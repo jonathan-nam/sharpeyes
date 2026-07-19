@@ -34,16 +34,23 @@ const SKELETON_BOSSES: Boss[] = [
 
 const SKELETON_CHARACTERS = Array.from({ length: 4 }, (_, i) => ({ id: `sk-char-${i}`, name: "" }));
 
+// The column headers double as the upload's character picker, rather than a second roster strip
+// above the table. Every character is already a column here, so a carousel would be the same list
+// twice, and pinning by clicking the column puts "where will this go" in the data itself.
 export function BossMatrix({
   bosses,
   characters,
   clearsByCharacter,
   loading,
+  selectedId,
+  onSelectCharacter,
 }: {
   bosses: Boss[];
   characters: Pick<Character, "id" | "name">[];
   clearsByCharacter: BossClearsByCharacter;
   loading?: boolean;
+  selectedId?: string | null;
+  onSelectCharacter?: (id: string) => void;
 }) {
   // Same table either way, so the loading and loaded layouts cannot drift apart.
   const rows = loading && bosses.length === 0 ? SKELETON_BOSSES : bosses;
@@ -81,11 +88,37 @@ export function BossMatrix({
             <th className="boss-col-head" scope="col">
               Boss
             </th>
-            {columns.map((character) => (
-              <th key={character.id} className="boss-char-head" scope="col" title={character.name}>
-                {loading ? <span className="skeleton sk-line" /> : character.name}
-              </th>
-            ))}
+            {columns.map((character) => {
+              const selected = !loading && character.id === selectedId;
+              return (
+                <th
+                  key={character.id}
+                  className={`boss-char-head${selected ? " is-selected" : ""}`}
+                  scope="col"
+                  title={character.name}
+                  aria-selected={onSelectCharacter && !loading ? selected : undefined}
+                >
+                  {loading ? (
+                    <span className="skeleton sk-line" />
+                  ) : onSelectCharacter ? (
+                    <button
+                      type="button"
+                      className="boss-char-pick"
+                      onClick={() => onSelectCharacter(character.id)}
+                    >
+                      {character.name}
+                      <span className="visually-hidden">
+                        {selected
+                          ? ", selected. A screenshot dropped below is saved to them."
+                          : ", select to save a screenshot to them"}
+                      </span>
+                    </button>
+                  ) : (
+                    character.name
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
 

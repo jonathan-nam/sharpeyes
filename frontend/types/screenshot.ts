@@ -23,6 +23,15 @@ export type DetectedToken = {
   quantity: number;
 };
 
+export type DetectedBossClear = {
+  // The catalog key, e.g. "chosen-seren".
+  bossKey: string;
+  // Resolved server-side from boss_catalog, for the reason DetectedToken carries one: the prose
+  // name is not derivable from the key.
+  displayName: string;
+  cleared: boolean;
+};
+
 export type ScreenshotResult = {
   screenshotId: string;
   outcome: ScreenshotOutcome;
@@ -34,4 +43,11 @@ export type ScreenshotResult = {
   // review has still been fully parsed, and showing what we read turns a blank,
   // baffling row into a one-click confirmation.
   tokenCounts: DetectedToken[];
+  // Same rule as tokenCounts. One capture can hold the inventory and the Maple Planner at once, so
+  // these are additional to the tokens above, not instead of them.
+  bossClears: DetectedBossClear[];
+  // Re-capture signals, not data. See lib/boss-capture.ts for what they mean and why they have to
+  // reach the screen.
+  unreadableBossRows: number | null;
+  reachedBossListEnd: boolean | null;
 };

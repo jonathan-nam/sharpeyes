@@ -3,8 +3,9 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { BossMatrix } from "@/components/boss-matrix";
+import { CaptureDock } from "@/components/capture-dock";
 import { apiFetch } from "@/lib/api";
-import { peek, put } from "@/lib/cache";
+import { invalidate, peek, put } from "@/lib/cache";
 import type { Boss, BossClearsByCharacter } from "@/types/boss";
 import type { Character } from "@/types/character";
 
@@ -31,6 +32,16 @@ export default function BossesPage() {
     seededBosses && seededCharacters ? "loaded" : "loading",
   );
 
+  // Which character an upload will be filed under. A planner capture usually has no HUD to read a
+  // name from (the Boss Content panel does not draw one), so pinning is how attribution happens
+  // here, not a convenience. null is the eye's "read the name from the screenshot" mode, which
+  // only pays off for a full-screen capture that caught the HUD.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
+
+  // Bumped after an upload writes clears, to re-pull the matrix it just changed.
+  const [revision, setRevision] = useState(0);
+
   useEffect(() => {
     // One token for the whole burst. getToken() can round-trip to Clerk and that cost is paid
     // before each request goes out (see lib/api.ts), so three separate calls would pay it three
@@ -48,6 +59,7 @@ export default function BossesPage() {
         setBosses(bossResult);
         setCharacters(characterResult);
         setClears(clearResult);
+        setSelectedId((current) => current ?? characterResult[0]?.id ?? null);
         put(BOSSES_KEY, bossResult);
         put(CHARACTERS_KEY, characterResult);
         put(CLEARS_KEY, clearResult);
@@ -57,7 +69,12 @@ export default function BossesPage() {
       // already have should not blank the page.
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [revision]);
+
+  function handleCharacterAdded(character: Character) {
+    setCharacters((prev) => [...prev, character]);
+    invalidate("/api/");
+  }
 
   return (
     <main className="page">
@@ -79,11 +96,35 @@ export default function BossesPage() {
           </p>
         ) : (
           <>
-            <BossMatrix bosses={bosses} characters={characters} clearsByCharacter={clears} />
+            <BossMatrix
+              bosses={bosses}
+              characters={characters}
+              clearsByCharacter={clears}
+              selectedId={selectedId}
+              onSelectCharacter={setSelectedId}
+            />
             <p className="hint">
-              Clears come from Maple Planner screenshots. Upload one per character to fill this in;
-              the list needs a capture per scroll position to be complete.
+              Clears come from the Maple Planner&apos;s Boss Content page. Pick a character above,
+              then drop their capture below; a long list needs one capture per scroll position to be
+              complete.
             </p>
+
+            <CaptureDock
+              characters={characters}
+              pinnedCharacterId={selectedId}
+              variant="planner"
+              getToken={getToken}
+              onCharacterAdded={handleCharacterAdded}
+              onSaved={() => setRevision((n) => n + 1)}
+              onToggleGeneric={() => {
+                if (selectedId) {
+                  setLastSelectedId(selectedId);
+                  setSelectedId(null);
+                } else {
+                  setSelectedId(lastSelectedId ?? characters[0]?.id ?? null);
+                }
+              }}
+            />
           </>
         ))}
     </main>

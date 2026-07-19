@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { COLS, SlotGrid, type SlotItem } from "@/components/slot-grid";
 import { apiFetch } from "@/lib/api";
+import { clearsNote, recaptureWarnings } from "@/lib/boss-capture";
 import { invalidate } from "@/lib/cache";
 import { compressImage } from "@/lib/compress-image";
 import type { Character } from "@/types/character";
@@ -26,6 +27,27 @@ import type { ScreenshotResult } from "@/types/screenshot";
 // lines that actually moved.
 
 type Phase = "reading" | "read" | "error";
+
+// Which page the dock is sitting on, and it changes the WORDS only, never the request. One
+// upload endpoint reads both panels, so a variant that also switched behaviour would be two
+// upload paths to keep in step. What it buys is that the dropzone asks for the screenshot the
+// page can actually use, and a rejection names that same thing: "that isn't an inventory
+// screenshot" on the boss page was refusing exactly the file the page had asked for.
+export type CaptureVariant = "inventory" | "planner";
+
+const COPY: Record<CaptureVariant, { subject: string; article: string; unrecognized: string }> = {
+  inventory: {
+    subject: "inventory screenshot",
+    article: "an",
+    unrecognized: "That isn't an inventory screenshot.",
+  },
+  planner: {
+    subject: "Maple Planner screenshot",
+    article: "a",
+    unrecognized: "No boss list in this one. Capture the Maple Planner's Boss Content page.",
+  },
+};
+
 type Capture = {
   id: string;
   file: File;
@@ -42,6 +64,7 @@ export function CaptureDock({
   characters,
   pinnedCharacterId,
   stored,
+  variant = "inventory",
   getToken,
   onCharacterAdded,
   onSaved,
@@ -51,8 +74,10 @@ export function CaptureDock({
   // null = no character selected, so the character is read from the screenshot's HUD instead.
   pinnedCharacterId: string | null;
   // What we already hold for the pinned character, keyed by catalog id. Each capture snapshots
-  // this at drop time (see Capture.baseline) so its preview can show the DIFFERENCE.
-  stored: Map<string, number>;
+  // this at drop time (see Capture.baseline) so its preview can show the DIFFERENCE. Only the
+  // inventory page holds counts to diff against; elsewhere the preview shows the parse as read.
+  stored?: Map<string, number>;
+  variant?: CaptureVariant;
   getToken: () => Promise<string | null>;
   onCharacterAdded: (character: Character) => void;
   onSaved: () => void;
@@ -97,7 +122,7 @@ export function CaptureDock({
         phase: "reading",
         result: null,
         // Snapshot now, before read()'s POST writes the new counts and the refetch moves `stored`.
-        baseline: new Map(stored),
+        baseline: new Map(stored ?? []),
       };
       setCaptures((prev) => [capture, ...prev]);
       read(capture);
@@ -192,8 +217,8 @@ export function CaptureDock({
       >
         <span className="dock-drop-main">
           {pinned
-            ? `Drop ${pinned.name}'s inventory screenshot here`
-            : "Drop an inventory screenshot here"}
+            ? `Drop ${pinned.name}'s ${COPY[variant].subject} here`
+            : `Drop ${COPY[variant].article} ${COPY[variant].subject} here`}
         </span>
         <span className="dock-drop-sub">
           {pinned
@@ -243,6 +268,7 @@ export function CaptureDock({
           capture={capture}
           characters={characters}
           pinned={pinned}
+          variant={variant}
           onResolve={(id) => resolveTo(capture, id)}
           onIgnore={() => ignore(capture)}
           onAddAndResolve={(name) => addAndResolve(capture, name)}
@@ -257,6 +283,7 @@ function CaptureCard({
   capture,
   characters,
   pinned,
+  variant,
   onResolve,
   onIgnore,
   onAddAndResolve,
@@ -265,6 +292,7 @@ function CaptureCard({
   capture: Capture;
   characters: Character[];
   pinned: Character | undefined;
+  variant: CaptureVariant;
   onResolve: (characterId: string) => void;
   onIgnore: () => void;
   onAddAndResolve: (name: string) => void;
@@ -309,9 +337,18 @@ function CaptureCard({
   const changed = items.filter((i) => i.delta !== 0);
   const rows = Math.max(1, Math.ceil(changed.length / COLS));
 
-  const { text, tone } = describe(capture, pinned);
+  const { text, tone } = describe(capture, pinned, variant);
   const saved = result?.outcome === "MATCHED";
   const note = previewNote(saved, changed.length, items.length);
+
+  // Both panels are shown whenever the parse holds them, on either page, rather than the page
+  // choosing which half it cares about. One capture can carry the inventory and the planner at
+  // once, and the clears from a full-screen inventory shot were being saved with nothing on
+  // screen to say so.
+  const clears = result?.bossClears ?? [];
+  const warnings = result ? recaptureWarnings(result) : [];
+  const showPreview =
+    capture.phase === "read" && (items.length > 0 || clears.length > 0 || warnings.length > 0);
 
   return (
     <article className={`capture${busy ? " busy" : ""}`}>
@@ -335,10 +372,30 @@ function CaptureCard({
         </span>
       </header>
 
-      {capture.phase === "read" && items.length > 0 && (
+      {showPreview && (
         <div className={`capture-preview${saved ? " saved" : " pending"}`}>
           {changed.length > 0 && <SlotGrid items={changed} rows={rows} />}
-          <p className="capture-preview-note">{note}</p>
+          {items.length > 0 && <p className="capture-preview-note">{note}</p>}
+
+          {clears.length > 0 && (
+            <ul className="capture-clears">
+              {clears.map((clear) => (
+                <li key={clear.bossKey} className={clear.cleared ? "is-cleared" : "is-pending"}>
+                  <span aria-hidden="true">{clear.cleared ? "✓" : "·"}</span>
+                  {clear.displayName}
+                </li>
+              ))}
+            </ul>
+          )}
+          {clears.length > 0 && <p className="capture-preview-note">{clearsNote(saved, clears)}</p>}
+
+          {/* The clears above were saved regardless of these, so this is the only place the
+              gaps are visible. See lib/boss-capture.ts. */}
+          {warnings.map((warning) => (
+            <p key={warning} className="capture-warning">
+              {warning}
+            </p>
+          ))}
         </div>
       )}
     </article>
@@ -435,7 +492,11 @@ function previewNote(saved: boolean, changed: number, total: number): string {
   return saved ? `${n} saved.` : `${n} to save. Nothing has been saved yet.`;
 }
 
-function describe(capture: Capture, pinned: Character | undefined): { text: string; tone: string } {
+function describe(
+  capture: Capture,
+  pinned: Character | undefined,
+  variant: CaptureVariant,
+): { text: string; tone: string } {
   if (capture.phase === "reading") return { text: "Reading the screenshot…", tone: "pending" };
   if (capture.phase === "error")
     return { text: "The upload didn't reach the server.", tone: "bad" };
@@ -469,7 +530,7 @@ function describe(capture: Capture, pinned: Character | undefined): { text: stri
       };
 
     case "UNRECOGNIZED_SCREENSHOT":
-      return { text: "That isn't an inventory screenshot.", tone: "bad" };
+      return { text: COPY[variant].unrecognized, tone: "bad" };
 
     case "FAILED":
       return { text: r.failureReason ?? "Couldn't read this one.", tone: "bad" };
