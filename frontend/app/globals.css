@@ -646,6 +646,32 @@ button.ms-slot {
   image-rendering: pixelated;
 }
 
+/* The same 46px sprite, outside a slot, at whatever size a list row can spare.
+ *
+ * Every token PNG is a 32x32 artwork centred in the 46px frame with 7px of transparent margin on
+ * all four sides (checked across all 26). Sizing the <img> to the row therefore spends 48% of the
+ * pixels on nothing: a 23px row icon was drawing 15px of artwork. So crop instead of shrink. The
+ * chip is the box the layout sees, the <img> inside it is oversized by 46/32 and centred, and
+ * overflow clips the margin away. Same row height, artwork half again as large.
+ *
+ * image-rendering stays `auto` here on purpose. Unlike the slot this is not an integer ratio, and
+ * nearest-neighbour at a fractional scale is the exact failure documented above. */
+.icon-chip {
+  display: block;
+  position: relative;
+  flex: none;
+  overflow: hidden;
+}
+
+.icon-chip > img {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(100% * 46 / 32);
+  height: calc(100% * 46 / 32);
+  transform: translate(-50%, -50%);
+}
+
 /* The count, drawn from the client's own digit sprites (see slot-grid.tsx). No font, no colour,
  * no text-shadow to get right, just put it where the game puts it.
  *
@@ -1190,15 +1216,15 @@ img.user-avatar-img {
   background: var(--surface-2);
 }
 
-.finder-suggest-row img {
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  image-rendering: pixelated;
+/* Small icons crop the frame away, they do not shrink it. See .icon-chip. */
+.finder-suggest-row .icon-chip {
+  width: 23px;
+  height: 23px;
 }
 
+/* Matches .icon-chip so item rows and character rows share one text column. */
 .finder-suggest-mark {
-  width: 22px;
+  width: 23px;
   color: var(--accent);
   text-align: center;
 }
@@ -1560,11 +1586,9 @@ button.link:disabled {
 .finder-row li:first-child {
   border-top: 0;
 }
-.finder-row li img {
-  width: 23px;
-  height: 23px;
-  flex: none;
-  image-rendering: auto;
+.finder-row li .icon-chip {
+  width: 26px;
+  height: 26px;
 }
 .finder-item-name {
   min-width: 0;

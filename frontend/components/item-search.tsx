@@ -413,7 +413,9 @@ export function SearchBar({
               onMouseEnter={() => setActive(i)}
             >
               {s.kind === "item" && s.iconUrl ? (
-                <img src={apiAssetUrl(s.iconUrl)} alt="" aria-hidden="true" />
+                <span className="icon-chip" aria-hidden="true">
+                  <img src={apiAssetUrl(s.iconUrl)} alt="" />
+                </span>
               ) : (
                 <span className="finder-suggest-mark" aria-hidden="true">
                   {s.kind === "character" ? "◆" : "·"}
@@ -481,7 +483,9 @@ export function SearchResults({ query, matches }: { query: string; matches: Matc
                   {items.map((item) => (
                     <li key={item.tokenCatalogId} title={item.name}>
                       {item.iconUrl && (
-                        <img src={apiAssetUrl(item.iconUrl)} alt="" aria-hidden="true" />
+                        <span className="icon-chip" aria-hidden="true">
+                          <img src={apiAssetUrl(item.iconUrl)} alt="" />
+                        </span>
                       )}
                       {/* The boss, but not the slots. The slots are still SEARCHED on. "robe"
                           finds this. They just do not need restating on every row once the

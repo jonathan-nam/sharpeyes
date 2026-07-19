@@ -62,7 +62,11 @@ export function SlotGrid({
 }) {
   const slots = COLS * rows;
   return (
-    <div className="ms-grid" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}>
+    // max-content, not 1fr: the tracks must resolve to the slot's own 42px. Under 1fr a container
+    // wider than the grid (the capture dock, unlike .ms-window) spreads the columns onto
+    // fractional offsets, and the icon's translate(-50%, -50%) then lands on a half pixel, where
+    // image-rendering: pixelated smears exactly as described on .ms-slot > img.
+    <div className="ms-grid" style={{ gridTemplateColumns: `repeat(${COLS}, max-content)` }}>
       {Array.from({ length: slots }, (_, i) => {
         const item = items[i];
         if (!item) return <div key={i} className="ms-slot" />;
