@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth, useUser } from "@clerk/nextjs";
-import { useState } from "react";
+import { type KeyboardEvent, useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { Character } from "@/types/character";
 
@@ -16,6 +16,10 @@ type Props = {
   onMove: (direction: -1 | 1) => void;
   canMoveLeft: boolean;
   canMoveRight: boolean;
+  // Roving tabindex: only one tile in the strip is a tab stop (the selected one), so Tab reaches
+  // the carousel in one press instead of once per character. The carousel owns the arithmetic.
+  tabIndex: number;
+  onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
 };
 
 export function CharacterTile({
@@ -27,6 +31,8 @@ export function CharacterTile({
   onMove,
   canMoveLeft,
   canMoveRight,
+  tabIndex,
+  onKeyDown,
 }: Props) {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -76,7 +82,33 @@ export function CharacterTile({
   }
 
   return (
-    <div className={`char-tile${selected ? " selected" : ""}`} onClick={onSelect}>
+    <div
+      className={`char-tile${selected ? " selected" : ""}`}
+      onClick={onSelect}
+      // The tile is what focus lands on and what the arrow keys move between. The inner controls
+      // (star, move, refresh, delete) are their own tab stops and bubble their keys up here, so
+      // every key handler below ignores anything that did not happen on the tile itself.
+      //
+      // aria-current, not a listbox: the strip ends in the "add character" tile, which is not an
+      // option and would make the listbox's children a lie. `group` rather than `button` because
+      // button makes its descendants presentational, which would hide the four controls inside.
+      // A real <button> around the sprite and plate would be better and needs the tile's layout
+      // reworked, since it cannot wrap the actions and cannot use display:contents safely.
+      role="group"
+      aria-label={character.name}
+      aria-current={selected ? "true" : undefined}
+      tabIndex={tabIndex}
+      data-char-id={character.id}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+          return;
+        }
+        onKeyDown(e);
+      }}
+    >
       {/* Star to make this character the profile avatar. Always shows on the current main so you can
           see which it is; filled when this tile is it. Clicking must not also select the tile. */}
       <button

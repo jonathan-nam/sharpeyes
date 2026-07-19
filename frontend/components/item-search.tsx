@@ -238,12 +238,16 @@ export function SearchBar({
   tokensByChar,
   onSelectCharacter,
   focusSignal = 0,
+  onLeaveDown,
 }: {
   query: string;
   onQuery: (q: string) => void;
   characters: Character[];
   tokensByChar: Record<string, CharacterToken[]>;
   onSelectCharacter: (id: string) => void;
+  // Arrow down out of the bar, into the character strip. Only when there are no suggestions to
+  // walk: with the list open, down belongs to the list.
+  onLeaveDown?: () => void;
   // Bumped by the page each time an inventory item is clicked into the bar, to pull focus here
   // so the query can be edited straight away. A counter, not a boolean: clicking the same item
   // twice must re-focus, and a boolean would not change.
@@ -340,7 +344,13 @@ export function SearchBar({
       if (query) onQuery("");
       return;
     }
-    if (!open || suggestions.length === 0) return;
+    if (!open || suggestions.length === 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        onLeaveDown?.();
+      }
+      return;
+    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setActive(nextActive(activeIndex, suggestions.length, 1));

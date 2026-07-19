@@ -16,6 +16,11 @@ import { CharacterCarousel, type Selection } from "@/components/character-carous
 
 type LoadState = "loading" | "loaded" | "error";
 
+// The three arrow-navigable regions of the page, top to bottom. Up and down move between them,
+// left and right mean something different inside each: characters in the strip, categories in
+// the inventory.
+type FocusRegion = "search" | "carousel" | "inventory";
+
 const CHARACTERS_KEY = "/api/characters";
 const ALL_TOKENS_KEY = "/api/characters/tokens";
 
@@ -49,14 +54,26 @@ export default function CharactersPage() {
 
   const [query, setQuery] = useState("");
 
-  // Bumped when an inventory item is clicked into the bar, so the SearchBar knows to pull focus.
-  // Separate from `query` because clicking the same item twice leaves the query unchanged but
-  // should still re-focus.
-  const [searchFocusSignal, setSearchFocusSignal] = useState(0);
+  // Which region should take focus, and a counter so asking twice for the same one still lands.
+  // The page owns this because the three regions are siblings: the carousel cannot reach into the
+  // inventory panel, and neither should have to know the other exists.
+  //
+  // The counter is shared, not one per region. Each region is handed the nonce only while it is
+  // the target and 0 otherwise, so its focus effect fires exactly on the turn it is chosen.
+  const [focus, setFocus] = useState<{ region: FocusRegion; nonce: number }>({
+    region: "search",
+    nonce: 0,
+  });
+
+  function focusRegion(region: FocusRegion) {
+    setFocus((f) => ({ region, nonce: f.nonce + 1 }));
+  }
+
+  const signalFor = (region: FocusRegion) => (focus.region === region ? focus.nonce : 0);
 
   function handleSelectItem(name: string) {
     setQuery(name);
-    setSearchFocusSignal((n) => n + 1);
+    focusRegion("search");
   }
 
   // Which character to come back to when you turn the generic upload back off. Without it, the
@@ -218,7 +235,8 @@ export default function CharactersPage() {
             characters={characters}
             tokensByChar={tokensByChar}
             onSelectCharacter={setSelectedId}
-            focusSignal={searchFocusSignal}
+            focusSignal={signalFor("search")}
+            onLeaveDown={() => focusRegion("carousel")}
           />
 
           <CharacterCarousel
@@ -229,6 +247,9 @@ export default function CharactersPage() {
             onDeleted={handleDeleted}
             onAdded={handleAdded}
             onReorder={handleReorder}
+            focusSignal={signalFor("carousel")}
+            onLeaveUp={() => focusRegion("search")}
+            onLeaveDown={() => focusRegion("inventory")}
           />
 
           {/* The selected character's inventory sits directly under the carousel: pick a
@@ -246,6 +267,8 @@ export default function CharactersPage() {
               // (bound to this same state), focus moves there so it can be edited (see SearchBar),
               // and the results take over this slot.
               onSelectItem={handleSelectItem}
+              focusSignal={signalFor("inventory")}
+              onLeaveUp={() => focusRegion("carousel")}
             />
           ) : characters.length === 0 ? (
             <p className="finder-empty">Add a character above to start tracking.</p>

@@ -22,6 +22,9 @@ export function CharacterCarousel({
   onDeleted,
   onAdded,
   onReorder,
+  focusSignal = 0,
+  onLeaveUp,
+  onLeaveDown,
 }: {
   characters: Character[];
   selectedId: Selection;
@@ -30,6 +33,11 @@ export function CharacterCarousel({
   onDeleted: (id: string) => void;
   onAdded: (character: Character) => void;
   onReorder: (ordered: Character[]) => void;
+  // Bumped by the page when another region hands focus here. See the inventory page.
+  focusSignal?: number;
+  // Arrow out of the strip: up to the search bar, down into the inventory.
+  onLeaveUp?: () => void;
+  onLeaveDown?: () => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [atStart, setAtStart] = useState(true);
@@ -97,6 +105,57 @@ export function CharacterCarousel({
     onReorder(next);
   }
 
+  // Roving tabindex: the strip is ONE tab stop, not five per character. The selected tile is the
+  // one that answers Tab, so tabbing in lands on the character you are already looking at.
+  const rovingIndex = Math.max(
+    0,
+    characters.findIndex((c) => c.id === selectedId),
+  );
+
+  function focusTile(index: number) {
+    const target = characters[index];
+    if (!target) return;
+    const tile = trackRef.current?.querySelector<HTMLElement>(
+      `[data-char-id="${CSS.escape(target.id)}"]`,
+    );
+    if (!tile) return;
+    tile.focus();
+    // block: "nearest" so paging the strip never scrolls the page itself vertically.
+    tile.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+  }
+
+  // Left/right move the selection, not just the viewport: arrowing across the strip changes whose
+  // inventory is below, which is the whole point of the strip. The arrow BUTTONS still only page
+  // the scroll, since a mouse user clicking "next" is asking to see more, not to switch character.
+  function onTileKeyDown(e: React.KeyboardEvent, index: number) {
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const next = index + (e.key === "ArrowLeft" ? -1 : 1);
+      const target = characters[next];
+      // No wrap. Falling off the end of the strip and reappearing at the other end loses your
+      // place in a control whose whole job is left-to-right order.
+      if (!target) return;
+      e.preventDefault();
+      onSelect(target.id);
+      focusTile(next);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      onLeaveUp?.();
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      onLeaveDown?.();
+    }
+  }
+
+  useEffect(() => {
+    if (focusSignal === 0) return;
+    focusTile(rovingIndex);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusSignal]);
+
   return (
     <div className="carousel">
       <button
@@ -120,6 +179,8 @@ export function CharacterCarousel({
             onMove={(direction) => moveCharacter(index, direction)}
             canMoveLeft={index > 0}
             canMoveRight={index < characters.length - 1}
+            tabIndex={index === rovingIndex ? 0 : -1}
+            onKeyDown={(e) => onTileKeyDown(e, index)}
           />
         ))}
         {/* Last, always. With no characters it is the only card, so the empty state is this same

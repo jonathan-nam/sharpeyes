@@ -49,6 +49,8 @@ export function InventoryPanel({
   emptyHint,
   loading = false,
   onSelectItem,
+  focusSignal = 0,
+  onLeaveUp,
 }: {
   // The character's name, and nothing else. The level used to hang off it as "· Lv.287", which
   // repeated what the tile directly above already says and gave the window's title bar a second
@@ -64,36 +66,51 @@ export function InventoryPanel({
   loading?: boolean;
   // Clicking an item searches every character for it (see the page).
   onSelectItem?: (name: string) => void;
+  // Bumped by the page when another region hands focus here. See the inventory page.
+  focusSignal?: number;
+  // Arrow up out of the panel, back to the carousel.
+  onLeaveUp?: () => void;
 }) {
   const [category, setCategory] = useState<Category>("Use");
   const [focused, setFocused] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Tab cycles tabs, as it does in-game. Only while the panel holds focus, so Tab keeps meaning
-  // "next element" everywhere else on the page, and Escape hands focus back, so a keyboard
-  // user is never stuck inside the panel.
   useEffect(() => {
-    const panel = panelRef.current;
-    if (!panel) return;
+    if (focusSignal === 0) return;
+    panelRef.current?.focus();
+  }, [focusSignal]);
 
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        panelRef.current?.blur();
-        return;
-      }
-      if (e.key !== "Tab") return;
-      e.preventDefault();
-      setCategory((current) => {
-        const i = CATEGORIES.indexOf(current);
-        const step = e.shiftKey ? -1 : 1;
-        const next = (i + step + CATEGORIES.length) % CATEGORIES.length;
-        return CATEGORIES[next] ?? current;
-      });
+  // Left/right cycle categories, up leaves for the carousel.
+  //
+  // This used to be Tab, in-game style, and that was a focus trap: the listener sat on the panel
+  // in the bubble phase, so it swallowed Tab from every descendant too. The category buttons and
+  // the slot buttons became unreachable, and the Escape hatch called blur() on the panel, which
+  // is a no-op when a child is what actually holds focus. Tab is the browser's, not ours.
+  function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Escape") {
+      // The focused element, not the panel: from a slot button, blurring the panel does nothing.
+      (document.activeElement as HTMLElement | null)?.blur();
+      return;
     }
+    // Only from the panel itself or the tab row. Inside a slot the arrows belong to whatever the
+    // browser does with them, and stealing them there would strand you in the grid.
+    const target = e.target as HTMLElement;
+    if (target !== panelRef.current && target.getAttribute("role") !== "tab") return;
 
-    panel.addEventListener("keydown", onKeyDown);
-    return () => panel.removeEventListener("keydown", onKeyDown);
-  }, []);
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      onLeaveUp?.();
+      return;
+    }
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    setCategory((current) => {
+      const i = CATEGORIES.indexOf(current);
+      const step = e.key === "ArrowLeft" ? -1 : 1;
+      const next = (i + step + CATEGORIES.length) % CATEGORIES.length;
+      return CATEGORIES[next] ?? current;
+    });
+  }
 
   const shown = category === "Use" ? items : [];
 
@@ -114,6 +131,7 @@ export function InventoryPanel({
       tabIndex={0}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
+      onKeyDown={onKeyDown}
     >
       <div className="ms-titlebar">
         <span className="ms-title">INVENTORY</span>
@@ -122,7 +140,7 @@ export function InventoryPanel({
             thinking about the window. It used to sit in a footer beneath the grid, alongside an
             "N items tracked" readout that told you a number you can see by looking, so the
             footer is gone and the hint has moved up. */}
-        <span className="ms-title-hint">{focused ? "Tab · Esc" : "Click to focus"}</span>
+        <span className="ms-title-hint">{focused ? "← → · ↑ · Esc" : "Click to focus"}</span>
         <span className="ms-window-buttons" aria-hidden="true">
           <i>&#8211;</i>
           <i>+</i>
