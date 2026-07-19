@@ -50,6 +50,15 @@ costs nothing, makes no network call, and returns the same answer every time.
 ./scripts/smoke.sh    # runs the whole thing locally and checks it works
 ```
 
+`docker compose down -v` wipes the dev database, and the characters and parsed screenshots in it
+are hand-made: no migration or seed rebuilds them. Take a snapshot before you do anything that
+resets it.
+
+```bash
+./scripts/dev-db-snapshot.sh    # -> dev-snapshots/ (gitignored: the repo is public)
+./scripts/dev-db-restore.sh     # restores dev-snapshots/latest.sql.gz
+```
+
 | | |
 | --- | --- |
 | `.devcontainer/README.md` | **Start here on a new machine.** Setup, credentials, and what to do when it hangs |

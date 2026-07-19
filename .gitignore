@@ -54,3 +54,7 @@ symbol-candidates.png
 # test reads it, at which point it moves up into test-fixtures/ proper.
 test-fixtures/scratch/*
 !test-fixtures/scratch/README.md
+
+# Local dev DB snapshots. Repo is public and these carry a Clerk user ID and raw parse
+# results, so they never get committed. See scripts/dev-db-snapshot.sh.
+dev-snapshots/
