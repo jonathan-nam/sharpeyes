@@ -168,8 +168,10 @@ def boss_sql(bosses: list[dict]) -> str:
     """The boss_catalog seed. Upserts by boss_key and keeps each id (boss_clear references it).
 
     Untracked bosses are omitted: boss_catalog is the set of bosses the tracker keeps clears for.
-    This seed does not DELETE, so untracking a boss that is already seeded needs a versioned
-    migration to remove its row and its clears (see V14__drop_daily_bosses.sql).
+    The seed then DELETES whatever is left over, so the manifest alone decides the contents and a
+    removal needs no versioned migration. That delete is why this is authoritative rather than
+    merely additive: an upsert-only seed cannot undo a row an older image put there, which is how
+    two deleted dailies came back a minute after the migration that dropped them.
     """
 
     def q(s: str) -> str:
@@ -181,6 +183,7 @@ def boss_sql(bosses: list[dict]) -> str:
     rows = ",\n".join(
         f"    ({q(b['key'])}, {q(b['name'])}, {q(b['reset'])}, {i})" for i, b in enumerate(tracked)
     )
+    keys = ", ".join(q(b["key"]) for b in tracked)
     return f"""-- GENERATED FROM catalog/bosses.yaml. DO NOT EDIT BY HAND.
 -- Regenerate with:  python catalog/build.py
 --
@@ -197,6 +200,30 @@ ON CONFLICT (boss_key) DO UPDATE SET
     name       = EXCLUDED.name,
     reset      = EXCLUDED.reset,
     sort_order = EXCLUDED.sort_order;
+
+-- Then remove what the manifest no longer lists. The manifest is the whole truth: without this
+-- the seed can only ADD, so a boss deleted here survives in any database that already had it,
+-- and an older image redeploying re-inserts one this seed just dropped.
+--
+-- DESTRUCTIVE, and deliberately so: this deletes every recorded clear for a removed boss, for
+-- every user, with no migration to review first. A mistyped or renamed key is therefore silent
+-- data loss, which is why bosses.yaml calls a key permanent. The NOTICE puts what went into the
+-- boot log, so the deletion is at least never invisible.
+DO $$
+DECLARE gone text;
+BEGIN
+    SELECT string_agg(boss_key, ', ' ORDER BY boss_key) INTO gone
+    FROM boss_catalog WHERE boss_key NOT IN ({keys});
+
+    IF gone IS NOT NULL THEN
+        RAISE NOTICE 'boss_catalog: dropping % and every clear recorded against them (not in catalog/bosses.yaml)', gone;
+    END IF;
+END $$;
+
+DELETE FROM boss_clear
+WHERE boss_catalog_id IN (SELECT id FROM boss_catalog WHERE boss_key NOT IN ({keys}));
+
+DELETE FROM boss_catalog WHERE boss_key NOT IN ({keys});
 """
 
 

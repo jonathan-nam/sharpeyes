@@ -240,12 +240,14 @@ class BossClearsTest {
         transaction {
             // Not a shortcut: seven daily periods sit inside one week, so a daily boss has no single
             // answer for it, and a week can straddle two months. See weeklyClearsFor.
+            //
+            // The MONTHLY boss carries the test on its own now. There is no DAILY boss left to key a
+            // clear on (#111 dropped them), and upserting one throws rather than being ignored.
             val character = addCharacter(userOneId, "Cadences")
             upsertBossClears(
                 character,
                 listOf(
                     DetectedBossClear("lotus", true), // WEEKLY
-                    DetectedBossClear("zakum", true), // DAILY
                     DetectedBossClear("black-mage", true), // MONTHLY
                 ),
                 addScreenshot(userOneId),

@@ -8,7 +8,7 @@ import type { BossClear } from "@/types/boss";
 // kind this project exists to avoid.
 export type CellState = "cleared" | "pending" | "unseen";
 
-/** Index one character's clears for lookup. 17 bosses by N characters is a lot of find() scans. */
+/** Index one character's clears for lookup. 16 bosses by N characters is a lot of find() scans. */
 export function indexClears(clears: BossClear[] | undefined): Map<string, boolean> {
   return new Map((clears ?? []).map((c) => [c.bossKey, c.cleared]));
 }

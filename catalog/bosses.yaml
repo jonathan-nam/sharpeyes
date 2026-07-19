@@ -9,7 +9,9 @@
 #     python catalog/build.py --check    fail if the generated catalog is stale
 #
 # `key` is the stable identifier (lowercase kebab-case): it becomes the boss_catalog value the
-# backend will key clears on. Rename it and you rename that, so treat it as permanent.
+# backend will key clears on. Treat it as PERMANENT. This file is authoritative, so the seed
+# deletes any boss_catalog row it does not list, along with every clear recorded against it. A
+# renamed key therefore reads as "one boss removed, one added" and destroys that boss's history.
 #
 # `name` is the exact in-game display name, what the OCR is matched against. Truncated reads
 # ("Guardian Angel Sli..") still resolve by best overlap, so the full name belongs here.
@@ -71,9 +73,6 @@ bosses:
     reset: WEEKLY
   - key: baldrix
     name: Baldrix
-    reset: WEEKLY
-  - key: akechi-mitsuhide
-    name: Akechi Mitsuhide
     reset: WEEKLY
 
   # --- Monthly ----------------------------------------------------------------------

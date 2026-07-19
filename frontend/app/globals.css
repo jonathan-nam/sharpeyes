@@ -1550,7 +1550,7 @@ button.link:disabled {
    Boss clears matrix
 
    Bosses on the rows, characters on the columns. The other way round does not
-   fit: 17 bosses across a 794px column is ~47px each, too narrow for a name.
+   fit: 16 bosses across a 794px column is ~50px each, too narrow for a name.
    Grouped by reset cadence, the way the game's own planner groups them, because
    a check under DAILY and a check under MONTHLY do not mean the same thing.
    --------------------------------------------------------------------------- */
@@ -1572,7 +1572,7 @@ button.link:disabled {
   font-size: 13px;
 }
 
-/* 17 rows of small marks, and full width puts the far column ~400px from the name. Striping tells
+/* 16 rows of small marks, and full width puts the far column ~400px from the name. Striping tells
    you which row you are on at rest; the hover band tracks the one you are reading. Without both,
    crossing the gap means counting rows. */
 /* Hover must be the LIGHTER of the two, or it reads as a dark-out on striped rows. The tokens run

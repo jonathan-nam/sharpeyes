@@ -6,7 +6,7 @@ import type { Character } from "@/types/character";
 
 // Bosses on the ROWS, characters on the columns.
 //
-// The other way round does not fit: 17 bosses against a 794px column leaves ~47px per boss, which
+// The other way round does not fit: 16 bosses against a 794px column leaves ~50px per boss, which
 // is not enough for a name and forces rotated headers. Characters are the smaller axis for almost
 // everyone, and it is also how the same information is kept by hand today (test-fixtures/boss
 // matrix.png), so the layout matches how it is already read.

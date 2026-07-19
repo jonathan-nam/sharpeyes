@@ -16,6 +16,12 @@ from app.cv import planner as P
 REF = Path(__file__).resolve().parents[2] / "test-fixtures"
 
 # (boss name, cleared) top-to-bottom. First nine verified by Jonathan; last two parser-proposed.
+#
+# Row 8 is None, not "Akechi Mitsuhide". The row IS on this capture and reads fine; Akechi was
+# deleted from catalog/bosses.yaml, so there is no longer a name to match it to and the reader
+# reports it as UNRESOLVED. That is the cost of removing a boss that is still on the planner:
+# every capture containing its row now carries one unreadable row. See test_parse's
+# test_a_removed_boss_leaves_an_unresolved_row.
 SAMPLE2_TRUTH = [
     ("Darknell", True),
     ("Chosen Seren", True),
@@ -24,7 +30,7 @@ SAMPLE2_TRUTH = [
     ("Kaling", False),
     ("Malefic Star", False),
     ("Limbo", True),
-    ("Akechi Mitsuhide", False),
+    (None, False),
     ("Black Mage", False),
     ("Zakum", False),
     ("Gollux", False),

@@ -90,12 +90,6 @@
     "tracked": true
   },
   {
-    "key": "akechi-mitsuhide",
-    "name": "Akechi Mitsuhide",
-    "reset": "WEEKLY",
-    "tracked": true
-  },
-  {
     "key": "black-mage",
     "name": "Black Mage",
     "reset": "MONTHLY",

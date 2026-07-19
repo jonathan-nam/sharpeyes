@@ -448,7 +448,6 @@ SAMPLE2_CLEARS = [
     ("kaling", False),
     ("malefic-star", False),
     ("limbo", True),
-    ("akechi-mitsuhide", False),
     ("black-mage", False),
 ]
 
@@ -463,25 +462,37 @@ def test_planner_alone_is_read_as_planner():
     assert body["tokenCounts"] is None
 
 
-def test_planner_rows_all_resolve_to_a_key():
-    # An unresolved row is reported, never dropped. A clean capture should have none, and if
-    # this starts failing the catalog and the reader have drifted.
+def test_a_removed_boss_leaves_an_unresolved_row():
+    """Akechi was deleted from the manifest while its row is still on the planner.
+
+    So this capture now carries exactly one row the reader cannot name. Pinned at 1 rather than
+    0 because that is the honest state, and pinned rather than ignored because the count is still
+    the drift guard: a SECOND unresolved row means the catalog and the reader have come apart,
+    which is what this test existed to catch.
+
+    The cost is real and belongs in the open. Every capture containing the Akechi row raises the
+    "unreadable-rows" caveat in the UI (lib/planner-capture.ts), so the warning is now expected
+    noise on a clean shot. Removing the row from the in-game planner is what actually clears it;
+    the alternative is `tracked: false`, which is how the dailies are handled below.
+    """
     body = _parse(f"{REF}/boss clear menu sample 2.png").json()
-    assert body["unreadableBossRows"] == 0
+    assert body["unreadableBossRows"] == 1
+    assert "akechi-mitsuhide" not in [c["bossKey"] for c in body["bossClears"]]
+    assert "Akechi Mitsuhide" not in planner_mod.BOSS_NAMES
 
 
 def test_untracked_daily_rows_are_ignored_not_unreadable():
     """Dropping the dailies must not look like a failed read.
 
     The two daily rows are still on this capture. An ignored row and an unreadable one are
-    opposite claims: unreadable tells the user to re-capture, and inflating it here would raise
-    that warning on every clean planner shot. So the rows must vanish from bossClears while
-    unreadableBossRows stays 0.
+    opposite claims: unreadable tells the user to re-capture. So the daily rows must vanish from
+    bossClears WITHOUT adding to unreadableBossRows, which is the whole difference between this
+    and the removed-boss case above. The 1 here is Akechi's row, never a daily's.
     """
     body = _parse(f"{REF}/boss clear menu sample 2.png").json()
     keys = [c["bossKey"] for c in body["bossClears"]]
     assert "zakum" not in keys and "gollux" not in keys
-    assert body["unreadableBossRows"] == 0
+    assert body["unreadableBossRows"] == 1
     # The reader still FOUND them; they are dropped downstream, not missed.
     assert planner_mod.BOSS_NAMES.count("Zakum") == 1
 
@@ -556,19 +567,22 @@ def test_a_planner_blowup_does_not_take_the_inventory_with_it(monkeypatch):
 
 
 def test_an_unresolved_row_is_counted_not_dropped(monkeypatch):
-    """The counting is the point, and every other test here sees zero of it.
+    """The counting is the point, and it must track the number of bad rows rather than latch.
 
     A row whose name will not resolve is the one case where the reader has found a boss and
     cannot say which, and reporting it is what stops it reading as "not cleared". Forced by
     denying the matcher one name that the clean capture definitely contains, so the response
     has to come back exactly one clear shorter and say so.
+
+    Two, not one: this capture already carries Akechi's unresolvable row (see
+    test_a_removed_boss_leaves_an_unresolved_row), and the denied name adds the second.
     """
     keep = [n for n in planner_mod.BOSS_NAMES if n != "Chosen Seren"]
     real = planner_mod.parse_planner
     monkeypatch.setattr(main_mod, "parse_planner", lambda img, glyphs: real(img, glyphs, keep))
 
     body = _parse(f"{REF}/boss clear menu sample 2.png").json()
-    assert body["unreadableBossRows"] == 1
+    assert body["unreadableBossRows"] == 2
     keys = [c["bossKey"] for c in body["bossClears"]]
     assert "chosen-seren" not in keys
     # Short by exactly the denied row: the others must not be disturbed by its absence, and in
