@@ -360,28 +360,27 @@ export default function RunOrderPage() {
 
       {plan.runs.length > 0 && (
         <section className="night-section" aria-busy={stale}>
-          <div className="night-plan-copy">
+          <div className="night-plan-head">
+            {options.length > 1 && (
+              <div className="basis-row" role="group" aria-label="Plans to choose between">
+                {options.map((option, i) => (
+                  <button
+                    key={option.runs.length}
+                    type="button"
+                    className={plan === option ? "basis-tab active" : "basis-tab"}
+                    aria-pressed={plan === option}
+                    onClick={() => setChosen(i)}
+                  >
+                    {option.runs.length} {option.runs.length === 1 ? "boss" : "bosses"}
+                    <span className="tab-count">
+                      {option.switches} {option.switches === 1 ? "switch" : "switches"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             <CopyPlan plan={plan} roster={onTonight} />
           </div>
-
-          {options.length > 1 && (
-            <div className="basis-row" role="group" aria-label="Plans to choose between">
-              {options.map((option, i) => (
-                <button
-                  key={option.runs.length}
-                  type="button"
-                  className={plan === option ? "basis-tab active" : "basis-tab"}
-                  aria-pressed={plan === option}
-                  onClick={() => setChosen(i)}
-                >
-                  {option.runs.length} {option.runs.length === 1 ? "boss" : "bosses"}
-                  <span className="tab-count">
-                    {option.switches} {option.switches === 1 ? "switch" : "switches"}
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
 
           <RunPlan plan={plan} roster={onTonight} />
 

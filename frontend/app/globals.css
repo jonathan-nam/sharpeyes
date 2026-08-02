@@ -4418,9 +4418,20 @@ button.link:disabled {
   cursor: pointer;
 }
 
-.night-plan-copy {
+/* The chips pick a plan and the button copies the one picked, so they share a line. Baseline
+   rather than centre, because the two boxes are not the same height and only baseline puts the
+   labels on exactly one line. margin-left is auto rather than justify-content, so the button still
+   sits right when there is one plan and no chips. .copy-amount keeps its own -5px right margin,
+   which cancels its padding and lands the label on the table's edge. */
+.night-plan-head {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.night-plan-head .copy-amount {
+  margin-left: auto;
 }
 
 /* The order itself: bosses down the rows, people across the columns, the same way round as the
