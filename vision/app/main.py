@@ -36,10 +36,11 @@ import numpy as np
 from fastapi import FastAPI, HTTPException, Request, Response
 from pydantic import BaseModel
 
-from app.cv.admit import NotNativeScale, require_native_scale
-from app.cv.classify import classify
+from app.cv.admit import NotNativeScale, clashes, require_native_scale
+from app.cv.build_icons import cut_template
+from app.cv.classify import OCCUPIED, _busy, classify
 from app.cv.discover import unknown_slots
-from app.cv.grid import coverage, find_grid
+from app.cv.grid import COLS, ROWS, coverage, find_grid
 from app.cv.hud import find_hud
 from app.cv.match import load_templates
 from app.cv.ocr import load_font, read_count
@@ -446,3 +447,69 @@ async def discover_items(request: Request) -> DiscoverResult:
             raise HTTPException(500, f"could not encode slot r{r}c{c}")
         out.append(DiscoverableSlot(row=r, col=c, imagePng=base64.b64encode(buf).decode("ascii")))
     return DiscoverResult(slots=out, knownCount=len(hits))
+
+
+class AdmittedTemplate(BaseModel):
+    # The slot as an RGBA matching template: the item's pixels, with the stack-count digits
+    # and the slot-lock bar masked out. This is what every future parse correlates against,
+    # and it doubles as the display icon, since it is already art on transparency.
+    templatePng: str
+    # Fraction of the slot the mask kept. Diagnostic: a very low number means the cut found
+    # little art, which is worth seeing in a log when someone reports a bad match.
+    coverage: float
+
+
+@app.post("/admit", response_model=AdmittedTemplate)
+async def admit_item(request: Request, row: int, col: int) -> AdmittedTemplate:
+    """Turn one slot into a template the catalog could accept, or refuse to.
+
+    Naming is not our business. Pixels carry no names, the user supplies one, and the backend
+    keeps it. What cannot be delegated is whether these pixels can safely be told apart from
+    the ones already in the catalog, because getting that wrong does not error, it reports
+    the wrong item, confidently, for everyone.
+
+    Checked against the CORE catalog only. A user's own items are not in this process, and
+    the transport that would carry them arrives with per-user parsing; until then the backend
+    is the only thing that can stop a user adding the same item twice, and it can only do it
+    by name.
+    """
+    img = _decode_upload(await request.body())
+    if not (0 <= row < ROWS and 0 <= col < COLS):
+        raise HTTPException(422, f"r{row}c{col} is outside the {ROWS}x{COLS} grid")
+
+    try:
+        g = find_grid(img)
+    except ValueError as e:
+        raise HTTPException(422, "No inventory grid could be located in this image.") from e
+
+    img, g = normalize(img, g)
+    try:
+        require_native_scale(g.pitch)
+    except NotNativeScale as e:
+        raise HTTPException(422, str(e)) from e
+
+    x, y, w, h = g.cell(row, col)
+    if _busy(img[y : y + h, x : x + w]) < OCCUPIED:
+        raise HTTPException(422, f"r{row}c{col} is empty. Pick a slot with an item in it.")
+
+    tpl = cut_template(img, g, row, col)
+
+    found = clashes(tpl, TOKENS)
+    if found:
+        # 409, not 422: the capture is fine and re-taking it will not help. The item is
+        # already tracked, or it is a recolour of one that is, and either way the answer is
+        # a name rather than a new template.
+        log.info("admit refused r%dc%d: %s", row, col, "; ".join(str(c) for c in found))
+        raise HTTPException(
+            409,
+            "This looks like an item already in the catalog: " + ", ".join(c.key for c in found),
+        )
+
+    ok, buf = cv2.imencode(".png", tpl)
+    if not ok:
+        raise HTTPException(500, "could not encode the template")
+    log.info("admitted r%dc%d, mask covers %.2f", row, col, float((tpl[:, :, 3] > 0).mean()))
+    return AdmittedTemplate(
+        templatePng=base64.b64encode(buf).decode("ascii"),
+        coverage=round(float((tpl[:, :, 3] > 0).mean()), 3),
+    )

@@ -287,4 +287,133 @@ class VisionServiceClientTest {
                 parsed.result.tokenCounts?.associate { it.tokenName to it.quantity },
             )
         }
+
+    // ---- Authoring: finding what is NOT in the catalog, and cutting it out ----------------
+
+    private fun golden(name: String) =
+        requireNotNull(javaClass.getResourceAsStream("/$name")) {
+            "golden vision response missing from test resources: $name"
+        }.readBytes().decodeToString()
+
+    @Test
+    fun `decodes a discover response captured from the running vision service`() =
+        runTest {
+            val outcome = ok(golden("vision-discover-response.json")).discoverUntracked(ByteArray(8), "image/png")
+
+            val found = assertIs<DiscoverOutcome.Found>(outcome)
+            // The capture's own numbers: 25 slots the catalog claims, and the rest offerable.
+            // Trimmed to three slots in the golden, because the wire shape is the contract.
+            assertEquals(25, found.knownCount)
+            assertEquals(3, found.slots.size)
+            assertEquals(0, found.slots[0].row)
+            assertEquals(0, found.slots[0].col)
+            assertTrue(found.slots.all { it.imagePng.isNotBlank() }, "a slot with no pixels is useless to a picker")
+        }
+
+    @Test
+    fun `decodes a template response captured from the running vision service`() =
+        runTest {
+            val outcome =
+                ok(golden("vision-template-response.json")).cutTemplate(ByteArray(8), "image/png", 0, 0)
+
+            val cut = assertIs<TemplateOutcome.Cut>(outcome)
+            assertTrue(cut.templatePng.isNotBlank())
+            assertTrue(cut.coverage > 0.0 && cut.coverage <= 1.0, "coverage was ${cut.coverage}")
+        }
+
+    @Test
+    fun `an already-tracked item is a conflict, not a failed capture`() =
+        runTest {
+            // The distinction the whole outcome type exists for. A 409 means the capture was
+            // fine, so telling the user to re-take it would send them to fix nothing.
+            val outcome =
+                service {
+                    MockEngine {
+                        respond(
+                            """{"detail":"This looks like an item already in the catalog: kalos-token"}""",
+                            HttpStatusCode.Conflict,
+                            headersOf("Content-Type", ContentType.Application.Json.toString()),
+                        )
+                    }
+                }.cutTemplate(ByteArray(8), "image/png", 0, 0)
+
+            val tracked = assertIs<TemplateOutcome.AlreadyTracked>(outcome)
+            assertTrue(tracked.reason.contains("kalos-token"), tracked.reason)
+        }
+
+    @Test
+    fun `a rescaled capture is refused with the service's own wording`() =
+        runTest {
+            val detail =
+                "slot pitch is 61.0px, not the client's native 46px. this screenshot has been rescaled"
+            val outcome =
+                service {
+                    MockEngine {
+                        respond(
+                            """{"detail":"$detail"}""",
+                            HttpStatusCode.UnprocessableEntity,
+                            headersOf("Content-Type", ContentType.Application.Json.toString()),
+                        )
+                    }
+                }.cutTemplate(ByteArray(8), "image/png", 0, 0)
+
+            assertEquals(detail, assertIs<TemplateOutcome.Failed>(outcome).reason)
+        }
+
+    @Test
+    fun `discover fails without throwing when the vision service is unreachable`() =
+        runTest {
+            val outcome =
+                service { MockEngine { throw IOException("connection refused") } }
+                    .discoverUntracked(ByteArray(8), "image/png")
+
+            assertIs<DiscoverOutcome.Failed>(outcome)
+        }
+
+    @Test
+    fun `cutting fails without throwing when the vision service is unreachable`() =
+        runTest {
+            val outcome =
+                service { MockEngine { throw IOException("connection refused") } }
+                    .cutTemplate(ByteArray(8), "image/png", 0, 0)
+
+            // Not AlreadyTracked: an unreachable container must never read as "nothing to add".
+            assertIs<TemplateOutcome.Failed>(outcome)
+        }
+
+    @Test
+    fun `an undecodable file is refused by both authoring routes`() =
+        runTest {
+            assertIs<DiscoverOutcome.Failed>(
+                service { MockEngine { respondError(HttpStatusCode.BadRequest) } }
+                    .discoverUntracked(ByteArray(8), "image/png"),
+            )
+            assertIs<TemplateOutcome.Failed>(
+                service { MockEngine { respondError(HttpStatusCode.BadRequest) } }
+                    .cutTemplate(ByteArray(8), "image/png", 0, 0),
+            )
+        }
+
+    @Test
+    fun `the slot is carried to the service as query parameters`() =
+        runTest {
+            var seen: String? = null
+            val svc =
+                service {
+                    MockEngine { request ->
+                        seen = request.url.toString()
+                        respond(
+                            golden("vision-template-response.json"),
+                            HttpStatusCode.OK,
+                            headersOf("Content-Type", ContentType.Application.Json.toString()),
+                        )
+                    }
+                }
+            svc.cutTemplate(ByteArray(8), "image/png", 3, 7)
+
+            // A silently dropped row/col would cut the WRONG slot and store it under the name
+            // the user typed for a different item.
+            assertTrue(seen!!.contains("row=3"), seen!!)
+            assertTrue(seen!!.contains("col=7"), seen!!)
+        }
 }

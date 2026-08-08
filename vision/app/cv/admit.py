@@ -69,22 +69,72 @@ class Clash:
         )
 
 
+def _art(tpl: np.ndarray) -> np.ndarray:
+    """The template cropped to its mask, dropping the transparent margin."""
+    ys, xs = np.nonzero(tpl[:, :, 3])
+    if not len(ys):
+        return tpl
+    return tpl[ys.min() : ys.max() + 1, xs.min() : xs.max() + 1]
+
+
 def masked_score(slot: np.ndarray, tpl: np.ndarray) -> float:
-    """How well `tpl` matches `slot`, under tpl's own mask.
+    """How well `tpl` matches `slot`, under tpl's own mask, at the best alignment.
 
     The argument order mirrors the verifier: a template is correlated against the pixels a
     slot holds, masked by the template. Passing two templates asks "if a slot held `slot`,
     how well would `tpl` match it".
-    """
-    h = min(slot.shape[0], tpl.shape[0])
-    w = min(slot.shape[1], tpl.shape[1])
-    slot_rgb = slot[:h, :w, :3].astype(np.uint8)
-    tpl_rgb = tpl[:h, :w, :3].astype(np.uint8)
-    mask = cv2.cvtColor(tpl[:h, :w, 3], cv2.COLOR_GRAY2BGR)
 
-    res = cv2.matchTemplate(slot_rgb, tpl_rgb, cv2.TM_CCOEFF_NORMED, mask=mask)
+    **It must SLIDE, because the verifier slides.** This compared two 46x46 images at offset
+    zero, which is not a question the verifier ever asks: _verify correlates the template
+    across a window wider than the cell and takes the maximum. Two cuts of the SAME item,
+    framed a pixel or two apart because find_grid's lattice differs between captures, scored
+    0.247 that way while the verifier scored the same pair 0.998. It failed open, which is
+    the direction that admits a duplicate.
+
+    So the template is cropped to its art and slid over the whole slot. Alignment stops being
+    something the caller has to have got right, which it cannot, since the two templates come
+    from different screenshots.
+    """
+    return _align(slot, tpl)[0]
+
+
+# How far the two cuts may be out of step before we stop looking. find_grid's lattice is good
+# to a pixel or two between captures (build_icons.slot_offsets exists to correct exactly that),
+# so this only has to absorb jitter, not search.
+ALIGN_SLACK = 4
+
+
+def _align(slot: np.ndarray, tpl: np.ndarray) -> tuple[float, np.ndarray, np.ndarray]:
+    """(best score, the art that scored it, the slot patch under it at that position).
+
+    BOTH sides are cropped to their own art first. Sliding the template over the slot is not
+    enough on its own: a symbol's mask fills nearly the whole 46x46 cell, so there is nowhere
+    to slide and the comparison collapses back to offset zero, which is how a second cut of
+    sacred-carcion scored 0.2816 against its own catalog template. Cropping both removes the
+    framing difference instead of trying to search past it.
+    """
+    art = _art(tpl)
+    body = _art(slot)
+
+    # A little room either way for whatever the crop did not cancel: the two masks differ
+    # where the stack-count digits fell, so the bboxes need not agree to the pixel.
+    body = cv2.copyMakeBorder(
+        body, ALIGN_SLACK, ALIGN_SLACK, ALIGN_SLACK, ALIGN_SLACK, cv2.BORDER_REPLICATE
+    )
+    art = art[: body.shape[0], : body.shape[1]]
+    th, tw = art.shape[:2]
+
+    mask = cv2.cvtColor(art[:, :, 3], cv2.COLOR_GRAY2BGR)
+    res = cv2.matchTemplate(
+        body[:, :, :3].astype(np.uint8),
+        art[:, :, :3].astype(np.uint8),
+        cv2.TM_CCOEFF_NORMED,
+        mask=mask,
+    )
     res[~np.isfinite(res)] = -1.0
-    return float(res.max())
+    _, score, _, loc = cv2.minMaxLoc(res)
+    patch = body[loc[1] : loc[1] + th, loc[0] : loc[0] + tw, :3]
+    return float(score), art, patch
 
 
 def _confusable(slot: np.ndarray, tpl: np.ndarray) -> tuple[float, float | None] | None:
@@ -95,10 +145,12 @@ def _confusable(slot: np.ndarray, tpl: np.ndarray) -> tuple[float, float | None]
     separate the blue potion from kalos-token at 0.4 degrees of hue. See
     classify.MAX_LAB_DISTANCE for the measurements.
     """
-    shape = masked_score(slot, tpl)
+    shape, art, patch = _align(slot, tpl)
     if shape < VERIFY_THRESHOLD:
         return None
-    colour = _colour_distance(tpl, slot[: tpl.shape[0], : tpl.shape[1], :3])
+    # Colour is read at the position the shape match chose, exactly as _verify does. Reading
+    # it at offset zero would stencil the template's mask over pixels the match never claimed.
+    colour = _colour_distance(art, patch)
     if colour is not None and colour > MAX_LAB_DISTANCE:
         return None
     return shape, colour

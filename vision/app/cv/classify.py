@@ -193,6 +193,11 @@ class SlotItem:
     score: float
 
 
+# A slot holds something above this much non-backing. Empty slots sit near zero, so the bar
+# is slack on purpose; every caller treats "occupied" as the cheap gate before real work.
+OCCUPIED = 0.02
+
+
 def _busy(cell: np.ndarray) -> float:
     """How much of a slot's interior is not backing. Near zero for an empty slot."""
     m = max(int(round(cell.shape[0] * 6 / NATIVE)), 1)
@@ -202,7 +207,7 @@ def _busy(cell: np.ndarray) -> float:
 
 def background(cells: dict, size: int = NATIVE) -> np.ndarray:
     """The slot backing, taken as the median of the empty slots in this frame."""
-    empties = [c.astype(np.float32) for c in cells.values() if _busy(c) < 0.02]
+    empties = [c.astype(np.float32) for c in cells.values() if _busy(c) < OCCUPIED]
     if not empties:
         # A completely full inventory: fall back to the flat backing colour.
         return np.full((size, size, 3), 226.0, np.float32)
@@ -380,7 +385,7 @@ def classify(img: np.ndarray, g: Grid, templates: dict) -> list[SlotItem]:
     cells = slot_cells(img, g)
     bg = background(cells, round(g.pitch))
 
-    keys = [k for k, cell in cells.items() if _busy(cell) >= 0.02]  # skip empty slots
+    keys = [k for k, cell in cells.items() if _busy(cell) >= OCCUPIED]  # skip empty slots
     if not keys:
         return []
 

@@ -2,9 +2,11 @@ package com.maplestorage.backend.plugins
 
 import com.maplestorage.backend.bosses.bossRoutes
 import com.maplestorage.backend.characters.characterRoutes
+import com.maplestorage.backend.items.itemAuthoringRoutes
 import com.maplestorage.backend.parties.partyRoutes
 import com.maplestorage.backend.parties.peopleRoutes
 import com.maplestorage.backend.screenshots.screenshotRoutes
+import com.maplestorage.backend.services.ItemAuthoring
 import com.maplestorage.backend.services.NexonLookupService
 import com.maplestorage.backend.services.ScreenshotParser
 import com.maplestorage.backend.tokens.tokenRoutes
@@ -25,6 +27,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 fun Application.configureRouting(
     nexonLookupService: NexonLookupService,
     screenshotParser: ScreenshotParser,
+    itemAuthoring: ItemAuthoring,
 ) {
     routing {
         // A day, and public: these are static art keyed by a stable filename, so without it the
@@ -102,6 +105,10 @@ fun Application.configureRouting(
 
             route("/api/tokens") {
                 tokenRoutes()
+            }
+
+            route("/api/items") {
+                itemAuthoringRoutes(itemAuthoring)
             }
 
             route("/api/bosses") {

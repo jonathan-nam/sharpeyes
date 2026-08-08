@@ -26,7 +26,7 @@ from collections.abc import Iterable
 import cv2
 import numpy as np
 
-from .classify import _busy, classify
+from .classify import OCCUPIED, _busy, classify
 from .grid import COLS, NATIVE_PITCH, ROWS, find_grid
 from .match import load_templates
 from .pipeline import normalize
@@ -55,7 +55,7 @@ def unknown_slots(img: np.ndarray, g, known: Iterable[tuple[int, int]]) -> list[
                 continue
             x, y, w, h = g.cell(r, c)
             cell = img[y : y + h, x : x + w]
-            if cell.size and _busy(cell) >= 0.02:
+            if cell.size and _busy(cell) >= OCCUPIED:
                 out.append((r, c))
     return out
 

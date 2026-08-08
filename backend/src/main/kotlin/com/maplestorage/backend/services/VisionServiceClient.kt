@@ -31,6 +31,8 @@ private const val PARSE_TIMEOUT_MS = 15_000L
 // multiplies tokens by a per-model rate, and this service reports zero tokens,
 
 private const val VISION_UNAVAILABLE = "Screenshot parsing is temporarily unavailable."
+private const val CANNOT_READ = "That screenshot could not be read."
+private const val NOT_AN_IMAGE = "That file could not be read as an image."
 
 fun createVisionHttpClient(): HttpClient =
     HttpClient(CIO) {
@@ -77,6 +79,25 @@ private data class VisionError(
     @SerialName("detail") val detail: String? = null,
 )
 
+@Serializable
+private data class VisionUntrackedSlot(
+    val row: Int,
+    val col: Int,
+    val imagePng: String,
+)
+
+@Serializable
+private data class VisionDiscoverResult(
+    val slots: List<VisionUntrackedSlot>,
+    val knownCount: Int,
+)
+
+@Serializable
+private data class VisionTemplateResult(
+    val templatePng: String,
+    val coverage: Double,
+)
+
 /**
  * Parses screenshots by calling the co-located OpenCV vision service, rather
  * than a vision model.
@@ -90,7 +111,8 @@ private data class VisionError(
 class VisionServiceClient(
     private val client: HttpClient,
     private val baseUrl: String,
-) : ScreenshotParser {
+) : ScreenshotParser,
+    ItemAuthoring {
     override suspend fun parseScreenshot(
         imageBytes: ByteArray,
         mediaType: String,
@@ -99,18 +121,8 @@ class VisionServiceClient(
         // not a bad screenshot: FAILED lets the user retry the same upload once
         // it recovers.
         val response =
-            try {
-                client.post("$baseUrl/parse") {
-                    contentType(ContentType.parse(mediaType))
-                    setBody(imageBytes)
-                }
-            } catch (e: IOException) {
-                log.error("vision service unreachable at {}", baseUrl, e)
-                null
-            } catch (e: HttpRequestTimeoutException) {
-                log.error("vision service timed out after {}ms", PARSE_TIMEOUT_MS, e)
-                null
-            } ?: return ScreenshotParseOutcome.Failed(VISION_UNAVAILABLE)
+            send("/parse", imageBytes, mediaType)
+                ?: return ScreenshotParseOutcome.Failed(VISION_UNAVAILABLE)
 
         return when (response.status) {
             HttpStatusCode.OK -> parsed(response.body())
@@ -122,7 +134,7 @@ class VisionServiceClient(
             // instead of flattening it to a generic failure.
             HttpStatusCode.UnprocessableEntity -> ScreenshotParseOutcome.Failed(detail(response.bodyAsText()))
 
-            HttpStatusCode.BadRequest -> ScreenshotParseOutcome.Failed("That file could not be read as an image.")
+            HttpStatusCode.BadRequest -> ScreenshotParseOutcome.Failed(NOT_AN_IMAGE)
 
             else -> {
                 log.error("vision service returned {}: {}", response.status, response.bodyAsText())
@@ -152,11 +164,94 @@ class VisionServiceClient(
         return ScreenshotParseOutcome.Parsed(result = result)
     }
 
-    private fun detail(raw: String): String =
+    override suspend fun discoverUntracked(
+        imageBytes: ByteArray,
+        mediaType: String,
+    ): DiscoverOutcome {
+        val response =
+            send("/discover", imageBytes, mediaType)
+                ?: return DiscoverOutcome.Failed(VISION_UNAVAILABLE)
+
+        return when (response.status) {
+            HttpStatusCode.OK ->
+                response.body<VisionDiscoverResult>().let { body ->
+                    DiscoverOutcome.Found(
+                        slots = body.slots.map { UntrackedSlot(it.row, it.col, it.imagePng) },
+                        knownCount = body.knownCount,
+                    )
+                }
+
+            HttpStatusCode.UnprocessableEntity ->
+                DiscoverOutcome.Failed(detail(response.bodyAsText(), CANNOT_READ))
+
+            HttpStatusCode.BadRequest -> DiscoverOutcome.Failed(NOT_AN_IMAGE)
+
+            else -> {
+                log.error("vision /discover returned {}: {}", response.status, response.bodyAsText())
+                DiscoverOutcome.Failed(CANNOT_READ)
+            }
+        }
+    }
+
+    override suspend fun cutTemplate(
+        imageBytes: ByteArray,
+        mediaType: String,
+        row: Int,
+        col: Int,
+    ): TemplateOutcome {
+        val response =
+            send("/admit?row=$row&col=$col", imageBytes, mediaType)
+                ?: return TemplateOutcome.Failed(VISION_UNAVAILABLE)
+
+        return when (response.status) {
+            HttpStatusCode.OK ->
+                response.body<VisionTemplateResult>().let {
+                    TemplateOutcome.Cut(templatePng = it.templatePng, coverage = it.coverage)
+                }
+
+            // Kept apart from the 422 below on purpose. See TemplateOutcome.AlreadyTracked:
+            // one means fix the capture, the other means the capture was never the problem.
+            HttpStatusCode.Conflict ->
+                TemplateOutcome.AlreadyTracked(detail(response.bodyAsText(), "This item is already tracked."))
+
+            HttpStatusCode.UnprocessableEntity ->
+                TemplateOutcome.Failed(detail(response.bodyAsText(), CANNOT_READ))
+
+            HttpStatusCode.BadRequest -> TemplateOutcome.Failed(NOT_AN_IMAGE)
+
+            else -> {
+                log.error("vision /admit returned {}: {}", response.status, response.bodyAsText())
+                TemplateOutcome.Failed(CANNOT_READ)
+            }
+        }
+    }
+
+    /** POST the capture, or null when the vision container itself is the problem. */
+    private suspend fun send(
+        path: String,
+        imageBytes: ByteArray,
+        mediaType: String,
+    ) = try {
+        client.post("$baseUrl$path") {
+            contentType(ContentType.parse(mediaType))
+            setBody(imageBytes)
+        }
+    } catch (e: IOException) {
+        log.error("vision service unreachable at {}", baseUrl, e)
+        null
+    } catch (e: HttpRequestTimeoutException) {
+        log.error("vision service timed out after {}ms", PARSE_TIMEOUT_MS, e)
+        null
+    }
+
+    private fun detail(
+        raw: String,
+        fallback: String = "That screenshot could not be parsed.",
+    ): String =
         try {
             Json { ignoreUnknownKeys = true }.decodeFromString<VisionError>(raw).detail
         } catch (e: SerializationException) {
             log.warn("could not read vision error body: {}", raw, e)
             null
-        } ?: "That screenshot could not be parsed."
+        } ?: fallback
 }

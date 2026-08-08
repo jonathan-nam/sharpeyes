@@ -40,7 +40,10 @@ fun Application.module() {
     // same answer every time for the same bytes.
     val visionHttpClient = createVisionHttpClient()
     monitor.subscribe(ApplicationStopped) { visionHttpClient.close() }
-    val screenshotParser = VisionServiceClient(visionHttpClient, Env.visionServiceUrl)
+    // One client, two jobs: reading the catalog out of a capture (ScreenshotParser) and
+    // finding what is NOT in the catalog so a user can add it (ItemAuthoring). Passed as two
+    // interfaces rather than one so the routes that only read cannot reach the authoring half.
+    val vision = VisionServiceClient(visionHttpClient, Env.visionServiceUrl)
 
-    configureRouting(NexonLookupService(nexonHttpClient), screenshotParser)
+    configureRouting(NexonLookupService(nexonHttpClient), vision, vision)
 }

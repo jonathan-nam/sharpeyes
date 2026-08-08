@@ -407,13 +407,13 @@ def build_display_icons(capture_paths: list[str], out_dir: Path) -> dict[str, in
     return {k: len(v) for k, v in instances.items()}
 
 
-def cut(img: np.ndarray, g, row: int, col: int, key: str) -> float:
-    """Cut one template out of one slot. Returns the fraction of the slot the mask covers.
+def cut_template(img: np.ndarray, g, row: int, col: int) -> np.ndarray:
+    """One slot's pixels as an RGBA matching template. Nothing is written.
 
-    This is the half of the pipeline that runs when a user clicks "track this" on their own
-    upload: they name a slot, and its pixels become the template every future screenshot is
-    matched against. The mask is what makes that safe, it excludes the stack-count digits
-    and the slot-lock bar, which belong to *this* screenshot rather than to the item.
+    This is what runs when a user clicks "track this" on their own upload: they name a slot,
+    and its pixels become the template every future screenshot is matched against. The mask
+    is what makes that safe, it excludes the stack-count digits and the slot-lock bar, which
+    belong to *this* screenshot rather than to the item.
 
     The source must be at the client's native scale. See admit.require_native_scale for why
     that is a correctness requirement rather than a nicety.
@@ -421,10 +421,15 @@ def cut(img: np.ndarray, g, row: int, col: int, key: str) -> float:
     require_native_scale(g.pitch)
     x, y, w, _ = g.cell(row, col)
     cell = img[y : y + w, x : x + w]
-    mask = icon_mask(cell)
-    rgba = cv2.merge([*cv2.split(cell), mask])
+    return cv2.merge([*cv2.split(cell), icon_mask(cell)])
+
+
+def cut(img: np.ndarray, g, row: int, col: int, key: str) -> float:
+    """cut_template, onto disk under the catalog's naming. Returns the fraction of the slot
+    the mask covers. The CLI's half: the service authors templates it never writes."""
+    rgba = cut_template(img, g, row, col)
     cv2.imwrite(str(TEMPLATE_DIR / f"token-{key}.png"), rgba)
-    return float((mask > 0).mean())
+    return float((rgba[:, :, 3] > 0).mean())
 
 
 SEED_ASSETS = Path(__file__).resolve().parents[3] / (
