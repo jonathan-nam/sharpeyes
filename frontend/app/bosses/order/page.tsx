@@ -26,6 +26,7 @@ import { type Availability, planNight, screenRuns, tradeOffs } from "@/lib/boss-
 import { peek, put } from "@/lib/cache";
 import { isCleared, runningThisPeriod } from "@/lib/parties";
 import { preloadRunArt } from "@/lib/preload-boss-art";
+import { useShowTimes } from "@/lib/show-times";
 import type { Boss } from "@/types/boss";
 import type { Party } from "@/types/party";
 
@@ -145,8 +146,9 @@ export default function RunOrderPage() {
   // Whether the night runs to the clock at all. Off, it is an ORDER: nothing bounds it, the windows
   // people gave are not applied, and no time is drawn anywhere. That is a night where the length of
   // a run is a guess nobody is holding to, and showing one would be reading a schedule into a list.
-  // The windows are kept while it is off, so ticking it back on gets the same night back.
-  const [timed, setTimed] = useState(true);
+  // The windows are kept while it is off, so ticking it back on gets the same night back. Kept
+  // across visits too: the choice is how you plan, not something about tonight.
+  const [timed, setTimed] = useShowTimes();
 
   // The night on the reset clock: when it starts, when it has to be over, and who is only here for
   // part of it. Every one is a time against reset, signed, which is what the party already says.
