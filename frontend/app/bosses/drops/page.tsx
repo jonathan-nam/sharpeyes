@@ -2,7 +2,7 @@
 
 import { DropLogSkeleton } from "@/components/drop-log-skeleton";
 import { PageSwap } from "@/components/page-swap";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AddSettlement } from "@/components/add-settlement";
@@ -187,7 +187,7 @@ export default function DropLogPage() {
   }
 
   useEffect(() => {
-    // One token for the whole burst: getToken() can round-trip to Clerk.
+    // One token for the whole burst: getToken() can round-trip to auth.
     getToken()
       .then((token) => {
         const withToken = () => Promise.resolve(token);

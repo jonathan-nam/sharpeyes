@@ -57,6 +57,40 @@ services:
       retries: 10
       start_period: 10s
 
+  auth:
+    build: ./auth
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Published because the BROWSER talks to it, not just the backend: sign-in is a redirect the
+      # user's browser follows, so localhost has to reach it the same way the frontend does.
+      - "3001:3001"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: maplestorage
+      DB_USERNAME: maplestorage
+      DB_PASSWORD: maplestorage
+      # Where the browser reaches this service. It goes in the token's `iss` and in every OAuth
+      # redirect, so a wrong value here is a sign-in that lands somewhere that does not exist.
+      AUTH_BASE_URL: ${AUTH_BASE_URL:-http://localhost:3001}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-sharpeyes-api}
+      AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-http://localhost:3000}
+      # Encrypts the signing keys at rest. Change it and every existing key is unreadable, so the
+      # service mints a new one and every token in flight fails at once.
+      AUTH_SECRET: ${AUTH_SECRET:?set it in .env, any long random string. `openssl rand -base64 32`}
+      # No defaults, same reasoning as the backend's JWKS URL below. A placeholder here buys a
+      # service that starts, serves a JWKS, and fails every sign-in at Discord instead.
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:?set it in .env, from https://discord.com/developers/applications}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:?set it in .env, from the same Discord application}
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
   backend:
     build: ./backend
     # Same namespace as vision -> 127.0.0.1 reaches it, exactly as under awsvpc.
@@ -68,6 +102,10 @@ services:
         # Mirrors the ECS container dependency: never start the backend before
         # the parser is up, or every upload in that window fails.
         condition: service_healthy
+      auth:
+        # Only so the first request does not race the key being minted. The keys are cached after
+        # one fetch and nothing on the request path talks to auth again.
+        condition: service_healthy
     environment:
       DB_HOST: postgres
       DB_PORT: "5432"
@@ -75,17 +113,13 @@ services:
       DB_USERNAME: maplestorage
       DB_PASSWORD: maplestorage
       VISION_SERVICE_URL: http://127.0.0.1:8000
-      # No default. The old one was https://example.invalid/..., on the reasoning that "real
-      # values are only needed to exercise authenticated routes". But EVERY route is
-      # authenticated, so what that default actually bought was a backend that boots perfectly
-      # happily, reports itself healthy, and then 401s every single request, which the UI
-      # surfaces as "Upload failed. Check your connection", sending you to look at your network
-      # instead of your config. It has now cost debugging time twice.
-      #
-      # `:?` makes compose refuse to start and name the missing variable. A stack that will not
-      # come up is a far better failure than one that comes up broken. Put the value in .env --
-      # the domain is base64-encoded inside the frontend's Clerk publishable key.
-      CLERK_JWKS_URL: ${CLERK_JWKS_URL:?set it in .env, e.g. https://<your-instance>.clerk.accounts.dev/.well-known/jwks.json. Without it the backend 401s every request}
+      # Container-to-container, NOT the browser-facing URL: the backend fetches keys itself and
+      # never redirects anyone here, so this stays fixed while AUTH_BASE_URL changes per host.
+      AUTH_JWKS_URL: http://auth:3001/api/auth/jwks
+      # Both claimed by the token and both checked. These have to match auth's own settings above,
+      # and the failure when they do not is a uniform 401 that says nothing about which one is wrong.
+      AUTH_ISSUER: ${AUTH_BASE_URL:-http://localhost:3001}
+      AUTH_AUDIENCE: ${AUTH_AUDIENCE:-sharpeyes-api}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
 
 volumes:

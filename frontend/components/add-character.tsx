@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/use-auth";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
 import type { Character } from "@/types/character";

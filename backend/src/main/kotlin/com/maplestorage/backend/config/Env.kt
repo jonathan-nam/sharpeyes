@@ -12,7 +12,14 @@ object Env {
     val dbName: String get() = required("DB_NAME")
     val dbUsername: String get() = required("DB_USERNAME")
     val dbPassword: String get() = required("DB_PASSWORD")
-    val clerkJwksUrl: String get() = required("CLERK_JWKS_URL")
+
+    // Where the auth service publishes its public signing keys, and the two claims a token has to
+    // carry to be one of ours. All three, because a token that verifies against the right keys but
+    // was issued for something else is still not a token for this API.
+    val authJwksUrl: String get() = required("AUTH_JWKS_URL")
+    val authIssuer: String get() = required("AUTH_ISSUER")
+    val authAudience: String get() = required("AUTH_AUDIENCE")
+
     val frontendOrigin: String get() = required("FRONTEND_ORIGIN")
 
     // The vision service runs as a second container in the same ECS task, so

@@ -17,7 +17,7 @@ rather than two that can drift apart:
 docker compose up -d postgres
 
 cd backend
-cp .env.example .env      # then set CLERK_JWKS_URL for your own Clerk dev instance
+cp .env.example .env      # works as-is against the local stack
 
 # Export the vars into your shell, then run/test/build as usual, this covers
 # ./gradlew run, ./gradlew test, and IDE debug launches uniformly, unlike a

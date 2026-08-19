@@ -73,29 +73,41 @@ secrets. Git will never bring them, so a clone that skips this step builds fine 
 
 ```bash
 cp frontend/.env.local.example frontend/.env.local
-echo 'CLERK_JWKS_URL=https://your-instance.clerk.accounts.dev/.well-known/jwks.json' > .env
+cat > .env <<'EOF'
+AUTH_SECRET=paste-openssl-rand-base64-32-here
+DISCORD_CLIENT_ID=
+DISCORD_CLIENT_SECRET=
+EOF
 ```
 
-Then fill in the Clerk values. **three, all from one page** of the Clerk dashboard
-(*your instance → API keys*):
+The two Discord values come from one page: <https://discord.com/developers/applications> → your
+application → *OAuth2*. Register this redirect URI there, exactly, or sign-in fails at Discord
+with nothing useful on screen:
+
+```
+http://localhost:3001/api/auth/callback/discord
+```
 
 | file | key | what it is |
 | --- | --- | --- |
-| `.env` (repo root) | `CLERK_JWKS_URL` | the JWKS endpoint the backend verifies tokens against |
-| `frontend/.env.local` | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | public, safe in the browser |
-| `frontend/.env.local` | `CLERK_SECRET_KEY` | server-side only |
+| `.env` (repo root) | `AUTH_SECRET` | encrypts the signing keys at rest. `openssl rand -base64 32` |
+| `.env` (repo root) | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | your Discord application |
+| `frontend/.env.local` | `NEXT_PUBLIC_API_BASE_URL` | where the backend is |
+| `frontend/.env.local` | `NEXT_PUBLIC_AUTH_BASE_URL` | where the **browser** reaches the auth service |
 
 Everything else in those files already works as-is against the local stack.
 
 The root `.env` is the one that matters, because that is the file `docker compose` reads, and
-compose refuses to start without `CLERK_JWKS_URL` rather than booting a backend that 401s. Note
-that `backend/.env.example` tells you to copy it to `backend/.env`: nothing loads that file. The
-backend reads its configuration from the process environment (`Env.kt`), and compose supplies it.
+compose refuses to start without those three rather than booting a stack that cannot sign anybody
+in. Note that `backend/.env.example` tells you to copy it to `backend/.env`: nothing loads that
+file. The backend reads its configuration from the process environment (`Env.kt`), and compose
+supplies it.
 
-> **Trap.** A wrong `CLERK_JWKS_URL` does not fail loudly. The backend boots happily and
-> then 401s every request, and the UI reports that as *"Upload failed, check your
-> connection"*, which sends you to look at your network. **If everything 401s, suspect this
-> first.**
+> **Trap.** `AUTH_BASE_URL` and the backend's `AUTH_ISSUER` have to be the same string. They are
+> both derived from one variable in compose so they cannot drift, but if you override one by hand,
+> the mismatch does not fail loudly: the backend boots happily and then 401s every request, and the
+> UI reports that as *"Upload failed, check your connection"*, which sends you to look at your
+> network. **If everything 401s, suspect this first.**
 
 **You do not need an Anthropic API key.** The `.env.example` used to ask for one;
 screenshots are parsed by the local OpenCV service in `vision/`, so no model is called and
@@ -137,10 +149,10 @@ every machine at once. AWS allows two active keys per user for this reason. Make
 one in the IAM console, and then revoking a lost laptop is one click that does not touch
 anything else.
 
-**Do not copy `.env` files between machines.** They hold your Clerk secret key. Do not send
-them over Slack, email, or a shared drive. Re-fetch the three values from the Clerk
-dashboard, which takes half a minute and leaves no copy lying around. A password manager is
-fine if you want them saved. Same reasoning for `infra/backend.hcl`: it is gitignored
+**Do not copy `.env` files between machines.** They hold your Discord client secret and the key
+that decrypts every signing key. Do not send them over Slack, email, or a shared drive. Re-fetch
+them from the Discord developer portal, which takes half a minute and leaves no copy lying around.
+A password manager is fine if you want them saved. Same reasoning for `infra/backend.hcl`: it is gitignored
 because it embeds the AWS account ID, and this repo is public.
 
 ### 8. Prove it works
@@ -240,7 +252,7 @@ fuser -k 3000/tcp              # stop the dev server
 > database, and there is no backup. smoke.sh ends in that same `down -v` on the same compose
 > project, including when it fails: it builds its own stack to test and is not a probe against a
 > running one. Dump first if the data matters (`dev-snapshots/` is gitignored, and a dump carries
-> a real Clerk user ID, so keep it out of a commit):
+> a real user ID and Discord account row, so keep it out of a commit):
 >
 > ```bash
 > mkdir -p dev-snapshots

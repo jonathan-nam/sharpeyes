@@ -1,7 +1,7 @@
 "use client";
 
 import { PageSwap } from "@/components/page-swap";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { AddForWeek } from "@/components/add-for-week";
@@ -227,7 +227,7 @@ export default function PartiesPage() {
   }
 
   useEffect(() => {
-    // One token for the whole burst, as the boss page does: getToken() can round-trip to Clerk,
+    // One token for the whole burst, as the boss page does: getToken() can round-trip to auth,
     // and three calls would pay that three times.
     getToken()
       .then((token) => {

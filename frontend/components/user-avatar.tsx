@@ -1,17 +1,15 @@
 "use client";
 
-import { useClerk, useUser } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 import { spriteUrl } from "@/lib/api";
+import { signOut } from "@/lib/session-token";
 import { useAccountSettings } from "@/lib/use-account-settings";
+import { useSessionUser } from "@/lib/use-auth";
 
-// The account button, showing the user's chosen main character instead of the OAuth photo. Clerk
-// still owns the actual account actions; this only replaces the avatar and the small menu around
-// it (openUserProfile / signOut), so nothing about auth changes. Falls back to the OAuth image
-// until a main is picked (star on a character row).
+// The account button, showing the user's chosen main character instead of the Discord photo. Falls
+// back to that photo until a main is picked (star on a character row).
 export function UserAvatar() {
-  const { user } = useUser();
-  const { signOut, openUserProfile } = useClerk();
+  const { user } = useSessionUser();
   const settings = useAccountSettings();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -47,7 +45,7 @@ export function UserAvatar() {
         onClick={() => setOpen((o) => !o)}
       >
         {/* A character sprite is full-body pixel art. It is drawn as a background so it can be zoomed
-            and positioned to frame the face (see .sprite-face); the OAuth photo is a plain
+            and positioned to frame the face (see .sprite-face); the Discord photo is a plain
             image that just fills the circle. */}
         {sprite ? (
           <span
@@ -55,8 +53,10 @@ export function UserAvatar() {
             style={{ backgroundImage: `url("${spriteUrl(sprite)}")` }}
             aria-hidden="true"
           />
+        ) : user.image ? (
+          <img className="user-avatar-img" src={user.image} alt="" />
         ) : (
-          <img className="user-avatar-img" src={user.imageUrl} alt="" />
+          <span className="user-avatar-img" aria-hidden="true" />
         )}
       </button>
 
@@ -67,17 +67,7 @@ export function UserAvatar() {
             role="menuitem"
             onClick={() => {
               setOpen(false);
-              openUserProfile();
-            }}
-          >
-            Manage account
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              signOut();
+              void signOut();
             }}
           >
             Sign out

@@ -14,7 +14,8 @@ import org.jetbrains.exposed.v1.json.jsonb
 // string literals. There is no SchemaUtils.create(...) call anywhere.
 
 object Users : Table("users") {
-    // Clerk userIds are strings (e.g. "user_2abc..."), not UUIDs.
+    // The auth service's user id, a string and not a UUID. Arrives as the JWT's `sub`, so this is
+    // the one column whose values another service chooses.
     val id = text("id")
     val email = text("email")
     val createdAt = timestamp("created_at")

@@ -7,7 +7,7 @@
 // Three things are worth telling apart, and a single "the request took 300ms" hides
 // all of them:
 //
-//   auth    getToken() from Clerk. It can hit the network, and it happens BEFORE the
+//   auth    getToken() from the auth service. It can hit the network, and it happens BEFORE the
 //           fetch, so it is pure latency the user waits through, on every call.
 //   server  the backend's own work, read from its Server-Timing header. Usually ~1ms.
 //   net     round trip minus server. Connection setup, transfer, the browser's own

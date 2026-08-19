@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/use-auth";
 import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { RunDraftEditor } from "@/components/run-draft-editor";
@@ -235,7 +235,7 @@ export default function RunOrderPage() {
 
   useEffect(() => {
     let live = true;
-    // One token for the burst. getToken() can round-trip to Clerk, and paying that per request is
+    // One token for the burst. getToken() can round-trip to auth, and paying that per request is
     // latency the user waits through twice for no reason.
     getToken()
       .then((token) => {

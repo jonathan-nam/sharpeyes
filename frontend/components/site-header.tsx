@@ -1,21 +1,23 @@
 "use client";
 
-import { ClerkLoading, SignedIn } from "@clerk/nextjs";
 import Link from "next/link";
 import { SectionMenu } from "@/components/section-menu";
-import { SharpEyesMark } from "./sharp-eyes-mark";
 import { UserAvatar } from "@/components/user-avatar";
 import { WorldToggle } from "@/components/world-toggle";
+import { useAuth } from "@/lib/use-auth";
+import { SharpEyesMark } from "./sharp-eyes-mark";
 
 // Every page used to restate the app's name in its own <h1> and link to the others
 // by hand. One header instead, with the Sharp Eyes mark.
 //
-// The .header-reserved boxes hold the signed-in controls' space until Clerk confirms the session,
-// so the real control fades into space that was already there rather than shifting the brand.
-// They are always rendered; CSS decides whether they take space, keyed off the class the inline
-// script in RootLayout sets from the session cookie before first paint. That was a `reserveControls`
-// prop from a cookies() read, which cost the whole app static rendering.
+// The .header-reserved boxes hold the signed-in controls' space until the session resolves, so the
+// real control fades into space that was already there rather than shifting the brand. They are
+// always rendered; CSS decides whether they take space, keyed off the class the inline script in
+// RootLayout sets before first paint. That was a `reserveControls` prop from a cookies() read,
+// which cost the whole app static rendering.
 export function SiteHeader() {
+  const { isSignedIn, isLoaded } = useAuth();
+
   return (
     <header className="site-header">
       {/* The bar is full-bleed, the inner wrapper carries the shared column, so the brand lines up
@@ -31,35 +33,31 @@ export function SiteHeader() {
 
         {/* Sections open from a hamburger just right of the brand. Signed-in only: they are
             account views. */}
-        <ClerkLoading>
+        {!isLoaded && (
           <div className="section-menu header-reserved" aria-hidden="true">
             <div className="section-menu-btn is-reserved">
               <span className="section-menu-icon" />
             </div>
           </div>
-        </ClerkLoading>
-        <SignedIn>
-          <SectionMenu />
-        </SignedIn>
+        )}
+        {isSignedIn && <SectionMenu />}
 
         {/* Which world everything below is answering for. Beside the sections rather than by the
             avatar: it scopes what the menu leads to, not who you are signed in as. */}
-        <SignedIn>
-          <WorldToggle />
-        </SignedIn>
+        {isSignedIn && <WorldToggle />}
 
-        <ClerkLoading>
+        {!isLoaded && (
           <div className="site-user header-reserved" aria-hidden="true">
             <div className="user-avatar">
               <div className="user-avatar-btn is-reserved" />
             </div>
           </div>
-        </ClerkLoading>
-        <SignedIn>
+        )}
+        {isSignedIn && (
           <div className="site-user">
             <UserAvatar />
           </div>
-        </SignedIn>
+        )}
       </div>
     </header>
   );

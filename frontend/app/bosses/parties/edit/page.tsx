@@ -1,7 +1,7 @@
 "use client";
 
 import { PageSwap } from "@/components/page-swap";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CharacterPicker } from "@/components/character-picker";

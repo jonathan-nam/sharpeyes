@@ -81,11 +81,20 @@ On Vercel, from the repo, root directory `frontend/`:
 
 ```
 NEXT_PUBLIC_API_BASE_URL=https://api.sharpeyes.gg
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
+NEXT_PUBLIC_AUTH_BASE_URL=https://api.sharpeyes.gg
 ```
 
-Then add both hostnames to the Clerk dashboard's allowed origins, or every request 401s.
+Both are the API hostname: Caddy serves sign-in from it under `/api/auth`, so there is no third
+name to point at anything.
+
+Then register the redirect URI in the Discord application
+(<https://discord.com/developers/applications> → *OAuth2*), exactly:
+
+```
+https://api.sharpeyes.gg/api/auth/callback/discord
+```
+
+Discord matches it character for character, a trailing slash included, and refuses anything else.
 
 ### 5. Backups
 

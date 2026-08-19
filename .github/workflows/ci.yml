@@ -34,6 +34,7 @@ jobs:
       infra: ${{ steps.filter.outputs.infra }}
       vision: ${{ steps.filter.outputs.vision }}
       catalog: ${{ steps.filter.outputs.catalog }}
+      auth: ${{ steps.filter.outputs.auth }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -44,6 +45,8 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
+            auth:
+              - 'auth/**'
             infra:
               - 'infra/**'
             # The catalog generates the backend's seed migration and names the vision templates,
@@ -97,6 +100,28 @@ jobs:
       # The redemption rules. Three ways to produce a confidently wrong number, each of which
       # looks like arithmetic. See lib/redemption.test.ts.
       - run: pnpm test
+
+  auth:
+    needs: changes
+    if: needs.changes.outputs.auth == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: auth/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: auth/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # The build, not just a type check: the Dockerfile runs the same command, so a service that
+      # compiles here is one the box can start.
+      - run: pnpm run build
 
   # The CV regression corpus: the highest-risk code in the repo, and until now it ran only in a
   # pre-commit hook, so a PR from a machine without hooks installed merged it unchecked.
@@ -165,7 +190,7 @@ jobs:
   # cancelled; a skipped upstream job counts as a pass. Add every new CI job to `needs`, or it
   # merges unenforced.
   required-checks:
-    needs: [changes, backend, frontend, vision, catalog, infra]
+    needs: [changes, backend, frontend, auth, vision, catalog, infra]
     if: always()
     runs-on: ubuntu-latest
     steps:

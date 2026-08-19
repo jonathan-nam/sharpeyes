@@ -11,10 +11,9 @@ import kotlin.uuid.Uuid
 fun ApplicationCall.principalIdAndEmail(): Pair<String, String> {
     val principal = principal<JWTPrincipal>()!!
     val userId = principal.payload.subject
-    // Verify against a real Clerk JWT during implementation. Expected empty
-    // unless a custom JWT template adding an `email` claim is configured in
-    // the Clerk dashboard (Security.kt's own comment already establishes the
-    // default template carries no custom claims beyond `sub`).
+    // Present, because the auth service puts the whole user object in the payload. Kept lenient
+    // anyway: it is only ever written to Users.email on first sight, nothing reads it, and a
+    // sign-in that works should not turn on a claim nothing needs.
     val email =
         principal.payload
             .getClaim("email")

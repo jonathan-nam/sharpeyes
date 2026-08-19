@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/use-auth";
 import { useState } from "react";
 import { apiFetch, spriteUrl } from "@/lib/api";
 import { setAccountSettings, SETTINGS_KEY, useAccountSettings } from "@/lib/use-account-settings";

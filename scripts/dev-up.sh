@@ -16,10 +16,11 @@ cd "$(dirname "$0")/.." || exit 0
 
 status=()
 
-# Compose deliberately refuses to start without CLERK_JWKS_URL (see docker-compose.yml), so a
-# missing .env would fail every time. Say so once rather than failing on every session.
+# Compose deliberately refuses to start without AUTH_SECRET and the Discord credentials (see
+# docker-compose.yml), so a missing .env would fail every time. Say so once rather than failing on
+# every session.
 if [ ! -f .env ]; then
-  echo '{"systemMessage":"Local stack not started: .env is missing, and compose refuses to start without CLERK_JWKS_URL."}'
+  echo '{"systemMessage":"Local stack not started: .env is missing, and compose refuses to start without AUTH_SECRET and DISCORD_CLIENT_ID/SECRET. See .devcontainer/README.md."}'
   exit 0
 fi
 

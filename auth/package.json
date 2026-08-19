@@ -1,0 +1,20 @@
+{
+  "name": "sharpeyes-auth",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit",
+    "schema": "tsc && node --experimental-strip-types scripts/print-schema.ts"
+  },
+  "dependencies": {
+    "better-auth": "^1.7.0",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
+    "typescript": "^5.9.3"
+  }
+}

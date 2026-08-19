@@ -1,6 +1,6 @@
 name: Publish images
 
-# Builds the two images the box runs and pushes them to GHCR, tagged with the commit SHA.
+# Builds the three images the box runs and pushes them to GHCR, tagged with the commit SHA.
 #
 # Separate from ci.yml on purpose. ci.yml runs on pull requests too, and its `required-checks` gate
 # asserts over every job in `needs`; a publish job living there would either have to join that gate
@@ -20,14 +20,16 @@ jobs:
       contents: read
       packages: write
     strategy:
-      # Both images always, even for a backend-only commit. deploy.sh pulls both by the same commit
-      # SHA, so a tag that exists for one image and not the other is a deploy that cannot run.
+      # Every image always, even for a backend-only commit. deploy.sh pulls them all by the same
+      # commit SHA, so a tag that exists for one image and not another is a deploy that cannot run.
       matrix:
         include:
           - name: backend
             context: ./backend
           - name: vision
             context: ./vision
+          - name: auth
+            context: ./auth
     steps:
       - uses: actions/checkout@v4
 

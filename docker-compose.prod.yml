@@ -25,6 +25,9 @@ x-backend-prod-env: &backend-prod-env
   DB_USERNAME: ${DB_USERNAME:?set it in .env on the box}
   DB_PASSWORD: ${DB_PASSWORD:?set it in .env on the box}
   FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?the frontend's origin, e.g. https://sharpeyes.gg}
+  # Has to be character-for-character what the auth service puts in `iss`, which is why both read
+  # the same API_DOMAIN. A trailing slash on one side and not the other is a uniform 401.
+  AUTH_ISSUER: https://${API_DOMAIN:?the API hostname, e.g. api.sharpeyes.gg}
 
 services:
   postgres:
@@ -43,6 +46,24 @@ services:
     # inside the container. Production has no such need, and no reason to carry the images.
     volumes: !reset []
     restart: unless-stopped
+
+  auth:
+    image: ghcr.io/jonathan-nam/sharpeyes-auth:${IMAGE_TAG:?deploy.sh sets this. Any value works for exec/logs/ps}
+    build: !reset null
+    # Reached only through Caddy, which routes /api/auth/* here. The base file publishes 3001 for
+    # local development; on the box nothing but Caddy may talk to it.
+    ports: !reset []
+    restart: unless-stopped
+    environment:
+      DB_USERNAME: ${DB_USERNAME:?set it in .env on the box}
+      DB_PASSWORD: ${DB_PASSWORD:?set it in .env on the box}
+      # The API hostname, because Caddy serves sign-in from the same one. This lands in the token's
+      # `iss` and in the OAuth redirect, so it has to be the URL a BROWSER uses, https and all.
+      AUTH_BASE_URL: https://${API_DOMAIN:?the API hostname, e.g. api.sharpeyes.gg}
+      # Scoped to the parent so the frontend on the apex and this service on api. share one session.
+      # A leading dot, and never a bare subdomain, or the apex does not get the cookie.
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:?the parent domain with a leading dot, e.g. .sharpeyes.gg}
+      AUTH_TRUSTED_ORIGINS: ${FRONTEND_ORIGIN:?the frontend's origin, e.g. https://sharpeyes.gg}
 
   # Replica A. Owns port 8080 inside the shared namespace, as the base file already has it.
   backend:

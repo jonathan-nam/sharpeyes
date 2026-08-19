@@ -82,9 +82,9 @@ fun Application.configureRouting(
         }
 
         // M0's actual round-trip proof: a signed-in user's JWT verifies against
-        // Clerk's JWKS, and the response value comes from a real RDS query, not
+        // the auth service's JWKS, and the response value comes from a real RDS query, not
         // a hardcoded string.
-        authenticate(CLERK_AUTH) {
+        authenticate(SESSION_AUTH) {
             get("/api/ping") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = principal!!.payload.subject

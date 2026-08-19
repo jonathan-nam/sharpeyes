@@ -1,7 +1,7 @@
 "use client";
 
 import { PageSwap } from "@/components/page-swap";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { InventoryPanel, type InventoryItem } from "@/components/inventory-panel";
@@ -89,7 +89,7 @@ export default function CharactersPage() {
     // when you click one. The page already knows you are about to look at one of these; it just
     // does not know which. Waiting to find out puts a network round-trip between the click and
     // the pixels, and that gap is the flicker: the panel renders empty, then fills.
-    // One token for the whole burst. getToken() can round-trip to Clerk, and that cost is paid
+    // One token for the whole burst. getToken() can round-trip to auth, and that cost is paid
     // BEFORE each request goes out (see lib/api.ts), so the roster and the bulk tokens loading
     // together would each pay it. Mint once and share.
     getToken()

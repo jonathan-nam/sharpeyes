@@ -70,3 +70,6 @@ dev-snapshots/
 # test reads it, at which point it moves up into test-fixtures/ proper.
 test-fixtures/scratch/*
 !test-fixtures/scratch/README.md
+
+# The auth service's compiled output. Built in the image, never committed.
+auth/dist

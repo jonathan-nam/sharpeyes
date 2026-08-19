@@ -96,6 +96,14 @@ if [ -n "$vision_before" ] && [ "$vision_before" != "$vision_after" ]; then
   ROLLED=yes
 fi
 
+# Sign-in, on its own and before the replicas.
+#
+# One instance, no rolling, and that is fine: the backend verifies tokens offline against keys it
+# cached at startup, so nothing serving the API depends on this being up. The cost of a restart is
+# a few seconds in which somebody cannot START a session, not one in which sessions stop working.
+echo "==> auth"
+"${COMPOSE[@]}" up -d --no-deps auth
+
 # One replica at a time. No --force-recreate: compose leaves a replica alone when nothing about it
 # changed, and a deploy that restarts nothing is the correct outcome for a docs-only commit.
 for replica in "${REPLICAS[@]}"; do
@@ -132,5 +140,5 @@ for i in $(seq 1 60); do
 done
 
 echo "==> NOT healthy after 60s. Last 40 lines:" >&2
-"${COMPOSE[@]}" logs --tail 40 backend backend-b caddy >&2
+"${COMPOSE[@]}" logs --tail 40 backend backend-b auth caddy >&2
 exit 1

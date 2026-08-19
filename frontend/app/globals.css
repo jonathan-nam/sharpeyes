@@ -6003,3 +6003,32 @@ button.ledger-drop-sale:hover:not(:disabled) {
   cursor: default;
   opacity: 0.6;
 }
+
+/* --- Sign in ----------------------------------------------------------------------------- */
+
+/* Discord's own blurple, not the app accent. This is the one control on the site that leads
+   somewhere else, and it should look like where it leads. */
+.sign-in-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 14px;
+  border: 0;
+  border-radius: 8px;
+  background: #5865f2;
+  color: #fff;
+  cursor: pointer;
+}
+
+.sign-in-btn:hover {
+  background: #4752c4;
+}
+
+.sign-in-btn:disabled {
+  background: var(--surface-2);
+  color: var(--muted-2);
+  cursor: default;
+}
