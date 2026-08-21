@@ -36,6 +36,18 @@ function isMine(member: PartyMember): boolean {
   return member.characterId !== null;
 }
 
+/**
+ * The looter's name, when a seat was recorded and it is not one of yours.
+ *
+ * Off `seats` rather than the week's roster, for the reason takenByName is: a seat that has since
+ * left still picked the drop up, and resolving through this week's roster would lose the name the
+ * week after they left.
+ */
+function otherLooter(loot: Loot, seats: PartyMember[]): string | null {
+  const seat = seats.find((s) => s.id === loot.looterMemberId);
+  return seat && !isMine(seat) ? seat.name : null;
+}
+
 /** The catalog row behind a logged drop, or null for free text or a boss with no table. */
 function catalogDrop(loot: Loot, dropTables: DropTables): BossDrop | null {
   if (loot.dropKey === null) return null;
@@ -57,9 +69,25 @@ function catalogDrop(loot: Loot, dropTables: DropTables): BossDrop | null {
  * question, and isCouponDrop is the one that asks it.
  */
 export function isPieceDrop(loot: Loot, party: Party, dropTables: DropTables): boolean {
-  if (party.difficulty === null) return false;
-  const inWorld = catalogDrop(loot, dropTables)?.pieces?.[party.worldType];
-  return (inWorld?.[party.difficulty] ?? 0) > 0;
+  return dividesByCount(loot.dropKey, loot.bossKey, party, dropTables);
+}
+
+/**
+ * The same question before there is a row to ask it about: does THIS drop divide for THIS party?
+ *
+ * What the log form needs, since whether to ask who looted it is settled by the drop being picked
+ * and not by the row that does not exist yet. isPieceDrop is this, read off a stored row, so the
+ * form and the log cannot disagree about which drops divide.
+ */
+export function dividesByCount(
+  dropKey: string | null,
+  bossKey: string | null,
+  party: Party,
+  dropTables: DropTables,
+): boolean {
+  if (party.difficulty === null || dropKey === null) return false;
+  const drop = (dropTables[bossKey ?? ""] ?? []).find((d) => d.dropKey === dropKey);
+  return (drop?.pieces?.[party.worldType]?.[party.difficulty] ?? 0) > 0;
 }
 
 /**
@@ -114,6 +142,18 @@ export type DropEntry = {
   yours: number;
   /** The character holding part of your share until they hand it over. Null when nobody is. */
   owedBy: string | null;
+  /**
+   * Who is holding this drop, when it is not you. What the meta line names, for both kinds.
+   *
+   * A divisible drop reads it off the night's arrangement, so it is `owedBy`. Anything else reads
+   * the seat that was recorded as picking it up (V64), which until then was written down nowhere
+   * until the drop SOLD: a member who does not loot had a row with a stage and no holder, and
+   * nothing on screen saying who to ask for the sale they were waiting on.
+   *
+   * Null when the looter is one of your own seats, the same rule `owedBy` runs on: you are not
+   * waiting on yourself, you have it.
+   */
+  lootedBy: string | null;
   /**
    * How many of your share that character is holding. Zero whenever `owedBy` is null.
    *
@@ -390,6 +430,14 @@ export function buildDropLog(
         // Named only when somebody ELSE is holding some of it. Your own seat looting the lot is not
         // a debt to you, it is you having it already.
         owedBy: gap !== null && !gap.yours ? gap.by : null,
+        // Pieces answer this from the arrangement; everything else from the seat that was recorded
+        // as picking it up. The form does not ask who looted a divisible drop and this never reads
+        // the answer there, so one drop cannot be given two holders.
+        lootedBy: pieces
+          ? gap !== null && !gap.yours
+            ? gap.by
+            : null
+          : otherLooter(loot, party.seats),
         owedToYou: gap !== null && !gap.yours ? gap.pieces : 0,
         owedByYou: gap !== null && gap.yours ? gap.pieces : 0,
         // The holder who owes it is the one whose books close it, so the key is theirs and not the

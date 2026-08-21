@@ -69,19 +69,14 @@ private suspend fun RoutingContext.addLootRoute() {
                         "send exactly one of dropKey or customName"
                     request.dropKey != null && dropId == null -> "unknown dropKey"
                     request.bossKey != null && bossId == null -> "unknown bossKey"
-                    quantityRefusal(request.quantity) != null -> quantityRefusal(request.quantity)
-                    else -> {
-                        val lootId =
-                            addLoot(
-                                partyId,
-                                LootedDrop(dropId, customName, request.quantity),
-                                bossId,
-                                droppedOn,
-                                Clock.System.now(),
-                            )
-                        addedBundles(lootId, partyId, request.bundles)
-                        findLoot(lootId, partyId)!!
-                    }
+                    else ->
+                        addedDrop(
+                            partyId,
+                            request,
+                            LootedDrop(dropId, customName, request.quantity),
+                            bossId,
+                            droppedOn,
+                        )
                 }
             }
         } catch (refused: BundlesRefused) {

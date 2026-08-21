@@ -677,6 +677,7 @@ export default function DropLogPage() {
                   <LogDrop
                     characters={characters}
                     bosses={bosses}
+                    parties={parties}
                     dropTables={dropTables}
                     busy={busy}
                     onLog={logDrop}
@@ -1110,9 +1111,9 @@ function DropRow({
         boss?.name,
         showCharacter ? characterName : null,
         formatDropped(entry.droppedOn),
-        // The count on this row is your share, and this is who is holding it until they hand it
-        // over. Without it the row reads as pieces you already have.
-        entry.owedBy ? `${entry.owedBy} looted` : null,
+        // Who is holding it. On a piece drop, without this the row reads as pieces you already
+        // have; on anything else it is the only thing saying who to ask for the sale.
+        entry.lootedBy ? `${entry.lootedBy} looted` : null,
         // This row IS the run when it stands alone: one night, one roster, and no chevron under it
         // to say so instead.
         ranWith(entry.ranWith),
@@ -1321,7 +1322,7 @@ function RunRow({
     // Not said twice: where the label IS the date, there is no date left to put here.
     label === formatDropped(entry.droppedOn) ? null : formatDropped(entry.droppedOn),
     byBoss ? (showCharacter ? characterName : null) : null,
-    entry.owedBy ? `${entry.owedBy} looted` : null,
+    entry.lootedBy ? `${entry.lootedBy} looted` : null,
     // Per run, because the roster is the WEEK's: a fold spanning two months is two rosters, and the
     // line above can only name their union.
     ranWith(entry.ranWith),

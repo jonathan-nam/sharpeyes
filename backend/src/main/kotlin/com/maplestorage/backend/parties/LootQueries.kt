@@ -262,6 +262,7 @@ private fun ResultRow.toLootResponse(
         splitMethod = this[PartyLoot.splitMethod],
         sellerShares = this[PartyLoot.sellerShares],
         sellerMemberId = this[PartyLoot.sellerMemberId]?.toString(),
+        looterMemberId = this[PartyLoot.looterMemberId]?.toString(),
         takenByMemberId = takenBy,
         soldAt = this[PartyLoot.soldAt]?.toString(),
         payouts = payouts,

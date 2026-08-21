@@ -4,6 +4,7 @@ import {
   foldRuns,
   consolidate,
   couponsOutstandingByParty,
+  dividesByCount,
   dropStatusLabel,
   foldNames,
   foldStatus,
@@ -1354,5 +1355,114 @@ describe("an untradeable piece divides, but is owed to nobody", () => {
 
     expect(isPieceDrop(tokens(), at, tableWith(true))).toBe(false);
     expect(isCouponDrop(tokens(), at, tableWith(false))).toBe(false);
+  });
+});
+
+describe("who is holding an indivisible drop", () => {
+  // The gap this closes: seller_member_id arrives with the SALE, and a member who does not loot is
+  // waiting on that sale. So their row had a stage and no holder, and nothing said who to ask.
+  const duoOf = () => party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "Bro")]);
+
+  it("names the partner who picked it up", () => {
+    const log = buildDropLog([duoOf()], [pool("pa", [pending({ looterMemberId: "m2" })])], {});
+
+    expect(log.entries[0]!.lootedBy).toBe("Bro");
+  });
+
+  it("says nothing when one of your own seats looted it", () => {
+    // Same rule owedBy runs on: you are not waiting on yourself, you have it.
+    const log = buildDropLog([duoOf()], [pool("pa", [pending({ looterMemberId: "m1" })])], {});
+
+    expect(log.entries[0]!.lootedBy).toBeNull();
+  });
+
+  it("says nothing when nobody has said", () => {
+    const log = buildDropLog([duoOf()], [pool("pa", [pending()])], {});
+
+    expect(log.entries[0]!.lootedBy).toBeNull();
+  });
+
+  it("keeps the name after the seat has left the party", () => {
+    // Off `seats` and never `members`, the same choice takenByName makes: a seat that has since
+    // left still picked the drop up, and the week after they go the row would otherwise stop
+    // saying who is holding it.
+    const gone = mine("m1", "Huskyxkenshi");
+    const left = party("pa", [gone, theirs("m2", "Bro")], { members: [gone] });
+    const log = buildDropLog([left], [pool("pa", [pending({ looterMemberId: "m2" })])], {});
+
+    expect(log.entries[0]!.lootedBy).toBe("Bro");
+  });
+});
+
+describe("a divisible drop answers this from its arrangement", () => {
+  const VESTIGE_KEY = "vestige-of-erion-coupon";
+  const tables = {
+    limbo: [
+      {
+        dropKey: VESTIGE_KEY,
+        name: "Vestige of Erion Coupon",
+        iconUrl: null,
+        perMember: null,
+        worlds: "INTERACTIVE",
+        quantity: 1,
+        fungible: false,
+        untradeable: false,
+        pieces: { INTERACTIVE: { HARD: 60 } },
+        bundles: { INTERACTIVE: { HARD: 3 } },
+      },
+    ],
+  };
+
+  const pair = () =>
+    party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "Bro")], { difficulty: "HARD" });
+
+  const coupons = (over: Partial<Loot> = {}): Loot =>
+    pending({ dropKey: VESTIGE_KEY, name: "Vestige of Erion Coupon", quantity: 60, ...over });
+
+  it("reads the stacks, not a looter, so the two cannot disagree", () => {
+    // Bro took both stacks of a 60 that owed him 30, so he is holding 30 of yours. A single looter
+    // id could only have said "Bro" and lost the count, which is why V64 leaves this column null on
+    // a drop that divides.
+    const loot = coupons({
+      bundles: 2,
+      bundlesBy: [{ memberId: "m2", bundles: 2 }],
+      ranThatWeek: ["m1", "m2"],
+    });
+    const entry = buildDropLog([pair()], [pool("pa", [loot])], tables).entries[0]!;
+
+    expect(entry.pieces).toBe(true);
+    expect(entry.lootedBy).toBe(entry.owedBy);
+    expect(entry.lootedBy).toBe("Bro");
+  });
+
+  it("says nothing when the night divided evenly", () => {
+    const loot = coupons({
+      bundles: 2,
+      bundlesBy: [
+        { memberId: "m1", bundles: 1 },
+        { memberId: "m2", bundles: 1 },
+      ],
+      ranThatWeek: ["m1", "m2"],
+    });
+    const entry = buildDropLog([pair()], [pool("pa", [loot])], tables).entries[0]!;
+
+    expect(entry.lootedBy).toBeNull();
+  });
+
+  it("dividesByCount is the same question isPieceDrop asks of a stored row", () => {
+    // One implementation, so the form that decides whether to ask who looted it and the log that
+    // decides whether to read the answer cannot disagree about which drops divide.
+    const p = pair();
+    const divisible = coupons();
+    const single = pending({ dropKey: "grindstone-of-faith" });
+
+    expect(dividesByCount(divisible.dropKey, divisible.bossKey, p, tables)).toBe(
+      isPieceDrop(divisible, p, tables),
+    );
+    expect(dividesByCount(single.dropKey, single.bossKey, p, tables)).toBe(
+      isPieceDrop(single, p, tables),
+    );
+    expect(dividesByCount(divisible.dropKey, divisible.bossKey, p, tables)).toBe(true);
+    expect(dividesByCount(single.dropKey, single.bossKey, p, tables)).toBe(false);
   });
 });

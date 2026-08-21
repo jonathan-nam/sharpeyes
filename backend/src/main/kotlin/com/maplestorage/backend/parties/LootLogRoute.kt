@@ -12,6 +12,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 // Logging a drop without naming a pool: POST /api/parties/loot, registered by PartyRoutes.kt.
@@ -52,44 +53,52 @@ internal suspend fun RoutingContext.logDropRoute() {
                 (request.dropKey == null) == (customName == null) ->
                     "send exactly one of dropKey or customName"
                 request.dropKey != null && dropId == null -> "unknown dropKey"
-                quantityRefusal(request.quantity) != null -> quantityRefusal(request.quantity)
                 else -> {
                     val existing = partyIdFor(characterId, bossId)
-                    // A character clears a boss once a period, so opening a solo pool for one it
-                    // already has a seat on elsewhere would record a run that cannot have happened.
-                    // Only asked when there is no pool yet: an existing config is where the drop
-                    // goes whatever else names this character.
-                    val clash =
-                        if (existing != null) {
-                            null
-                        } else {
-                            validateBossRoster(
-                                userId,
-                                bossId,
-                                exclude = null,
-                                rosterOf(characterId, emptyList()),
-                                now,
-                            )
+                    // Every refusal that needs the pool resolved, in the order they have to run.
+                    // The looter is answered against the pool that ALREADY exists, before poolFor
+                    // can open one: see looterRefusalForPool.
+                    quantityRefusal(request.quantity)
+                        ?: soloClash(userId, characterId, bossId, existing, now)
+                        ?: looterRefusalForPool(existing, droppedOn, request.looterMemberId)
+                        ?: run {
+                            val partyId = poolFor(userId, characterId, bossId, now)
+                            val lootId =
+                                addLoot(
+                                    partyId,
+                                    LootedDrop(dropId, customName, request.quantity),
+                                    bossId,
+                                    droppedOn,
+                                    now,
+                                )
+                            recordLooter(lootId, request.looterMemberId)
+                            findLoot(lootId, partyId)!!
                         }
-                    if (clash != null) {
-                        clash
-                    } else {
-                        val partyId = poolFor(userId, characterId, bossId, now)
-                        val lootId =
-                            addLoot(
-                                partyId,
-                                LootedDrop(dropId, customName, request.quantity),
-                                bossId,
-                                droppedOn,
-                                now,
-                            )
-                        findLoot(lootId, partyId)!!
-                    }
                 }
             }
         }
     respondToLoot(outcome, HttpStatusCode.Created)
 }
+
+/**
+ * Why this drop cannot open a solo pool, or null when it can or needs none.
+ *
+ * A character clears a boss once a period, so opening a solo pool for one it already has a seat on
+ * elsewhere would record a run that cannot have happened. Only asked when there is no pool yet: an
+ * existing config is where the drop goes whatever else names this character.
+ */
+private fun soloClash(
+    userId: String,
+    characterId: Uuid,
+    bossId: Uuid,
+    existingPartyId: Uuid?,
+    now: Instant,
+): String? =
+    if (existingPartyId != null) {
+        null
+    } else {
+        validateBossRoster(userId, bossId, exclude = null, rosterOf(characterId, emptyList()), now)
+    }
 
 /**
  * The day to file a drop under, today when it is not said, or null once a refusal has been sent.

@@ -419,6 +419,10 @@ object PartyLoot : Table("party_loot") {
     // exclusive with it (party_loot_sold_or_taken). Nothing is owed: see V49.
     val takenByMemberId = optReference("taken_by_member_id", PartyMember.id)
 
+    // Which seat picked it up, for a drop that is one thing. A divisible drop's stacks are
+    // party_loot_bundle's to say one by one. See V64__loot_looter.sql.
+    val looterMemberId = optReference("looter_member_id", PartyMember.id)
+
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 

@@ -89,7 +89,11 @@ export function LootRow({
   // stands now. Offering more than that would offer a seller the sell route refuses, and offering
   // the week's roster for a guest week is the only way to name the guest who actually sold it.
   const ran = party.seats.filter((m) => loot.ranThatWeek.includes(m.id));
-  const [sellerMemberId, setSellerMemberId] = useState(ran[0]?.id ?? "");
+  // Whoever picked it up is who is holding it, so they are the seller unless somebody says
+  // otherwise. A recorded fact (V64) rather than the first seat in the roster, which named an
+  // arbitrary person as seller and so set which way the debt ran.
+  const looted = ran.find((m) => m.id === loot.looterMemberId)?.id;
+  const [sellerMemberId, setSellerMemberId] = useState(looted ?? ran[0]?.id ?? "");
   const [selling, setSelling] = useState(false);
   // Every seat opens on one share, and an uneven split is typed here. It used to be seeded from
   // `party_member.shares`, which is the STACK entitlement the party config's boxes write: a duo

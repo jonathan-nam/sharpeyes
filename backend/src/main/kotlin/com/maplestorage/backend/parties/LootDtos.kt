@@ -59,6 +59,9 @@ data class LootResponse(
     // Who took the item, where it cannot be sold. Null until somebody does, and never set at the
     // same time as a sale. Nothing is owed off it: the item cannot move again. See V49.
     val takenByMemberId: String? = null,
+    // Which seat picked it up. Null is nobody having said, and is what a divisible drop always
+    // carries: its stacks are bundlesBy's to name one by one. See V64__loot_looter.sql.
+    val looterMemberId: String? = null,
     val soldAt: String?,
     // Who is owed, as pinned when the drop sold. Empty until then.
     val payouts: List<LootPayoutResponse>,
@@ -111,6 +114,10 @@ data class AddLootRequest(
     // Carried with the drop rather than PUT after it so the pair cannot half-land. Refusing it rolls
     // the drop back too, because one act was asked for and one answer is owed. See addedBundles.
     val bundles: Map<String, Int>? = null,
+    // Which seat picked it up, when the drop is one thing. Has to be a seat that RAN that week, the
+    // same list the seller comes from. Absent is nobody having said, which is what the API-only
+    // caller and a row filed from a clear both leave.
+    val looterMemberId: String? = null,
 )
 
 /**
@@ -132,6 +139,9 @@ data class LogDropRequest(
     val customName: String? = null,
     val quantity: Int = 1,
     val droppedOn: String? = null,
+    // As AddLootRequest's. Checked against the resolved pool's week roster, which for a solo config
+    // opened by this very request is the one character in it.
+    val looterMemberId: String? = null,
 )
 
 /**

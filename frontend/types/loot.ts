@@ -44,6 +44,13 @@ export type Loot = {
   // Who took the item, where it cannot be sold. Nothing is owed off it: the item cannot move
   // again, so a seat's tally is how many they have taken and never a share of anything.
   takenByMemberId: string | null;
+  // Which seat picked it up, for a drop that is one thing. Always null on a divisible one, whose
+  // stacks bundlesBy names exactly and a single seat id could only round.
+  //
+  // OPTIONAL for the reason sharesThatWeek is: lib/cache.ts hands back whatever shape the API had
+  // when the page last fetched, and absent has to mean "nobody said", which is what those rows
+  // meant. See V64__loot_looter.sql.
+  looterMemberId?: string | null;
   soldAt: string | null;
   // Who is owed, pinned when the drop sold. Empty before that.
   payouts: LootPayout[];
@@ -93,6 +100,8 @@ export type AddLootBody = {
    * drop nobody has answered for yet.
    */
   bundles?: Record<string, number>;
+  // Which seat picked it up. Only a seat that RAN that week, the same list the seller comes from.
+  looterMemberId?: string | null;
 };
 
 // POST /api/parties/loot. A drop named by character and boss, for the Drop Log: the pool is the
@@ -103,6 +112,9 @@ export type LogDropBody = {
   dropKey?: string | null;
   customName?: string | null;
   quantity?: number;
+  // Which seat picked it up. Refused on a boss with no party yet, whose pool is about to be opened
+  // solo and has one seat to name.
+  looterMemberId?: string | null;
 };
 
 export type SellLootBody = {
