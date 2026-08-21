@@ -5506,22 +5506,6 @@ button.link:disabled {
   white-space: nowrap;
 }
 
-/* Pieces to pick up on this run, beside the character who picks them up. Only ever drawn where the
-   drop will not divide evenly, so it is a handful of rows rather than the whole grid.
-
-   A badge rather than more text in the cell: the cell already holds a name, and a bare number after
-   one reads as part of it. Dim like every other derived figure here, since it is worked out from
-   the weeks already answered for rather than typed by anybody. */
-.run-take {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 5px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
 /* Sitting this one out. Quiet, because a column of X's is the ground the characters read against
    and not a warning, but legible: at --line it is back to being an empty cell. */
 .run-cell.is-out {
@@ -5620,6 +5604,12 @@ button.link:disabled {
 
 .run-panel .loot-add {
   margin-bottom: 0;
+}
+
+/* The rotation heads the panel, and 4px of cell padding leaves its border sitting on the row's.
+   Only a top margin: the "Add Drop" heading under it brings its own. */
+.run-panel .loot-config-card {
+  margin-top: 4px;
 }
 
 .run-panel .split-error {

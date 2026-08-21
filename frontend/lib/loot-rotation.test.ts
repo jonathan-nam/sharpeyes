@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rotatingDrops, rotatingDropsAt, rotationFor, takesByOwner } from "./loot-rotation";
+import { rotatingDrops, rotatingDropsAt, rotationFor } from "./loot-rotation";
 import type { BossDrop, DropTables } from "@/types/drop";
 import type { Loot } from "@/types/loot";
 import type { Party, PartyMember } from "@/types/party";
@@ -410,69 +410,6 @@ describe("a piece that falls in stacks of more than one", () => {
     // One of the two numbers is wrong, and guessing which would put a fraction of a stack on screen.
     expect(rotate(trio(), [], token(), 18, 5)).toBeNull();
     expect(rotate(trio(), [], token(), 18, 0)).toBeNull();
-  });
-});
-
-describe("the turns keyed by whose they are", () => {
-  // Run Order draws a column per PERSON, not per seat, so the rotation has to be folded the same way
-  // before it can be read into that grid. Getting this wrong puts somebody else's number in your
-  // column, which is the kind of wrong that looks perfectly ordinary.
-  const unattributed = (id: string, name: string): PartyMember => ({
-    ...theirs(id, name),
-    personId: null,
-    personName: null,
-  });
-
-  it("adds a person's characters into one column", () => {
-    const seats = [
-      mine("m1", "Husky"),
-      { ...theirs("m2", "Rune", "p-rune"), name: "RuneAlt" },
-      theirs("m3", "Rune", "p-rune"),
-    ];
-    const at = party(seats);
-    const r = rotate(at, [], token(), 6)!;
-
-    // Two shares against one, so four are theirs, and they are theirs ONCE.
-    expect(takesByOwner(r, at)).toEqual(
-      new Map([
-        ["you", 2],
-        ["p-rune", 4],
-      ]),
-    );
-  });
-
-  it("keys your own characters as you", () => {
-    const at = party([mine("m1", "Husky"), theirs("m2", "Rune")]);
-    const r = rotate(at, [], token(), 6)!;
-
-    expect(takesByOwner(r, at).get("you")).toBe(3);
-  });
-
-  it("leaves out a seat nobody has attributed, rather than crediting somebody else", () => {
-    // No column to put them in. Folding them into anyone would hand their turn away.
-    const at = party([mine("m1", "Husky"), unattributed("m2", "Stranger")]);
-    const r = rotate(at, [], token(), 6)!;
-    const byOwner = takesByOwner(r, at);
-
-    expect([...byOwner.keys()]).toEqual(["you"]);
-    // Their pieces are still in the rotation itself, they simply have nowhere to be drawn.
-    expect(r.holders).toHaveLength(2);
-  });
-
-  it("counts in pieces on a drop that falls in stacks of three", () => {
-    const at = party([mine("m1", "Husky"), theirs("m2", "Rune")], {
-      bossKey: "malefic-star",
-      difficulty: "HARD",
-    });
-    const r = rotate(at, [], token(), 18, 6)!;
-
-    // Three stacks each, which is nine pieces each, and never a part of a stack.
-    expect(takesByOwner(r, at)).toEqual(
-      new Map([
-        ["you", 9],
-        ["p-m2", 9],
-      ]),
-    );
   });
 });
 

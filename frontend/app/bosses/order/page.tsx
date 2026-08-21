@@ -4,8 +4,8 @@ import { useAuth } from "@clerk/nextjs";
 import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { RunDraftEditor } from "@/components/run-draft-editor";
-import { CopyPlan, type RunLog, type RunRotation, RunPlan } from "@/components/run-plan";
-import { rotatingDrops, rotationFor, takesByOwner } from "@/lib/loot-rotation";
+import { CopyPlan, type RunLog, RunPlan } from "@/components/run-plan";
+import { rotatingDrops, type Rotation, rotationFor } from "@/lib/loot-rotation";
 import type { PartyLootPool } from "@/types/loot";
 import { apiFetch, readBack } from "@/lib/api";
 import { progressLabel } from "@/lib/boss-clears";
@@ -493,23 +493,20 @@ export default function RunOrderPage() {
   const haveDropTables = Object.keys(dropTables).length > 0;
 
   /**
-   * Whose turn it is on this run's pieces, or null where the row should say nothing.
+   * Whose turn it is on this run's pieces, or null for a boss with none to rotate.
    *
-   * Null in every case but the one worth drawing: a boss with no pooled piece at this mode, a world
-   * where everyone gets their own, and a split that comes out EVEN. An even one needs no telling,
-   * since everybody takes the same number every week and a column of identical figures on every run
-   * is noise the plan does not need.
+   * An EVEN split is drawn now, unlike when this fed a badge on every person's cell: what ruled one
+   * out was a column of identical figures across the grid, and in a panel somebody opened there is
+   * no column and an even week is worth saying. Same block Party View draws, same reasons.
    */
-  const rotationOnRun = (party: Party | undefined): RunRotation | null => {
+  const rotationOnRun = (party: Party | undefined): Rotation | null => {
     if (!party) return null;
     const drop = rotatingDrops(party, dropTables)[0];
     if (!drop) return null;
     const mode = party.difficulty ?? "";
     const quantity = drop.pieces?.[party.worldType]?.[mode] ?? 0;
     const bundles = drop.bundles?.[party.worldType]?.[mode] ?? 0;
-    const rotation = rotationFor(party, lootByParty.get(party.id) ?? [], drop, quantity, bundles);
-    if (!rotation || rotation.even) return null;
-    return { drop: rotation.name, takes: takesByOwner(rotation, party) };
+    return rotationFor(party, lootByParty.get(party.id) ?? [], drop, quantity, bundles);
   };
 
   // Only a night built from your parties can be answered for: a hand-typed run has no config

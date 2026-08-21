@@ -23,7 +23,6 @@ import {
   ranSeats,
   suggestArrangement,
 } from "./vestige-ledger";
-import { ownerOf } from "./boss-night";
 import { isPerMember } from "./world";
 import type { WorldType } from "./world";
 import type { BossDrop, DropTables } from "@/types/drop";
@@ -63,14 +62,6 @@ export type Rotation = {
   quantity: number;
   /** One row per person, in the party's own seat order. */
   holders: RotationHolder[];
-  /**
-   * The same figures by SEAT rather than by person, in pieces.
-   *
-   * For the grids that are drawn per seat or per character rather than per holder. Folded to people
-   * for anything that reads as a debt or a turn, which is what `holders` is: one person with two
-   * characters has one turn, not two.
-   */
-  takesBySeat: Map<string, number>;
   /**
    * Whether it divides with nobody carried over.
    *
@@ -222,9 +213,6 @@ export function rotationFor(
     dropKey: drop.dropKey,
     name: drop.name,
     iconUrl: drop.iconUrl,
-    takesBySeat: new Map(
-      party.members.map((seat) => [seat.id, (suggested.get(seat.id) ?? 0) * size]),
-    ),
     quantity,
     // Against the STACKS, which is what has to divide. 18 pieces between three people is six each
     // and looks fine on the pieces alone; it is the six stacks that decide whether they can.
@@ -237,21 +225,4 @@ export function rotationFor(
       takes: takesByHolder.get(f.key) ?? 0,
     })),
   };
-}
-
-/**
- * This week's turns keyed by WHOSE they are, for a grid with a column per person.
- *
- * Run Order draws people, not seats: two characters of one person share a column, and their turns
- * add up into it exactly as they do into one holder. A seat nobody has attributed has no column to
- * go in, so it is left out rather than given somebody else's.
- */
-export function takesByOwner(rotation: Rotation, party: Party): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const seat of party.members) {
-    const owner = ownerOf(seat);
-    if (owner === null) continue;
-    out.set(owner, (out.get(owner) ?? 0) + (rotation.takesBySeat.get(seat.id) ?? 0));
-  }
-  return out;
 }
