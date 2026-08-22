@@ -16,17 +16,6 @@ describe("spriteUrl", () => {
     // change. A stamp would throw the year-long immutable cache away on every deploy for nothing.
     expect(spriteUrl("/character-sprites/abc123.png")).not.toContain("?v=");
   });
-
-  it("passes an absolute Nexon URL through untouched", () => {
-    // Clerk's unsafeMetadata holds a copy of the sprite for the account avatar, and anyone who set
-    // their main before this proxy existed has an absolute Nexon URL in there. Prefixing it would
-    // break their avatar until they picked a main again.
-    const legacy = "https://msavatar1.nexon.net/Character/ABC.png";
-    expect(spriteUrl(legacy)).toBe(legacy);
-    expect(spriteUrl("http://msavatar1.nexon.net/Character/ABC.png")).toBe(
-      "http://msavatar1.nexon.net/Character/ABC.png",
-    );
-  });
 });
 
 const member = (name: string, spriteImgUrl: string | null): PartyMember => ({

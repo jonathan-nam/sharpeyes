@@ -1,9 +1,11 @@
 "use client";
 
-import { useAuth, useUser } from "@clerk/nextjs";
+import { useAuth } from "@clerk/nextjs";
 import { useState } from "react";
 import { apiFetch, spriteUrl } from "@/lib/api";
+import { setAccountSettings, SETTINGS_KEY, useAccountSettings } from "@/lib/use-account-settings";
 import type { Character } from "@/types/character";
+import type { Settings } from "@/types/settings";
 
 // One character, and everything you can do to it.
 //
@@ -26,27 +28,25 @@ export function CharacterRow({
   canMoveDown: boolean;
 }) {
   const { getToken } = useAuth();
-  const { user } = useUser();
+  const settings = useAccountSettings();
   const [working, setWorking] = useState(false);
   // Deleting takes this character's token counts, boss clears and party seats with it, and there
   // is no undo. It was a hover-only [delete] link on the carousel tile; on a page that lists every
   // character with the button always showing, one stray click is a whole character.
   const [confirming, setConfirming] = useState(false);
 
-  // The main character is stored on the Clerk user (unsafeMetadata, so it is writable from here
-  // without a backend of its own). The sprite is denormalised alongside the id so the header avatar
-  // can draw it without re-fetching the roster. See UserAvatar.
-  const isMain = user?.unsafeMetadata?.mainCharacterId === character.id;
+  const isMain = settings?.mainCharacterId === character.id;
 
   async function setMain() {
-    if (!user || isMain) return;
-    await user.update({
-      unsafeMetadata: {
-        ...user.unsafeMetadata,
-        mainCharacterId: character.id,
-        mainCharacterSprite: character.spriteImgUrl ?? null,
-      },
-    });
+    if (isMain) return;
+    // The response is the whole settings object, so the header avatar redraws off the same read
+    // that confirmed the write rather than off what this row assumed it did.
+    const saved = await apiFetch<Settings>(
+      `${SETTINGS_KEY}/main-character`,
+      { method: "PUT", body: JSON.stringify({ characterId: character.id }) },
+      getToken,
+    );
+    setAccountSettings(saved);
   }
 
   async function run(work: () => Promise<void>) {

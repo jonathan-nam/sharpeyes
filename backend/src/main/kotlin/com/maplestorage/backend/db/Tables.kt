@@ -23,6 +23,13 @@ object Users : Table("users") {
     // ask: what the section menu offers, and what a newly added character inherits.
     val worldType = text("world_type")
 
+    // The character drawn as the account avatar (V66), or null for none.
+    //
+    // A plain uuid, NOT reference(Characters.id). Characters already references Users, and Exposed
+    // half-builds the object on a cycle: unrelated queries stop matching and nothing is thrown.
+    // The foreign key and its ON DELETE SET NULL are declared in V66 instead.
+    val mainCharacterId = uuid("main_character_id").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 

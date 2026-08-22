@@ -3,14 +3,16 @@
 import { useClerk, useUser } from "@clerk/nextjs";
 import { useEffect, useRef, useState } from "react";
 import { spriteUrl } from "@/lib/api";
+import { useAccountSettings } from "@/lib/use-account-settings";
 
 // The account button, showing the user's chosen main character instead of the OAuth photo. Clerk
 // still owns the actual account actions; this only replaces the avatar and the small menu around
 // it (openUserProfile / signOut), so nothing about auth changes. Falls back to the OAuth image
-// until a main is picked (star on a character tile writes it to unsafeMetadata).
+// until a main is picked (star on a character row).
 export function UserAvatar() {
   const { user } = useUser();
   const { signOut, openUserProfile } = useClerk();
+  const settings = useAccountSettings();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -32,7 +34,7 @@ export function UserAvatar() {
 
   if (!user) return null;
 
-  const sprite = (user.unsafeMetadata?.mainCharacterSprite as string | null) || null;
+  const sprite = settings?.mainCharacterSprite ?? null;
 
   return (
     <div className="user-avatar" ref={ref}>

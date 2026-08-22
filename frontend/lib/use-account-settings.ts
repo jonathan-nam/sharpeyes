@@ -18,10 +18,14 @@ const listeners = new Set<() => void>();
 
 /** Called by whoever learns the answer: the fetch below, or the toggle after it writes. */
 export function setAccountSettings(settings: Settings): void {
+  // Every field, or the store goes quiet on a change nobody else can see: picking a main moves
+  // only mainCharacterId, and a comparison blind to it would leave the header avatar as it was.
   if (
     current?.worldType === settings.worldType &&
     current?.trades === settings.trades &&
-    current?.otherWorldCharacters === settings.otherWorldCharacters
+    current?.otherWorldCharacters === settings.otherWorldCharacters &&
+    current?.mainCharacterId === settings.mainCharacterId &&
+    current?.mainCharacterSprite === settings.mainCharacterSprite
   ) {
     return;
   }
