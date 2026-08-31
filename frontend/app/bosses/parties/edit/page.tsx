@@ -8,13 +8,14 @@ import { CharacterPicker } from "@/components/character-picker";
 import { PartyConfigEditor } from "@/components/party-config-editor";
 import { ApiError, apiFetch } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
+import { rosterConflictOf } from "@/lib/roster-conflict";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { spriteByName } from "@/lib/sprite-by-name";
 import { useRowWrites } from "@/lib/use-row-writes";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
-import type { Party, Person, SavePartyBody, SetPartySkipBody } from "@/types/party";
+import type { Party, Person, RosterMove, SavePartyBody, SetPartySkipBody } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -49,7 +50,27 @@ export default function EditPartiesPage() {
   // Per config, so saving one row does not grey out every other row's buttons. One write at a time
   // still, because each one refetches the list. See lib/use-row-writes.ts.
   const { isSaving, write } = useRowWrites();
-  const [error, setError] = useState<string | null>(null);
+  // Keyed the same way the in-flight writes are, so a refusal reaches the row it is about. Why it
+  // has to be per row: see errorFor in components/party-config-editor.tsx.
+  const [failure, setFailure] = useState<{ key: string; message: string } | null>(null);
+  const errorFor = (key: string) => (failure?.key === key ? failure.message : null);
+  const failed = (key: string, e: unknown, fallback: string) =>
+    setFailure({
+      // A 409's body is the conflict, as JSON, not a sentence. It only reaches here when the shape
+      // was unreadable, and putting that on screen would be worse than saying nothing useful.
+      key,
+      message: e instanceof ApiError && e.status !== 409 ? e.body : fallback,
+    });
+
+  // The one refusal that is a question rather than a dead end: somebody in the roster is in another
+  // party for this boss. Held with the save that raised it, because answering means sending that
+  // same save again with the parties to take them out of. See lib/roster-conflict.ts.
+  const [pending, setPending] = useState<{
+    key: string;
+    moves: RosterMove[];
+    body: SavePartyBody;
+    partyId?: string;
+  } | null>(null);
 
   async function loadParties(token?: string | null) {
     const result = await apiFetch<Party[]>(
@@ -93,9 +114,11 @@ export default function EditPartiesPage() {
   }, [isLoaded]);
 
   async function save(body: SavePartyBody, partyId?: string) {
-    setError(null);
+    const key = partyId ?? ADD_PARTY;
+    setFailure(null);
+    setPending(null);
     try {
-      await write(partyId ?? ADD_PARTY, async () => {
+      await write(key, async () => {
         await apiFetch<Party>(
           partyId ? `${PARTIES_KEY}/${partyId}` : PARTIES_KEY,
           { method: partyId ? "PUT" : "POST", body: JSON.stringify(body) },
@@ -105,10 +128,27 @@ export default function EditPartiesPage() {
         await loadParties();
       });
     } catch (e) {
+      const conflict = rosterConflictOf(e);
+      if (conflict) {
+        setPending({ key, moves: conflict.moves, body, partyId });
+        return;
+      }
       // The backend refuses with the reason in the body (see validateNewParty). Showing it beats
       // "something went wrong" for the one thing the user can actually fix.
-      setError(e instanceof ApiError ? e.body : "Couldn't save that party.");
+      failed(key, e, "Couldn't save that party.");
     }
+  }
+
+  /**
+   * Runs the move the last save was refused for.
+   *
+   * The same body again, with the parties it has to take people out of. Both halves are one
+   * transaction on the server, so this cannot half happen. See applyRoster.
+   */
+  function confirmMove() {
+    if (!pending) return;
+    const { body, partyId, moves } = pending;
+    void save({ ...body, releaseFrom: moves.map((m) => m.partyId) }, partyId);
   }
 
   /**
@@ -119,7 +159,8 @@ export default function EditPartiesPage() {
    * the row still is.
    */
   async function putBack(party: Party) {
-    setError(null);
+    setFailure(null);
+    setPending(null);
     try {
       await write(party.id, async () => {
         await apiFetch<Party>(
@@ -130,19 +171,20 @@ export default function EditPartiesPage() {
         await loadParties();
       });
     } catch (e) {
-      setError(e instanceof ApiError ? e.body : "Couldn't put that boss back.");
+      failed(party.id, e, "Couldn't put that boss back.");
     }
   }
 
   async function remove(party: Party) {
-    setError(null);
+    setFailure(null);
+    setPending(null);
     try {
       await write(party.id, async () => {
         await apiFetch<void>(`${PARTIES_KEY}/${party.id}`, { method: "DELETE" }, getToken);
         await loadParties();
       });
     } catch (e) {
-      setError(e instanceof ApiError ? e.body : "Couldn't remove that party.");
+      failed(party.id, e, "Couldn't remove that party.");
     }
   }
 
@@ -193,7 +235,8 @@ export default function EditPartiesPage() {
                   selectedId={selected}
                   onSelect={(id) => {
                     setSelected(id);
-                    setError(null);
+                    setFailure(null);
+                    setPending(null);
                   }}
                 />
 
@@ -208,7 +251,12 @@ export default function EditPartiesPage() {
                     spriteFor={(name) => sprites.get(name) ?? null}
                     isSaving={isSaving}
                     adding={isSaving(ADD_PARTY)}
-                    error={error}
+                    errorFor={errorFor}
+                    addError={errorFor(ADD_PARTY)}
+                    movesFor={(id) => (pending?.key === id ? pending.moves : null)}
+                    addMoves={pending?.key === ADD_PARTY ? pending.moves : null}
+                    onConfirmMove={confirmMove}
+                    onCancelMove={() => setPending(null)}
                     onSave={save}
                     onDelete={remove}
                     onPutBack={putBack}

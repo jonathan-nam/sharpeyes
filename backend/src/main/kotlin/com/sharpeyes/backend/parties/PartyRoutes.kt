@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.plugins.failing
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.services.NexonLookupService
@@ -152,21 +153,35 @@ private suspend fun RoutingContext.createPartyRoute(
             val takeOver = held?.takeIf { takesOverConfig(it, request, now) }
             if (takeOver != null) {
                 // The request's kind, not the row's: takeOverParty writes request.oneOff over it.
-                val problem = validateSavedParty(userId, takeOver, request, now, request.oneOff)
-                if (problem != null) {
-                    problem
-                } else {
-                    takeOverParty(userId, takeOver, request, now, sprites)
-                    findParty(takeOver, userId)!!
-                }
+                validateSavedPartyRules(takeOver, request)
+                    ?: applyRoster(
+                        RosterTarget(
+                            request,
+                            bossIdOfParty(takeOver),
+                            characterIdOfParty(takeOver),
+                            exclude = takeOver,
+                            oneOff = request.oneOff,
+                            context = SeatContext(userId, sprites, now),
+                        ),
+                    ) {
+                        takeOverParty(userId, takeOver, request, now, sprites)
+                        findParty(takeOver, userId)!!
+                    }
             } else {
-                val problem = validateNewParty(request, userId, characterId, bossId, now)
-                if (problem != null) {
-                    problem
-                } else {
-                    val id = createParty(userId, characterId!!, bossId!!, request, now, sprites)
-                    findParty(id, userId)!!
-                }
+                validateNewPartyRules(request, userId, characterId, bossId)
+                    ?: applyRoster(
+                        RosterTarget(
+                            request,
+                            bossId,
+                            characterId,
+                            exclude = null,
+                            oneOff = request.oneOff,
+                            context = SeatContext(userId, sprites, now),
+                        ),
+                    ) {
+                        val id = createParty(userId, characterId!!, bossId!!, request, now, sprites)
+                        findParty(id, userId)!!
+                    }
             }
         }
     respondToSave(outcome, HttpStatusCode.Created)
@@ -184,19 +199,9 @@ private suspend fun RoutingContext.savePartyRoute(
     val outcome =
         transaction {
             val now = Clock.System.now()
-            if (!ownsParty(partyId, userId)) {
-                null
-            } else {
-                // The row's kind, not the request's: oneOff is read at create only, so an edit
-                // leaves it as it was.
-                val problem = validateSavedParty(userId, partyId, request, now, isOneOff(partyId))
-                if (problem != null) {
-                    problem
-                } else {
-                    saveParty(userId, partyId, request, now, sprites)
-                    findParty(partyId, userId)!!
-                }
-            }
+            // The row's kind, not the request's: oneOff is read at create only, so an edit leaves
+            // it as it was. See writeSavedParty for the order the rules are asked in.
+            writeSavedParty(userId, partyId, request, now, sprites)
         }
     respondToSave(outcome, HttpStatusCode.OK)
 }
@@ -326,7 +331,19 @@ internal suspend fun RoutingContext.respondToSave(
 ) {
     when (outcome) {
         null -> call.respond(HttpStatusCode.NotFound)
-        is String -> call.respond(HttpStatusCode.BadRequest, outcome)
+        is String -> {
+            // The refusal is the whole content of this response, so the log has to carry it too.
+            // Without it a refused save is a bare "FAIL PUT /api/parties/:id 400", which says a
+            // roster was rejected and not which name or which other party.
+            call.failing(outcome)
+            call.respond(HttpStatusCode.BadRequest, outcome)
+        }
+        // Not a 400. The request is writable and the screen is being asked one question about it,
+        // so the client has a second call to make rather than an input to fix.
+        is RosterConflictResponse -> {
+            call.failing(outcome.message)
+            call.respond(HttpStatusCode.Conflict, outcome)
+        }
         is PartyResponse -> call.respond(onSuccess, outcome)
         else -> call.respond(HttpStatusCode.InternalServerError)
     }

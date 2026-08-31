@@ -147,6 +147,43 @@ data class SavePartyRequest(
      * going back to everybody looting their own.
      */
     val looterName: String? = null,
+    /**
+     * Parties to take these members OUT of, by id, as part of this save.
+     *
+     * A character can be in one party per boss (see bossRosterClashes), so moving one across used
+     * to mean emptying the old party in a write of its own, which the screen refused rather than
+     * offered. Naming the parties here makes it one save: the seats are released and the roster
+     * written in the same transaction, so a move cannot half happen.
+     *
+     * Ids rather than a "force" flag. The client has been told exactly which parties it is about to
+     * take from and says so back; a clash with a party NOT named here is still refused, so agreeing
+     * to one move cannot quietly authorise another.
+     */
+    val releaseFrom: List<String> = emptyList(),
+)
+
+/**
+ * The one refusal a user can answer: somebody in this roster is in another party for this boss.
+ *
+ * Sent instead of the flat message so the screen can offer the move rather than restate the
+ * problem. Each entry is a party the save would have to take a seat from, and whether that leaves
+ * the party standing. Answering means sending the same save again with those ids in `releaseFrom`.
+ */
+@Serializable
+data class RosterConflictResponse(
+    val message: String,
+    val moves: List<RosterMoveResponse>,
+)
+
+@Serializable
+data class RosterMoveResponse(
+    val partyId: String,
+    /** The seat that would move, named as the other party spells it. */
+    val member: String,
+    /** Whose party it is being taken from. */
+    val fromCharacter: String,
+    /** Whether that party is left with nobody else, so the move removes it. */
+    val removesParty: Boolean,
 )
 
 /**

@@ -1,7 +1,6 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.periodOf
-import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
@@ -30,6 +29,32 @@ internal fun validateNewParty(
     characterId: Uuid?,
     bossCatalogId: Uuid?,
     now: Instant,
+): String? =
+    validateNewPartyRules(request, userId, characterId, bossCatalogId)
+        ?: bossCatalogId?.let {
+            validateBossRoster(
+                userId,
+                it,
+                exclude = null,
+                rosterOf(characterId, request.members),
+                now,
+                request.oneOff,
+            )
+        }
+
+/**
+ * The same rules, minus the roster clash.
+ *
+ * Split out because the clash is the one refusal a user can answer: they are told which party holds
+ * the character and can agree to move them. Everything here is a request that cannot be written at
+ * all, so the routes ask for these first and never offer a move over a bad difficulty. See
+ * releaseFrom on SavePartyRequest.
+ */
+internal fun validateNewPartyRules(
+    request: SavePartyRequest,
+    userId: String,
+    characterId: Uuid?,
+    bossCatalogId: Uuid?,
 ): String? {
     val owned =
         characterId != null &&
@@ -60,14 +85,6 @@ internal fun validateNewParty(
                 ?: validateMembers(request.members)
                 ?: validateShares(request.shares, characterId, request.members)
                 ?: validateLooter(request.looterName, characterId, request.members)
-                ?: validateBossRoster(
-                    userId,
-                    bossCatalogId,
-                    exclude = null,
-                    rosterOf(characterId, request.members),
-                    now,
-                    request.oneOff,
-                )
     }
 }
 
@@ -90,14 +107,9 @@ internal fun validateSavedParty(
     request: SavePartyRequest,
     now: Instant,
     oneOff: Boolean,
-): String? {
-    val bossCatalogId = bossIdOfParty(partyId)
-    return bossCatalogId?.let { validateDifficulty(it, request.difficulty) }
-        ?: validateMinutes(request.minutes)
-        ?: validateMembers(request.members)
-        ?: validateShares(request.shares, characterIdOfParty(partyId), request.members)
-        ?: validateLooter(request.looterName, characterIdOfParty(partyId), request.members)
-        ?: bossCatalogId?.let {
+): String? =
+    validateSavedPartyRules(partyId, request)
+        ?: bossIdOfParty(partyId)?.let {
             validateBossRoster(
                 userId,
                 it,
@@ -107,6 +119,18 @@ internal fun validateSavedParty(
                 oneOff,
             )
         }
+
+/** The same rules, minus the roster clash. See validateNewPartyRules. */
+internal fun validateSavedPartyRules(
+    partyId: Uuid,
+    request: SavePartyRequest,
+): String? {
+    val bossCatalogId = bossIdOfParty(partyId)
+    return bossCatalogId?.let { validateDifficulty(it, request.difficulty) }
+        ?: validateMinutes(request.minutes)
+        ?: validateMembers(request.members)
+        ?: validateShares(request.shares, characterIdOfParty(partyId), request.members)
+        ?: validateLooter(request.looterName, characterIdOfParty(partyId), request.members)
 }
 
 /**
@@ -162,19 +186,6 @@ internal fun validateWeekRoster(
     }
 }
 
-/** A config's seats as one list: your character, then the people it runs the boss with. */
-internal fun rosterOf(
-    characterId: Uuid?,
-    members: List<String>,
-): List<String> = listOfNotNull(characterId?.let(::characterName)) + members
-
-private fun characterName(characterId: Uuid): String? =
-    Characters
-        .selectAll()
-        .where { Characters.id eq characterId }
-        .firstOrNull()
-        ?.get(Characters.name)
-
 /**
  * Why this run time cannot be stored, or null.
  *
@@ -216,92 +227,6 @@ internal fun validateDifficulty(
             ?.get(BossCatalog.difficulties)
             .orEmpty()
     return if (difficulty in modes) null else "difficulty must be one of: ${modes.joinToString(", ")}"
-}
-
-/**
- * Why this roster cannot stand against the boss's other configs, or null.
- *
- * A character clears a boss once a period, so naming one in two configs for the same boss states
- * something the game cannot do: only one of the two can ever run. Run Order had to drop one of them
- * and could say nothing useful about which, so the pair is refused at the point it is written.
- *
- * `exclude` is the config being edited, which is not competition with itself.
- *
- * Owner and members are one list here. A character occupies its slot whichever end of a config it
- * sits at, and letting it own one config and sit in another for the same boss is the same clash
- * through a different door.
- *
- * Only seats that are still IN a roster compete. A seat somebody left is retired rather than
- * deleted, because a payout or a past week points at it (see retireOrDelete), and a retired seat is
- * not running the boss with anybody. Counting one refused a roster over somebody the party no
- * longer has, naming a config the user could look straight at and not find them in.
- *
- * Which of the others count depends on what is being written, because the two are only in each
- * other's way in a period they would both run. A STANDING config runs in every period from here on,
- * so anything that has not stopped for good competes with it: a one-off whose period has passed
- * holds nobody, and a config merely skipped this week still does. That is the difference between
- * not running once and not running again.
- *
- * [oneOff] is a single night, so only its own period is asked about, and a config skipped in that
- * period is not running the boss then. Same fact as validateWeekRoster's, read against the period
- * rather than the week: a party taken off for the week is one its members were free to run the boss
- * with somebody else. Without it, taking a party off this week and running its boss with a different
- * pair the same week was refused, and the only way through was retiring the standing config.
- *
- * Both ways of arming a spent one-off again come back through this rule (takeOverParty and
- * setSkipRoute), so the two can still never be on at the same time.
- *
- * Must run inside a transaction.
- */
-internal fun validateBossRoster(
-    userId: String,
-    bossCatalogId: Uuid,
-    exclude: Uuid?,
-    roster: List<String>,
-    now: Instant,
-    oneOff: Boolean,
-): String? {
-    val wanted = roster.map { it.trim().lowercase() }.toSet()
-    // The one period a one-off runs in, or null for a config that runs in all of them. A boss whose
-    // reset cannot be read leaves it null, which asks the stricter question rather than guessing a
-    // period and letting a real clash through.
-    val period = if (oneOff) bossResetOf(bossCatalogId)?.let { periodStartFor(it, now) } else null
-
-    // Every seat this account already has on this boss. Compared in Kotlin rather than SQL: it is a
-    // handful of rows per boss, and the case-folding then matches validateMembers' rather than
-    // Postgres's collation.
-    val clash =
-        if (wanted.isEmpty()) {
-            null
-        } else {
-            PartyMember
-                .innerJoin(Party)
-                .selectAll()
-                .where {
-                    (Party.userId eq userId) and
-                        (Party.bossCatalogId eq bossCatalogId) and
-                        // The config is live, AND the seat is still in its roster. Two different
-                        // `standing` columns, and reading only the first was the bug.
-                        (Party.standing eq true) and
-                        (PartyMember.standing eq true)
-                }.filter { exclude == null || it[Party.id] != exclude }
-                .filter { it[PartyMember.name].trim().lowercase() in wanted }
-                // Last, and on the matches only: it is a query per row, and there are usually none.
-                // Every candidate is on the same boss, hence the same cadence, so the one period
-                // answers for all of them.
-                .firstOrNull {
-                    val other = it[Party.id]
-                    if (period == null) {
-                        !isSpentOneOff(other, now)
-                    } else {
-                        runsInPeriod(other, isOneOff(other), period)
-                    }
-                }
-        }
-
-    return clash?.let {
-        "${it[PartyMember.name]} is already in your ${characterName(it[Party.characterId])} party for this boss"
-    }
 }
 
 /**

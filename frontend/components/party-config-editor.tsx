@@ -7,6 +7,7 @@ import { RosterInputs } from "@/components/roster-inputs";
 import { apiAssetUrl } from "@/lib/api";
 import { MAX_MINUTES, parseMinutes } from "@/lib/boss-minutes";
 import { rotatingDropsAt } from "@/lib/loot-rotation";
+import { moveLines } from "@/lib/roster-conflict";
 import { bossesWithoutConfig, standingMembers, standingParties } from "@/lib/parties";
 import { splitTitle } from "@/lib/split-title";
 import {
@@ -22,7 +23,7 @@ import {
 } from "@/lib/stacks";
 import type { Boss } from "@/types/boss";
 import type { BossDrop, DropTables } from "@/types/drop";
-import type { Party, PartyMember, SavePartyBody } from "@/types/party";
+import type { Party, PartyMember, RosterMove, SavePartyBody } from "@/types/party";
 
 /** The one drop a party has to decide how to divide. See catalog/drops.yaml. */
 const VESTIGE = "vestige-of-erion";
@@ -43,7 +44,12 @@ export function PartyConfigEditor({
   spriteFor,
   isSaving,
   adding,
-  error,
+  errorFor,
+  addError,
+  movesFor,
+  addMoves,
+  onConfirmMove,
+  onCancelMove,
   onSave,
   onDelete,
   onPutBack,
@@ -65,7 +71,30 @@ export function PartyConfigEditor({
   isSaving: (partyId: string) => boolean;
   /** The add form's own write. Adding one party does not lock the rows above it. */
   adding: boolean;
-  error: string | null;
+  /**
+   * Why THIS config's write was refused, by its id.
+   *
+   * Per row for the same reason `isSaving` is. One message for the page rendered after the LAST
+   * row, so a refusal named the row you were on and appeared below the ones you were not: measured
+   * at 382px under the clicked Save button, editing the sixth of seven parties in a 757px viewport.
+   * Off screen, so the save read as having done nothing.
+   */
+  errorFor: (partyId: string) => string | null;
+  /** The add form's own refusal. */
+  addError: string | null;
+  /**
+   * The move THIS row's last save was refused for, by its id, or null.
+   *
+   * Somebody in the roster is in another party for this boss. That used to be the end of it, and
+   * on a duo there was no way through at all: taking the one other member out leaves a solo run,
+   * which is not a party, so the only route was removing the party by hand first. Answering here
+   * does both halves in one save. See lib/roster-conflict.ts.
+   */
+  movesFor: (partyId: string) => RosterMove[] | null;
+  /** The add form's own, for the same reason it has its own refusal. */
+  addMoves: RosterMove[] | null;
+  onConfirmMove: () => void;
+  onCancelMove: () => void;
   onSave: (body: SavePartyBody, partyId?: string) => void;
   onDelete: (party: Party) => void;
   /** Puts a boss back on the period Party View took it off. Only that direction lives here. */
@@ -96,6 +125,10 @@ export function PartyConfigEditor({
           drops={dropTables[party.bossKey] ?? []}
           spriteFor={spriteFor}
           busy={isSaving(party.id)}
+          error={errorFor(party.id)}
+          moves={movesFor(party.id)}
+          onConfirmMove={onConfirmMove}
+          onCancelMove={onCancelMove}
           onSave={(members, difficulty, minutes, looterName, shares) =>
             onSave(
               {
@@ -114,8 +147,6 @@ export function PartyConfigEditor({
           onPutBack={() => onPutBack(party)}
         />
       ))}
-
-      {error && <p className="split-error">{error}</p>}
 
       <div className="loot-actions">
         <select
@@ -144,6 +175,13 @@ export function PartyConfigEditor({
           knownCharacters={knownCharacters}
         />
       </div>
+      {addError && <p className="split-error">{addError}</p>}
+      <MoveConfirm
+        moves={addMoves}
+        busy={adding}
+        onConfirm={onConfirmMove}
+        onCancel={onCancelMove}
+      />
     </section>
   );
 }
@@ -204,6 +242,47 @@ function AddParty({
 }
 
 /**
+ * What the move costs, then the button that does it.
+ *
+ * What is said is the effect and only the effect: who leaves whose party, and, where it is true,
+ * that the party goes with them. The rule behind it (a character is in one party per boss) is why
+ * the question exists and is not itself worth a line on screen.
+ *
+ * In place of Save rather than beside it. The save that raised this is the one being answered, so
+ * offering both would be two buttons for one decision.
+ */
+function MoveConfirm({
+  moves,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  moves: RosterMove[] | null;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (!moves) return null;
+  return (
+    <>
+      {moveLines(moves).map((line) => (
+        <p className="split-error" key={line}>
+          {line}
+        </p>
+      ))}
+      <div className="loot-actions">
+        <button type="button" className="party-save" onClick={onConfirm} disabled={busy}>
+          Move
+        </button>
+        <button type="button" className="party-cancel" onClick={onCancel} disabled={busy}>
+          Cancel
+        </button>
+      </div>
+    </>
+  );
+}
+
+/**
  * How long this party takes on its boss, door to door.
  *
  * Empty is a real answer and stays one: a config nobody has timed gets the flat estimate on Run
@@ -252,6 +331,10 @@ function ConfigRow({
   drops,
   spriteFor,
   busy,
+  error,
+  moves,
+  onConfirmMove,
+  onCancelMove,
   onSave,
   onDelete,
   onPutBack,
@@ -263,6 +346,12 @@ function ConfigRow({
   /** The sprite for a name as typed, for the roster boxes. See lib/sprite-by-name. */
   spriteFor: (name: string) => string | null;
   busy: boolean;
+  /** Why this row's last write was refused. Shown under its own buttons, not the page's. */
+  error: string | null;
+  /** The move this row's last save was refused for, offered in place of its Save button. */
+  moves: RosterMove[] | null;
+  onConfirmMove: () => void;
+  onCancelMove: () => void;
   onSave: (
     members: string[],
     difficulty: string | null,
@@ -530,7 +619,7 @@ function ConfigRow({
         </div>
       )}
 
-      {dirty && (
+      {dirty && !moves && (
         <div className="loot-actions">
           <button
             type="button"
@@ -586,6 +675,8 @@ function ConfigRow({
           </button>
         </div>
       )}
+      <MoveConfirm moves={moves} busy={busy} onConfirm={onConfirmMove} onCancel={onCancelMove} />
+      {error && <p className="split-error">{error}</p>}
     </article>
   );
 }

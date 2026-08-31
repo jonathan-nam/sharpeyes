@@ -115,6 +115,32 @@ export type SavePartyBody = {
   // Who picks up the pieces, by character name rather than seat id: seats are matched by name, and a
   // party being created has no seat ids yet. Null clears it.
   looterName?: string | null;
+  // Parties to take these members OUT of, by id, as part of this save. A character is in one party
+  // per boss, so this is what turns "already in your HuskyxKenshi party" from a dead end into a
+  // move. Only ids the server just offered are accepted, so this cannot be sent blind.
+  releaseFrom?: string[];
+};
+
+/**
+ * The one refusal a save can answer: somebody in the roster is in another party for this boss.
+ *
+ * Comes back as a 409 rather than a 400, because the request is writable and the screen is being
+ * asked a question about it. Answering is the same save again with these party ids in
+ * `releaseFrom`. See RosterConflictResponse in PartyDtos.kt.
+ */
+export type RosterConflict = {
+  message: string;
+  moves: RosterMove[];
+};
+
+export type RosterMove = {
+  partyId: string;
+  /** The seat that would move, named as the party holding it spells it. */
+  member: string;
+  /** Whose party it is being taken from. */
+  fromCharacter: string;
+  /** Whether that party is left with nobody else, so the move removes it. */
+  removesParty: boolean;
 };
 
 /**
