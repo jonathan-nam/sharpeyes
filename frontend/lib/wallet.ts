@@ -88,7 +88,10 @@ export type Wallet = {
    * prevent, and a total with "2 unreadable" beside it is at least honest about being short.
    */
   unreadable: number;
-  /** Unpaid shares between two OTHER people in your party. Real, and not yours to settle. */
+  /**
+   * Unpaid shares between two OTHER people in your party. Counted, not shown: the point is that
+   * they are kept OUT of owe/owed, which is what wallet.test.ts asserts against.
+   */
   betweenOthers: number;
   /** Unpaid shares between two of your OWN characters. Mesos to move, but nobody to settle with. */
   betweenMine: number;
