@@ -5742,8 +5742,8 @@ button.link:disabled {
   color: var(--good);
 }
 
-/* What the Settlement Ledger's cards do NOT cover: unreadable splits, and shares that are real but
-   not yours to settle. Inherited from the Wallet page this tab replaced. */
+/* What the Settlement Ledger's cards do NOT cover: unreadable splits, and shares between two of
+   your own characters. Inherited from the Wallet page this tab replaced. */
 .ledger-notes {
   list-style: none;
   margin: 20px 0 0;

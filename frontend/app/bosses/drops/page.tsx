@@ -1101,7 +1101,7 @@ export default function DropLogPage() {
                   sale is on the other tab. */}
                 {/* What the cards above do NOT cover, from the Wallet this tab replaced. A total that
                   is short must not read as a total that is complete. */}
-                {(wallet.unreadable > 0 || wallet.betweenOthers > 0 || wallet.betweenMine > 0) && (
+                {(wallet.unreadable > 0 || wallet.betweenMine > 0) && (
                   <ul className="ledger-notes">
                     {wallet.unreadable > 0 && (
                       <li className="loot-warn">
@@ -1109,13 +1109,6 @@ export default function DropLogPage() {
                         {wallet.unreadable === 1 ? "drop names a seat" : "drops name a seat"} that
                         has left its party, so {wallet.unreadable === 1 ? "its" : "their"} split
                         cannot be read. Not counted above.
-                      </li>
-                    )}
-                    {wallet.betweenOthers > 0 && (
-                      <li>
-                        {wallet.betweenOthers} unpaid{" "}
-                        {wallet.betweenOthers === 1 ? "share is" : "shares are"} between two other
-                        people, not yours to settle.
                       </li>
                     )}
                     {wallet.betweenMine > 0 && (
