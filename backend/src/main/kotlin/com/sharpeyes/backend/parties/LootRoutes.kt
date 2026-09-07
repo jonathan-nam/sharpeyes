@@ -105,9 +105,9 @@ private suspend fun RoutingContext.sellLootRoute() {
                 !ownsParty(partyId, userId) -> null
                 loot == null -> null
                 !partyCanSell(partyId) -> "Heroic worlds do not trade, so this cannot be sold."
-                request.amount < 0 -> "amount must be zero or more"
                 request.amountBasis !in AMOUNT_BASES ->
                     "amountBasis must be LISTED, RECEIVED or BOUGHT"
+                saleRefusal(request) != null -> saleRefusal(request)
                 request.splitMethod !in SPLIT_METHODS -> "splitMethod must be LAZY or FAIR"
                 // The seller has to have been THERE: they are who the payouts are measured against,
                 // and somebody who did not run that week would make every share wrong. Off the

@@ -6,6 +6,7 @@
 // thing this feature must not grow, because two answers to "what do I send you" is worse than none.
 
 import { type AmountBasis, FEE_STANDARD, type Split, splitDrop } from "./drop-split";
+import type { Currency, Money } from "./money";
 import type { Loot } from "@/types/loot";
 import type { PartyMember } from "@/types/party";
 
@@ -38,7 +39,7 @@ export type Share = {
   fee: number;
   /** Shares of the pot they take. 1 in an even split. */
   shares: number;
-  /** Mesos to send them, before the fee on that transfer. */
+  /** What to send them, before the fee on that transfer. In the sale's own currency. */
   pay: number;
   /** What they end up holding. */
   nets: number;
@@ -54,7 +55,28 @@ export type LootSplit = {
   seller: { memberId: string; name: string; keeps: number; paysOut: number; shares: number };
   shares: Share[];
   split: Split;
+  /**
+   * What every figure above is denominated in. Cents when USD, mesos when MESO.
+   *
+   * Carried ON the split rather than looked up again at each call site. A figure and its unit that
+   * travel separately get separated, and a payout of 33334 drawn as mesos is a thousandth of what
+   * is owed, stated with the same confidence as the right answer.
+   */
+  currency: Currency;
 };
+
+/**
+ * What this drop sold for and in which unit, or null if it has not sold.
+ *
+ * Dollars first, because a dollar sale stores no meso figure at all and a meso sale stores no cents
+ * (V76 makes them exclusive). The order matters only if a row ever carried both, and then the unit
+ * that cannot be converted away is the one to believe.
+ */
+export function saleMoney(loot: Pick<Loot, "saleAmount" | "saleUsdCents">): Money | null {
+  const cents = loot.saleUsdCents ?? null;
+  if (cents !== null) return { amount: cents, currency: "USD" };
+  return loot.saleAmount === null ? null : { amount: loot.saleAmount, currency: "MESO" };
+}
 
 /**
  * How to read the stored figure, or null for a basis this build does not know.
@@ -81,8 +103,9 @@ function basisOf(stored: string): AmountBasis | null {
  * otherwise produce a payout list that looks complete and is short a person or wrong on a rate.
  */
 export function splitOf(loot: Loot, members: PartyMember[]): LootSplit | null {
+  const money = saleMoney(loot);
   if (
-    loot.saleAmount === null ||
+    money === null ||
     loot.sellerMemberId === null ||
     loot.amountBasis === null ||
     loot.splitMethod === null
@@ -108,11 +131,16 @@ export function splitOf(loot: Loot, members: PartyMember[]): LootSplit | null {
   const memberShares = owed.map((o) => o.payout.shares ?? 1);
   if ([sellerShares, ...memberShares].some((n) => !Number.isInteger(n) || n < 1)) return null;
 
+  // Real money never crossed the Auction House, so there is no cut on a payout hop and no cut off
+  // the top either. Cents otherwise divide exactly as mesos do, which is why the split itself did
+  // not have to learn about currencies: only its rate did.
+  const fee = money.currency === "USD" ? 0 : memberFee();
+
   const split = splitDrop({
-    amount: loot.saleAmount,
+    amount: money.amount,
     amountIs,
-    sellerFee: memberFee(),
-    memberFees: owed.map(() => memberFee()),
+    sellerFee: fee,
+    memberFees: owed.map(() => fee),
     method: loot.splitMethod === "FAIR" ? "fair" : "lazy",
     sellerShares,
     memberShares,
@@ -137,6 +165,7 @@ export function splitOf(loot: Loot, members: PartyMember[]): LootSplit | null {
       paid: o.payout.paid,
     })),
     split,
+    currency: money.currency,
   };
 }
 

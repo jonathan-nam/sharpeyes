@@ -46,6 +46,7 @@ const NO_WALLET: Wallet = {
   owe: 0,
   owed: 0,
   net: 0,
+  usd: { owe: 0, owed: 0, net: 0 },
   unreadable: 0,
   betweenOthers: 0,
   betweenMine: 0,

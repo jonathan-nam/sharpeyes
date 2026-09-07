@@ -439,6 +439,10 @@ object PartyLoot : Table("party_loot") {
     // The sale, all six columns or none of them (party_loot_sale_complete).
     val soldAt = timestamp("sold_at").nullable()
     val saleAmount = long("sale_amount").nullable()
+
+    // What it fetched in real money, in cents, when that is what it sold for. Exactly one of this
+    // and saleAmount is set on a sold row: see V76.
+    val saleUsdCents = long("sale_usd_cents").nullable()
     val amountBasis = text("amount_basis").nullable()
     val splitMethod = text("split_method").nullable()
 

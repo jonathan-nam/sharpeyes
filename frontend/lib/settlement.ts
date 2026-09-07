@@ -23,7 +23,7 @@ import { spendOldestFirst, spendSales } from "./piece-ledger";
 import type { AnsweredSale } from "./piece-ledger";
 import { SELF_KEY, answeredKey, holderFromKey, holderKey } from "./vestige-ledger";
 import type { CouponSale, Holder, HolderLedger, SaleCredit } from "./vestige-ledger";
-import type { Wallet, WalletLine } from "./wallet";
+import type { Owings, Wallet, WalletLine } from "./wallet";
 import type { ProceedsDisposal, SettlementDebt, SettlementDebtPayout } from "@/types/vestige";
 
 /** One night's coupons sitting in the wrong inventory, in whichever direction it runs. */
@@ -140,6 +140,19 @@ export type Settlement = {
    * cancel in a figure that had already assumed it.
    */
   sharesYouOwe: number;
+  /**
+   * Unpaid shares of a sale made in REAL MONEY, in cents, in both directions. Never netted against
+   * anything above, because there is no rate in this app to net them at.
+   *
+   * A third unit on a card that already carries two, and it behaves like the pieces rather than
+   * like the mesos: stated on its own, settled on its own, and left out of every total the other
+   * two appear in. Nothing else on this card can be denominated in dollars, because a debt entered
+   * by hand and a payment received are both meso rows (V56), so this is only ever shares.
+   *
+   * `net` is not drawn. What you owe waits outside the headline until Offset or Mark sent is
+   * pressed, which is the rule the meso half runs on too: see sharesYouOwe.
+   */
+  usd: Owings;
   /** What the net is made of, in the order the card says them. Every one is signed towards you. */
   parts: {
     /** Unpaid shares THEY owe you. What you owe them is `sharesYouOwe`, which is not netted here. */
@@ -234,6 +247,7 @@ const blank = (key: string, name: string): Settlement => ({
   mesos: 0,
   owedByYou: 0,
   sharesYouOwe: 0,
+  usd: { owe: 0, owed: 0, net: 0 },
   parts: { shares: 0, entered: 0, soldOfTheirs: 0, soldOfYours: 0, received: 0 },
   receivedOnPieces: 0,
   holding: 0,
@@ -400,6 +414,7 @@ export function buildSettlement(
     const row = rowFor(person.key, person.name);
     row.parts.shares = person.owed;
     row.sharesYouOwe = person.owe;
+    row.usd = person.usd;
 
     // Every line, both directions, and in EVERY direction the net runs.
     //
@@ -507,6 +522,10 @@ export function buildSettlement(
         // Dropping one would take Mark sent and Offset with it, leaving a debt with nowhere to say
         // it had been paid.
         row.sharesYouOwe > 0 ||
+        // A dollar sale can be the only thing between two people, and it is in no figure above.
+        // Without this the card is not drawn at all and the share has nowhere to be marked paid.
+        row.usd.owed > 0 ||
+        row.usd.owe > 0 ||
         row.pieces > 0 ||
         // Coupons of theirs you are holding are exactly the thing this ledger is for now: they come
         // off what that person owes you. A card kept only for the other direction hid them.
@@ -521,6 +540,9 @@ export function buildSettlement(
       (a, b) =>
         b.mesos - a.mesos ||
         b.owedByYou + b.sharesYouOwe - (a.owedByYou + a.sharesYouOwe) ||
+        // Its own key rather than added to the mesos above, for the reason buildWallet's sort
+        // gives: an order made of two units is a rate nobody can see and nobody would catch.
+        b.usd.owed - a.usd.owed ||
         b.pieces - a.pieces ||
         b.piecesYouOwe - a.piecesYouOwe ||
         a.name.localeCompare(b.name),
@@ -919,8 +941,15 @@ export function shareKey(lootId: string, memberId: string): string {
   return `${lootId}:${memberId}`;
 }
 
-/** What the whole list comes to, in the three figures the Wallet page used to carry. */
-export type SettlementTotals = { owed: number; owe: number; net: number; people: number };
+/** What the whole list comes to: the three figures the Wallet page used to carry, and the dollars. */
+export type SettlementTotals = {
+  owed: number;
+  owe: number;
+  net: number;
+  people: number;
+  /** The same pair in cents, off dollar sales. Its own tile, never added to the mesos. See Owings. */
+  usd: Owings;
+};
 
 /**
  * The account's position, summed off the CARDS rather than worked out again.
@@ -938,7 +967,15 @@ export function settlementTotals(rows: Settlement[]): SettlementTotals {
   // the net: they are money you have to move, and a tile that left them out would be short by every
   // share nobody has decided about yet.
   const owe = rows.reduce((sum, row) => sum + row.owedByYou + row.sharesYouOwe, 0);
-  return { owed, owe, net: owed - owe, people: rows.length };
+  const usdOwed = rows.reduce((sum, row) => sum + row.usd.owed, 0);
+  const usdOwe = rows.reduce((sum, row) => sum + row.usd.owe, 0);
+  return {
+    owed,
+    owe,
+    net: owed - owe,
+    people: rows.length,
+    usd: { owed: usdOwed, owe: usdOwe, net: usdOwed - usdOwe },
+  };
 }
 
 /**
@@ -1027,7 +1064,9 @@ export function isEmpty(row: Settlement): boolean {
     row.piecesYouOwe === 0 &&
     row.mesos === 0 &&
     row.owedByYou === 0 &&
-    row.sharesYouOwe === 0
+    row.sharesYouOwe === 0 &&
+    row.usd.owed === 0 &&
+    row.usd.owe === 0
   );
 }
 

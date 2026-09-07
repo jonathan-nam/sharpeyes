@@ -107,6 +107,7 @@ const line = (lootId: string, pay: number, direction: "owe" | "owed" = "owed"): 
   payeeId: `payee-${lootId}`,
   pay,
   nets: Math.floor(pay * 0.95),
+  currency: "MESO",
 });
 
 const counterparty = (key: string, name: string, lines: WalletLine[]): Counterparty => {
@@ -119,6 +120,7 @@ const counterparty = (key: string, name: string, lines: WalletLine[]): Counterpa
     owe,
     owed,
     net: owed - owe,
+    usd: { owe: 0, owed: 0, net: 0 },
     lines,
   };
 };
@@ -128,6 +130,7 @@ const wallet = (counterparties: Counterparty[]): Wallet => ({
   owe: 0,
   owed: 0,
   net: 0,
+  usd: { owe: 0, owed: 0, net: 0 },
   unreadable: 0,
   betweenOthers: 0,
   betweenMine: 0,
@@ -896,6 +899,7 @@ describe("what the account comes to, above the cards", () => {
       owe: 400 * M,
       net: 600 * M,
       people: 2,
+      usd: { owe: 0, owed: 0, net: 0 },
     });
   });
 
@@ -917,6 +921,7 @@ describe("what the account comes to, above the cards", () => {
       owe: 400 * M,
       net: 600 * M,
       people: 1,
+      usd: { owe: 0, owed: 0, net: 0 },
     });
   });
 
@@ -933,7 +938,13 @@ describe("what the account comes to, above the cards", () => {
       [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
       wallet([]),
     );
-    expect(settlementTotals(rows)).toEqual({ owed: 0, owe: 0, net: 0, people: 1 });
+    expect(settlementTotals(rows)).toEqual({
+      owed: 0,
+      owe: 0,
+      net: 0,
+      people: 1,
+      usd: { owe: 0, owed: 0, net: 0 },
+    });
   });
 });
 

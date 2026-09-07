@@ -54,6 +54,9 @@ data class LootResponse(
     // rows and taken_by rather than stored, so it cannot drift from them.
     val status: String,
     val saleAmount: Long?,
+    // What it fetched in real money, in cents. Set INSTEAD of saleAmount, never beside it, so a
+    // reader that only knows about mesos sees an unpriced sale rather than a wrong price. See V76.
+    val saleUsdCents: Long? = null,
     val amountBasis: String?,
     val splitMethod: String?,
     // The seller's own share count, pinned with the sale. Null until it sells.
@@ -151,6 +154,14 @@ data class LogDropRequest(
 @Serializable
 data class SellLootRequest(
     val amount: Long,
+    /**
+     * Cents, when it sold for real money. Set, [amount] is ignored and the pot is this instead.
+     *
+     * The split itself is unchanged: cents divide the way mesos do. What changes is that no
+     * Auction House stood in the way, so nothing is taken off the top and nothing is taken off a
+     * payout hop either. See splitOf on the client.
+     */
+    val usdCents: Long? = null,
     // LISTED (what it was listed at), RECEIVED (what landed in the seller's inventory), or BOUGHT
     // (what the whole drop is worth, the buyer's own share included, with no Auction House cut off
     // the top). BOUGHT is the pot and not what changed hands: the buyer keeps their share of it and
