@@ -23,7 +23,7 @@ import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
 import { SharedParties } from "@/components/shared-parties";
 import { yourClear } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
-import { peek, put } from "@/lib/cache";
+import { peek, put, storedAt } from "@/lib/cache";
 import { buildDropLog, couponsOutstandingByParty, pieceStatusByParty } from "@/lib/drop-log";
 import { dropsInWeek, NOTHING_OUTSTANDING } from "@/lib/loot";
 import { closedByHolder, outstanding, runningBalance, stillOpen } from "@/lib/vestige-ledger";
@@ -143,8 +143,9 @@ export default function PartiesPage() {
   const { isSaving, write } = useRowWrites();
   const [view, setView] = useState<BossClearsView | null>(peek<BossClearsView>(CLEARS_KEY) ?? null);
   // When the view was received, so the countdown can correct for a browser clock that disagrees
-  // with the server's. See lib/reset-countdown.ts.
-  const [receivedAt, setReceivedAt] = useState<number>(() => Date.now());
+  // with the server's. A seeded view arrived with the request that cached it, not now: see
+  // storedAt in lib/cache.ts, and lib/reset-countdown.ts.
+  const [receivedAt, setReceivedAt] = useState<number>(() => storedAt(CLEARS_KEY) ?? Date.now());
   // null is the live view. Anything else is a past week, read-only.
   const [week, setWeek] = useState<string | null>(null);
   const [stepping, setStepping] = useState(false);

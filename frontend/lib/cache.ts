@@ -14,14 +14,28 @@
 // machinery than this app needs. If the API grows a lot, replace this with one of
 // them rather than growing this.
 
-const entries = new Map<string, unknown>();
+// The value, and when it was put. A response carrying the server's clock is only usable
+// alongside the moment it arrived, so the time is kept with it rather than left to the caller
+// to remember. See storedAt.
+const entries = new Map<string, { value: unknown; at: number }>();
 
 export function peek<T>(key: string): T | undefined {
-  return entries.get(key) as T | undefined;
+  return entries.get(key)?.value as T | undefined;
+}
+
+/**
+ * When `key` was last put, or undefined if it is not cached.
+ *
+ * A page seeded from the cache is holding a `now` from an earlier request. Pairing it with the
+ * present instead reads the cache's age as clock skew: the reset countdown drew that much extra
+ * time remaining and snapped back when the refresh landed. See lib/reset-countdown.ts.
+ */
+export function storedAt(key: string): number | undefined {
+  return entries.get(key)?.at;
 }
 
 export function put<T>(key: string, value: T): void {
-  entries.set(key, value);
+  entries.set(key, { value, at: Date.now() });
 }
 
 /**
