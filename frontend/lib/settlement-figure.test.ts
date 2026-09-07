@@ -69,8 +69,9 @@ describe("what the card says a person owes", () => {
     // fact rather than as the act the button performs. Same subject-less fragment as the entry box
     // it replaced.
     expect(source).not.toContain("already sent");
-    // Mark Sent's own line, which names both pots AND both units. The Settle line below carries the
-    // same words after "also", so this has to pin the send's own or it passes on the collect's.
+    // Mark Sent's own line, which names both pots AND both units. It used to have to be pinned
+    // apart from the Settle line, which carried the same words after "also"; that button is gone
+    // now (see below), so this is the only line saying it.
     expect(source).toContain("records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}");
   });
   it("puts the nights behind the shares figure on hover, and marks that it has them", () => {
@@ -81,18 +82,25 @@ describe("what the card says a person owes", () => {
     expect(source).toContain('part.detail ? "loot-name has-detail" : "loot-name"');
     expect(css).toContain(".loot-name.has-detail");
   });
-  it("offers Settle only where there is something to COLLECT", () => {
-    // A card whose every share runs against you has nothing to collect, so a Settle on it can only
-    // mean "I have already paid them", the one thing nobody comes to this page to say. It was hit
-    // three times running, each time taking a debt of Jonathan's out of the netting and putting the
-    // figure back UP. A warning beside it was not enough and could not be: a button with one
-    // possible effect, and that effect wrong, is a trap however it is labelled.
-    expect(source).toContain('row.lines.some((line) => line.direction === "owed")');
-    expect(source).toContain("{collectable && (");
+  it("has no aggregate Settle, an act being per line and in one direction", () => {
+    // Kept as a guard rather than deleted, because deleting it would delete the lesson. Settle
+    // marked every share on the card paid in BOTH directions, on the reasoning that a relationship
+    // is settled by one transfer of the difference. Before that it had already been pulled off
+    // cards with nothing to collect, where it could only mean "I have already paid them": hit three
+    // times running, each time taking a debt of Jonathan's out of the netting and putting the
+    // figure back UP.
+    //
+    // What finished it is the second unit. No rate exists to net $333.33 against 2.32b, so the one
+    // transfer it assumed cannot happen, and a button doing both halves records one that did not.
+    expect(source).not.toContain("{collectable && (");
+    expect(source).not.toContain("onSettleShares(sharesOf(row))");
+    expect(source).not.toContain("also records");
   });
 
-  it("still says what a MIXED settle also does, since it clears both directions", () => {
-    expect(source).toContain("also records ${formatMesos(owes, true)} sent to ${row.name}");
+  it("puts the act on the line it is about, named for that line's own direction", () => {
+    // The same write either way. What differs is which way the money went, and the line knows.
+    expect(source).toContain("onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }])");
+    expect(source).toContain('line.direction === "owed" ? "Mark Received" : "Mark Sent"');
   });
   it("names the nights an offset discharged, off the pools", () => {
     // Without V58 the link is gone: the settle marks those shares PAID, so they leave the wallet,

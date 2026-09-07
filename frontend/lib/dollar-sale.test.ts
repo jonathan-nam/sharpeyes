@@ -292,10 +292,11 @@ describe("a card that runs both ways at once", () => {
 describe("what the closing actions say they move", () => {
   const source = readFileSync(join(__dirname, "..", "components", "settlement-ledger.tsx"), "utf8");
 
-  it("names the dollars Settle collects, which no meso figure on the card can", () => {
-    expect(source).toContain(
-      "row.usd.owed > 0 ? `collects ${formatDollars(row.usd.owed)}` : null,",
-    );
+  it("puts the collecting act on the line, the aggregate that hid it being gone", () => {
+    // It used to be the aggregate Settle, whose caption named only the mesos and so said nothing
+    // about the $333.33 it also collected. See settlement-figure for why that button went entirely.
+    expect(source).toContain('line.direction === "owed" ? "Mark Received" : "Mark Sent"');
+    expect(source).not.toContain("{collectable && (");
   });
 
   it("names both units in what Mark Sent records, and offers it for a dollar debt at all", () => {
