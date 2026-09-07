@@ -684,11 +684,14 @@ export default function DropLogPage() {
   // Whether the sale boxes will draw anything, which decides with the coupon piles whether there is
   // an Outstanding Sales section at all. A heading over no cards is a heading over nothing.
   const anythingToPrice = money && (lots.length > 0 || alone.length > 0);
-  // The coupon's sprite, off whichever boss table carries it. Every table names the same drop.
-  const vestigeIcon =
+  // The coupon's own row, off whichever boss table carries it. Every table names the same drop, and
+  // both its sprite and its name come off the one row so a card cannot draw one item and name
+  // another.
+  const vestige =
     Object.values(dropTables)
       .flat()
-      .find((drop) => drop.dropKey === VESTIGE)?.iconUrl ?? null;
+      .find((drop) => drop.dropKey === VESTIGE) ?? null;
+  const vestigeIcon = vestige?.iconUrl ?? null;
 
   // What fell, and what it was sold for, one at a time. Both halves are entered into rather than
   // read, so they stay on one page: a drop and the sale that prices it are the same evening's work.
@@ -936,6 +939,7 @@ export default function DropLogPage() {
                   partyById={partyById}
                   offsetShares={offsetShares}
                   iconUrl={vestigeIcon}
+                  couponName={vestige?.name ?? null}
                   busy={busy}
                   // Every payment, not only the ones counted since closing: these are the rows as
                   // typed, and one entered against a closed boss is still one somebody may need back.

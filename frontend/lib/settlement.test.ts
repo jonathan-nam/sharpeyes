@@ -10,6 +10,7 @@ import {
   owedByYouShares,
   splittableDebts,
   settleThePair,
+  undecidedSales,
   sharesOf,
   yourPiles,
   shareKey,
@@ -1862,5 +1863,52 @@ describe("splitting an offset written before one-row-per-share", () => {
     // Positive is theirs to pay. It names no shares, and splitting a hand-entered figure would be
     // inventing rows for an act that never covered any.
     expect(splittableDebts([entry("d1", 5_602_105_364, 3)], THREE)).toEqual([]);
+  });
+});
+
+// Which sales the money you are still holding came out of. The figure arrived as a bare 2.41b and
+// nothing on any screen said that was 130 coupons over two nights.
+//
+// The card draws the answer as rows under the figure, so the rows have to come to the figure. Where
+// a decision stopped part way through a sale they cannot: "70 coupons" beside 400m of a 1.3b lot is
+// a wrong number wearing an itemisation, which is the failure this repo exists to prevent.
+describe("the sales behind the money you are holding", () => {
+  const sale = (mesos: number, pieces = mesos / 10_000_000) => ({
+    trancheId: `t-${mesos}`,
+    pieces,
+    mesos,
+    lot: { pieces, amount: mesos },
+    soldAt: "2026-08-12",
+  });
+
+  it("is every sale where nothing has been decided", () => {
+    const sales = [sale(1_000_000_000), sale(2_000_000_000)];
+    expect(undecidedSales({ sales, holding: 3_000_000_000 })).toEqual(sales);
+  });
+
+  it("drops the ones already decided, oldest first", () => {
+    const sales = [sale(1_000_000_000), sale(2_000_000_000)];
+    // A billion offset or paid out. Which sale that was is the front of the list, the order
+    // buildSettlement spends the money in.
+    expect(undecidedSales({ sales, holding: 2_000_000_000 })).toEqual([sales[1]]);
+  });
+
+  it("comes to exactly what is being held, whatever has come off", () => {
+    const sales = [sale(1_000_000_000), sale(2_000_000_000), sale(500_000_000)];
+    for (const holding of [3_500_000_000, 2_500_000_000, 500_000_000, 0]) {
+      const rows = undecidedSales({ sales, holding });
+      expect(rows.reduce((sum, row) => sum + row.mesos, 0)).toBe(holding);
+    }
+  });
+
+  it("refuses the lot where a decision stopped mid-sale", () => {
+    // 1.5b decided out of a 1b sale and a 2b one: half of the second is gone, and no whole row can
+    // say so. The card says the figure and nothing about its parts, which is what it said before.
+    const sales = [sale(1_000_000_000), sale(2_000_000_000)];
+    expect(undecidedSales({ sales, holding: 1_500_000_000 })).toEqual([]);
+  });
+
+  it("is empty where nothing was ever credited", () => {
+    expect(undecidedSales({ sales: [], holding: 0 })).toEqual([]);
   });
 });

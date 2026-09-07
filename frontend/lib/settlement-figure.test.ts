@@ -68,7 +68,9 @@ describe("what the card says a person owes", () => {
     // fact rather than as the act the button performs. Same subject-less fragment as the entry box
     // it replaced.
     expect(source).not.toContain("already sent");
-    expect(source).toContain("records ${formatMesos(owes, true)} sent to ${row.name}");
+    // Mark sent's own line, which names both pots. The Settle line below carries the same words
+    // after "also", so this has to pin the send's own or it passes on the collect's.
+    expect(source).toContain("records ${moved(owes)} sent to ${row.name}");
   });
   it("puts the nights behind the shares figure on hover, and marks that it has them", () => {
     // The same list sits under its own step further down, with two forms between the two, so the
@@ -129,15 +131,21 @@ describe("what the card says a person owes", () => {
     expect(handler).toContain("setDebts(done.debts);");
   });
 
-  it("promises the figure the headline actually moves by", () => {
+  it("promises the figures the headline actually moves by", () => {
     // It used to say "clears", because the headline was the net and the two halves of an offset
     // cancelled in it: the button could not promise to take anything off a figure that did not move.
-    // A share you owe is outside the net now, so it can, in the same words the money-in-hand Offset
-    // below wears.
+    // A share you owe is outside the net now, so it can.
     expect(source).toContain(
-      "takes ${formatMesos(offset.amount, true)} off what ${row.name} owes you",
+      "takes ${moved(offset.offered ? offset.amount : 0)} off what ${row.name} owes you",
     );
-    // And the figure it promises is the one the act writes: `parts` is what the request carries.
+    // POT BY POT, never one sum of the two. One Offset covers the shares you owe and their own money
+    // you are holding, and the act writes them as two calls; a single figure over the pair would be
+    // an addition this card makes nowhere else.
+    expect(source).toContain(
+      "? `${formatMesos(shares, true)} of shares and ${formatMesos(row.holding, true)} you are holding`",
+    );
+    expect(source).toContain(": formatMesos(shares > 0 ? shares : row.holding, true);");
+    // And the share figure it promises is the one the act writes: `parts` is what the request carries.
     expect(settlement).toContain(
       "const amount = parts.reduce((sum, part) => sum + part.amount, 0);",
     );

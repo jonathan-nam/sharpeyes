@@ -646,6 +646,35 @@ export function decidedSales(
 }
 
 /**
+ * The coupon sales the money you are still holding came out of, or none where they cannot be told.
+ *
+ * couponSalesBehind's discipline from the other end. Decisions are taken on the whole undecided pile
+ * oldest first, so what is left is the tail of the list past everything they have already taken, and
+ * that tail sums to `holding` exactly.
+ *
+ * How much has been taken is read off `holding` rather than off the disposals, whose amounts are
+ * capped as they are applied: a decision typed larger than the pile is said, not absorbed, so adding
+ * the rows up would spend sales nothing paid for.
+ *
+ * WHOLE SALES, and the run has to land exactly on a boundary. Where a decision stopped mid-sale the
+ * tail names coupons whose money has partly gone, and a count beside a figure that is not what those
+ * coupons fetched is a wrong number wearing an itemisation. Empty then, which is the card saying the
+ * figure and nothing about its parts, the way it did before this existed.
+ */
+export function undecidedSales(row: Pick<Settlement, "sales" | "holding">): CouponSale[] {
+  const credited = row.sales.reduce((sum, sale) => sum + sale.mesos, 0);
+  const decided = credited - row.holding;
+  let spent = 0;
+  let next = 0;
+  while (spent < decided && next < row.sales.length) {
+    spent += row.sales[next]!.mesos;
+    next += 1;
+  }
+  if (spent !== decided) return [];
+  return row.sales.slice(next);
+}
+
+/**
  * The money rows split by what they ARE: what builds the debt, and what has come off it.
  *
  * One list mixed the two, so an offset read as a debt and only a chevron told them apart, and every

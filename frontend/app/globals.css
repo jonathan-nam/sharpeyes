@@ -6732,6 +6732,56 @@ button.link:disabled {
   width: 120px;
 }
 
+/* The two entry forms at half a card's width. Wrapping, the label took the line with its amount and
+   the description took another with the button, so each form stood two rows deep. */
+.ledger-pair .ledger-sale {
+  gap: 8px;
+}
+
+.ledger-pair .ledger-sale .loot-share-input .split-input {
+  width: 84px;
+}
+
+/* The description takes what is left of the line, being the one box on it with no size of its own to
+   keep. `min-width: 0` on the label as well, or its own content sets a floor and the line wraps
+   anyway: a flex item does not shrink past its content without it. */
+.ledger-sale .loot-share-input.is-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* STRETCH, not flex-grow. `is-stacked` turns the label into a column, so a grow on the box inside
+   it grows the wrong axis: the box kept its own 20-character width, which at half a card is wider
+   than the label it sits in. */
+.ledger-sale .loot-share-input.is-grow .split-input {
+  align-self: stretch;
+  width: auto;
+  min-width: 56px;
+}
+
+/* Sized like the boxes beside it, which means the INPUT's metrics and not the button's: .party-save
+   is 13px on 8px of padding and came out 4px shorter than a 15px .split-input on 9px, so a row of
+   three controls had one that did not line up. A mark rather than a word, so the sides are the
+   input's too and the box is as narrow as the glyph allows. */
+.ledger-add {
+  font-size: var(--text-lg);
+  padding: 9px 14px;
+}
+
+/* On the boxes' line, not centred against a label stacked above them. */
+.ledger-sale .ledger-add {
+  align-self: flex-end;
+}
+
+/* The label above its box rather than beside it. Beside it, the label's own width came off the line
+   the two boxes and the submit had to share, and at half a card's width the submit was pushed to a
+   row of its own. */
+.loot-share-input.is-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
 /* The share boxes for the rows a lot would cover. Its own row in the form's wrap, so the price line
    keeps its line and the button keeps the next one. */
 /* The lot card's form. .ledger-sale, which this was, is a wrapping ROW, so the boxes, the splits
@@ -6780,6 +6830,15 @@ button.link:disabled {
 .ledger-step {
   font-size: var(--text-sm);
   color: var(--muted);
+}
+
+/* A card SECTION, which two of them are: what is unsettled, and what can be done about it. The
+   steps are 11px lowercase labels on the figure each one heads, and neither of these heads a figure,
+   so they carry a heading's size and weight instead of reading as one more step in the arithmetic. */
+.ledger-heading {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink-strong);
 }
 
 /* Space before the second step, so the two do not run together. Not before the first, which already
@@ -6857,6 +6916,15 @@ button.link:disabled {
 .ledger-hint-mark:focus-visible + .ledger-hint-bubble {
   visibility: visible;
   opacity: 1;
+}
+
+/* One act per line: the button, and what pressing it will record beside it. Unstyled, these were
+   inline spans, so the sentence butted against the button's own border with nothing between them. */
+.ledger-settle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
 /* The card's one instruction, and it is a count. Sits directly above the control it is about, so the

@@ -13,6 +13,7 @@ import {
   moneyRows,
   offsetOf,
   owedByYouShares,
+  undecidedSales,
   settleThePair,
   shareKey,
   sharesOf,
@@ -74,6 +75,7 @@ export function SettlementLedger({
   partyById,
   offsetShares,
   iconUrl,
+  couponName,
   busy,
   payments,
   onAddPayment,
@@ -97,6 +99,14 @@ export function SettlementLedger({
   offsetShares: Map<string, OffsetShare>;
   /** The coupon's own sprite, for the acts whose every piece is one. See DischargeRow. */
   iconUrl: string | null;
+  /**
+   * The coupon's own name, off the same drop table its sprite comes from.
+   *
+   * A sale row said "130 coupons", which is the count and not what was sold. One item behaves this
+   * way so the card could have spelled it, and spelling it here is what keeps it the catalog's name
+   * rather than a second one. Null falls back to the count alone.
+   */
+  couponName: string | null;
   busy: boolean;
   /** Each person's receipts, keyed by holderKey(). See Receipts. */
   payments: Map<string, Receipts>;
@@ -144,6 +154,7 @@ export function SettlementLedger({
           partyById={partyById}
           offsetShares={offsetShares}
           iconUrl={iconUrl}
+          couponName={couponName}
           busy={busy}
           payments={payments.get(row.key) ?? NO_RECEIPTS}
           onAddPayment={onAddPayment}
@@ -171,6 +182,7 @@ function SettlementCard({
   partyById,
   offsetShares,
   iconUrl,
+  couponName,
   busy,
   payments,
   onAddPayment,
@@ -194,6 +206,8 @@ function SettlementCard({
   offsetShares: Map<string, OffsetShare>;
   /** The coupon's own sprite, for the acts whose every piece is one. See DischargeRow. */
   iconUrl: string | null;
+  /** The coupon's own name, so a sale row says what was sold and not only how much of it. */
+  couponName: string | null;
   busy: boolean;
   /** This person's receipts. See Receipts. */
   payments: Receipts;
@@ -236,6 +250,9 @@ function SettlementCard({
   const [showOff, setShowOff] = useState(false);
   // Whether what the debt is made of is open. Open by default: it is the half the card is for.
   const [showOwed, setShowOwed] = useState(true);
+  // Whether the sales behind the money you are holding are open. Folded, like the offsets history:
+  // the figure is what you act on and the rows are the check on it.
+  const [showHeld, setShowHeld] = useState(false);
   const [note, setNote] = useState("");
   // Its own, not the debt form's: two forms sharing one box would clear a half-typed note in the
   // other the moment either saved.
@@ -372,16 +389,54 @@ function SettlementCard({
    */
   const collectable = row.lines.some((line) => line.direction === "owed");
   /**
-   * Whether there is a share of YOURS here to mark as actually paid.
+   * The two pots a closing act moves, and they stay two pots everywhere else on this card.
    *
-   * Distinct from Settle, which collects, and from Offset, which discharges one against a debt of
-   * theirs. This is the third thing that can happen to a share you owe: you sent them the mesos.
+   * SHARES you owe are your cut of a night of theirs. HOLDING is their own money, which a sale of
+   * their coupons left in your hands. What can happen to each is the same pair of things, so one
+   * button covers both: one trade settles both, and two buttons wearing one word ("Offset" twice,
+   * "Mark sent" beside "I paid them") said nothing about which pot each was for.
+   *
+   * Each pot is still WRITTEN on its own, so a click is two calls where both apply. If the second is
+   * refused the first stands, which the refusal line says; both are reversible where they are drawn,
+   * a disposal on this card and a share on the party page.
+   */
+  const offsettable = offset.offered || row.holding > 0;
+  /**
+   * Whether there is anything of theirs to send.
+   *
+   * Distinct from Settle, which collects, and from Offset, which discharges against a debt of
+   * theirs. This is the third thing that can happen: the mesos left your hands.
    *
    * It went missing when Settle was pulled off a card with nothing to collect, and pulling it was
    * right; what was wrong was leaving no act in its place. Jared's card said "you owe 289,382,716"
    * with nothing to do about it, which is a ledger you cannot keep.
    */
-  const sendable = owes > 0;
+  const sendable = owes > 0 || row.holding > 0;
+
+  /**
+   * What an act moves, pot by pot.
+   *
+   * Never one sum of the two: this card keeps them apart everywhere, and the act writes them apart.
+   * With one pot in play it reads as the single figure it always did.
+   */
+  const moved = (shares: number) =>
+    shares > 0 && row.holding > 0
+      ? `${formatMesos(shares, true)} of shares and ${formatMesos(row.holding, true)} you are holding`
+      : formatMesos(shares > 0 ? shares : row.holding, true);
+
+  // The sales the held money is still sitting on, where they can be told exactly. See undecidedSales.
+  const held = undecidedSales(row);
+
+  /** Everything of theirs that can come off their debt. */
+  const offsetAll = async () => {
+    if (offset.offered) await onOffsetShares(row.holder, row.name, offset.parts);
+    if (row.holding > 0) await onDisposeProceeds(row.holder, row.holding, "OFFSET");
+  };
+  /** Everything of theirs that has left your hands. */
+  const sendAll = async () => {
+    if (owes > 0) await onSettleShares(owedByYouShares(row));
+    if (row.holding > 0) await onDisposeProceeds(row.holder, row.holding, "PAID");
+  };
 
   /**
    * The nights one act discharged, named. Off the pools rather than the wallet's lines: the settle
@@ -488,31 +543,31 @@ function SettlementCard({
         {/* The money, and what it is made of. Every entered row is removable and nothing else is: the
           others are corrected where they were recorded, which is the sale or the split itself. */}
         <div className="ledger-entry">
-          {/* Foldable only where there is a list, so a card with nothing priced draws no chevron at
-            all and its two forms stay reachable. Folded, the count is what says the list is there;
-            the money it comes to is the header's, and no second sum is spelled out here. */}
-          <div className="ledger-step-line">
-            <span className="ledger-step">owed</span>
-            {owedParts > 0 && (
-              <>
-                <button
-                  type="button"
-                  className="party-row-toggle"
-                  aria-expanded={showOwed}
-                  aria-controls={`owed-${row.key}`}
-                  onClick={() => setShowOwed((o) => !o)}
-                >
-                  <span className="party-row-chevron" aria-hidden="true" />
-                  <span className="visually-hidden">
-                    {showOwed ? `Hide what ${row.name} owes you` : `Show what ${row.name} owes you`}
-                  </span>
-                </button>
-                {!showOwed && <span className="ledger-done">{plural(owedParts, "part")}</span>}
-              </>
-            )}
-          </div>
+          {/* Nothing priced yet means no step at all, not the word OWED over a gap. What is left is
+            the two forms, and each of them says what it adds.
+
+            Where there is a list it folds, and where there is not there is no chevron either, which
+            is the card's rule everywhere else. Folded, the count is what says the list is there: the
+            money it comes to is the header's figure, and no second sum is spelled out here. */}
+          {owedParts > 0 && (
+            <div className="ledger-step-line">
+              <span className="ledger-step">owed</span>
+              <button
+                type="button"
+                className="party-row-toggle"
+                aria-expanded={showOwed}
+                aria-controls={`owed-${row.key}`}
+                onClick={() => setShowOwed((o) => !o)}
+              >
+                <span className="party-row-chevron" aria-hidden="true" />
+                <span className="visually-hidden">
+                  {showOwed ? `Hide what ${row.name} owes you` : `Show what ${row.name} owes you`}
+                </span>
+              </button>
+              {!showOwed && <span className="ledger-done">{plural(owedParts, "part")}</span>}
+            </div>
+          )}
           <div className="ledger-fold" id={`owed-${row.key}`} hidden={!openOwed}>
-            {/* Nothing priced yet means no list at all, rather than the word "OWED" over a gap. */}
             {(parts.length > 0 || typed.length > 0) && (
               <ul className="ledger-queue">
                 {parts.map((part) => (
@@ -543,10 +598,12 @@ function SettlementCard({
 
             {/* The one figure on this page nothing else could have known. See V56.
 
-            Both boxes NAME the person, and both show the shape of the answer. "owes me ___ for ___"
-            was a sentence fragment two boxes long: no subject (the title is a list away), no unit,
-            and nothing saying what "for" wanted. The placeholder also teaches the b/m suffix, which
-            is the one thing about parseMesos nobody can guess. */}
+            Its own step, and the boxes say what they take. "Bro owes me ___ for ___" was a sentence
+            spread over two boxes: no unit on either, nothing saying what "for" wanted, and the step
+            it belongs to a list away. The step names the act, the labels name the fields, and the
+            b/m suffix is the one thing about parseMesos nobody can guess, so it stays a placeholder
+            on the amount. */}
+            <span className="ledger-heading">Add Debt</span>
             <form
               className="ledger-sale"
               onSubmit={(e) => {
@@ -559,34 +616,43 @@ function SettlementCard({
                 }
               }}
             >
-              <label className="loot-share-input">
-                {row.name} owes me
+              <label className="loot-share-input is-stacked">
+                Amount
                 <input
                   className="split-input"
                   value={owed}
                   onChange={(e) => setOwed(e.target.value)}
                   placeholder="1.5b"
                   inputMode="decimal"
-                  aria-label={`What ${row.name} owes you`}
+                  aria-label={`Amount ${row.name} owes you`}
                 />
               </label>
-              {/* No label of its own: the placeholder says what it wants in the words it wants them
-              in, and "for [ ]" said neither. Optional, and the button does not wait on it. */}
-              <input
-                className="split-input"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="what for"
-                maxLength={120}
-                aria-label="What it was for, optional"
-              />
-              <button type="submit" className="party-save" disabled={busy || owing === null}>
-                Add
+              {/* Takes what is left of the line, being the one box on it with no size of its own. */}
+              <label className="loot-share-input is-grow is-stacked">
+                Description
+                <input
+                  className="split-input"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  maxLength={120}
+                  aria-label="Description, optional"
+                />
+              </label>
+              {/* A + rather than the word: two forms a step apart both read "Add", and what each one
+              adds is what its step says. The label is the act, since the mark is not text. */}
+              <button
+                type="submit"
+                className="party-save ledger-add"
+                disabled={busy || owing === null}
+                aria-label={`Add what ${row.name} owes you`}
+              >
+                +
               </button>
             </form>
 
             {/* Mesos arriving, against everything above at once. A payment is against the person, not
             against a particular boss or a particular coupon. See V51. */}
+            <span className="ledger-heading">Add Payment</span>
             <form
               className="ledger-sale"
               onSubmit={(e) => {
@@ -599,29 +665,36 @@ function SettlementCard({
                 }
               }}
             >
-              <label className="loot-share-input">
-                {row.name} paid me
+              <label className="loot-share-input is-stacked">
+                Amount
                 <input
                   className="split-input"
                   value={got}
                   onChange={(e) => setGot(e.target.value)}
                   placeholder="1.5b"
                   inputMode="decimal"
-                  aria-label={`What ${row.name} has paid you`}
+                  aria-label={`Amount ${row.name} has paid you`}
                 />
               </label>
               {/* The same box the entry above it carries, in the same words. A receipt that cannot say
               what it answered is one nobody can check a month later. */}
-              <input
-                className="split-input"
-                value={gotNote}
-                onChange={(e) => setGotNote(e.target.value)}
-                placeholder="what for"
-                maxLength={120}
-                aria-label="What it was for, optional"
-              />
-              <button type="submit" className="party-save" disabled={busy || paid === null}>
-                Add
+              <label className="loot-share-input is-grow is-stacked">
+                Description
+                <input
+                  className="split-input"
+                  value={gotNote}
+                  onChange={(e) => setGotNote(e.target.value)}
+                  maxLength={120}
+                  aria-label="Description, optional"
+                />
+              </label>
+              <button
+                type="submit"
+                className="party-save ledger-add"
+                disabled={busy || paid === null}
+                aria-label={`Add a payment from ${row.name}`}
+              >
+                +
               </button>
             </form>
 
@@ -722,176 +795,152 @@ function SettlementCard({
         )}
       </div>
 
-      {/* The shares behind the figure above, and the one button that marks every one of them paid.
-          The act the Wallet used to perform, against the same payout rows. BOTH directions are
-          listed and one button covers them, because a relationship is settled by one transfer of
-          the difference and that marks every share behind it paid at once. Each line is signed, so
-          a list holding both ways round says which is which without a word. */}
-      {row.lines.length > 0 && (
+      {/* Everything outstanding, itemised, in the two shapes it is outstanding in: shares of a
+          night, and their own money a sale of their coupons left in your hands. One section, because
+          one transfer of the difference closes both and Closing Actions acts on both at once. Two
+          steps inside it, because a share is a claim on somebody and the money is already here.
+
+          The card is one person's, so the heading does not name them again. It used to, and the two
+          halves were two sections with nothing between them but a rule. */}
+      {(row.lines.length > 0 || row.holding > 0 || paidOut.length > 0) && (
         <div className="ledger-entry">
-          <span className="ledger-step">shares</span>
-          <ul className="ledger-queue">
-            {row.lines.map((line) => {
-              const boss = bossByKey.get(line.bossKey ?? "");
-              const party = partyById.get(line.partyId);
-              return (
-                <li key={`${line.lootId}:${line.theirsId}`} className="ledger-drop">
-                  <div className="ledger-drop-head">
-                    <Link href={partyHrefById(line.partyId, partyById)} className="loot-name">
-                      {line.name}
-                    </Link>
-                    <span className="loot-meta">
-                      {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"} ·{" "}
-                      {line.theirs}
-                    </span>
-                    {/* `pay`, not `nets`: every other figure on this card is pre-fee, so a line
-                        drawn net of it disagreed with the Offset button sitting under it by the 5%.
-                        A 703,703,488 offset was listed as a 668,518,313 share. See settlement-figure
-                        for the whole card's unit. */}
-                    <span className="ledger-amount">
-                      {signed(line.direction === "owe" ? -line.pay : line.pay)}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {/* What it will do, beside the button that does it. One act now covers shares in both
-              directions, so what it will record is worth saying before it runs. Reversible from the
-              party page, share by share. */}
-          {/* Discharged against what they owe you, rather than by money crossing.
+          <span className="ledger-heading">Unsettled Amounts</span>
 
-              The shares YOU owe, and only those. Handed every line it also marked their shares to you
-              paid, so the offset quietly collected money nobody had sent: the net fell by whatever
-              they owed. Settle is the act that covers both directions, because there a transfer of the
-              difference really did happen. */}
-          {offset.offered && (
-            <span className="ledger-settle">
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy}
-                onClick={() => void write(onOffsetShares(row.holder, row.name, offset.parts), null)}
-              >
-                Offset
-              </button>
-              {/* What it leaves behind, where their debt cannot cover the lot. Said, because the
-                  alternative is a button promising to take 800m off a 500m debt.
-
-                  The same words the money-in-hand Offset below wears, now that the headline moves
-                  the same way: a share you owe is outside the net until this is pressed. */}
-              <span className="ledger-progress">
-                {offset.leftOwing > 0
-                  ? `clears what ${row.name} owes you, leaving you owing ${formatMesos(offset.leftOwing, true)}`
-                  : `takes ${formatMesos(offset.amount, true)} off what ${row.name} owes you`}
-              </span>
-            </span>
-          )}
-
-          {/* You actually sent them the mesos. Named for the direction, so it cannot be read as the
-              collecting act above it or as the offset beside it. */}
-          {sendable && (
-            <span className="ledger-settle">
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy}
-                onClick={() => void write(onSettleShares(owedByYouShares(row)), null)}
-              >
-                Mark sent
-              </button>
-              <span className="ledger-progress">
-                {`records ${formatMesos(owes, true)} sent to ${row.name}`}
-              </span>
-            </span>
-          )}
-
-          {collectable && (
-            <span className="ledger-settle">
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy}
-                onClick={() => void write(onSettleShares(sharesOf(row)), null)}
-              >
-                Settle
-              </button>
-              <span className="ledger-progress">
-                {owes
-                  ? `also records ${formatMesos(owes, true)} sent to ${row.name}`
-                  : `marks ${row.lines.length} ${row.lines.length === 1 ? "share" : "shares"} paid`}
-              </span>
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* Their money, sitting in your hands, with nothing decided about it yet.
-
-          Two things can happen to it and they end in different places, so the card asks rather than
-          choosing: OFFSET takes it off what they owe you, PAID means you sent it and their debt never
-          moved. Until one is recorded it is outside the net entirely, which is why this block is not
-          under `owed` with the parts. See V61. */}
-      {(row.holding > 0 || paidOut.length > 0) && (
-        <div className="ledger-entry">
-          <span className="ledger-step">{`${row.name}'s money I'm holding`}</span>
-          {row.holding > 0 && (
+          {/* Both directions, each line signed, so a list holding both ways round says which is
+              which without a word. `pay`, not `nets`: every other figure on this card is pre-fee, so
+              a line drawn net of it disagreed with the Offset below by the 5%, listing a 703,703,488
+              offset as a 668,518,313 share. See settlement-figure for the whole card's unit. */}
+          {row.lines.length > 0 && (
             <>
-              {/* Copyable, like the headline: "I paid them" means pasting this into a trade box,
-                  and it was the one figure on a card with an act behind it you could not take. */}
-              <span className="ledger-amount">
-                <CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />
-              </span>
-              <span className="ledger-settle">
-                <button
-                  type="button"
-                  className="party-save"
-                  disabled={busy}
-                  onClick={() =>
-                    void write(onDisposeProceeds(row.holder, row.holding, "OFFSET"), null)
-                  }
-                >
-                  Offset
-                </button>
-                <button
-                  type="button"
-                  className="party-save"
-                  disabled={busy}
-                  onClick={() =>
-                    void write(onDisposeProceeds(row.holder, row.holding, "PAID"), null)
-                  }
-                >
-                  I paid them
-                </button>
-                <span className="ledger-progress">
-                  {`takes ${formatMesos(row.holding, true)} off what ${row.name} owes you, or sends it`}
-                </span>
-              </span>
+              <span className="ledger-step">shares</span>
+              <ul className="ledger-queue">
+                {row.lines.map((line) => {
+                  const boss = bossByKey.get(line.bossKey ?? "");
+                  const party = partyById.get(line.partyId);
+                  return (
+                    <li key={`${line.lootId}:${line.theirsId}`} className="ledger-drop">
+                      <div className="ledger-drop-head">
+                        <Link href={partyHrefById(line.partyId, partyById)} className="loot-name">
+                          {line.name}
+                        </Link>
+                        <span className="loot-meta">
+                          {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}{" "}
+                          · {line.theirs}
+                        </span>
+                        <span className="ledger-amount">
+                          {signed(line.direction === "owe" ? -line.pay : line.pay)}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             </>
           )}
-          {/* Only what was SENT to them. A decision to offset took something off what they owe you,
-              so it is said under `offsets` with everything else that did: one place for one kind
-              of fact. Paying them out took nothing off, which is exactly why it stays here, beside
-              the money it came out of.
 
-              Removable, and only here: nothing else on any screen records one. */}
-          {paidOut.length > 0 && (
-            <span className="ledger-tranches">
-              {paidOut.map((disposal) => (
-                <span key={disposal.id} className="ledger-tranche">
-                  {`${formatMesos(disposal.amount, true)} paid out`}
-                  <button
-                    type="button"
-                    className="link ledger-drop-sale"
-                    disabled={busy}
-                    onClick={() => void write(onRemoveDisposal(disposal.id), null)}
-                    aria-label={`Undo ${formatMesos(disposal.amount, true)} paid out to ${row.name}`}
-                  >
-                    ×
-                  </button>
+          {/* Their money, in your hands, with nothing decided about it yet.
+
+              Two things can happen to it and they end in different places, so the card asks rather
+              than choosing: OFFSET takes it off what they owe you, sending it leaves their debt where
+              it was. Until one is recorded it is outside the net entirely, which is why this is not
+              a part under `owed`. See V61. */}
+          {(row.holding > 0 || paidOut.length > 0) && (
+            <>
+              {/* THE FIGURE IS THE HEADING. It had a step of its own over it saying "coupon
+                  sales", which named where the money came from twice: the rows inside say it, one
+                  sale each. What is left on the line is the amount and the way in to its parts.
+
+                  Copyable, like the card's own headline: sending it means pasting this into a trade
+                  box, and it was the one figure on a card with an act behind it you could not take.
+
+                  Folded, the way the offsets history is: the figure is what you act on and the rows
+                  are the check on it. The rows add up to it exactly, or there are none of them at
+                  all, because undecidedSales refuses a list it cannot land on a sale boundary rather
+                  than name coupons whose money has partly gone. */}
+              {row.holding > 0 && (
+                <ul className="ledger-queue">
+                  <li className="ledger-drop">
+                    <div className="ledger-drop-head">
+                      <span className="loot-name">
+                        <CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />
+                      </span>
+                      {held.length > 0 && (
+                        <button
+                          type="button"
+                          className="party-row-toggle"
+                          aria-expanded={showHeld}
+                          aria-controls={`held-${row.key}`}
+                          onClick={() => setShowHeld((o) => !o)}
+                        >
+                          <span className="party-row-chevron" aria-hidden="true" />
+                          <span className="visually-hidden">
+                            {`${showHeld ? "Hide" : "Show"} the ${plural(held.length, "sale")} behind it`}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+
+                    {/* One sale each, keyed by position: a tranche's id has nothing to say here that
+                        its coupons and its day do not. */}
+                    {showHeld && held.length > 0 && (
+                      <ul className="loot-shares" id={`held-${row.key}`}>
+                        {held.map((sale, i) => (
+                          <li key={`held-${i}`}>
+                            {iconUrl ? (
+                              <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+                            ) : (
+                              <span className="loot-icon" aria-hidden="true" />
+                            )}
+                            <span className="loot-share-name">
+                              {couponName
+                                ? `${sale.pieces} ${couponName}`
+                                : `${sale.pieces} coupons`}
+                            </span>
+                            <span className="loot-share-nets">
+                              {[
+                                sale.soldAt && dayOf(sale.soldAt),
+                                // Only where the lot was not all theirs. Their share of a mixed one
+                                // is a figure nobody can check without the lot it came out of.
+                                sale.pieces !== sale.lot.pieces &&
+                                  `of ${sale.lot.pieces} for ${formatMesos(sale.lot.amount, true)}`,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </span>
+                            <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                </ul>
+              )}
+
+              {/* Only what was SENT to them. A decision to offset took something off what they owe
+                  you, so it is said under `offsets` with everything else that did: one place for one
+                  kind of fact. Paying them out took nothing off, which is exactly why it stays here,
+                  beside the money it came out of.
+
+                  Removable, and only here: nothing else on any screen records one. */}
+              {paidOut.length > 0 && (
+                <span className="ledger-tranches">
+                  {paidOut.map((disposal) => (
+                    <span key={disposal.id} className="ledger-tranche">
+                      {`${formatMesos(disposal.amount, true)} paid out`}
+                      <button
+                        type="button"
+                        className="link ledger-drop-sale"
+                        disabled={busy}
+                        onClick={() => void write(onRemoveDisposal(disposal.id), null)}
+                        aria-label={`Undo ${formatMesos(disposal.amount, true)} paid out to ${row.name}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
                 </span>
-              ))}
-            </span>
+              )}
+            </>
           )}
         </div>
       )}
@@ -979,10 +1028,103 @@ function SettlementCard({
             </>
           )}
 
-          {/* One act for both sides. Closing a single side is what took your own coupons out of the
+          {/* Only the nights the closing act will NOT close. The ones it will are the rows directly
+              above, so counting them back read as a second fact and matched nothing else on the
+              card: 22 was eleven rows in each pile, and no screen in this app has 22 of anything
+              else.
+
+              A night owing a third person cannot be closed for one of them, so it stays open and is
+              said. Silence there would be the count quietly going short. It stays with the lists it
+              is about rather than following the button down to `closing actions`. */}
+          {pair.shared > 0 && (
+            <span className="ledger-progress">
+              {`${pair.shared} shared with others, not closed here`}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Every act the card offers, in one place, each beside what pressing it will record.
+
+          They were scattered across the steps they acted on, which put two buttons wearing the word
+          Offset on one card and "Mark sent" a step above "I paid them" for the same errand. What an
+          act moves is now said in its line instead, so the step is a list of what can be done and
+          the steps above are a statement of what stands.
+
+          Last on the card on purpose: it is what you do about the figures, so it comes after all of
+          them. */}
+      {(offsettable || sendable || collectable || pair.offered) && (
+        <div className="ledger-entry">
+          <span className="ledger-heading">Closing Actions</span>
+
+          {/* Discharged against what they owe you, rather than by money crossing.
+
+              What YOU owe, and only that. Handed every line it also marked their shares to you paid,
+              so the offset quietly collected money nobody had sent: the net fell by whatever they
+              owed. Settle is the act that covers both directions, because there a transfer of the
+              difference really did happen. */}
+          {offsettable && (
+            <span className="ledger-settle">
+              <button
+                type="button"
+                className="party-save"
+                disabled={busy}
+                onClick={() => void write(offsetAll(), null)}
+              >
+                Offset
+              </button>
+              {/* What it leaves behind, where their debt cannot cover the shares. Said, because the
+                  alternative is a button promising to take 800m off a 500m debt. Only where the
+                  shares are the whole act: with their money in it too the remainder is a subtraction
+                  across two pots, and this card does not make that one. */}
+              <span className="ledger-progress">
+                {offset.leftOwing > 0 && row.holding === 0
+                  ? `clears what ${row.name} owes you, leaving you owing ${formatMesos(offset.leftOwing, true)}`
+                  : `takes ${moved(offset.offered ? offset.amount : 0)} off what ${row.name} owes you`}
+              </span>
+            </span>
+          )}
+
+          {/* You actually sent them the mesos. Named for the direction, so it cannot be read as the
+              collecting act below it or as the offset above. */}
+          {sendable && (
+            <span className="ledger-settle">
+              <button
+                type="button"
+                className="party-save"
+                disabled={busy}
+                onClick={() => void write(sendAll(), null)}
+              >
+                Mark sent
+              </button>
+              <span className="ledger-progress">
+                {`records ${moved(owes)} sent to ${row.name}`}
+              </span>
+            </span>
+          )}
+
+          {collectable && (
+            <span className="ledger-settle">
+              <button
+                type="button"
+                className="party-save"
+                disabled={busy}
+                onClick={() => void write(onSettleShares(sharesOf(row)), null)}
+              >
+                Settle
+              </button>
+              <span className="ledger-progress">
+                {owes
+                  ? `also records ${formatMesos(owes, true)} sent to ${row.name}`
+                  : `marks ${row.lines.length} ${row.lines.length === 1 ? "share" : "shares"} paid`}
+              </span>
+            </span>
+          )}
+
+          {/* The coupons, both sides at once. Closing a single side is what took your own out of the
               netting and answered "60 to hand over" by asking for 80. See settleThePair. */}
-          <span className="ledger-settle">
-            {pair.offered && (
+          {pair.offered && (
+            <span className="ledger-settle">
               <button
                 type="button"
                 className="party-save"
@@ -991,19 +1133,11 @@ function SettlementCard({
               >
                 Mark settled
               </button>
-            )}
-            {/* Only the nights it will NOT close. The ones it will are the rows directly above, so
-                counting them back read as a second fact and matched nothing else on the card: 22
-                was eleven rows in each pile, and no screen in this app has 22 of anything else.
-
-                A night owing a third person cannot be closed for one of them, so it stays open and
-                is said. Silence there would be the count quietly going short. */}
-            {pair.shared > 0 && (
-              <span className="ledger-progress">
-                {`${pair.shared} shared with others, not closed here`}
-              </span>
-            )}
-          </span>
+              {/* No count beside it. What it closes is the two lists above, and counting them back
+                  read as a second fact matching nothing else on the card: 22 was eleven rows in each
+                  pile. What it cannot close is said up there, with them. */}
+            </span>
+          )}
         </div>
       )}
 
