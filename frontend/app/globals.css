@@ -6680,6 +6680,46 @@ button.link:disabled {
   border-bottom: 1px solid var(--line);
 }
 
+/* `owed` and `offsets` side by side: what builds the figure, and what has come off it. Stacked,
+   the second was a scroll past the shares in between, and the two are read against each other.
+
+   auto-fit rather than two fixed halves, because most cards have no offsets on them at all and the
+   forms on the left take a price, a note and a button. One column below ~660px of card. */
+.ledger-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* One rule under the pair, not one under each half: the halves end at different heights, so their
+   own borders came out as two ragged lines mid-card. */
+.ledger-pair > .ledger-entry {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* A step label and the chevron that folds the step. The chevron sits after the label, the way the
+   acts under `offsets` carry theirs after the count. */
+.ledger-step-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* What a folding step holds. Its own column, so folding one keeps the gap the entry had between
+   the parts inside it. `hidden` needs saying because the display here would beat it. */
+.ledger-fold {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ledger-fold[hidden] {
+  display: none;
+}
+
 .ledger-sale {
   display: flex;
   flex-wrap: wrap;

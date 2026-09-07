@@ -234,6 +234,8 @@ function SettlementCard({
   const [kept, setKept] = useState("");
   // Whether the history of what has come off is open. Folded by default: it is the half that grows.
   const [showOff, setShowOff] = useState(false);
+  // Whether what the debt is made of is open. Open by default: it is the half the card is for.
+  const [showOwed, setShowOwed] = useState(true);
   const [note, setNote] = useState("");
   // Its own, not the debt form's: two forms sharing one box would clear a half-typed note in the
   // other the moment either saved.
@@ -335,6 +337,10 @@ function SettlementCard({
   // What builds the debt, and what has already come off it. Two questions, so two lists: see
   // moneyRows for why one list could not hold both.
   const { typed, discharges, discharged } = moneyRows(row, payments.counted);
+  // How many rows the `owed` list holds, which is what decides whether it folds at all and what the
+  // folded line says is inside it.
+  const owedParts = parts.length + typed.length;
+  const openOwed = showOwed || owedParts === 0;
   // An OFFSET here is anything that came off the debt, which is the account's word for the step and
   // covers a payment: it is a count of acts, and each row inside names which act it was.
   const offsets = plural(discharges.length, "offset");
@@ -471,142 +477,248 @@ function SettlementCard({
         )}
       </header>
 
-      {/* The money, and what it is made of. Every entered row is removable and nothing else is: the
+      {/* What builds the debt beside what has come off it, half a card each.
+
+          Two questions about one figure, so they are read against each other rather than one
+          scrolled past to reach the other. `shares` follows below, being the detail behind a
+          single row of the left half rather than a third question. The right half is absent on
+          most cards, and the grid gives its width back when it is: the forms on the left take a
+          price and a note, which is more than half a card's worth of boxes. */}
+      <div className="ledger-pair">
+        {/* The money, and what it is made of. Every entered row is removable and nothing else is: the
           others are corrected where they were recorded, which is the sale or the split itself. */}
-      <div className="ledger-entry">
-        <span className="ledger-step">owed</span>
-        {/* Nothing priced yet means no list at all, rather than the word "OWED" over a gap. */}
-        {(parts.length > 0 || typed.length > 0) && (
-          <ul className="ledger-queue">
-            {parts.map((part) => (
-              <li key={part.key} className="ledger-drop">
-                {/* The nights behind the figure, where there are any. A title, because this is the
+        <div className="ledger-entry">
+          {/* Foldable only where there is a list, so a card with nothing priced draws no chevron at
+            all and its two forms stay reachable. Folded, the count is what says the list is there;
+            the money it comes to is the header's, and no second sum is spelled out here. */}
+          <div className="ledger-step-line">
+            <span className="ledger-step">owed</span>
+            {owedParts > 0 && (
+              <>
+                <button
+                  type="button"
+                  className="party-row-toggle"
+                  aria-expanded={showOwed}
+                  aria-controls={`owed-${row.key}`}
+                  onClick={() => setShowOwed((o) => !o)}
+                >
+                  <span className="party-row-chevron" aria-hidden="true" />
+                  <span className="visually-hidden">
+                    {showOwed ? `Hide what ${row.name} owes you` : `Show what ${row.name} owes you`}
+                  </span>
+                </button>
+                {!showOwed && <span className="ledger-done">{plural(owedParts, "part")}</span>}
+              </>
+            )}
+          </div>
+          <div className="ledger-fold" id={`owed-${row.key}`} hidden={!openOwed}>
+            {/* Nothing priced yet means no list at all, rather than the word "OWED" over a gap. */}
+            {(parts.length > 0 || typed.length > 0) && (
+              <ul className="ledger-queue">
+                {parts.map((part) => (
+                  <li key={part.key} className="ledger-drop">
+                    {/* The nights behind the figure, where there are any. A title, because this is the
                     detail of one row rather than something the card owes everybody: the same list
                     is under its own step below, and both are the wallet's, not a third answer. */}
-                <div className="ledger-drop-head" title={part.detail || undefined}>
-                  <span className={part.detail ? "loot-name has-detail" : "loot-name"}>
-                    {part.label}
-                  </span>
-                  <span className="ledger-amount">{signed(part.mesos)}</span>
-                </div>
-              </li>
-            ))}
-            {typed.map((entry) => (
-              <EnteredRow
-                key={entry.id}
-                entry={entry}
-                name={row.name}
-                busy={busy}
-                signed={signed}
-                onRemove={() => void write(onRemoveDebt(entry.id), null)}
-              />
-            ))}
-          </ul>
-        )}
+                    <div className="ledger-drop-head" title={part.detail || undefined}>
+                      <span className={part.detail ? "loot-name has-detail" : "loot-name"}>
+                        {part.label}
+                      </span>
+                      <span className="ledger-amount">{signed(part.mesos)}</span>
+                    </div>
+                  </li>
+                ))}
+                {typed.map((entry) => (
+                  <EnteredRow
+                    key={entry.id}
+                    entry={entry}
+                    name={row.name}
+                    busy={busy}
+                    signed={signed}
+                    onRemove={() => void write(onRemoveDebt(entry.id), null)}
+                  />
+                ))}
+              </ul>
+            )}
 
-        {/* The one figure on this page nothing else could have known. See V56.
+            {/* The one figure on this page nothing else could have known. See V56.
 
             Both boxes NAME the person, and both show the shape of the answer. "owes me ___ for ___"
             was a sentence fragment two boxes long: no subject (the title is a list away), no unit,
             and nothing saying what "for" wanted. The placeholder also teaches the b/m suffix, which
             is the one thing about parseMesos nobody can guess. */}
-        <form
-          className="ledger-sale"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (owing) {
-              void write(onAddDebt(row.holder, owing, note.trim()), () => {
-                setOwed("");
-                setNote("");
-              });
-            }
-          }}
-        >
-          <label className="loot-share-input">
-            {row.name} owes me
-            <input
-              className="split-input"
-              value={owed}
-              onChange={(e) => setOwed(e.target.value)}
-              placeholder="1.5b"
-              inputMode="decimal"
-              aria-label={`What ${row.name} owes you`}
-            />
-          </label>
-          {/* No label of its own: the placeholder says what it wants in the words it wants them
+            <form
+              className="ledger-sale"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (owing) {
+                  void write(onAddDebt(row.holder, owing, note.trim()), () => {
+                    setOwed("");
+                    setNote("");
+                  });
+                }
+              }}
+            >
+              <label className="loot-share-input">
+                {row.name} owes me
+                <input
+                  className="split-input"
+                  value={owed}
+                  onChange={(e) => setOwed(e.target.value)}
+                  placeholder="1.5b"
+                  inputMode="decimal"
+                  aria-label={`What ${row.name} owes you`}
+                />
+              </label>
+              {/* No label of its own: the placeholder says what it wants in the words it wants them
               in, and "for [ ]" said neither. Optional, and the button does not wait on it. */}
-          <input
-            className="split-input"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="what for"
-            maxLength={120}
-            aria-label="What it was for, optional"
-          />
-          <button type="submit" className="party-save" disabled={busy || owing === null}>
-            Add
-          </button>
-        </form>
+              <input
+                className="split-input"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="what for"
+                maxLength={120}
+                aria-label="What it was for, optional"
+              />
+              <button type="submit" className="party-save" disabled={busy || owing === null}>
+                Add
+              </button>
+            </form>
 
-        {/* Mesos arriving, against everything above at once. A payment is against the person, not
+            {/* Mesos arriving, against everything above at once. A payment is against the person, not
             against a particular boss or a particular coupon. See V51. */}
-        <form
-          className="ledger-sale"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (paid) {
-              void write(onAddPayment(row.holder, paid, gotNote.trim()), () => {
-                setGot("");
-                setGotNote("");
-              });
-            }
-          }}
-        >
-          <label className="loot-share-input">
-            {row.name} paid me
-            <input
-              className="split-input"
-              value={got}
-              onChange={(e) => setGot(e.target.value)}
-              placeholder="1.5b"
-              inputMode="decimal"
-              aria-label={`What ${row.name} has paid you`}
-            />
-          </label>
-          {/* The same box the entry above it carries, in the same words. A receipt that cannot say
+            <form
+              className="ledger-sale"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (paid) {
+                  void write(onAddPayment(row.holder, paid, gotNote.trim()), () => {
+                    setGot("");
+                    setGotNote("");
+                  });
+                }
+              }}
+            >
+              <label className="loot-share-input">
+                {row.name} paid me
+                <input
+                  className="split-input"
+                  value={got}
+                  onChange={(e) => setGot(e.target.value)}
+                  placeholder="1.5b"
+                  inputMode="decimal"
+                  aria-label={`What ${row.name} has paid you`}
+                />
+              </label>
+              {/* The same box the entry above it carries, in the same words. A receipt that cannot say
               what it answered is one nobody can check a month later. */}
-          <input
-            className="split-input"
-            value={gotNote}
-            onChange={(e) => setGotNote(e.target.value)}
-            placeholder="what for"
-            maxLength={120}
-            aria-label="What it was for, optional"
-          />
-          <button type="submit" className="party-save" disabled={busy || paid === null}>
-            Add
-          </button>
-        </form>
+              <input
+                className="split-input"
+                value={gotNote}
+                onChange={(e) => setGotNote(e.target.value)}
+                placeholder="what for"
+                maxLength={120}
+                aria-label="What it was for, optional"
+              />
+              <button type="submit" className="party-save" disabled={busy || paid === null}>
+                Add
+              </button>
+            </form>
 
-        {/* Receipts a closure has already spoken for, which are in none of the arithmetic above.
+            {/* Receipts a closure has already spoken for, which are in none of the arithmetic above.
             Kept because this is the only place a payment can be taken back: it used to be done on
             the Sale Ledger, on a card that held the old per-holder tranches, and that card is gone.
             Empty until a pile is settled, which is the usual state of a card. */}
-        {payments.spent.length > 0 && (
-          <span className="ledger-tranches">
-            {payments.spent.map((got) => (
-              <span key={got.id} className="ledger-tranche">
-                {got.note
-                  ? `${formatMesos(got.amount, true)} paid \u00b7 ${got.note}`
-                  : `${formatMesos(got.amount, true)} paid`}
-                <ArmedRemove
-                  busy={busy}
-                  label={`Remove the ${formatMesos(got.amount, true)} payment`}
-                  onRemove={() => void write(onRemovePayment(got.id), null)}
-                />
+            {payments.spent.length > 0 && (
+              <span className="ledger-tranches">
+                {payments.spent.map((got) => (
+                  <span key={got.id} className="ledger-tranche">
+                    {got.note
+                      ? `${formatMesos(got.amount, true)} paid \u00b7 ${got.note}`
+                      : `${formatMesos(got.amount, true)} paid`}
+                    <ArmedRemove
+                      busy={busy}
+                      label={`Remove the ${formatMesos(got.amount, true)} payment`}
+                      onRemove={() => void write(onRemovePayment(got.id), null)}
+                    />
+                  </span>
+                ))}
               </span>
-            ))}
-          </span>
+            )}
+          </div>
+        </div>
+
+        {/* What has already come off, folded to one line.
+
+          Its own step because it is a different question from the one beside it: `owed` is a
+          standing fact, this is a history of acts. Mixed into one list an offset read as a debt,
+          told apart only by a chevron, and every press of Offset added a line that never left.
+
+          A PAYMENT is one of these acts: mesos they sent came off what they owe exactly as an offset
+          does, dated and removable the same way. It is an offset in the sense the step means, which
+          is what came off, and the row inside says which act it was.
+
+          FOLDED, because this is the half that grows without bound. Three acts against one person
+          were three near-identical rows burying the one that said what he owed. The count and the
+          total are on the line, so nothing is hidden by folding it: what is inside is which act and
+          when, and that is what a reader opens it for. */}
+        {discharges.length > 0 && (
+          <div className="ledger-entry">
+            <span className="ledger-step">offsets</span>
+            <ul className="ledger-queue">
+              <li className="ledger-drop">
+                <div className="ledger-drop-head">
+                  {/* After the count, the way the acts under it carry theirs. This row leads with a
+                    heading rather than art, so a chevron in front of it pushed nothing aside, but
+                    it sat one step left of every row it opens onto and read as a second column. */}
+                  <span className="loot-name">{offsets}</span>
+                  <button
+                    type="button"
+                    className="party-row-toggle"
+                    aria-expanded={showOff}
+                    aria-controls={`off-${row.key}`}
+                    onClick={() => setShowOff((o) => !o)}
+                  >
+                    <span className="party-row-chevron" aria-hidden="true" />
+                    <span className="visually-hidden">
+                      {showOff ? `Hide the ${offsets}` : `Show the ${offsets}`}
+                    </span>
+                  </button>
+                  <span className="ledger-amount">{signed(-discharged)}</span>
+                </div>
+
+                {/* A queue, not a share list. `.loot-shares > li` is a wrapping ROW with a rule above
+                  it, and a `.ledger-drop` is a COLUMN with a rule down its left: nesting one in the
+                  other gave every act both, so the rows came out with a stray top border and two
+                  indents fighting. Drop rows go in a drop queue. */}
+                {showOff && (
+                  <ul className="ledger-queue" id={`off-${row.key}`}>
+                    {discharges.map((act) => (
+                      <DischargeRow
+                        key={act.id}
+                        act={act}
+                        name={row.name}
+                        shares={nightsBehind(act.payouts)}
+                        iconUrl={iconUrl}
+                        busy={busy}
+                        signed={signed}
+                        onRemove={() =>
+                          void write(
+                            act.source === "DEBT"
+                              ? onRemoveDebt(act.id)
+                              : act.source === "PAYMENT"
+                                ? onRemovePayment(act.id)
+                                : onRemoveDisposal(act.id),
+                            null,
+                          )
+                        }
+                      />
+                    ))}
+                  </ul>
+                )}
+              </li>
+            </ul>
+          </div>
         )}
       </div>
 
@@ -711,79 +823,6 @@ function SettlementCard({
               </span>
             </span>
           )}
-        </div>
-      )}
-
-      {/* What has already come off, folded to one line.
-
-          Its own step because it is a different question from the one above: `owed` is a standing
-          fact, this is a history of acts. Mixed into one list an offset read as a debt, told apart
-          only by a chevron, and every press of Offset added a line that never left again.
-
-          A PAYMENT is one of these acts: mesos they sent came off what they owe exactly as an offset
-          does, dated and removable the same way. It is an offset in the sense the step means, which
-          is what came off, and the row inside says which act it was.
-
-          FOLDED, because this is the half that grows without bound. Three acts against one person
-          were three near-identical rows burying the one that said what he owed. The count and the
-          total are on the line, so nothing is hidden by folding it: what is inside is which act and
-          when, and that is what a reader opens it for. */}
-      {discharges.length > 0 && (
-        <div className="ledger-entry">
-          <span className="ledger-step">offsets</span>
-          <ul className="ledger-queue">
-            <li className="ledger-drop">
-              <div className="ledger-drop-head">
-                {/* After the count, the way the acts under it carry theirs. This row leads with a
-                    heading rather than art, so a chevron in front of it pushed nothing aside, but
-                    it sat one step left of every row it opens onto and read as a second column. */}
-                <span className="loot-name">{offsets}</span>
-                <button
-                  type="button"
-                  className="party-row-toggle"
-                  aria-expanded={showOff}
-                  aria-controls={`off-${row.key}`}
-                  onClick={() => setShowOff((o) => !o)}
-                >
-                  <span className="party-row-chevron" aria-hidden="true" />
-                  <span className="visually-hidden">
-                    {showOff ? `Hide the ${offsets}` : `Show the ${offsets}`}
-                  </span>
-                </button>
-                <span className="ledger-amount">{signed(-discharged)}</span>
-              </div>
-
-              {/* A queue, not a share list. `.loot-shares > li` is a wrapping ROW with a rule above
-                  it, and a `.ledger-drop` is a COLUMN with a rule down its left: nesting one in the
-                  other gave every act both, so the rows came out with a stray top border and two
-                  indents fighting. Drop rows go in a drop queue. */}
-              {showOff && (
-                <ul className="ledger-queue" id={`off-${row.key}`}>
-                  {discharges.map((act) => (
-                    <DischargeRow
-                      key={act.id}
-                      act={act}
-                      name={row.name}
-                      shares={nightsBehind(act.payouts)}
-                      iconUrl={iconUrl}
-                      busy={busy}
-                      signed={signed}
-                      onRemove={() =>
-                        void write(
-                          act.source === "DEBT"
-                            ? onRemoveDebt(act.id)
-                            : act.source === "PAYMENT"
-                              ? onRemovePayment(act.id)
-                              : onRemoveDisposal(act.id),
-                          null,
-                        )
-                      }
-                    />
-                  ))}
-                </ul>
-              )}
-            </li>
-          </ul>
         </div>
       )}
 
