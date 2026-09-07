@@ -6727,10 +6727,15 @@ button.link:disabled {
 }
 
 /* One rule under the pair, not one under each half: the halves end at different heights, so their
-   own borders came out as two ragged lines mid-card. */
+   own borders came out as two ragged lines mid-card.
+
+   `min-width: 0` because a grid item's default is `auto`, which is its longest word: one typed note
+   with no space in it sized the whole column and pushed the row's × out over the half beside it. A
+   1fr track cannot hold an item that refuses to be smaller than its content. */
 .ledger-pair > .ledger-entry {
   padding-bottom: 0;
   border-bottom: none;
+  min-width: 0;
 }
 
 /* A step label and the chevron that folds the step. The chevron sits after the label, the way the
@@ -6751,6 +6756,15 @@ button.link:disabled {
 
 .ledger-fold[hidden] {
   display: none;
+}
+
+/* No rule under the last section: a divider divides two things, and under the bottom one there is
+   nothing to divide it from. It sat there on every card on the page, and on the entry card above
+   them. An error message is a child too, and one below the rule is where it belongs. */
+.ledger-card > .ledger-entry:last-child,
+.ledger-card > .ledger-pair:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .ledger-sale {
@@ -7135,20 +7149,16 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   }
 }
 
-/* Half the canvas exactly, so the art lands on whole pixels. The size the sales beside them are
-   drawn at (`.loot-shares .loot-icon`): the two lists under Unsettled Amounts are one section, and
-   at the full 46px the shares stood twice as tall as the sales above them. */
-.ledger-drop-head .loot-icon {
-  width: 23px;
-  height: 23px;
-}
+/* Smaller than the 46px frame, because a row is a line of text with a label on it rather than a
+   place the art is the subject. SMOOTHED, and that is what makes it legible: nearest-neighbour below
+   1x drops rows of the sprite, which at 22px (0.478x) ate a chest's lid and a star's points, and at
+   a clean half ate the detail off the drop art and the coupon alike. Nearest is for a whole ratio
+   above one; under it a smooth filter keeps the shape. See lib/pixel-scaling-css.test.ts.
 
-/* Smaller than the 46px frame, because these sit two folds in: there the art is the subject, here it
-   is a label on a line of text. SMOOTHED, and that is what makes it legible. 22px was 0.478x of a
-   46px canvas under the inherited `image-rendering: pixelated`, so nearest-neighbour dropped every
-   other row of a 32px sprite and ate the chest lid and the star's points. Nearest is for a whole
-   ratio; below one, a smooth filter keeps the shape. See lib/pixel-scaling-css.test.ts. */
-.ledger-drop-head.is-oneline .loot-icon {
+   ONE SIZE for every row on a settlement card, an offset's and a share's alike: they are the same
+   kind of row, and the shares were the half of a section that could not be read. */
+.ledger-drop-head .loot-icon,
+.ledger-entry > .loot-shares .loot-icon {
   width: 32px;
   height: 32px;
   image-rendering: auto;
@@ -7156,6 +7166,14 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 
 .ledger-drop-head .loot-name {
   text-decoration: none;
+}
+
+/* A typed note, which is the one name on a settlement card nobody chose the length of: 120
+   characters, and nothing says any of them is a space. Every other `.loot-name` is a drop or a boss
+   out of the catalog and breaks at its spaces, so only this one is allowed to break mid-word. */
+.ledger-drop-head .loot-name.is-note {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .ledger-drop-head .loot-name:hover {

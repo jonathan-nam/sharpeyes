@@ -57,7 +57,7 @@ describe("folding `owed`", () => {
   it("draws no step at all where nothing is priced", () => {
     // The word Owed over a gap. Nothing is left in the column at all: the two entry forms moved to
     // the foot of the card, so an empty left half is an empty left half.
-    expect(ledger).toContain('{owedParts > 0 && (\n            <div className="ledger-step-line">');
+    expect(ledger).toMatch(/\{owedParts > 0 && \(\s*<div className="ledger-step-line">/);
   });
 
   it("folds by hiding, so a half-typed amount survives the fold", () => {
@@ -119,16 +119,19 @@ describe("one section for what is unsettled", () => {
     expect(head).toContain("aria-controls={`held-${row.key}`}");
   });
 
-  it("draws the art on both lists in the section, at one size", () => {
+  it("draws the art on both lists in the section, at one size and legibly", () => {
     // A list of drops that drops the icons is the one place you cannot tell two grindstones apart at
-    // a glance. The share rows carried none at all, and at the full 46px they stood twice as tall as
-    // the sales above them.
+    // a glance. The share rows carried none at all, and then carried them at a clean half, where
+    // nearest-neighbour takes every other row of the sprite and the art stops being readable.
     expect(ledger).toContain(
       '<img className="loot-icon" src={apiAssetUrl(line.iconUrl)} alt="" />',
     );
     expect(wallet).toContain("iconUrl: loot.iconUrl,");
-    expect(rule(".ledger-drop-head .loot-icon")).toMatch(/width:\s*23px/);
-    expect(rule(".loot-shares .loot-icon")).toMatch(/width:\s*23px/);
+    // One rule over both lists, so neither can drift: an offset's row and a share's are the same
+    // kind of row, and a sale row under the same heading is one too.
+    const both = rule(".ledger-drop-head .loot-icon,\n.ledger-entry > .loot-shares .loot-icon");
+    expect(both).toMatch(/width:\s*32px/);
+    expect(both).toMatch(/image-rendering:\s*auto/);
   });
 
   it("names the item a sale row is a count of, off the row its sprite comes from", () => {
@@ -248,5 +251,49 @@ describe("the two entry forms", () => {
     // Its own selector: `.ledger-sale select` belongs to the Sale Ledger's disposition picker, which
     // is deliberately smaller for the sake of "they took mine, at a price".
     expect(css).toContain(".ledger-sale select.split-input {");
+  });
+});
+
+// Two ways a half-width column went wrong, both found on screen rather than by a test.
+describe("what a column draws and how wide it lets itself get", () => {
+  it("heads a list of nights only where a night will be drawn", () => {
+    // A night a sale answered for, or one the other side cancelled, sits in `drops` at zero:
+    // settleThePair still closes it, so it is kept, and PieceNights draws it in neither list. Read
+    // as a length, that put "Bro is holding" over nothing at all.
+    expect(ledger).toContain("const theirNights = row.drops.filter((drop) => drop.pieces > 0);");
+    expect(ledger).toContain("const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);");
+    expect(ledger).toContain("{theirNights.length > 0 && (");
+    expect(ledger).toContain("{myNights.length > 0 && (");
+    expect(ledger).toContain("<PieceNights drops={theirNights}");
+    expect(ledger).toContain("<PieceNights drops={myNights}");
+    // And nothing is drawn off the raw arrays, which is the question that was being asked wrong.
+    expect(ledger).not.toContain("row.drops.length > 0");
+    expect(ledger).not.toContain("row.owedDrops.length > 0");
+    expect(ledger).not.toContain("drops={row.drops}");
+    expect(ledger).not.toContain("drops={row.owedDrops}");
+  });
+
+  it("keeps the price a pill records beside the lists, not inside one", () => {
+    // A tranche against their pile has a pill nowhere else on any screen, so it must not go with a
+    // heading when that heading goes.
+    const at = ledger.indexOf("{theirNights.length > 0 && (");
+    const pills = ledger.indexOf("{keptRows.length > 0 && (");
+    expect(pills).toBeGreaterThan(at);
+    // Outside the fragment the heading owns, which ends before it.
+    expect(ledger.indexOf("</>", at)).toBeLessThan(pills);
+  });
+
+  it("lets a typed note break rather than size the column it is in", () => {
+    // A grid item's default min-width is `auto`, which is its longest word: one 120-character note
+    // with no space in it sized the whole half and pushed its row's × out over the half beside it.
+    expect(rule(".ledger-pair > .ledger-entry")).toMatch(/min-width:\s*0/);
+    // Only the note breaks mid-word. Every other `.loot-name` is a drop or a boss out of the
+    // catalog and breaks at its spaces.
+    expect(ledger).toContain(
+      '<span className="loot-name is-note">{entry.note ?? "entered"}</span>',
+    );
+    const note = rule(".ledger-drop-head .loot-name.is-note");
+    expect(note).toMatch(/overflow-wrap:\s*anywhere/);
+    expect(note).toMatch(/min-width:\s*0/);
   });
 });

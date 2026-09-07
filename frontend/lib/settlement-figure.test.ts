@@ -255,7 +255,9 @@ describe("what the card says a person owes", () => {
     expect(css).toContain("text-overflow: ellipsis");
     // The figure is pushed right and never shrunk: it is the one number nobody can infer.
     expect(css).toContain(".ledger-drop-head.is-oneline .ledger-amount");
-    expect(css).toContain(".ledger-drop-head.is-oneline .loot-icon");
+    // The art is smaller than its 46px frame, which is now every settlement row's rule rather than
+    // this one's: an offset's row and a share's are the same kind of row.
+    expect(css).toContain(".ledger-drop-head .loot-icon");
   });
 
   it("nests a drop queue in a drop row, never a share list", () => {
