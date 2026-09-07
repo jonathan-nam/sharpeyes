@@ -4085,11 +4085,17 @@ button.link:disabled {
   flex: 0 1 240px;
 }
 
-/* A box whose answers are a closed vocabulary ("Listed", "Received", "Member bought") wants enough
-   for the longest of them and not a share of the slack, which otherwise leaves a 234px box holding
-   the word "Listed" beside a price box that could have used it. */
+/* A box whose answers are a closed vocabulary ("Gross", "Net", "Member bought") wants enough for
+   the longest of them and not a share of the slack, which otherwise leaves a 234px box holding the
+   word "Gross" beside a price box that could have used it. */
 .add-field.is-pick {
   flex: 0 1 140px;
+}
+
+/* A price is at most eleven digits typed, or "9.5b". Growing, it was the only field left on a card
+   that asks nothing else, and one input ran the width of the card. */
+.add-field.is-price {
+  flex: 0 1 150px;
 }
 
 /* The drop picker sets the width of its own popup list (panelPlacement takes the trigger's), and

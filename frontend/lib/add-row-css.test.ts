@@ -47,9 +47,12 @@ describe("the add row", () => {
     expect(rule(".add-field.is-wide")).toMatch(/flex:\s*2\s+1\s+\d+px/);
     expect(rule(".add-field.is-narrow")).toMatch(/flex:\s*0\s+1\s+\d+px/);
     expect(rule(".add-field.is-drop")).toMatch(/flex:\s*0\s+1\s+\d+px/);
-    // The Sale Ledger's two: a fate phrase, and a box whose answers are a closed vocabulary.
+    // The Sale Ledger's three: a fate phrase, a box whose answers are a closed vocabulary, and a
+    // price. A growing price box was the only field left on a card that asks nothing else, and it
+    // ran the width of the card, so the 0 here is the fix rather than a preference.
     expect(rule(".add-field.is-fate")).toMatch(/flex:\s*0\s+1\s+\d+px/);
     expect(rule(".add-field.is-pick")).toMatch(/flex:\s*0\s+1\s+\d+px/);
+    expect(rule(".add-field.is-price")).toMatch(/flex:\s*0\s+1\s+\d+px/);
   });
 
   it("lets a field shrink, which min-width:auto otherwise forbids", () => {
@@ -86,13 +89,13 @@ describe("the add row", () => {
       overhead(4);
     expect(total).toBeLessThanOrEqual(INNER);
   });
-  // The Sale Ledger's widest: Pieces, What happened, Sold for. Its submit is a word rather than the
-  // +, so the button is not counted from .add-plus; 90px is more than "Add" has ever measured.
+  // The Sale Ledger's widest: Pieces, What happened, Sale Amount. Its submit is a word rather than
+  // the +, so the button is not counted from .add-plus; 90px is more than "Add" has ever measured.
   it("fits the coupon pile's boxes across the page", () => {
     const total =
       basis(".add-field.is-narrow") +
       basis(".add-field.is-fate") +
-      basis(".add-field") +
+      basis(".add-field.is-price") +
       90 +
       3 * num(".add-fields", /gap:\s*(\d+)px/);
     expect(total).toBeLessThanOrEqual(INNER);

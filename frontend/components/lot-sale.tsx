@@ -155,7 +155,7 @@ function LotCard({
         }}
       >
         <div className="add-fields">
-          <Field on label="How many" cls="is-narrow">
+          <Field on label="Quantity" cls="is-narrow">
             <input
               className="split-input loot-count-input"
               value={count}
@@ -163,7 +163,7 @@ function LotCard({
               inputMode="numeric"
             />
           </Field>
-          <Field on label="Sold for">
+          <Field on label="Sale Amount" cls="is-price">
             <input
               className="split-input"
               value={amount}
@@ -174,14 +174,14 @@ function LotCard({
           </Field>
           {/* No "member bought": a lot spans pools, and one member cannot have bought a pile out of
               parties they were not in. That case stays on the row, where it names its own buyer. */}
-          <Field on label="Amount is" cls="is-pick">
+          <Field on label="Sale Type" cls="is-pick">
             <select
               className="split-input"
               value={amountBasis}
               onChange={(e) => setAmountBasis(e.target.value)}
             >
-              <option value="LISTED">Listed</option>
-              <option value="RECEIVED">Received</option>
+              <option value="LISTED">Gross</option>
+              <option value="RECEIVED">Net</option>
             </select>
           </Field>
           {splits && (
