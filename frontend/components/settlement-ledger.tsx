@@ -16,7 +16,6 @@ import {
   undecidedSales,
   settleThePair,
   shareKey,
-  sharesOf,
 } from "@/lib/settlement";
 import { apiAssetUrl } from "@/lib/api";
 import { CopyAmount } from "@/components/copy-amount";
@@ -380,22 +379,16 @@ function SettlementCard({
   // Mesos a settle would declare you have ALREADY sent. Off the offset, rather than summed again
   // here: two spellings of one figure is how the button and its label come to disagree.
   const owes = offset.amount;
-  /**
-   * Whether there is anything here to COLLECT, which is what decides the button exists.
-   *
-   * A card whose every share runs against you has nothing to collect, so a Settle on it can only
-   * ever mean "I have already paid them", which is the one thing nobody comes to this page to say.
-   * Jonathan clicked it three times expecting the opposite and each time it took his own debt out of
-   * the netting and put the figure back UP. A warning beside it was not enough, and could not be: a
-   * button with one possible effect, and that effect wrong, is a trap however it is labelled.
-   *
-   * Where any line DOES run towards you the button stays, and it still settles both directions at
-   * once, because a relationship is settled by one transfer of the difference.
-   *
-   * Nothing is stranded by this. A share you owe is marked paid on the party page, share by share,
-   * next to the drop it came off.
-   */
-  const collectable = row.lines.some((line) => line.direction === "owed");
+  // The aggregate Settle that used to live here is GONE, and its history is worth keeping.
+  //
+  // It marked every share on the card paid in BOTH directions, on the reasoning that a relationship
+  // is settled by one transfer of the difference. That holds while a card is in one unit. It stops
+  // holding the moment one is not: there is no rate to net $333.33 against 2.32b, so collecting
+  // what they owe and recording what you owe as sent are two acts on two days, and one button doing
+  // both records a transfer that never happened. It was already the card's sharpest edge before
+  // that (it was pulled off cards with nothing to collect for the same family of reason), and the
+  // shares list carries a per-line act now, which is the same write with the direction it belongs
+  // to. See the button in the shares list.
   /**
    * The two pots a closing act moves, and they stay two pots everywhere else on this card.
    *
@@ -861,6 +854,29 @@ function SettlementCard({
                         <span className="ledger-amount">
                           {signed(line.direction === "owe" ? -line.pay : line.pay, line.currency)}
                         </span>
+                        {/* The act, on the line it is about.
+
+                            One transfer of the difference is what the aggregate Settle assumed, and
+                            it cannot hold across units: no rate exists to net $333.33 against 2.32b,
+                            so collecting one and recording the other as sent are two things that
+                            happen on two days. Named for its own direction, because the same write
+                            means "I received it" on one line and "I sent it" on the next. */}
+                        <button
+                          type="button"
+                          className="loot-paid"
+                          disabled={busy}
+                          onClick={() =>
+                            void write(
+                              onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }]),
+                              null,
+                            )
+                          }
+                          aria-label={`Mark the ${line.name} share ${
+                            line.direction === "owed" ? "received from" : "sent to"
+                          } ${line.theirs}`}
+                        >
+                          {line.direction === "owed" ? "Mark Received" : "Mark Sent"}
+                        </button>
                       </div>
                     </li>
                   );
@@ -1005,7 +1021,7 @@ function SettlementCard({
 
           Last on the card on purpose: it is what you do about the figures, so it comes after all of
           them. */}
-      {(offsettable || sendable || collectable || pair.offered) && (
+      {(offsettable || sendable || pair.offered) && (
         <div className="ledger-entry">
           <span className="ledger-heading">Closing Actions</span>
 
@@ -1051,32 +1067,6 @@ function SettlementCard({
               </button>
               <span className="ledger-progress">
                 {`records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}`}
-              </span>
-            </span>
-          )}
-
-          {collectable && (
-            <span className="ledger-settle">
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy}
-                onClick={() => void write(onSettleShares(sharesOf(row)), null)}
-              >
-                Settle
-              </button>
-              {/* What it COLLECTS first, in both units, then what it also records as sent. The
-                  collecting half used to go unsaid whenever you owed them something, so on a card
-                  running both ways the only figure named was the one leaving your hands. */}
-              <span className="ledger-progress">
-                {[
-                  row.usd.owed > 0 ? `collects ${formatDollars(row.usd.owed)}` : null,
-                  owes
-                    ? `also records ${formatMesos(owes, true)} sent to ${row.name}`
-                    : `marks ${row.lines.length} ${row.lines.length === 1 ? "share" : "shares"} paid`,
-                ]
-                  .filter(Boolean)
-                  .join(" \u00b7 ")}
               </span>
             </span>
           )}

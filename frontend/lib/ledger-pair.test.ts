@@ -217,9 +217,20 @@ describe("every act in one step", () => {
 
   it("titles every act the same way, so one is not a different kind of thing", () => {
     // Two of the four were sentence case and read as prose beside Offset and Settle.
-    for (const label of ["Offset", "Mark Sent", "Settle", "Mark Settled"]) {
+    //
+    // Settle is gone: see settlement-figure. What replaced it is an act per share line, and those
+    // are titled the same way, which is the whole point of this test. "Mark Sent" is written twice
+    // on purpose, once on a line and once in Closing Actions, because they are different scopes of
+    // one act: this share, or everything you owe them plus the money of theirs you are holding.
+    for (const label of ["Offset", "Mark Sent", "Mark Settled"]) {
       expect(ledger.match(new RegExp(`^\\s*${label}$`, "gm")), label).toHaveLength(1);
     }
+    expect(ledger).not.toMatch(/^\s*Settle$/gm);
+    // The per-line act picks its label from the line's direction, so neither sits on a line of its
+    // own the way the three above do. Title Case is the thing being pinned, not the layout.
+    expect(ledger).toContain('"Mark Received" : "Mark Sent"');
+    expect(ledger).not.toContain("Mark received");
+    expect(ledger).not.toContain("Mark sent");
   });
 });
 
