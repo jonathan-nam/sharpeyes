@@ -26,6 +26,7 @@ const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 const NATURAL: Record<string, number> = {
   ".ms-slot > img": 46, // item icon canvas
   ".loot-icon": 46,
+  ".ledger-drop-head .loot-icon": 46, // half, in a settlement card's list of shares
   ".ledger-drop-head.is-oneline .loot-icon": 46, // 0.7x, smoothed
   ".loot-shares .loot-icon": 46, // half, in an offset's own list of nights
   ".counts-icon": 46,

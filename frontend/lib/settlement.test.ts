@@ -96,6 +96,7 @@ const line = (lootId: string, pay: number, direction: "owe" | "owed" = "owed"): 
   partyId: `pa-${lootId}`,
   lootId,
   name: "Grindstone of Life",
+  iconUrl: null,
   bossKey: "baldrix",
   droppedOn: "2026-08-08",
   direction,

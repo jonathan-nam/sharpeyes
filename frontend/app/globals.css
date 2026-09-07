@@ -7102,6 +7102,14 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   }
 }
 
+/* Half the canvas exactly, so the art lands on whole pixels. The size the sales beside them are
+   drawn at (`.loot-shares .loot-icon`): the two lists under Unsettled Amounts are one section, and
+   at the full 46px the shares stood twice as tall as the sales above them. */
+.ledger-drop-head .loot-icon {
+  width: 23px;
+  height: 23px;
+}
+
 /* Smaller than the 46px frame, because these sit two folds in: there the art is the subject, here it
    is a label on a line of text. SMOOTHED, and that is what makes it legible. 22px was 0.478x of a
    46px canvas under the inherited `image-rendering: pixelated`, so nearest-neighbour dropped every

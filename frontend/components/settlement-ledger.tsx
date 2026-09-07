@@ -682,7 +682,81 @@ function SettlementCard({
           halves were two sections with nothing between them but a rule. */}
       {(row.lines.length > 0 || row.holding > 0 || paidOut.length > 0) && (
         <div className="ledger-entry">
-          <span className="ledger-heading">Unsettled Amounts</span>
+          {/* THE FIGURE ON THE HEADING'S LINE, which is the money of theirs you are holding: it has
+              a decision waiting on it, and the shares below have their own. Copyable, like the
+              card's own headline, because sending it means pasting it into a trade box.
+
+              It is NOT a total of the section. The shares under it run both ways and are in the
+              card's header already, and adding a count of coupons to a pile of mesos is the one sum
+              this account never makes. So the figure keeps its own way in, opening onto the sales it
+              is made of and nothing else. */}
+          <div className="ledger-step-line">
+            <span className="ledger-heading">Unsettled Amounts</span>
+            {row.holding > 0 && (
+              <>
+                <span className="ledger-amount">
+                  <CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />
+                </span>
+                {held.length > 0 && (
+                  <button
+                    type="button"
+                    className="party-row-toggle"
+                    aria-expanded={showHeld}
+                    aria-controls={`held-${row.key}`}
+                    onClick={() => setShowHeld((o) => !o)}
+                  >
+                    <span className="party-row-chevron" aria-hidden="true" />
+                    <span className="visually-hidden">
+                      {`${showHeld ? "Hide" : "Show"} the ${plural(held.length, "sale")} behind it`}
+                    </span>
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Their money, in your hands, with nothing decided about it yet.
+
+              Two things can happen to it and they end in different places, so the card asks rather
+              than choosing: OFFSET takes it off what they owe you, sending it leaves their debt where
+              it was. Until one is recorded it is outside the net entirely, which is why this is not
+              a part under `owed`. See V61.
+
+              The sales it is made of, folded, one to a row. It arrived as a bare 2.41b with nothing
+              anywhere saying that was 130 coupons over two nights. They add up to the figure above
+              exactly, or there are none of them at all: undecidedSales refuses a list it cannot land
+              on a sale boundary rather than name coupons whose money has partly gone.
+
+              Keyed by position, a tranche's id having nothing to say here that its coupons and its
+              day do not. */}
+          {showHeld && held.length > 0 && (
+            <ul className="loot-shares" id={`held-${row.key}`}>
+              {held.map((sale, i) => (
+                <li key={`held-${i}`}>
+                  {iconUrl ? (
+                    <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+                  ) : (
+                    <span className="loot-icon" aria-hidden="true" />
+                  )}
+                  <span className="loot-share-name">
+                    {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
+                  </span>
+                  <span className="loot-share-nets">
+                    {[
+                      sale.soldAt && dayOf(sale.soldAt),
+                      // Only where the lot was not all theirs. Their share of a mixed one is a
+                      // figure nobody can check without the lot it came out of.
+                      sale.pieces !== sale.lot.pieces &&
+                        `of ${sale.lot.pieces} for ${formatMesos(sale.lot.amount, true)}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
 
           {/* Both directions, each line signed, so a list holding both ways round says which is
               which without a word. `pay`, not `nets`: every other figure on this card is pre-fee, so
@@ -698,6 +772,14 @@ function SettlementCard({
                   return (
                     <li key={`${line.lootId}:${line.theirsId}`} className="ledger-drop">
                       <div className="ledger-drop-head">
+                        {/* The art the rest of the account reads drops by. A list of drops that
+                            drops the icons is the one place you cannot tell two grindstones apart
+                            at a glance. */}
+                        {line.iconUrl ? (
+                          <img className="loot-icon" src={apiAssetUrl(line.iconUrl)} alt="" />
+                        ) : (
+                          <span className="loot-icon" aria-hidden="true" />
+                        )}
                         <Link href={partyHrefById(line.partyId, partyById)} className="loot-name">
                           {line.name}
                         </Link>
@@ -716,109 +798,29 @@ function SettlementCard({
             </>
           )}
 
-          {/* Their money, in your hands, with nothing decided about it yet.
+          {/* Only what was SENT to them. A decision to offset took something off what they owe you,
+              so it is said under `offsets` with everything else that did: one place for one kind of
+              fact. Paying them out took nothing off, which is exactly why it stays here, beside the
+              money it came out of.
 
-              Two things can happen to it and they end in different places, so the card asks rather
-              than choosing: OFFSET takes it off what they owe you, sending it leaves their debt where
-              it was. Until one is recorded it is outside the net entirely, which is why this is not
-              a part under `owed`. See V61. */}
-          {(row.holding > 0 || paidOut.length > 0) && (
-            <>
-              {/* THE FIGURE IS THE HEADING. It had a step of its own over it saying "coupon
-                  sales", which named where the money came from twice: the rows inside say it, one
-                  sale each. What is left on the line is the amount and the way in to its parts.
-
-                  Copyable, like the card's own headline: sending it means pasting this into a trade
-                  box, and it was the one figure on a card with an act behind it you could not take.
-
-                  Folded, the way the offsets history is: the figure is what you act on and the rows
-                  are the check on it. The rows add up to it exactly, or there are none of them at
-                  all, because undecidedSales refuses a list it cannot land on a sale boundary rather
-                  than name coupons whose money has partly gone. */}
-              {row.holding > 0 && (
-                <ul className="ledger-queue">
-                  <li className="ledger-drop">
-                    <div className="ledger-drop-head">
-                      <span className="loot-name">
-                        <CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />
-                      </span>
-                      {held.length > 0 && (
-                        <button
-                          type="button"
-                          className="party-row-toggle"
-                          aria-expanded={showHeld}
-                          aria-controls={`held-${row.key}`}
-                          onClick={() => setShowHeld((o) => !o)}
-                        >
-                          <span className="party-row-chevron" aria-hidden="true" />
-                          <span className="visually-hidden">
-                            {`${showHeld ? "Hide" : "Show"} the ${plural(held.length, "sale")} behind it`}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-
-                    {/* One sale each, keyed by position: a tranche's id has nothing to say here that
-                        its coupons and its day do not. */}
-                    {showHeld && held.length > 0 && (
-                      <ul className="loot-shares" id={`held-${row.key}`}>
-                        {held.map((sale, i) => (
-                          <li key={`held-${i}`}>
-                            {iconUrl ? (
-                              <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
-                            ) : (
-                              <span className="loot-icon" aria-hidden="true" />
-                            )}
-                            <span className="loot-share-name">
-                              {couponName
-                                ? `${sale.pieces} ${couponName}`
-                                : `${sale.pieces} coupons`}
-                            </span>
-                            <span className="loot-share-nets">
-                              {[
-                                sale.soldAt && dayOf(sale.soldAt),
-                                // Only where the lot was not all theirs. Their share of a mixed one
-                                // is a figure nobody can check without the lot it came out of.
-                                sale.pieces !== sale.lot.pieces &&
-                                  `of ${sale.lot.pieces} for ${formatMesos(sale.lot.amount, true)}`,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                            <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
-                </ul>
-              )}
-
-              {/* Only what was SENT to them. A decision to offset took something off what they owe
-                  you, so it is said under `offsets` with everything else that did: one place for one
-                  kind of fact. Paying them out took nothing off, which is exactly why it stays here,
-                  beside the money it came out of.
-
-                  Removable, and only here: nothing else on any screen records one. */}
-              {paidOut.length > 0 && (
-                <span className="ledger-tranches">
-                  {paidOut.map((disposal) => (
-                    <span key={disposal.id} className="ledger-tranche">
-                      {`${formatMesos(disposal.amount, true)} paid out`}
-                      <button
-                        type="button"
-                        className="link ledger-drop-sale"
-                        disabled={busy}
-                        onClick={() => void write(onRemoveDisposal(disposal.id), null)}
-                        aria-label={`Undo ${formatMesos(disposal.amount, true)} paid out to ${row.name}`}
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
+              Removable, and only here: nothing else on any screen records one. */}
+          {paidOut.length > 0 && (
+            <span className="ledger-tranches">
+              {paidOut.map((disposal) => (
+                <span key={disposal.id} className="ledger-tranche">
+                  {`${formatMesos(disposal.amount, true)} paid out`}
+                  <button
+                    type="button"
+                    className="link ledger-drop-sale"
+                    disabled={busy}
+                    onClick={() => void write(onRemoveDisposal(disposal.id), null)}
+                    aria-label={`Undo ${formatMesos(disposal.amount, true)} paid out to ${row.name}`}
+                  >
+                    ×
+                  </button>
                 </span>
-              )}
-            </>
+              ))}
+            </span>
           )}
         </div>
       )}

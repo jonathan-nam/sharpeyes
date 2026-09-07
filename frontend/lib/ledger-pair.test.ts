@@ -14,6 +14,7 @@ const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
 const ledger = read("components", "settlement-ledger.tsx");
 const page = read("app", "bosses", "drops", "page.tsx");
+const wallet = read("lib", "wallet.ts");
 const css = read("app", "globals.css");
 
 /** A rule's body, by its selector. */
@@ -97,13 +98,37 @@ describe("one section for what is unsettled", () => {
     expect(at, "the heading is gone").toBeGreaterThan(-1);
     const section = ledger.slice(at, ledger.indexOf("Closing Actions", at));
     expect(section).toContain('<span className="ledger-step">shares</span>');
-    // The held money's own figure IS its heading, so there is no step over it saying where it came
-    // from: the rows inside say that, one sale each.
+    // The held money has no step over it saying where it came from: its figure is on the section's
+    // own heading line, and the rows it opens onto say it, one sale each.
     expect(section).toContain("<CopyAmount value={row.holding}");
-    expect(section).toContain("aria-controls={`held-${row.key}`}");
     expect(ledger).not.toContain("coupon sales</span>");
     // The card is one person's, so neither heading names them again.
     expect(ledger).not.toContain("money I'm holding");
+  });
+
+  it("puts the figure on the heading's line, with its own way into the sales", () => {
+    // A bare 500,000,000 on a row of its own under the heading read as a row of the list. What it is
+    // NOT is a total of the section: the shares under it run both ways and are in the card's header
+    // already, so the chevron opens onto the sales it is made of and onto nothing else.
+    const at = ledger.indexOf(
+      '<div className="ledger-step-line">\n            <span className="ledger-heading">Unsettled Amounts',
+    );
+    expect(at, "the figure is off the heading's line").toBeGreaterThan(-1);
+    const head = ledger.slice(at, ledger.indexOf("</div>", at));
+    expect(head).toContain("<CopyAmount value={row.holding}");
+    expect(head).toContain("aria-controls={`held-${row.key}`}");
+  });
+
+  it("draws the art on both lists in the section, at one size", () => {
+    // A list of drops that drops the icons is the one place you cannot tell two grindstones apart at
+    // a glance. The share rows carried none at all, and at the full 46px they stood twice as tall as
+    // the sales above them.
+    expect(ledger).toContain(
+      '<img className="loot-icon" src={apiAssetUrl(line.iconUrl)} alt="" />',
+    );
+    expect(wallet).toContain("iconUrl: loot.iconUrl,");
+    expect(rule(".ledger-drop-head .loot-icon")).toMatch(/width:\s*23px/);
+    expect(rule(".loot-shares .loot-icon")).toMatch(/width:\s*23px/);
   });
 
   it("names the item a sale row is a count of, off the row its sprite comes from", () => {

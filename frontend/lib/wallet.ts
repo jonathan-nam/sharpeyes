@@ -28,6 +28,8 @@ export type WalletLine = {
   partyId: string;
   lootId: string;
   name: string;
+  /** The drop's own art, so a list of shares reads like every other list of drops on this account. */
+  iconUrl: string | null;
   bossKey: string | null;
   droppedOn: string;
   direction: Direction;
@@ -165,6 +167,7 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
           partyId: pool.partyId,
           lootId: loot.id,
           name: loot.name,
+          iconUrl: loot.iconUrl,
           bossKey: loot.bossKey,
           droppedOn: loot.droppedOn,
           direction,
