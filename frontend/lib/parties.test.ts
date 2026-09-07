@@ -12,6 +12,7 @@ import {
   hasStandingRoster,
   isCleared,
   knownCharacterNames,
+  namedSeats,
   otherMembers,
   partiedBossKeys,
   partySizeLabel,
@@ -460,5 +461,47 @@ describe("partiedBossKeys", () => {
     const live = { ...config("p1", "char-1", "jupiter", ["Bryants"]), oneOff: true };
 
     expect(Array.from(partiedBossKeys([live], "char-1"))).toEqual(["jupiter"]);
+  });
+});
+
+describe("namedSeats", () => {
+  it("keeps the order the roster was typed in", () => {
+    // Seat order is position, and position is what the boxes are: writeMembers takes the list as
+    // sent, so a roster that reordered itself on the way out would draw back in a different order.
+    expect(namedSeats(["Bryants", "CreedBratton", "mechyfechy"])).toEqual([
+      "Bryants",
+      "CreedBratton",
+      "mechyfechy",
+    ]);
+  });
+
+  it("drops a seat nobody filled in", () => {
+    // "+ Member" adds an empty box. Sending it would be refused ("a member needs a character
+    // name"), which would make adding a seat and changing your mind an error to read.
+    expect(namedSeats(["Bryants", "", "CreedBratton"])).toEqual(["Bryants", "CreedBratton"]);
+  });
+
+  it("drops a box holding only spaces", () => {
+    expect(namedSeats(["Bryants", "   "])).toEqual(["Bryants"]);
+  });
+
+  it("trims a name, because a seat is matched by one", () => {
+    // writeMembers matches an existing seat by trimmed name. " Bryants" would abandon Bryants'
+    // seat and make a second one, taking the payouts pointing at it out of the roster.
+    expect(namedSeats([" Bryants ", "CreedBratton "])).toEqual(["Bryants", "CreedBratton"]);
+  });
+
+  it("says nobody for a roster of empty boxes", () => {
+    // What an untouched card holds. The caller uses this to keep the + off rather than to send it:
+    // creating a party naming nobody is refused, on purpose.
+    expect(namedSeats([""])).toEqual([]);
+    expect(namedSeats(["", "", ""])).toEqual([]);
+  });
+
+  it("leaves the same character twice for the server to refuse", () => {
+    // Not deduped here. The server's "the same character twice" is the message that says what
+    // happened; silently dropping one would file a night as a smaller party than was typed, and
+    // divide the drop by it.
+    expect(namedSeats(["Bryants", "bryants"])).toEqual(["Bryants", "bryants"]);
   });
 });

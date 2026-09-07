@@ -14,6 +14,7 @@ export function RosterInputs({
   members,
   onChange,
   spriteFor,
+  disabled = false,
 }: {
   members: string[];
   onChange: (members: string[]) => void;
@@ -25,6 +26,8 @@ export function RosterInputs({
    * that is the point. The frame filling in is what says the name landed on somebody real.
    */
   spriteFor?: (name: string) => string | null;
+  /** A save is in flight, and what is typed into these boxes is about to be replaced by it. */
+  disabled?: boolean;
 }) {
   return (
     <div className={`config-members${spriteFor ? " has-sprites" : ""}`}>
@@ -41,12 +44,14 @@ export function RosterInputs({
               placeholder="character"
               aria-label={`Member ${index + 1}`}
               maxLength={40}
+              disabled={disabled}
             />
             {members.length > 1 && (
               <button
                 type="button"
                 className="grid-boss-remove"
                 aria-label={`Remove member ${index + 1}`}
+                disabled={disabled}
                 onClick={() => onChange(members.filter((_, i) => i !== index))}
               >
                 &times;
@@ -56,7 +61,12 @@ export function RosterInputs({
         </span>
       ))}
       {members.length < MAX_PARTY - 1 && (
-        <button type="button" className="party-add-seat" onClick={() => onChange([...members, ""])}>
+        <button
+          type="button"
+          className="party-add-seat"
+          disabled={disabled}
+          onClick={() => onChange([...members, ""])}
+        >
           + Member
         </button>
       )}

@@ -19,6 +19,19 @@ export function otherMembers(party: Party) {
 }
 
 /**
+ * What a roster of text boxes actually states: trimmed, with the boxes nobody filled in dropped.
+ *
+ * RosterInputs always carries a box, and "+ Member" adds an empty one, so what is on screen is
+ * never quite what to send. Blank is not a refusal, it is a seat somebody opened and did not use,
+ * and refusing over it would make the add button a trap. The rules that matter are the server's
+ * (validateMembers refuses nobody, a blank, and the same character twice) and it states them
+ * itself.
+ */
+export function namedSeats(members: string[]): string[] {
+  return members.map((m) => m.trim()).filter((m) => m !== "");
+}
+
+/**
  * Your own character's seat, which is the half of a config that can never be edited.
  *
  * `seats` and not `members`, so a week your character sat out still answers: this is the config's
