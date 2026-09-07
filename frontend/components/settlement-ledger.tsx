@@ -35,7 +35,7 @@ import type { SettlementDebt, VestigePayment, VestigeTranche } from "@/types/ves
 // parts are listed because a figure nobody can take apart is a figure nobody can check.
 //
 // What YOU owe is beside it, not inside it. A share of yours comes off their debt when you press
-// Offset and stays off it when you press Mark sent, and the card cannot know which until you say.
+// Offset and stays off it when you press Mark Sent, and the card cannot know which until you say.
 // See Settlement.sharesYouOwe.
 //
 // PIECES are the other unit and stay a count. Coupons are single-trade, so pieces of yours in
@@ -374,7 +374,7 @@ function SettlementCard({
    * SHARES you owe are your cut of a night of theirs. HOLDING is their own money, which a sale of
    * their coupons left in your hands. What can happen to each is the same pair of things, so one
    * button covers both: one trade settles both, and two buttons wearing one word ("Offset" twice,
-   * "Mark sent" beside "I paid them") said nothing about which pot each was for.
+   * "Mark Sent" beside "I paid them") said nothing about which pot each was for.
    *
    * Each pot is still WRITTEN on its own, so a click is two calls where both apply. If the second is
    * refused the first stands, which the refusal line says; both are reversible where they are drawn,
@@ -925,7 +925,7 @@ function SettlementCard({
       {/* Every act the card offers, in one place, each beside what pressing it will record.
 
           They were scattered across the steps they acted on, which put two buttons wearing the word
-          Offset on one card and "Mark sent" a step above "I paid them" for the same errand. What an
+          Offset on one card and "Mark Sent" a step above "I paid them" for the same errand. What an
           act moves is now said in its line instead, so the step is a list of what can be done and
           the steps above are a statement of what stands.
 
@@ -973,7 +973,7 @@ function SettlementCard({
                 disabled={busy}
                 onClick={() => void write(sendAll(), null)}
               >
-                Mark sent
+                Mark Sent
               </button>
               <span className="ledger-progress">
                 {`records ${moved(owes)} sent to ${row.name}`}
@@ -1009,11 +1009,14 @@ function SettlementCard({
                 disabled={busy}
                 onClick={() => void write(onSettlePair(row.holder, pair.theirs, pair.yours), null)}
               >
-                Mark settled
+                Mark Settled
               </button>
-              {/* No count beside it. What it closes is the two lists above, and counting them back
-                  read as a second fact matching nothing else on the card: 22 was eleven rows in each
-                  pile. What it cannot close is said up there, with them. */}
+              {/* WHAT it closes, not how much of it. Counting the nights back read as a second fact
+                  matching nothing else on the card (22 was eleven rows in each pile), and a count of
+                  coupons would overclaim: a night shared with a third person is not closed here, and
+                  that is said with the lists themselves. Both sides is the fact worth carrying,
+                  closing one alone being what put the figure UP. See settleThePair. */}
+              <span className="ledger-progress">closes the coupon nights on both sides</span>
             </span>
           )}
         </div>

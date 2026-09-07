@@ -69,7 +69,7 @@ describe("what the card says a person owes", () => {
     // fact rather than as the act the button performs. Same subject-less fragment as the entry box
     // it replaced.
     expect(source).not.toContain("already sent");
-    // Mark sent's own line, which names both pots. The Settle line below carries the same words
+    // Mark Sent's own line, which names both pots. The Settle line below carries the same words
     // after "also", so this has to pin the send's own or it passes on the collect's.
     expect(source).toContain("records ${moved(owes)} sent to ${row.name}");
   });

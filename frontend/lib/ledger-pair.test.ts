@@ -119,11 +119,11 @@ describe("one section for what is unsettled", () => {
 
 describe("every act in one step", () => {
   it("collapses the two ways of sending into one", () => {
-    // "Mark sent" a step above "I paid them" was one errand in two buttons: shares of a night, and
+    // "Mark Sent" a step above "I paid them" was one errand in two buttons: shares of a night, and
     // their own money a coupon sale left with you. One trade settles both.
     // The label, not the word: the comment above the acts records the shape this replaced.
     expect(ledger.match(/^\s*I paid them$/gm)).toBeNull();
-    expect(ledger.match(/^\s*Mark sent$/gm)).toHaveLength(1);
+    expect(ledger.match(/^\s*Mark Sent$/gm)).toHaveLength(1);
     expect(ledger.match(/^\s*Offset$/gm)).toHaveLength(1);
   });
 
@@ -150,11 +150,23 @@ describe("every act in one step", () => {
     }
   });
 
-  it("says nothing about how many coupons Mark settled closes", () => {
-    // The lists above are what it closes, and counting them back matched nothing else on the card:
-    // 22 was eleven rows in each pile. What it cannot close is said with those lists.
+  it("says what Mark Settled closes and never how much of it", () => {
+    // Every act carries a line saying what pressing it will record, this one included. What it must
+    // not carry is a figure: counting the nights back matched nothing else on the card (22 was
+    // eleven rows in each pile), and a count of coupons would overclaim, a night shared with a third
+    // person being one this cannot close. That much is said with the lists themselves.
+    expect(ledger).toContain(
+      '<span className="ledger-progress">closes the coupon nights on both sides</span>',
+    );
     expect(ledger).not.toContain("row.piecesNet)} coupons`");
     expect(ledger).toContain("${pair.shared} shared with others, not closed here");
+  });
+
+  it("titles every act the same way, so one is not a different kind of thing", () => {
+    // Two of the four were sentence case and read as prose beside Offset and Settle.
+    for (const label of ["Offset", "Mark Sent", "Settle", "Mark Settled"]) {
+      expect(ledger.match(new RegExp(`^\\s*${label}$`, "gm")), label).toHaveLength(1);
+    }
   });
 });
 
