@@ -1335,6 +1335,16 @@ html.switching-world .world-veil {
   list-style: none;
 }
 
+/* Leaving, at the foot of the card. Wraps, because the confirming pair names the boss and the
+   cards sit in a narrow column. */
+.shared-party-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
 /* One night. Wraps rather than truncating: a drop name is the one part worth reading in full. */
 .shared-nights li {
   display: flex;
