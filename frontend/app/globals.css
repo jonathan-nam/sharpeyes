@@ -6713,6 +6713,46 @@ button.link:disabled {
   border-bottom: 1px solid var(--line);
 }
 
+/* `owed` and `offsets` side by side: what builds the figure, and what has come off it. Stacked,
+   the second was a scroll past the shares in between, and the two are read against each other.
+
+   auto-fit rather than two fixed halves, because most cards have no offsets on them at all and the
+   forms on the left take a price, a note and a button. One column below ~660px of card. */
+.ledger-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* One rule under the pair, not one under each half: the halves end at different heights, so their
+   own borders came out as two ragged lines mid-card. */
+.ledger-pair > .ledger-entry {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+/* A step label and the chevron that folds the step. The chevron sits after the label, the way the
+   acts under `offsets` carry theirs after the count. */
+.ledger-step-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* What a folding step holds. Its own column, so folding one keeps the gap the entry had between
+   the parts inside it. `hidden` needs saying because the display here would beat it. */
+.ledger-fold {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ledger-fold[hidden] {
+  display: none;
+}
+
 .ledger-sale {
   display: flex;
   flex-wrap: wrap;
@@ -6723,6 +6763,61 @@ button.link:disabled {
 /* The sale box takes a price, so it is wider than the count beside it. */
 .ledger-sale .split-input:not(.loot-count-input) {
   width: 120px;
+}
+
+/* The description takes what is left of the line, being the one box on it with no size of its own to
+   keep. `min-width: 0` on the label as well, or its own content sets a floor and the line wraps
+   anyway: a flex item does not shrink past its content without it. */
+.ledger-sale .loot-share-input.is-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+/* STRETCH, not flex-grow. `is-stacked` turns the label into a column, so a grow on the box inside
+   it grows the wrong axis and the box keeps its own 20-character width whatever the label does. */
+.ledger-sale .loot-share-input.is-grow .split-input {
+  align-self: stretch;
+  width: auto;
+  min-width: 56px;
+}
+
+/* Sized like the boxes beside it, which means the INPUT's metrics and not the button's: .party-save
+   is 13px on 8px of padding and came out 4px shorter than a 15px .split-input on 9px, so a row of
+   three controls had one that did not line up. A mark rather than a word, so the sides are the
+   input's too and the box is as narrow as the glyph allows. */
+.ledger-add {
+  font-size: var(--text-lg);
+  padding: 9px 14px;
+}
+
+/* On the boxes' line, not centred against a label stacked above them. */
+.ledger-sale .ledger-add {
+  align-self: flex-end;
+}
+
+/* A select takes its height from the option text and ignores the line box an input builds from the
+   same `font: inherit`, so the picker came out 11.5px shorter than the amount box beside it.
+   Measured in headless chromium: 42.50px for an input against 31.00px for the select, and 1.5 on
+   15px is the 22.5px of content the input's 9px padding sits around.
+
+   Its own selector rather than `.ledger-sale select`, which the Sale Ledger's disposition picker
+   already owns: that one is DELIBERATELY smaller, having to hold "they took mine, at a price". */
+.loot-share-input.is-stacked select.split-input {
+  font-size: var(--text-lg);
+  padding: 9px 12px;
+  line-height: 1.5;
+  /* Chrome does not give a select's button the line box it gives an input, so the height is asked
+     for: the input's 1.5em of text plus its 18px of padding and 2px of border. A select is
+     border-box under Chrome's UA sheet, which is why the padding is in the sum. Measured. */
+  min-height: calc(1.5em + 20px);
+}
+
+/* The label above its box rather than beside it, which is what lets a row hold two boxes and a
+   submit: beside them the labels' own width came off the line the three had to share. */
+.loot-share-input.is-stacked {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 /* The share boxes for the rows a lot would cover. Its own row in the form's wrap, so the price line
@@ -6773,6 +6868,15 @@ button.link:disabled {
 .ledger-step {
   font-size: var(--text-sm);
   color: var(--muted);
+}
+
+/* A card SECTION, which two of them are: what is unsettled, and what can be done about it. The
+   steps are 11px lowercase labels on the figure each one heads, and neither of these heads a figure,
+   so they carry a heading's size and weight instead of reading as one more step in the arithmetic. */
+.ledger-heading {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--ink-strong);
 }
 
 /* Space before the second step, so the two do not run together. Not before the first, which already
@@ -6850,6 +6954,15 @@ button.link:disabled {
 .ledger-hint-mark:focus-visible + .ledger-hint-bubble {
   visibility: visible;
   opacity: 1;
+}
+
+/* One act per line: the button, and what pressing it will record beside it. Unstyled, these were
+   inline spans, so the sentence butted against the button's own border with nothing between them. */
+.ledger-settle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
 /* The card's one instruction, and it is a count. Sits directly above the control it is about, so the
@@ -7020,6 +7133,14 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   .ledger-drop-head.is-oneline {
     flex-wrap: wrap;
   }
+}
+
+/* Half the canvas exactly, so the art lands on whole pixels. The size the sales beside them are
+   drawn at (`.loot-shares .loot-icon`): the two lists under Unsettled Amounts are one section, and
+   at the full 46px the shares stood twice as tall as the sales above them. */
+.ledger-drop-head .loot-icon {
+  width: 23px;
+  height: 23px;
 }
 
 /* Smaller than the 46px frame, because these sit two folds in: there the art is the subject, here it
