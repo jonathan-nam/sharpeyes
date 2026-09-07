@@ -6069,12 +6069,16 @@ button.link:disabled {
   transition: transform 120ms ease;
 }
 
-/* Every row that folds: a config in any of the three party lists, a stacking drop in the Drop
-   Log. A chevron that does not turn reads as a button that did nothing. */
-.party-row.is-open .party-row-chevron,
-.droplog-row.is-open > .droplog-row-head .party-row-chevron,
-.droplog-character.is-open > .droplog-character-head .party-row-chevron,
-.run-table tr.is-open .party-row-chevron {
+/* A chevron that does not turn reads as a button that did nothing.
+
+   OFF THE BUTTON'S OWN aria-expanded, which every toggle in the app already sets from the state it
+   folds on. It used to be a list of the rows that carry an is-open CLASS, and the settlement card's
+   three toggles were simply not in it: `Owed` opened with its arrow still pointing at a closed
+   panel. A list is a thing to be left out of, and this was left out of it.
+
+   Scoped to the toggle, not to an ancestor: the Drop Log nests one fold inside another, and a
+   descendant selector on the outer ROW turned every closed character arrow with it. */
+.party-row-toggle[aria-expanded="true"] .party-row-chevron {
   transform: rotate(90deg);
 }
 
@@ -7086,15 +7090,6 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 
 /* The debts sit under the boss they are for, not beside it. */
 .ledger-drop .loot-shares {
-  padding-left: 14px;
-}
-
-/* Same for a queue inside a row, which is what a folded group of acts is. A `.loot-shares` was used
-   here first and came out wrong: its `> li` is a wrapping ROW with a rule above it, and a
-   `.ledger-drop` is a COLUMN with a rule down its left, so every act got both. Drop rows nest in a
-   drop queue; the gap is tighter than the outer one because these are one group, not a list. */
-.ledger-drop .ledger-queue {
-  gap: 8px;
   padding-left: 14px;
 }
 

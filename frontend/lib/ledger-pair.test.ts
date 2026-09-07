@@ -70,8 +70,12 @@ describe("folding `owed`", () => {
     expect(rule(".ledger-fold[hidden]")).toMatch(/display:\s*none/);
   });
 
-  it("opens by default, being the half the card is for", () => {
-    expect(ledger).toContain("const [showOwed, setShowOwed] = useState(true);");
+  it("folds by default, like the two sections beside it", () => {
+    // The figure it comes to is on the heading's line either way, so what opening it adds is which
+    // rows made that figure. Open by default it also disagreed with its own arrow.
+    expect(ledger).toContain("const [showOwed, setShowOwed] = useState(false);");
+    expect(ledger).toContain("const [showOff, setShowOff] = useState(false);");
+    expect(ledger).toContain("const [showHeld, setShowHeld] = useState(false);");
   });
 
   it("draws no chevron where there is no list to fold", () => {
@@ -82,11 +86,32 @@ describe("folding `owed`", () => {
     expect(ledger).toContain("{owedParts > 0 && (");
   });
 
-  it("says how many rows are folded away, and no second sum", () => {
-    // The count is what says the list is there. The money it comes to is the header's figure, and a
-    // total spelled out here as well is two spellings of one number, which is how they disagree.
-    expect(ledger).toContain('{plural(owedParts, "part")}');
-    expect(ledger).not.toContain("owedTotal");
+  it("says what its own rows come to, and reads it off those rows", () => {
+    // The sum of the list it heads, the way the offsets figure is the sum of its own, so the card's
+    // arithmetic is on the card: owed less offsets is the header. Off the drawn rows rather than
+    // worked out a second way, because two spellings of one number is how they come to disagree.
+    expect(ledger).toContain("const owedTotal =");
+    expect(ledger).toContain("parts.reduce((sum, part) => sum + part.mesos, 0) +");
+    expect(ledger).toContain("typed.reduce((sum, entry) => sum + entry.amount, 0);");
+    expect(ledger).toContain('<span className="ledger-amount">{signed(owedTotal)}</span>');
+  });
+
+  it("wears one shape in all three sections: heading, chevron, figure", () => {
+    // They grew up separately and read as three kinds of thing. Offsets carried its total and its
+    // chevron on a ROW inside the list, and the chevron belongs to the heading, not to a row of it.
+    for (const heading of ["Owed", "Offsets", "Unsettled Amounts"]) {
+      const at = ledger.indexOf(`<span className="ledger-heading">${heading}</span>`);
+      expect(at, heading).toBeGreaterThan(-1);
+      // The heading opens a `.ledger-step-line`, and the chevron and the figure are on it.
+      const line = ledger.lastIndexOf('<div className="ledger-step-line">', at);
+      expect(line, `${heading} is not on a step line`).toBeGreaterThan(-1);
+      const head = ledger.slice(line, ledger.indexOf("</div>", at));
+      expect(head, `${heading} lost its chevron`).toContain("party-row-toggle");
+      expect(head, `${heading} lost its figure`).toContain("ledger-amount");
+      expect(head.indexOf("party-row-toggle")).toBeLessThan(head.indexOf("ledger-amount"));
+    }
+    // And no total is left on a row inside a list.
+    expect(ledger).not.toContain('<span className="loot-name">{offsets}</span>');
   });
 });
 

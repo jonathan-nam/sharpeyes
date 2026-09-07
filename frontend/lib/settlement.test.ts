@@ -1227,6 +1227,31 @@ describe("what builds the debt, and what has come off it", () => {
     expect(rows.discharged).toBe(1_319 * M);
   });
 
+  // The claim the two figures on the card make together: what `Owed` heads, less what `Offsets`
+  // heads, is the header. Both are sums of their own drawn rows, so this is the one place the three
+  // can be checked against each other, and the identity is what stops a fourth spelling appearing.
+  //
+  // `parts.entered` is not the same as the typed rows: a NEGATIVE entry is a discharge and leaves
+  // the owed list, so the two lists split it between them and only together come back to `priced`.
+  it("has the owed rows less the offsets come to exactly the headline", () => {
+    const row = card(
+      [
+        entry("12", 254_512 * M, "oath + secondary"),
+        entry("13", -139 * M, "offset against Bro", [{ lootId: "l1", memberId: "m1" }]),
+        entry("14", -900 * M, "sent him too much"),
+      ],
+      [{ id: "d1", holder: BRO, amount: 2_000 * M, kind: "OFFSET", decidedAt: "2026-08-20" }],
+    );
+    const rows = moneyRows(row);
+    // What the component's `owedTotal` sums: the priced parts it draws, plus the typed debts.
+    const owedTotal =
+      row.parts.shares +
+      row.parts.soldOfYours +
+      rows.typed.reduce((sum, entry) => sum + entry.amount, 0);
+    // And what buildSettlement calls `priced`, which the header is the positive side of.
+    expect(owedTotal - rows.discharged).toBe(row.mesos - row.owedByYou);
+  });
+
   it("counts a credit typed by hand as a discharge, whatever it names", () => {
     // V57 made the entry signed, so a negative can arrive with no share behind it. Left in the owed
     // list it would read as a debt of minus a billion.

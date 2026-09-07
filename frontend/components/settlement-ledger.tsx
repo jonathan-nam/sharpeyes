@@ -236,8 +236,10 @@ function SettlementCard({
   const [kept, setKept] = useState("");
   // Whether the history of what has come off is open. Folded by default: it is the half that grows.
   const [showOff, setShowOff] = useState(false);
-  // Whether what the debt is made of is open. Open by default: it is the half the card is for.
-  const [showOwed, setShowOwed] = useState(true);
+  // Whether what the debt is made of is open. FOLDED, like the two beside it: the figure it comes to
+  // is on the heading's line either way, so what opening it adds is which rows made that figure, and
+  // it opened with its arrow pointing at a closed panel besides.
+  const [showOwed, setShowOwed] = useState(false);
   // Whether the sales behind the money you are holding are open. Folded, like the offsets history:
   // the figure is what you act on and the rows are the check on it.
   const [showHeld, setShowHeld] = useState(false);
@@ -338,6 +340,17 @@ function SettlementCard({
   // folded line says is inside it.
   const owedParts = parts.length + typed.length;
   const openOwed = showOwed || owedParts === 0;
+  /**
+   * What the rows under `owed` come to, which is the debt BEFORE anything came off it.
+   *
+   * The sum of its own rows and nothing else, the way the offsets figure is the sum of its own. So
+   * the card's arithmetic is on the card: this figure less the offsets one is the header's, which is
+   * `priced` in buildSettlement and `row.mesos - row.owedByYou` out here. Pinned in
+   * settlement.test.ts, since two spellings of one figure is how they come to disagree.
+   */
+  const owedTotal =
+    parts.reduce((sum, part) => sum + part.mesos, 0) +
+    typed.reduce((sum, entry) => sum + entry.amount, 0);
   // Whether the left half holds anything at all. The two entry forms left the card, so with nothing
   // priced and no spent receipt it is an empty box, and an empty box in the pair is still 12px of
   // padding and a rule under it: the card read as a gap between its header and the next section.
@@ -536,12 +549,14 @@ function SettlementCard({
           others are corrected where they were recorded, which is the sale or the split itself. */}
           {anyOwed && (
             <div className="ledger-entry">
-              {/* Nothing priced yet means no step at all, not the word OWED over a gap. What is left is
-            the two forms, and each of them says what it adds.
+              {/* Nothing priced yet means no step at all, not the word OWED over a gap. Where there
+                  is a list it folds, and where there is not there is no chevron either, which is
+                  the card's rule everywhere else.
 
-            Where there is a list it folds, and where there is not there is no chevron either, which
-            is the card's rule everywhere else. Folded, the count is what says the list is there: the
-            money it comes to is the header's figure, and no second sum is spelled out here. */}
+                  ONE SHAPE, here and under Offsets and Unsettled Amounts: the heading, its
+                  chevron, then the figure the fold sums to. The three grew up separately and read as
+                  three kinds of thing, one carrying its total beside the heading and one on a row of
+                  its own inside the list. */}
               {owedParts > 0 && (
                 <div className="ledger-step-line">
                   <span className="ledger-heading">Owed</span>
@@ -559,7 +574,7 @@ function SettlementCard({
                         : `Show what ${row.name} owes you`}
                     </span>
                   </button>
-                  {!showOwed && <span className="ledger-done">{plural(owedParts, "part")}</span>}
+                  <span className="ledger-amount">{signed(owedTotal)}</span>
                 </div>
               )}
               <div className="ledger-fold" id={`owed-${row.key}`} hidden={!openOwed}>
@@ -631,60 +646,57 @@ function SettlementCard({
           when, and that is what a reader opens it for. */}
           {discharges.length > 0 && (
             <div className="ledger-entry">
-              <span className="ledger-heading">Offsets</span>
-              <ul className="ledger-queue">
-                <li className="ledger-drop">
-                  <div className="ledger-drop-head">
-                    {/* After the count, the way the acts under it carry theirs. This row leads with a
-                    heading rather than art, so a chevron in front of it pushed nothing aside, but
-                    it sat one step left of every row it opens onto and read as a second column. */}
-                    <span className="loot-name">{offsets}</span>
-                    <button
-                      type="button"
-                      className="party-row-toggle"
-                      aria-expanded={showOff}
-                      aria-controls={`off-${row.key}`}
-                      onClick={() => setShowOff((o) => !o)}
-                    >
-                      <span className="party-row-chevron" aria-hidden="true" />
-                      <span className="visually-hidden">
-                        {showOff ? `Hide the ${offsets}` : `Show the ${offsets}`}
-                      </span>
-                    </button>
-                    <span className="ledger-amount">{signed(-discharged)}</span>
-                  </div>
+              {/* The heading, its chevron, then the figure. It used to be a ROW inside the list, a
+                  count and a total and the chevron on one line, which is why this half read as a
+                  different kind of thing from the half beside it. The count is in the chevron's own
+                  label, which is where a screen reader needs it and the only place it was doing
+                  work: how many acts is what opening it says. */}
+              <div className="ledger-step-line">
+                <span className="ledger-heading">Offsets</span>
+                <button
+                  type="button"
+                  className="party-row-toggle"
+                  aria-expanded={showOff}
+                  aria-controls={`off-${row.key}`}
+                  onClick={() => setShowOff((o) => !o)}
+                >
+                  <span className="party-row-chevron" aria-hidden="true" />
+                  <span className="visually-hidden">
+                    {showOff ? `Hide the ${offsets}` : `Show the ${offsets}`}
+                  </span>
+                </button>
+                <span className="ledger-amount">{signed(-discharged)}</span>
+              </div>
 
-                  {/* A queue, not a share list. `.loot-shares > li` is a wrapping ROW with a rule above
+              {/* A queue, not a share list. `.loot-shares > li` is a wrapping ROW with a rule above
                   it, and a `.ledger-drop` is a COLUMN with a rule down its left: nesting one in the
                   other gave every act both, so the rows came out with a stray top border and two
                   indents fighting. Drop rows go in a drop queue. */}
-                  {showOff && (
-                    <ul className="ledger-queue" id={`off-${row.key}`}>
-                      {discharges.map((act) => (
-                        <DischargeRow
-                          key={act.id}
-                          act={act}
-                          name={row.name}
-                          shares={nightsBehind(act.payouts)}
-                          iconUrl={iconUrl}
-                          busy={busy}
-                          signed={signed}
-                          onRemove={() =>
-                            void write(
-                              act.source === "DEBT"
-                                ? onRemoveDebt(act.id)
-                                : act.source === "PAYMENT"
-                                  ? onRemovePayment(act.id)
-                                  : onRemoveDisposal(act.id),
-                              null,
-                            )
-                          }
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              </ul>
+              {showOff && (
+                <ul className="ledger-queue" id={`off-${row.key}`}>
+                  {discharges.map((act) => (
+                    <DischargeRow
+                      key={act.id}
+                      act={act}
+                      name={row.name}
+                      shares={nightsBehind(act.payouts)}
+                      iconUrl={iconUrl}
+                      busy={busy}
+                      signed={signed}
+                      onRemove={() =>
+                        void write(
+                          act.source === "DEBT"
+                            ? onRemoveDebt(act.id)
+                            : act.source === "PAYMENT"
+                              ? onRemovePayment(act.id)
+                              : onRemoveDisposal(act.id),
+                          null,
+                        )
+                      }
+                    />
+                  ))}
+                </ul>
+              )}
             </div>
           )}
         </div>
@@ -699,36 +711,35 @@ function SettlementCard({
           halves were two sections with nothing between them but a rule. */}
       {(row.lines.length > 0 || row.holding > 0 || paidOut.length > 0) && (
         <div className="ledger-entry">
-          {/* THE FIGURE ON THE HEADING'S LINE, which is the money of theirs you are holding: it has
-              a decision waiting on it, and the shares below have their own. Copyable, like the
-              card's own headline, because sending it means pasting it into a trade box.
+          {/* The heading, its chevron, then the figure, which is the shape Owed and Offsets wear
+              too. Copyable, like the card's own headline, because sending it means pasting it into a
+              trade box.
 
-              It is NOT a total of the section. The shares under it run both ways and are in the
-              card's header already, and adding a count of coupons to a pile of mesos is the one sum
-              this account never makes. So the figure keeps its own way in, opening onto the sales it
-              is made of and nothing else. */}
+              The figure is the money of THEIRS you are holding, and it sums the sales in the fold
+              directly under it. It is not a total of the whole section: the shares below run both
+              ways and are in the card's header already, and adding a count of coupons to a pile of
+              mesos is the one sum this account never makes. The `shares` step is what tells them
+              apart, and it is why that step keeps its label while nothing else in here has one. */}
           <div className="ledger-step-line">
             <span className="ledger-heading">Unsettled Amounts</span>
-            {row.holding > 0 && (
-              <>
-                <span className="ledger-amount">
-                  <CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />
+            {row.holding > 0 && held.length > 0 && (
+              <button
+                type="button"
+                className="party-row-toggle"
+                aria-expanded={showHeld}
+                aria-controls={`held-${row.key}`}
+                onClick={() => setShowHeld((o) => !o)}
+              >
+                <span className="party-row-chevron" aria-hidden="true" />
+                <span className="visually-hidden">
+                  {`${showHeld ? "Hide" : "Show"} the ${plural(held.length, "sale")} behind it`}
                 </span>
-                {held.length > 0 && (
-                  <button
-                    type="button"
-                    className="party-row-toggle"
-                    aria-expanded={showHeld}
-                    aria-controls={`held-${row.key}`}
-                    onClick={() => setShowHeld((o) => !o)}
-                  >
-                    <span className="party-row-chevron" aria-hidden="true" />
-                    <span className="visually-hidden">
-                      {`${showHeld ? "Hide" : "Show"} the ${plural(held.length, "sale")} behind it`}
-                    </span>
-                  </button>
-                )}
-              </>
+              </button>
+            )}
+            {row.holding > 0 && (
+              <span className="ledger-amount">
+                <CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />
+              </span>
             )}
           </div>
 
