@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildDropLog, groupDrops } from "./drop-log";
-import { buildSettlement, isEmpty, offsetOf, settlementTotals } from "./settlement";
+import { buildSettlement, isEmpty, offsetOf, settlementTotals, sharesOf } from "./settlement";
 import { saleMoney, splitOf } from "./loot";
 import { buildWallet } from "./wallet";
 import type { Loot, PartyLootPool } from "@/types/loot";
@@ -209,5 +209,30 @@ describe("what the totals over many sales come to", () => {
     const groups = groupDrops(log().entries, "month");
     expect(groups).toHaveLength(1);
     expect([groups[0]!.pooled, groups[0]!.usd.pooled]).toEqual([9_000_000_000, 100_000]);
+  });
+});
+
+describe("collecting a dollar share", () => {
+  // Somebody ELSE sold it and owes your seat, which is the ordinary shape and the one in prod. The
+  // card has to offer the act that marks it received, or a debt is drawn with nothing to do about
+  // it. `collectable` and `sharesOf` are what the Settle button is built out of, and neither reads
+  // a currency, so this is a guard against one of them learning to.
+  const theirSale = () =>
+    inDollars({
+      sellerMemberId: "m2",
+      payouts: [
+        { memberId: "m1", paid: false, paidAt: null, shares: 1 },
+        { memberId: "m3", paid: false, paidAt: null, shares: 1 },
+      ],
+    });
+
+  it("draws the card with the share pointed at you, and something to press", () => {
+    const rows = buildSettlement([], buildWallet([party()], pools([theirSale()])));
+    const steve = rows.find((r) => r.name === "Steve")!;
+    expect(steve.usd.owed).toBe(33_333);
+    // What `collectable` is: any line running towards you. Never the meso figure, which is zero.
+    expect(steve.lines.some((line) => line.direction === "owed")).toBe(true);
+    // And Settle resolves to your own payout row, so pressing it marks that share received.
+    expect(sharesOf(steve)).toEqual([{ lootId: "l1", memberId: "m1" }]);
   });
 });
