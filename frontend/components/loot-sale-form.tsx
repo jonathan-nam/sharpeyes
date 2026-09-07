@@ -80,7 +80,7 @@ export function LootSaleForm({
       }}
     >
       <div className={labelled ? "add-fields" : "loot-sale-line"}>
-        <Field on={Boolean(labelled)} label="Sold for">
+        <Field on={Boolean(labelled)} label="Sale Amount" cls="is-price">
           <input
             className="split-input"
             value={price}
@@ -90,15 +90,15 @@ export function LootSaleForm({
             inputMode="decimal"
           />
         </Field>
-        <Field on={Boolean(labelled)} label="Amount is" cls="is-pick">
+        <Field on={Boolean(labelled)} label="Sale Type" cls="is-pick">
           <select
             className="split-input"
             value={amountBasis}
             onChange={(e) => setAmountBasis(e.target.value)}
             aria-label={labelled ? undefined : "What that amount is"}
           >
-            <option value="LISTED">{labelled ? "Listed" : "listed for"}</option>
-            <option value="RECEIVED">{labelled ? "Received" : "received"}</option>
+            <option value="LISTED">{labelled ? "Gross" : "listed for"}</option>
+            <option value="RECEIVED">{labelled ? "Net" : "received"}</option>
             {/* No listing, so no Auction House cut off the top: the price is the whole pot.
                 The payouts are still taxed, so the split is the same one. Not offered where one
                 seat ran: there is nobody to have bought it off. */}

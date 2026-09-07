@@ -429,7 +429,7 @@ function HolderCard({
             {/* A redemption realized nothing, so it has no price to give. Entered as a sale for zero
                 it would price those pieces at nothing and make the creditor absorb half of it. */}
             {fate !== "KEPT" && (
-              <Field on label="Sold for">
+              <Field on label="Sale Amount" cls="is-price">
                 <input
                   className="split-input"
                   value={amount}
