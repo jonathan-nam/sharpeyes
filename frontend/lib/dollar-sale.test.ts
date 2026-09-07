@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { buildDropLog, groupDrops } from "./drop-log";
 import { buildSettlement, isEmpty, offsetOf, settlementTotals, sharesOf } from "./settlement";
 import { saleMoney, splitOf } from "./loot";
@@ -234,5 +236,72 @@ describe("collecting a dollar share", () => {
     expect(steve.lines.some((line) => line.direction === "owed")).toBe(true);
     // And Settle resolves to your own payout row, so pressing it marks that share received.
     expect(sharesOf(steve)).toEqual([{ lootId: "l1", memberId: "m1" }]);
+  });
+});
+
+describe("a card that runs both ways at once", () => {
+  // The real card: Scanian owes a $333.33 share of the hammer, and you owe Scanian a meso share of
+  // a grindstone. Every closing-action caption was written when a card could only be in one unit,
+  // so Settle described the mesos alone and collected the dollars without saying so.
+  const theirHammer = () =>
+    inDollars({
+      sellerMemberId: "m2",
+      payouts: [
+        { memberId: "m1", paid: false, paidAt: null, shares: 1 },
+        { memberId: "m3", paid: false, paidAt: null, shares: 1 },
+      ],
+    });
+  const myGrindstone = () =>
+    inDollars({
+      id: "l2",
+      name: "Grindstone of Faith",
+      saleAmount: 7_188_888_888,
+      saleUsdCents: null,
+      amountBasis: "LISTED",
+      splitMethod: "FAIR",
+      sellerMemberId: "m1",
+      payouts: [
+        { memberId: "m2", paid: false, paidAt: null, shares: 1 },
+        { memberId: "m3", paid: false, paidAt: null, shares: 1 },
+      ],
+    });
+
+  const card = () => {
+    const pools = [{ partyId: "pa1", loot: [theirHammer(), myGrindstone()] }] as PartyLootPool[];
+    return buildSettlement([], buildWallet([party()], pools)).find((r) => r.name === "Steve")!;
+  };
+
+  it("owes in one unit and is owed in the other, with neither figure standing for both", () => {
+    const row = card();
+    // What they owe you is dollars only, so every meso figure is zero and a caption built from
+    // those figures had nothing true to say about the collecting half.
+    expect([row.mesos, row.parts.shares]).toEqual([0, 0]);
+    expect(row.usd.owed).toBe(33_333);
+    expect(row.sharesYouOwe).toBeGreaterThan(0);
+  });
+
+  it("settles both units in one act, which is why the caption has to name both", () => {
+    expect(
+      sharesOf(card())
+        .map((s) => s.lootId)
+        .sort(),
+    ).toEqual(["l1", "l2"]);
+  });
+});
+
+describe("what the closing actions say they move", () => {
+  const source = readFileSync(join(__dirname, "..", "components", "settlement-ledger.tsx"), "utf8");
+
+  it("names the dollars Settle collects, which no meso figure on the card can", () => {
+    expect(source).toContain(
+      "row.usd.owed > 0 ? `collects ${formatDollars(row.usd.owed)}` : null,",
+    );
+  });
+
+  it("names both units in what Mark Sent records, and offers it for a dollar debt at all", () => {
+    expect(source).toContain("const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;");
+    expect(source).toContain("records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}");
+    // Side by side, never added: there is no rate in this app to add them at.
+    expect(source).toContain('.join(" and ")');
   });
 });
