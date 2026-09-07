@@ -78,9 +78,7 @@ export function SettlementLedger({
   couponName,
   busy,
   payments,
-  onAddPayment,
   onRemovePayment,
-  onAddDebt,
   onRemoveDebt,
   keptRows,
   onDisposeProceeds,
@@ -110,9 +108,7 @@ export function SettlementLedger({
   busy: boolean;
   /** Each person's receipts, keyed by holderKey(). See Receipts. */
   payments: Map<string, Receipts>;
-  onAddPayment: (holder: Holder, amount: number, note: string) => Promise<void>;
   onRemovePayment: (paymentId: string) => Promise<void>;
-  onAddDebt: (holder: Holder, amount: number, note: string) => Promise<void>;
   onRemoveDebt: (debtId: string) => Promise<void>;
   /** Purchases each person's pile has recorded against your coupons. See keptOfYours. */
   keptRows: Map<string, VestigeTranche[]>;
@@ -157,9 +153,7 @@ export function SettlementLedger({
           couponName={couponName}
           busy={busy}
           payments={payments.get(row.key) ?? NO_RECEIPTS}
-          onAddPayment={onAddPayment}
           onRemovePayment={onRemovePayment}
-          onAddDebt={onAddDebt}
           onRemoveDebt={onRemoveDebt}
           keptRows={keptRows.get(row.key) ?? []}
           onDisposeProceeds={onDisposeProceeds}
@@ -185,9 +179,7 @@ function SettlementCard({
   couponName,
   busy,
   payments,
-  onAddPayment,
   onRemovePayment,
-  onAddDebt,
   onRemoveDebt,
   keptRows,
   onDisposeProceeds,
@@ -211,9 +203,7 @@ function SettlementCard({
   busy: boolean;
   /** This person's receipts. See Receipts. */
   payments: Receipts;
-  onAddPayment: (holder: Holder, amount: number, note: string) => Promise<void>;
   onRemovePayment: (paymentId: string) => Promise<void>;
-  onAddDebt: (holder: Holder, amount: number, note: string) => Promise<void>;
   onRemoveDebt: (debtId: string) => Promise<void>;
   /** This person's pile's purchases of your coupons, so a mistyped one can be taken back. */
   keptRows: VestigeTranche[];
@@ -243,8 +233,6 @@ function SettlementCard({
   /** Marks the shares paid AND records the offset, which takes it off what they owe. See V57. */
   onOffsetShares: (holder: Holder, name: string, parts: OffsetPart[]) => Promise<void>;
 }) {
-  const [got, setGot] = useState("");
-  const [owed, setOwed] = useState("");
   const [kept, setKept] = useState("");
   // Whether the history of what has come off is open. Folded by default: it is the half that grows.
   const [showOff, setShowOff] = useState(false);
@@ -253,16 +241,8 @@ function SettlementCard({
   // Whether the sales behind the money you are holding are open. Folded, like the offsets history:
   // the figure is what you act on and the rows are the check on it.
   const [showHeld, setShowHeld] = useState(false);
-  const [note, setNote] = useState("");
-  // Its own, not the debt form's: two forms sharing one box would clear a half-typed note in the
-  // other the moment either saved.
-  const [gotNote, setGotNote] = useState("");
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const payment = parseMesos(got);
-  const paid = payment !== null && payment >= 1 ? payment : null;
-  const entered = parseMesos(owed);
-  const owing = entered !== null && entered >= 1 ? entered : null;
   // What they are paying to keep the coupons of yours they hold. Above zero, matching the server: a
   // stack handed over for nothing is not a purchase at a price of nought, it is a handover.
   const keeping = parseMesos(kept);
@@ -551,7 +531,7 @@ function SettlementCard({
             money it comes to is the header's figure, and no second sum is spelled out here. */}
           {owedParts > 0 && (
             <div className="ledger-step-line">
-              <span className="ledger-step">owed</span>
+              <span className="ledger-heading">Owed</span>
               <button
                 type="button"
                 className="party-row-toggle"
@@ -596,108 +576,6 @@ function SettlementCard({
               </ul>
             )}
 
-            {/* The one figure on this page nothing else could have known. See V56.
-
-            Its own step, and the boxes say what they take. "Bro owes me ___ for ___" was a sentence
-            spread over two boxes: no unit on either, nothing saying what "for" wanted, and the step
-            it belongs to a list away. The step names the act, the labels name the fields, and the
-            b/m suffix is the one thing about parseMesos nobody can guess, so it stays a placeholder
-            on the amount. */}
-            <span className="ledger-heading">Add Debt</span>
-            <form
-              className="ledger-sale"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (owing) {
-                  void write(onAddDebt(row.holder, owing, note.trim()), () => {
-                    setOwed("");
-                    setNote("");
-                  });
-                }
-              }}
-            >
-              <label className="loot-share-input is-stacked">
-                Amount
-                <input
-                  className="split-input"
-                  value={owed}
-                  onChange={(e) => setOwed(e.target.value)}
-                  placeholder="1.5b"
-                  inputMode="decimal"
-                  aria-label={`Amount ${row.name} owes you`}
-                />
-              </label>
-              {/* Takes what is left of the line, being the one box on it with no size of its own. */}
-              <label className="loot-share-input is-grow is-stacked">
-                Description
-                <input
-                  className="split-input"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  maxLength={120}
-                  aria-label="Description, optional"
-                />
-              </label>
-              {/* A + rather than the word: two forms a step apart both read "Add", and what each one
-              adds is what its step says. The label is the act, since the mark is not text. */}
-              <button
-                type="submit"
-                className="party-save ledger-add"
-                disabled={busy || owing === null}
-                aria-label={`Add what ${row.name} owes you`}
-              >
-                +
-              </button>
-            </form>
-
-            {/* Mesos arriving, against everything above at once. A payment is against the person, not
-            against a particular boss or a particular coupon. See V51. */}
-            <span className="ledger-heading">Add Payment</span>
-            <form
-              className="ledger-sale"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (paid) {
-                  void write(onAddPayment(row.holder, paid, gotNote.trim()), () => {
-                    setGot("");
-                    setGotNote("");
-                  });
-                }
-              }}
-            >
-              <label className="loot-share-input is-stacked">
-                Amount
-                <input
-                  className="split-input"
-                  value={got}
-                  onChange={(e) => setGot(e.target.value)}
-                  placeholder="1.5b"
-                  inputMode="decimal"
-                  aria-label={`Amount ${row.name} has paid you`}
-                />
-              </label>
-              {/* The same box the entry above it carries, in the same words. A receipt that cannot say
-              what it answered is one nobody can check a month later. */}
-              <label className="loot-share-input is-grow is-stacked">
-                Description
-                <input
-                  className="split-input"
-                  value={gotNote}
-                  onChange={(e) => setGotNote(e.target.value)}
-                  maxLength={120}
-                  aria-label="Description, optional"
-                />
-              </label>
-              <button
-                type="submit"
-                className="party-save ledger-add"
-                disabled={busy || paid === null}
-                aria-label={`Add a payment from ${row.name}`}
-              >
-                +
-              </button>
-            </form>
-
             {/* Receipts a closure has already spoken for, which are in none of the arithmetic above.
             Kept because this is the only place a payment can be taken back: it used to be done on
             the Sale Ledger, on a card that held the old per-holder tranches, and that card is gone.
@@ -737,7 +615,7 @@ function SettlementCard({
           when, and that is what a reader opens it for. */}
         {discharges.length > 0 && (
           <div className="ledger-entry">
-            <span className="ledger-step">offsets</span>
+            <span className="ledger-heading">Offsets</span>
             <ul className="ledger-queue">
               <li className="ledger-drop">
                 <div className="ledger-drop-head">

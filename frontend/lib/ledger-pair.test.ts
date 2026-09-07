@@ -27,8 +27,8 @@ describe("`owed` and `offsets` are half a card each", () => {
   it("holds both halves, and only those, in the pair", () => {
     const at = ledger.indexOf('<div className="ledger-pair">');
     expect(at, "the pair is gone").toBeGreaterThan(-1);
-    const owed = ledger.indexOf('<span className="ledger-step">owed</span>');
-    const offsets = ledger.indexOf('<span className="ledger-step">offsets</span>');
+    const owed = ledger.indexOf('<span className="ledger-heading">Owed</span>');
+    const offsets = ledger.indexOf('<span className="ledger-heading">Offsets</span>');
     const shares = ledger.indexOf('<span className="ledger-step">shares</span>');
     expect(at).toBeLessThan(owed);
     expect(owed).toBeLessThan(offsets);
@@ -54,8 +54,8 @@ describe("`owed` and `offsets` are half a card each", () => {
 
 describe("folding `owed`", () => {
   it("draws no step at all where nothing is priced", () => {
-    // The word OWED over a gap. What is left in the column is the two entry forms, and each of them
-    // says what it adds.
+    // The word Owed over a gap. Nothing is left in the column at all: the two entry forms moved to
+    // the foot of the card, so an empty left half is an empty left half.
     expect(ledger).toContain('{owedParts > 0 && (\n            <div className="ledger-step-line">');
   });
 
@@ -159,24 +159,34 @@ describe("every act in one step", () => {
 });
 
 describe("the two entry forms", () => {
-  it("labels the boxes and submits with a mark", () => {
-    expect(ledger).toContain('<span className="ledger-heading">Add Debt</span>');
-    expect(ledger).toContain('<span className="ledger-heading">Add Payment</span>');
-    // The visible label is inside the accessible name, which is WCAG 2.5.3.
-    expect(ledger).toContain("aria-label={`Amount ${row.name} owes you`}");
-    expect(ledger).toContain("aria-label={`Amount ${row.name} has paid you`}");
-    expect(ledger).toContain('aria-label="Description, optional"');
-    // A mark is not text, so the act is the label.
-    expect(ledger).toContain("aria-label={`Add what ${row.name} owes you`}");
-    expect(ledger).toContain("aria-label={`Add a payment from ${row.name}`}");
+  // Their own card, above the settlement cards they write to, so what follows is the ENTRY card's.
+  it("is out of every settlement card", () => {
+    // Inside one they put a form between every card's arithmetic and the next card's, and the debt
+    // half could not open the first debt of a relationship: a card is drawn for somebody who
+    // already owes you something.
+    expect(ledger).not.toContain("Add Debt");
+    expect(ledger).not.toContain("Add Payment");
+    expect(ledger).not.toContain("onAddDebt");
+    expect(ledger).not.toContain("onAddPayment");
+    // Taking a row back off stays on the card, which is where the row is drawn.
+    expect(ledger).toContain("onRemoveDebt");
+    expect(ledger).toContain("onRemovePayment");
   });
 
-  it("stacks the label over its box, so the row fits at half a card", () => {
-    // Beside it, the label's own width came off the line the two boxes and the submit had to share,
-    // and the submit was pushed to a row of its own.
+  it("is drawn above the cards it writes to", () => {
+    const entry = page.indexOf("<AddSettlement");
+    const cards = page.indexOf("<SettlementLedger");
+    expect(entry, "the entry card is gone").toBeGreaterThan(-1);
+    expect(entry).toBeLessThan(cards);
+    // And under the totals, which is the section's own heading and its one figure.
+    expect(page.indexOf("<SettlementSummary")).toBeLessThan(entry);
+  });
+
+  it("stacks the label over its box, which is what lets the row hold four controls", () => {
+    // Beside them, the labels' own width came off the line the picker, two boxes and submit share.
     expect(rule(".loot-share-input.is-stacked")).toMatch(/flex-direction:\s*column/);
-    // STRETCH, not grow: in a column the grow axis is the wrong one, and the box kept its own
-    // 20-character width, wider at half a card than the label holding it.
+    // STRETCH, not grow: in a column the grow axis is the wrong one, and the box keeps its own
+    // 20-character width whatever the label holding it does.
     expect(rule(".ledger-sale .loot-share-input.is-grow .split-input")).toMatch(
       /align-self:\s*stretch/,
     );
@@ -184,10 +194,22 @@ describe("the two entry forms", () => {
 
   it("sizes the submit like the boxes beside it", () => {
     // .party-save is 13px on 8px of padding, four pixels shorter than a 15px .split-input on 9px,
-    // so one control in a row of three did not line up.
+    // so one control in a row of four did not line up.
     const add = rule(".ledger-add");
     expect(add).toMatch(/font-size:\s*var\(--text-lg\)/);
     expect(add).toMatch(/padding:\s*9px/);
     expect(rule(".ledger-sale .ledger-add")).toMatch(/align-self:\s*flex-end/);
+  });
+
+  it("sizes the picker like them too, a select taking no line box of its own", () => {
+    // Chrome gives a select's button 20px of content where an input builds 22.5px from the same
+    // font, so the picker stood 11.5px shorter than the amount box. Measured in headless chromium:
+    // all four controls are 42.50px tall now, top 55.50 to bottom 98.00.
+    const picker = rule(".loot-share-input.is-stacked select.split-input");
+    expect(picker).toMatch(/font-size:\s*var\(--text-lg\)/);
+    expect(picker).toMatch(/min-height:\s*calc\(1\.5em \+ 20px\)/);
+    // Its own selector: `.ledger-sale select` belongs to the Sale Ledger's disposition picker, which
+    // is deliberately smaller for the sake of "they took mine, at a price".
+    expect(css).toContain(".ledger-sale select.split-input {");
   });
 });

@@ -6732,16 +6732,6 @@ button.link:disabled {
   width: 120px;
 }
 
-/* The two entry forms at half a card's width. Wrapping, the label took the line with its amount and
-   the description took another with the button, so each form stood two rows deep. */
-.ledger-pair .ledger-sale {
-  gap: 8px;
-}
-
-.ledger-pair .ledger-sale .loot-share-input .split-input {
-  width: 84px;
-}
-
 /* The description takes what is left of the line, being the one box on it with no size of its own to
    keep. `min-width: 0` on the label as well, or its own content sets a floor and the line wraps
    anyway: a flex item does not shrink past its content without it. */
@@ -6751,8 +6741,7 @@ button.link:disabled {
 }
 
 /* STRETCH, not flex-grow. `is-stacked` turns the label into a column, so a grow on the box inside
-   it grows the wrong axis: the box kept its own 20-character width, which at half a card is wider
-   than the label it sits in. */
+   it grows the wrong axis and the box keeps its own 20-character width whatever the label does. */
 .ledger-sale .loot-share-input.is-grow .split-input {
   align-self: stretch;
   width: auto;
@@ -6773,9 +6762,25 @@ button.link:disabled {
   align-self: flex-end;
 }
 
-/* The label above its box rather than beside it. Beside it, the label's own width came off the line
-   the two boxes and the submit had to share, and at half a card's width the submit was pushed to a
-   row of its own. */
+/* A select takes its height from the option text and ignores the line box an input builds from the
+   same `font: inherit`, so the picker came out 11.5px shorter than the amount box beside it.
+   Measured in headless chromium: 42.50px for an input against 31.00px for the select, and 1.5 on
+   15px is the 22.5px of content the input's 9px padding sits around.
+
+   Its own selector rather than `.ledger-sale select`, which the Sale Ledger's disposition picker
+   already owns: that one is DELIBERATELY smaller, having to hold "they took mine, at a price". */
+.loot-share-input.is-stacked select.split-input {
+  font-size: var(--text-lg);
+  padding: 9px 12px;
+  line-height: 1.5;
+  /* Chrome does not give a select's button the line box it gives an input, so the height is asked
+     for: the input's 1.5em of text plus its 18px of padding and 2px of border. A select is
+     border-box under Chrome's UA sheet, which is why the padding is in the sum. Measured. */
+  min-height: calc(1.5em + 20px);
+}
+
+/* The label above its box rather than beside it, which is what lets a row hold two boxes and a
+   submit: beside them the labels' own width came off the line the three had to share. */
 .loot-share-input.is-stacked {
   flex-direction: column;
   align-items: flex-start;

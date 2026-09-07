@@ -19,6 +19,7 @@ const page = readFileSync(join(__dirname, "..", "app", "bosses", "drops", "page.
 const summary = readFileSync(join(__dirname, "..", "components", "settlement-summary.tsx"), "utf8");
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 const settlement = readFileSync(join(__dirname, "settlement.ts"), "utf8");
+const entry = readFileSync(join(__dirname, "..", "components", "add-settlement.tsx"), "utf8");
 
 describe("what the card says a person owes", () => {
   it("states it to the meso, never shortened", () => {
@@ -119,7 +120,7 @@ describe("what the card says a person owes", () => {
     // reads as a button that did nothing. A failure in the gap left it there for good.
     const handler = page.slice(
       page.indexOf("onOffsetShares={async"),
-      page.indexOf("<AddSettlement"),
+      page.indexOf("{/* What the cards above do NOT cover"),
     );
     expect(handler).toContain("`${DEBTS_KEY}/offset`");
     // Neither of the page's write helpers: each draws the moment it lands, and this act has two
@@ -330,15 +331,15 @@ describe("what the card says a person owes", () => {
     );
   });
 
-  it("asks what a PAYMENT was for too, the same way the entry above it does", () => {
+  it("asks what a PAYMENT was for too, the same way the entry beside it does", () => {
     // The two halves of one conversation were recorded differently: a debt could say "for the Kalos
     // run" and the money arriving back could not say which debt it answered. Same box, same words,
-    // and optional on both, so neither form waits on it.
-    expect(source).toContain("onAddPayment(row.holder, paid, gotNote.trim())");
-    expect(source).toContain("const [gotNote, setGotNote] = useState");
+    // and optional on both, so neither form waits on it. Both boxes are the entry card's now.
+    expect(entry).toContain("onAddPayment(payer.holder, paid, gotNote.trim())");
+    expect(entry).toContain("const [gotNote, setGotNote] = useState");
     // Its own state. One box shared between the two forms would clear a half-typed note in the
     // other the moment either saved.
-    expect(source).not.toContain("setGotNote(note)");
+    expect(entry).not.toContain("setGotNote(note)");
     expect(page).toContain("body: JSON.stringify({ holder, amount, note: note || undefined })");
   });
 
@@ -384,7 +385,7 @@ describe("a receipt on the card", () => {
     // OFFSETS is the word, and it means anything that came off: a payment is one, so the fold
     // counts acts and each row inside names which act it was. The step was renamed for a turn and
     // the rename was the wrong half of the change to make.
-    expect(source).toContain('<span className="ledger-step">offsets</span>');
+    expect(source).toContain('<span className="ledger-heading">Offsets</span>');
     expect(source).toContain('plural(discharges.length, "offset")');
   });
 

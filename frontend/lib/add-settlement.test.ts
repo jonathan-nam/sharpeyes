@@ -19,11 +19,12 @@ describe("the way in for somebody with no card", () => {
     expect(page).toContain("<AddSettlement");
   });
 
-  it("writes to the same endpoint a card's own box writes to", () => {
-    // Two ways to enter a debt is fine. Two SHAPES of debt row is not: they have to be one thing so
-    // a mistyped one is removable from the card it lands on.
-    const wiring = page.slice(page.indexOf("<AddSettlement"));
-    expect(wiring.slice(0, 400)).toContain("debtWrite(DEBTS_KEY");
+  it("writes to the endpoints the cards read back", () => {
+    // The rows it makes are removable from the card they land on, so they have to be that card's
+    // own shape: one endpoint each, and no second shape of debt row.
+    const wiring = page.slice(page.indexOf("<AddSettlement"), page.indexOf("<SettlementLedger"));
+    expect(wiring).toContain("debtWrite(DEBTS_KEY");
+    expect(wiring).toContain("paymentWrite(PAYMENTS_KEY");
   });
 
   it("picks a PERSON, since a debt is between two humans", () => {
@@ -45,6 +46,16 @@ describe("the way in for somebody with no card", () => {
 
   it("draws nothing when there is nobody to pick", () => {
     // A picker of nobody is a control that cannot be completed, which is worse than no control.
-    expect(component).toContain("if (people.length === 0) return null;");
+    expect(component).toContain("if (payers.length === 0) return null;");
+  });
+
+  it("takes a payment from an unclaimed character too, which only a card could before", () => {
+    // A settlement card can be keyed by a character nobody has said the human behind yet, and the
+    // box inside that card was the only place a payment from them could be entered. A people-only
+    // picker out here would have dropped the act, silently.
+    expect(component).toContain('one.holder.kind !== "PERSON"');
+    expect(page).toContain("holders={settlement.map((row) => ({");
+    // A debt is still against a PERSON: that is what the holder fold has meant since V39.
+    expect(component).toContain("const debtors: Payer[] = people.map((person) => ({");
   });
 });

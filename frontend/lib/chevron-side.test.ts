@@ -98,7 +98,7 @@ describe("a chevron hangs off the name in every list that leads with art", () =>
   // row. It opens onto rows that carry theirs after the name, so in front it was a step out of line
   // with everything under it.
   it("puts the offsets heading's chevron after its count", () => {
-    const at = ledger.indexOf('className="ledger-step">offsets<');
+    const at = ledger.indexOf('className="ledger-heading">Offsets<');
     expect(at, "the offsets step is gone").toBeGreaterThan(-1);
     // Up to the close of `.ledger-drop-head`, which is the first one after the marker.
     const head = ledger.slice(at, ledger.indexOf("</div>", at));

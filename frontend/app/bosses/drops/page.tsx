@@ -933,6 +933,32 @@ export default function DropLogPage() {
 
                 <SettlementSummary rows={settlement} totals={owedTotals} />
 
+                {/* The two boxes, above the cards they write to and out of every one of them. A
+                    card names its person, so the boxes inside one did not have to; out here the
+                    picker does, and it offers the unclaimed characters a card can be keyed by as
+                    well as the people list. */}
+                <AddSettlement
+                  people={people}
+                  holders={settlement.map((row) => ({
+                    key: row.key,
+                    name: row.name,
+                    holder: row.holder,
+                  }))}
+                  busy={busy}
+                  onAddDebt={(holder: Holder, amount, note) =>
+                    debtWrite(DEBTS_KEY, {
+                      method: "POST",
+                      body: JSON.stringify({ holder, amount, note: note || undefined }),
+                    })
+                  }
+                  onAddPayment={(holder: Holder, amount, note) =>
+                    paymentWrite(PAYMENTS_KEY, {
+                      method: "POST",
+                      body: JSON.stringify({ holder, amount, note: note || undefined }),
+                    })
+                  }
+                />
+
                 <SettlementLedger
                   rows={settlement}
                   bossByKey={bossByKey}
@@ -944,20 +970,10 @@ export default function DropLogPage() {
                   // Every payment, not only the ones counted since closing: these are the rows as
                   // typed, and one entered against a closed boss is still one somebody may need back.
                   payments={paymentsByHolder}
-                  onAddPayment={(holder: Holder, amount, note) =>
-                    paymentWrite(PAYMENTS_KEY, {
-                      method: "POST",
-                      body: JSON.stringify({ holder, amount, note: note || undefined }),
-                    })
-                  }
+                  // The two ENTRY boxes are the card above's, keyed by a picker. What stays here is
+                  // taking a row back off, which can only be done where the row is drawn.
                   onRemovePayment={(paymentId) =>
                     paymentWrite(`${PAYMENTS_KEY}/${paymentId}`, { method: "DELETE" })
-                  }
-                  onAddDebt={(holder: Holder, amount, note) =>
-                    debtWrite(DEBTS_KEY, {
-                      method: "POST",
-                      body: JSON.stringify({ holder, amount, note: note || undefined }),
-                    })
                   }
                   onRemoveDebt={(debtId) =>
                     debtWrite(`${DEBTS_KEY}/${debtId}`, { method: "DELETE" })
@@ -1083,17 +1099,6 @@ export default function DropLogPage() {
                   owes you something, so the first debt of a relationship had nowhere to go. After
                   the cards, not above them: it is the way to one more of the same, the way Record a
                   sale is on the other tab. */}
-                <AddSettlement
-                  people={people}
-                  busy={busy}
-                  onAdd={(holder: Holder, amount, note) =>
-                    debtWrite(DEBTS_KEY, {
-                      method: "POST",
-                      body: JSON.stringify({ holder, amount, note: note || undefined }),
-                    })
-                  }
-                />
-
                 {/* What the cards above do NOT cover, from the Wallet this tab replaced. A total that
                   is short must not read as a total that is complete. */}
                 {(wallet.unreadable > 0 || wallet.betweenOthers > 0 || wallet.betweenMine > 0) && (
