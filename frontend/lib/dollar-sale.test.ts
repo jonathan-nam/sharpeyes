@@ -85,13 +85,18 @@ describe("what a dollar sale splits into", () => {
   it("takes no Auction House cut, because no Auction House was involved", () => {
     const split = splitOf(inDollars(), SEATS)!;
     expect(split.currency).toBe("USD");
-    // $1000 three ways. Payouts round UP and the seller absorbs the dust, which is splitDrop's
-    // existing rule and not a dollar one: 33334 + 33334 leaves the seller 33332.
-    expect(split.shares.map((s) => s.pay)).toEqual([33_334, 33_334]);
-    expect(split.seller.keeps).toBe(33_332);
-    // Nothing comes off a hop either, so what they are sent is what they get.
-    expect(split.shares.map((s) => s.nets)).toEqual([33_334, 33_334]);
+    // Nothing comes off a hop, so what they are sent is what they get.
+    expect(split.shares.map((s) => s.nets)).toEqual(split.shares.map((s) => s.pay));
     expect(split.shares.map((s) => s.fee)).toEqual([0, 0]);
+  });
+
+  it("pays the figure everybody already worked out, and leaves the cent with the holder", () => {
+    // $1000 three ways is $333.33. Rounding UP, which is the meso rule, would pay $333.34 and make
+    // every number on the screen disagree with the division in the reader's head over a cent. The
+    // dust goes to the holder instead, who is the one person not checking. See SplitInput.rounding.
+    const split = splitOf(inDollars(), SEATS)!;
+    expect(split.shares.map((s) => s.pay)).toEqual([33_333, 33_333]);
+    expect(split.seller.keeps).toBe(33_334);
   });
 
   it("comes to the whole price, so no cent is invented or lost", () => {
@@ -120,12 +125,12 @@ describe("where a dollar share lands in the wallet", () => {
   it("sums apart from the mesos and never into them", () => {
     const wallet = buildWallet([party()], pools([inDollars()]));
     expect(wallet.owe).toBe(0);
-    expect(wallet.usd.owe).toBe(66_668);
+    expect(wallet.usd.owe).toBe(66_666);
     // Name order, because the two owe the same in both units: the meso key ties, then the dollar
     // key ties, and the name breaks it. See buildWallet's sort.
     expect(wallet.counterparties.map((c) => [c.name, c.owe, c.usd.owe])).toEqual([
-      ["Bob", 0, 33_334],
-      ["Steve", 0, 33_334],
+      ["Bob", 0, 33_333],
+      ["Steve", 0, 33_333],
     ]);
   });
 
@@ -141,7 +146,7 @@ describe("where a dollar share lands in the wallet", () => {
     expect(steve.lines.map((l) => l.currency).sort()).toEqual(["MESO", "USD"]);
     // One person, two debts, two units, and the card owes both without adding them.
     expect(steve.owe).toBeGreaterThan(0);
-    expect(steve.usd.owe).toBe(33_334);
+    expect(steve.usd.owe).toBe(33_333);
   });
 });
 
@@ -150,7 +155,7 @@ describe("what the settlement card does with it", () => {
 
   it("carries the dollars in their own pair, outside every meso figure", () => {
     const steve = cards().find((row) => row.name === "Steve")!;
-    expect(steve.usd.owe).toBe(33_334);
+    expect(steve.usd.owe).toBe(33_333);
     expect([steve.mesos, steve.sharesYouOwe, steve.owedByYou]).toEqual([0, 0, 0]);
   });
 
@@ -165,7 +170,7 @@ describe("what the settlement card does with it", () => {
   it("totals the two units side by side", () => {
     const totals = settlementTotals(cards());
     expect([totals.owe, totals.owed]).toEqual([0, 0]);
-    expect(totals.usd.owe).toBe(66_668);
+    expect(totals.usd.owe).toBe(66_666);
   });
 
   it("will not offset a dollar share against a meso debt", () => {

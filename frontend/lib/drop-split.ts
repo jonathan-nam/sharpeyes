@@ -45,6 +45,19 @@ export type SplitInput = {
   sellerShares?: number;
   /** One share count per OTHER member, positional with `memberFees`. Absent is 1 each. */
   memberShares?: number[];
+  /**
+   * Which way a payout that will not divide evenly is rounded. Absent is `up`, which is mesos.
+   *
+   * The dust has to land on somebody, and the two units want it in different places. In MESOS it
+   * goes to the party: a meso or two is nothing, the distributor is the one who should eat it, and
+   * it matches the split bot people already cross-check against.
+   *
+   * In DOLLARS it goes to the holder, because the figure is read by a human who has already done
+   * the division. $1000 three ways is $333.33 to everybody, and paying $333.34 makes every number
+   * on the screen disagree with the one in their head over a cent nobody cares about. The holder
+   * keeps $333.34 instead, which is the one figure nobody is checking.
+   */
+  rounding?: "up" | "down";
 };
 
 export type MemberShare = {
@@ -108,8 +121,9 @@ export function parseMesos(input: string): number | null {
  * Shares are the same kind of refusal. A `memberShares` of the wrong length would silently pay some
  * members a share they never agreed to, so it is rejected rather than padded.
  *
- * Mesos are integers, so each payout is rounded UP and the seller absorbs the dust. It is a meso
- * per member at most, and it is the distributor's to eat rather than the party's.
+ * Both units are integers, so a payout that will not divide evenly is rounded and somebody absorbs
+ * the dust. Which way, and therefore who, is `rounding`: up and the distributor eats it, which is
+ * the meso rule, or down and the holder keeps it, which is the dollar one.
  */
 export function splitDrop({
   amount,
@@ -119,6 +133,7 @@ export function splitDrop({
   method,
   sellerShares = 1,
   memberShares,
+  rounding = "up",
 }: SplitInput): Split {
   // The seller's own rate is unused on a `received` basis, so a nonsense value there must not
   // reject input the split does not depend on.
@@ -172,14 +187,13 @@ export function splitDrop({
   const payouts = (round: (n: number) => number) =>
     memberFees.map((fee, i) => round(exact(fee, shares[i] ?? 1)));
 
-  // Round payouts UP, so the seller absorbs the rounding dust rather than the party. It is a meso
-  // or two, but it is the distributor's to eat, and it matches the split bot people already
-  // cross-check against.
+  // Which way the dust lands, per `rounding`. See its note for why the two units differ.
   //
-  // Rounding up can OVERSHOOT what the seller is holding, though only on amounts too small to
+  // Rounding UP can OVERSHOOT what the seller is holding, though only on amounts too small to
   // divide: 1 meso across a party of 6 rounds to 1 each and pays out 5 from a purse of 1. Falling
-  // back to floor is the only branch where the invariant would otherwise break.
-  let pays = payouts(Math.ceil);
+  // back to floor is the only branch where the invariant would otherwise break. Rounding DOWN
+  // cannot overshoot at all, so for dollars that branch is dead rather than merely unused.
+  let pays = payouts(rounding === "up" ? Math.ceil : Math.floor);
   if (pays.reduce((sum, p) => sum + p, 0) > sellerReceives) pays = payouts(Math.floor);
 
   const members = memberFees.map((fee, i) => {

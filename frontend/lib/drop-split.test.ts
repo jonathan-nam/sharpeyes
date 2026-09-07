@@ -476,6 +476,36 @@ describe("rounding matches the split bot people cross-check against", () => {
     expect(s.sellerKeeps).toBeLessThanOrEqual(s.members[0]?.nets ?? 0);
   });
 
+  // The unit decides who eats the dust, and mesos must keep eating it the way they always have.
+  // See SplitInput.rounding: down is for dollars, where a human has already done the division.
+  const threeWays = (rounding?: "up" | "down") =>
+    splitDrop({
+      amount: 100_000,
+      amountIs: "received",
+      sellerFee: 0,
+      memberFees: [0, 0],
+      method: "lazy",
+      ...(rounding ? { rounding } : {}),
+    });
+
+  it("rounds a payout up unless told otherwise, which is every meso split there has ever been", () => {
+    expect(threeWays().members.map((m) => m.pay)).toEqual([33_334, 33_334]);
+    expect(threeWays().sellerKeeps).toBe(33_332);
+  });
+
+  it("rounds it down when asked, leaving the odd unit with the holder", () => {
+    expect(threeWays("down").members.map((m) => m.pay)).toEqual([33_333, 33_333]);
+    expect(threeWays("down").sellerKeeps).toBe(33_334);
+  });
+
+  it("hands out the whole purse either way, so no unit is invented or lost", () => {
+    for (const rounding of [undefined, "down"] as const) {
+      const s = threeWays(rounding);
+      const paidOut = s.members.reduce((sum, m) => sum + m.pay, 0);
+      expect(s.sellerKeeps + paidOut).toBe(100_000);
+    }
+  });
+
   // Rounding up can overshoot a purse too small to divide. This is the branch that falls back.
   it.each([
     [1, 6],

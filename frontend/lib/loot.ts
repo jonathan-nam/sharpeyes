@@ -144,6 +144,9 @@ export function splitOf(loot: Loot, members: PartyMember[]): LootSplit | null {
     method: loot.splitMethod === "FAIR" ? "fair" : "lazy",
     sellerShares,
     memberShares,
+    // Down in dollars, so $1000 three ways is the $333.33 everybody already worked out, and the
+    // holder keeps the odd cent rather than paying it. See SplitInput.rounding.
+    rounding: money.currency === "USD" ? "down" : "up",
   });
 
   return {
