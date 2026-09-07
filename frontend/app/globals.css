@@ -4105,6 +4105,23 @@ button.link:disabled {
   flex: 0 1 264px;
 }
 
+/* A whole roster in one field, on a line of its own.
+
+   The basis is deliberately too big to share a line with the three selects (390px of them inside a
+   700px card: .page is --measure less its 2rem, less .add-card's padding). That is what puts the
+   roster on the second line, where it has the width to lay its seats out sideways. Sized to fit on
+   one line and it gets about 300px, one 160px box wide, so a party of four stacks into a column and
+   .add-fields' flex-end then drags the selects down to meet the bottom of it, leaving the card
+   half empty above them.
+
+   Not basis 100%, which would take the line so completely that the + submitting the form wrapped
+   onto a third line by itself. It shrinks, so the two share the line and the + stays at the end of
+   the boxes. See .config-shares, which solves the same problem the other way because it has no
+   button to keep beside it. */
+.add-field.is-roster {
+  flex: 1 1 420px;
+}
+
 /* Never the thing that wraps: a + alone on the second line names nothing. */
 .add-fields .add-plus {
   flex: none;

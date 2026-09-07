@@ -7,7 +7,7 @@ import { RosterInputs } from "@/components/roster-inputs";
 import { apiAssetUrl } from "@/lib/api";
 import { MAX_MINUTES, parseMinutes } from "@/lib/boss-minutes";
 import { rotatingDropsAt } from "@/lib/loot-rotation";
-import { bossesWithoutConfig, standingMembers, standingParties } from "@/lib/parties";
+import { bossesWithoutConfig, namedSeats, standingMembers, standingParties } from "@/lib/parties";
 import { splitTitle } from "@/lib/split-title";
 import {
   couponsOf,
@@ -524,7 +524,7 @@ function ConfigRow({
               !badStacks &&
               addsUp &&
               onSave(
-                members.map((m) => m.trim()).filter((m) => m !== ""),
+                namedSeats(members),
                 difficulty === "" ? null : difficulty,
                 parsed.minutes,
                 looter === "" ? null : looter,

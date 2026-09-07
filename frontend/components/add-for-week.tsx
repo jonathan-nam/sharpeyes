@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { KNOWN_CHARACTERS_ID } from "@/components/known-characters";
+import { RosterInputs } from "@/components/roster-inputs";
 import { difficultyLabel } from "@/lib/boss-difficulty";
-import { bossesWithoutConfig } from "@/lib/parties";
+import { bossesWithoutConfig, namedSeats } from "@/lib/parties";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { Party, SavePartyBody } from "@/types/party";
@@ -19,6 +19,15 @@ import type { Party, SavePartyBody } from "@/types/party";
 // The Add is a + on the end of the row, so the boxes and the thing that submits them read as one
 // control. Its label ("Add for this week") is the tooltip, which is the only place the week is
 // still said.
+//
+// The roster is RosterInputs, the same control the edit page and Party View's row use, and not one
+// box: a night somebody talks you into is a pug, and a pug is five other people. One box left this
+// the only form in the app that could not state a whole party, so the roster had to be finished
+// afterwards on the row it had just made.
+//
+// Without sprites, as Party View's row is. The frame is drawn for an empty seat too, so at 96px a
+// card that opens on one blank box would open 112px tall and stay that way, and this is a form
+// rather than a roster being checked. The datalist inside RosterInputs is the typo guard here.
 
 export function AddForWeek({
   characters,
@@ -39,32 +48,34 @@ export function AddForWeek({
   const [characterId, setCharacterId] = useState("");
   const [bossKey, setBossKey] = useState("");
   const [difficulty, setDifficulty] = useState("");
-  const [member, setMember] = useState("");
+  const [members, setMembers] = useState<string[]>([""]);
 
   // Opening on the first character rather than on a prompt to choose one, as the edit page does.
   const chosen = characterId || characters[0]?.id || "";
   const available = chosen ? bossesWithoutConfig(parties, bosses, chosen) : [];
   const difficulties = bosses.find((b) => b.bossKey === bossKey)?.difficulties ?? [];
+  const named = namedSeats(members);
 
   // Every box answered, since the + says nothing about what is missing. A boss that offers no
-  // difficulties has nothing to answer there.
+  // difficulties has nothing to answer there. Somebody, rather than every seat: an empty box is a
+  // seat opened and not used, and the + would otherwise go dead the moment one was added.
   const ready =
     chosen !== "" &&
     bossKey !== "" &&
-    member.trim() !== "" &&
+    named.length > 0 &&
     (difficulties.length === 0 || difficulty !== "");
 
   function reset() {
     setBossKey("");
     setDifficulty("");
-    setMember("");
+    setMembers([""]);
   }
 
   async function add() {
     await onAdd({
       characterId: chosen,
       bossKey,
-      members: [member.trim()],
+      members: named,
       difficulty: difficulty === "" ? null : difficulty,
       oneOff: true,
     });
@@ -146,18 +157,14 @@ export function AddForWeek({
           </label>
 
           {/* The server refuses a party with nobody else in it, on purpose: that is a solo run. So
-              there is no such thing as an empty one to fill in afterwards. */}
-          <label className="add-field is-wide">
-            <span>Member</span>
-            <input
-              className="split-input"
-              value={member}
-              list={KNOWN_CHARACTERS_ID}
-              onChange={(e) => setMember(e.target.value)}
-              maxLength={40}
-              disabled={busy}
-            />
-          </label>
+              there is no such thing as an empty one to fill in afterwards.
+
+              A group of boxes rather than one, so not a <label>: RosterInputs names each seat
+              itself, and a label over several inputs points at whichever it liked. */}
+          <div className="add-field is-roster" role="group" aria-label="Members">
+            <span>Members</span>
+            <RosterInputs members={members} onChange={setMembers} disabled={busy} />
+          </div>
 
           <button
             type="submit"
