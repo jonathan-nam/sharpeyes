@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
+const runPlan = readFileSync(join(__dirname, "..", "components", "run-plan.tsx"), "utf8");
 
 // The per-row time column is gone: the clock is a rule across the table every half hour, so no row
 // draws a time and nothing has to reserve the width of one. What is left to pin is that the rule
@@ -78,10 +79,12 @@ describe("answering for a run", () => {
     expect(css).not.toMatch(/\.run-clear-cell \.party-clear/);
   });
 
-  // The rotation is what says the chevron did something. Its selector list is per-row-type, so a
-  // new row that reuses the chevron and not the selector gets an arrow that never turns.
+  // The rotation is what says the chevron did something. It used to be a per-row-type selector list
+  // and a run's row had to be in it; it comes off the toggle's own aria-expanded now, which this row
+  // sets like every other, so there is no list left to be left out of. See party-fold-css.
   it("turns the chevron on an open run", () => {
-    expect(css).toMatch(/\.run-table tr\.is-open \.party-row-chevron/);
+    expect(runPlan).toMatch(/className="party-row-toggle"\s*\n\s*aria-expanded=\{open\}/);
+    expect(css).toMatch(/\.party-row-toggle\[aria-expanded="true"\] \.party-row-chevron/);
   });
 
   it("recedes a done run without greying who ran it", () => {

@@ -26,8 +26,8 @@ const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 const NATURAL: Record<string, number> = {
   ".ms-slot > img": 46, // item icon canvas
   ".loot-icon": 46,
-  ".ledger-drop-head .loot-icon": 46, // half, in a settlement card's list of shares
-  ".ledger-drop-head.is-oneline .loot-icon": 46, // 0.7x, smoothed
+  ".ledger-drop-head .loot-icon": 46, // 0.7x, smoothed: every row on a settlement card
+  ".ledger-entry > .loot-shares .loot-icon": 46, // the same, for a sale row under Unsettled Amounts
   ".loot-shares .loot-icon": 46, // half, in an offset's own list of nights
   ".counts-icon": 46,
   ".tab-art": 34, // the Drop Log stage tabs, drawn 1:1 (see build-tab-marks.mjs MARK_CANVAS)
@@ -71,7 +71,7 @@ const RULES: Rule[] = [...sheet.matchAll(/(?:^|\n)([^\n@{}][^{}]*)\{([^{}]*)\}/g
 /**
  * The element a rule actually sizes, which is the LAST compound in its selector.
  *
- * `.ledger-drop-head.is-oneline .loot-icon` sizes a `.loot-icon`, and that is the element
+ * `.ledger-entry > .loot-shares .loot-icon` sizes a `.loot-icon`, and that is the element
  * `.loot-icon` declared the filter on. Reading the whole selector instead let the two live cases
  * hide.
  */

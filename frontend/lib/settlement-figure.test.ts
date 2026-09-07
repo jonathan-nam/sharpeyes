@@ -255,15 +255,21 @@ describe("what the card says a person owes", () => {
     expect(css).toContain("text-overflow: ellipsis");
     // The figure is pushed right and never shrunk: it is the one number nobody can infer.
     expect(css).toContain(".ledger-drop-head.is-oneline .ledger-amount");
-    expect(css).toContain(".ledger-drop-head.is-oneline .loot-icon");
+    // The art is smaller than its 46px frame, which is now every settlement row's rule rather than
+    // this one's: an offset's row and a share's are the same kind of row.
+    expect(css).toContain(".ledger-drop-head .loot-icon");
   });
 
-  it("nests a drop queue in a drop row, never a share list", () => {
+  it("puts the acts in a drop queue, never a share list", () => {
     // `.loot-shares > li` is a wrapping ROW with a rule above it and a `.ledger-drop` is a COLUMN
     // with a rule down its left. One inside the other gave every act both, and the section came out
     // with stray borders and two indents fighting.
     expect(source).toContain('<ul className="ledger-queue" id={`off-${row.key}`}>');
-    expect(css).toContain(".ledger-drop .ledger-queue");
+    // The queue hangs off the step now rather than off a row of it, so `.ledger-drop .ledger-queue`
+    // is gone with the row: nothing on this card nests one queue in another. What a drop row still
+    // holds is a list of NIGHTS, and that keeps its indent.
+    expect(css).not.toContain(".ledger-drop .ledger-queue");
+    expect(css).toContain(".ledger-drop .loot-shares");
   });
 
   it("states a discharge once, in the list that is for discharges", () => {
