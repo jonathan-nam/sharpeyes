@@ -21,6 +21,8 @@ import {
 import { apiAssetUrl } from "@/lib/api";
 import { CopyAmount } from "@/components/copy-amount";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
+import { copyText, formatDollars, formatMoney } from "@/lib/money";
+import type { Currency } from "@/lib/money";
 import { formatDropped } from "@/lib/loot";
 import type { Holder } from "@/lib/vestige-ledger";
 import type { Boss } from "@/types/boss";
@@ -293,17 +295,26 @@ function SettlementCard({
    * you owe is outside the net and is listed under the step below with the acts that answer it.
    */
   const behindShares = row.lines
-    .filter((line) => line.direction === "owed")
+    // Meso lines only. This is the breakdown of `parts.shares`, which is the meso figure, and a
+    // dollar share listed under it would be an item that total is not made of. The dollars are on
+    // the headline in their own unit and in the shares list below, each in its own.
+    .filter((line) => line.direction === "owed" && line.currency === "MESO")
     .map((line) => {
       const boss = bossByKey.get(line.bossKey ?? "");
       const party = partyById.get(line.partyId);
       const where = boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss";
-      return `${line.name} \u00b7 ${where} \u00b7 ${line.theirs}: ${formatMesos(line.pay, true)}`;
+      return `${line.name} \u00b7 ${where} \u00b7 ${line.theirs}: ${formatMoney(line.pay, line.currency, true)}`;
     })
     .join("\n");
 
-  /** A component of the net, always signed: nothing else on the row says which way it pushes. */
-  const signed = (mesos: number) => `${mesos > 0 ? "+" : ""}${formatMesos(mesos, true)}`;
+  /**
+   * A component of the net, always signed: nothing else on the row says which way it pushes.
+   *
+   * Mesos unless told otherwise, which is every caller but the shares list: a debt entered by hand,
+   * a payment and an offset are all meso rows, and only a share can be in dollars.
+   */
+  const signed = (value: number, currency: Currency = "MESO") =>
+    `${value > 0 ? "+" : ""}${formatMoney(value, currency, true)}`;
 
   // What the net is made of, in the order the money moved, before the rows somebody typed. Only the
   // parts that happened: a zero says nothing and a column of them would bury the one that matters.
@@ -465,7 +476,10 @@ function SettlementCard({
           members: [],
           on: "",
           share: 0,
+          // Mesos, being the unit of a zero on a deleted drop: an offset is a meso act, so a share
+          // it discharged was one. See offsetOf.
           sale: null,
+          currency: "MESO",
           partyId: "",
         },
     );
@@ -522,6 +536,19 @@ function SettlementCard({
                 stays that until an act moves it, so a card running both ways has to carry the other
                 side out loud or it would say nothing about money you have to send. */}
             {row.mesos > 0 && youOwe > 0 && <span>{`you owe ${formatMesos(youOwe, true)}`}</span>}
+            {/* A THIRD UNIT, said the way the coupons above are: on its own, in both directions,
+                and never netted against the mesos. There is no rate in this app, so $333.34 and
+                600b cannot become one figure, and the one that looked like they had would be the
+                confident wrong number. Copyable for the same reason the mesos are: it is what gets
+                pasted into whatever moves the money. See lib/money.ts. */}
+            {row.usd.owed > 0 && (
+              <CopyAmount
+                value={row.usd.owed}
+                display={`${formatDollars(row.usd.owed)} owed`}
+                copy={copyText(row.usd.owed, "USD")}
+              />
+            )}
+            {row.usd.owe > 0 && <span>{`you owe ${formatDollars(row.usd.owe)}`}</span>}
           </span>
         </span>
         {/* Money they sent beyond anything priced, which is a payment for the pieces. Out here rather
@@ -816,7 +843,7 @@ function SettlementCard({
                           · {line.theirs}
                         </span>
                         <span className="ledger-amount">
-                          {signed(line.direction === "owe" ? -line.pay : line.pay)}
+                          {signed(line.direction === "owe" ? -line.pay : line.pay, line.currency)}
                         </span>
                       </div>
                     </li>

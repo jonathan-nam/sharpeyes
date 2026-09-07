@@ -16,6 +16,7 @@
 // settled with both is TWO records. Folding them would name one person and quietly drop the other.
 
 import type { DropEntry } from "./drop-log";
+import type { Currency } from "./money";
 import { NO_COUPON_MONEY, holderKey } from "./vestige-ledger";
 import type { CouponMoney } from "./vestige-ledger";
 import type { VestigeSettlement } from "@/types/vestige";
@@ -51,6 +52,8 @@ export type SettledRecord = {
   /** What it sold for and what that left to divide. Null on a coupon night, which has no one price. */
   sale: {
     amount: number;
+    /** The unit `amount`, `pooled` and `yourTake` are in. Cents when USD. See lib/money.ts. */
+    currency: Currency;
     /** LISTED, RECEIVED or BOUGHT. What the amount MEANS, which is why it is never dropped. */
     basis: string | null;
     /** What there was to split, fee already off. Null when the split names a seat that has left. */
@@ -134,6 +137,7 @@ export function buildSettledLog(
           ? null
           : {
               amount: entry.saleAmount,
+              currency: entry.currency,
               basis: entry.amountBasis,
               pooled: entry.pooled,
               yourTake: entry.yourTake,
@@ -307,7 +311,21 @@ export type SettledTotals = {
    * silent wrong number. It was the Drop Ledger's note while that page carried the totals.
    */
   unreadable: number;
+  /**
+   * The same pair over sales made in real money, in cents.
+   *
+   * Its own pair for the reason the coupon COUNT is not in the meso totals: two units, no rate
+   * between them, so the only honest total is two totals. The coupon money is not in it, coupons
+   * having never been sold for dollars. See lib/money.ts.
+   */
+  usd: { pooled: number; yourTake: number };
 };
+
+/** One unit's share of one column of one row, so the two units are summed apart. See SettledTotals. */
+function saleIn(row: SettledRecord, currency: Currency, key: "pooled" | "yourTake"): number {
+  if (row.sale === null || row.sale.currency !== currency) return 0;
+  return row.sale[key] ?? 0;
+}
 
 export function settledTotals(
   rows: SettledRecord[],
@@ -318,8 +336,12 @@ export function settledTotals(
     nights: rows.filter((r) => r.kind === "PIECES").length,
     sales: rows.filter((r) => r.kind === "MONEY" && r.takenBy === null).length,
     taken: rows.filter((r) => r.takenBy !== null).length,
-    pooled: rows.reduce((sum, r) => sum + (r.sale?.pooled ?? 0), coupons.pooled),
-    yourTake: rows.reduce((sum, r) => sum + (r.sale?.yourTake ?? 0), coupons.yourTake),
+    pooled: rows.reduce((sum, r) => sum + saleIn(r, "MESO", "pooled"), coupons.pooled),
+    yourTake: rows.reduce((sum, r) => sum + saleIn(r, "MESO", "yourTake"), coupons.yourTake),
+    usd: {
+      pooled: rows.reduce((sum, r) => sum + saleIn(r, "USD", "pooled"), 0),
+      yourTake: rows.reduce((sum, r) => sum + saleIn(r, "USD", "yourTake"), 0),
+    },
     writtenOff: rows.reduce((sum, r) => sum + r.writtenOff, 0),
     // A sale that HAS a price and no split behind it. `pooled` is null exactly when the seat that
     // sold it has left, which is what makes the share unreadable. See drop-log.ts.

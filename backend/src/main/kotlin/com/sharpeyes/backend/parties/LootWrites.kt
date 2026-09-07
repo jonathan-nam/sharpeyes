@@ -145,7 +145,10 @@ internal fun sellLoot(
 
     PartyLoot.update({ PartyLoot.id eq lootId }) {
         it[soldAt] = now
-        it[saleAmount] = request.amount
+        // One or the other, never both: see V76. A dollar sale's `amount` is not stored at all,
+        // because a meso figure standing beside a dollar one is a conversion nobody entered.
+        it[saleAmount] = if (request.usdCents != null) null else request.amount
+        it[saleUsdCents] = request.usdCents
         it[amountBasis] = request.amountBasis
         it[splitMethod] = request.splitMethod
         it[PartyLoot.sellerMemberId] = sellerMemberId
@@ -200,6 +203,7 @@ internal fun unsellLoot(
     PartyLoot.update({ PartyLoot.id eq lootId }) {
         it[soldAt] = null
         it[saleAmount] = null
+        it[saleUsdCents] = null
         it[amountBasis] = null
         it[splitMethod] = null
         it[sellerMemberId] = null
@@ -342,7 +346,13 @@ internal fun sellLot(
     rows.forEach { row ->
         sellLoot(
             row.lootId,
-            SellLootRequest(row.amount, amountBasis, splitMethod, row.sellerMemberId.toString(), row.shares),
+            SellLootRequest(
+                amount = row.amount,
+                amountBasis = amountBasis,
+                splitMethod = splitMethod,
+                sellerMemberId = row.sellerMemberId.toString(),
+                shares = row.shares,
+            ),
             row.sellerMemberId,
             row.partyId,
             now,

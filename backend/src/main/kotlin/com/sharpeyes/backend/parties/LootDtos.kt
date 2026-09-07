@@ -54,6 +54,9 @@ data class LootResponse(
     // rows and taken_by rather than stored, so it cannot drift from them.
     val status: String,
     val saleAmount: Long?,
+    // What it fetched in real money, in cents. Set INSTEAD of saleAmount, never beside it, so a
+    // reader that only knows about mesos sees an unpriced sale rather than a wrong price. See V76.
+    val saleUsdCents: Long? = null,
     val amountBasis: String?,
     val splitMethod: String?,
     // The seller's own share count, pinned with the sale. Null until it sells.
@@ -170,6 +173,17 @@ data class SellLootRequest(
      * silently short a person.
      */
     val shares: Map<String, Int> = emptyMap(),
+    /**
+     * Cents, when it sold for real money. Set, [amount] is ignored and the pot is this instead.
+     *
+     * The split itself is unchanged: cents divide the way mesos do. What changes is that no Auction
+     * House stood in the way, so nothing comes off the top and nothing comes off a payout hop
+     * either. See splitOf on the client.
+     *
+     * LAST, away from the price it replaces, so the dozen positional callers this request already
+     * had keep meaning what they meant. Every one of them is a meso sale.
+     */
+    val usdCents: Long? = null,
 )
 
 /**

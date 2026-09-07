@@ -11,6 +11,30 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 // than a constraint violation, and pinned by a test so the two cannot drift.
 private const val MAX_QUANTITY = 1_000_000
 
+// The bound V76 checks, in cents. A billion dollars, which is a bound on the arithmetic and not on
+// the item: the split runs in the browser, where an integer stops being exact past 2^53.
+private const val MAX_USD_CENTS = 100_000_000_000L
+
+/**
+ * Why this price cannot be recorded, or null. The currency rules, not the split's.
+ *
+ * A dollar sale replaces the meso one rather than annotating it, so `amount` is not checked when
+ * cents are given: it is not stored, and refusing a stale figure the client did not mean to send
+ * would fail sales for a field nothing reads.
+ */
+internal fun saleRefusal(request: SellLootRequest): String? {
+    val cents = request.usdCents
+    return when {
+        cents == null -> if (request.amount < 0) "amount must be zero or more" else null
+        cents <= 0 -> "a real money sale has to be more than nothing"
+        cents > MAX_USD_CENTS -> "amount must be at most $MAX_USD_CENTS cents"
+        // No Auction House stood in the way, so there is no cut to take off the top and nothing for
+        // a gross figure to be gross OF. See V76.
+        request.amountBasis == "LISTED" -> "a real money sale is never a listed one"
+        else -> null
+    }
+}
+
 /** Why this many of a drop cannot be logged, or null. */
 internal fun quantityRefusal(quantity: Int): String? =
     if (quantity < 1 || quantity > MAX_QUANTITY) "quantity must be between 1 and $MAX_QUANTITY" else null

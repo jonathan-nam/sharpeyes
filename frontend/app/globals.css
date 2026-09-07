@@ -5689,6 +5689,15 @@ button.link:disabled {
   color: var(--good);
 }
 
+/* The same tile's figure in the other unit, under it. A real figure and not a footnote, so it is
+   readable rather than muted, and it is never added to the one above: there is no rate anywhere in
+   this app to add them at. Drawn only when it is non-zero. See lib/money.ts. */
+.stat-usd {
+  color: var(--ink-strong);
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+}
+
 /* What the figure above is measuring. Load-bearing on the Drop Log, where "sold for" means what
  * landed in inventories and NOT the prices as typed. See lib/drop-log.ts. */
 /* A breakdown row with the nights behind it on hover. Dotted, the way a term with a definition is

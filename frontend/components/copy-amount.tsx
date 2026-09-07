@@ -8,7 +8,20 @@ import { useEffect, useState } from "react";
  * Copies the RAW digits whatever the display is set to. The grouping toggle is for reading, and a
  * pasted "3,284,739,285" is not a price the game will accept.
  */
-export function CopyAmount({ value, display }: { value: number; display: string }) {
+export function CopyAmount({
+  value,
+  display,
+  copy,
+}: {
+  value: number;
+  display: string;
+  /**
+   * What lands on the clipboard, when the raw value is not it. Dollars are held as CENTS, so a
+   * share of 33334 pastes as 333.34 or it is a thousandfold overpayment typed by hand.
+   */
+  copy?: string;
+}) {
+  const text = copy ?? String(value);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -25,11 +38,11 @@ export function CopyAmount({ value, display }: { value: number; display: string 
       // than one that says nothing, because you paste whatever was in the clipboard before.
       onClick={() => {
         navigator.clipboard
-          ?.writeText(String(value))
+          ?.writeText(text)
           .then(() => setCopied(true))
           .catch(() => setCopied(false));
       }}
-      aria-label={`Copy ${value}`}
+      aria-label={`Copy ${text}`}
     >
       <span className="copy-value">{display}</span>
       <span className="copy-mark" aria-hidden="true">

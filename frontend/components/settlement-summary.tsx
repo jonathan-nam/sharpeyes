@@ -2,6 +2,7 @@
 
 import type { Settlement, SettlementTotals } from "@/lib/settlement";
 import { formatMesos } from "@/lib/drop-split";
+import { formatDollars } from "@/lib/money";
 
 // The account's position, above the cards.
 //
@@ -26,16 +27,23 @@ export function SettlementSummary({
       <div className="stat-tile">
         <span className="stat-label">Amount Owed</span>
         <span className="stat-value is-good">{formatMesos(totals.owed, true)}</span>
+        {/* Under the mesos, never added to them: two units with no rate between them. Drawn only
+            where there is one, so an account that has never sold for real money is unchanged.
+            The Net tile nets dollars against dollars, which is a subtraction between two figures
+            of one unit and so a real one. See lib/money.ts. */}
+        {totals.usd.owed > 0 && <span className="stat-usd">{formatDollars(totals.usd.owed)}</span>}
       </div>
       <div className="stat-tile">
         <span className="stat-label">Amount You Owe</span>
         <span className="stat-value">{formatMesos(totals.owe, true)}</span>
+        {totals.usd.owe > 0 && <span className="stat-usd">{formatDollars(totals.usd.owe)}</span>}
       </div>
       <div className="stat-tile">
         <span className="stat-label">Net</span>
         <span className={totals.net < 0 ? "stat-value is-warn" : "stat-value is-good"}>
           {formatMesos(totals.net, true)}
         </span>
+        {totals.usd.net !== 0 && <span className="stat-usd">{formatDollars(totals.usd.net)}</span>}
       </div>
     </div>
   );

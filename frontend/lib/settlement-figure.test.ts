@@ -49,7 +49,7 @@ describe("what the card says a person owes", () => {
     // credit AGAINST the debt in red for being unsettled, so one number read as a problem and as
     // progress at once.
     expect(source).not.toContain('className="droplog-take"');
-    expect(source).toContain("const signed = (mesos: number) =>");
+    expect(source).toContain('const signed = (value: number, currency: Currency = "MESO") =>');
     expect(source).toContain("{signed(part.mesos)}");
     expect(source).toContain("{signed(entry.amount)}");
     expect(css).not.toContain(".ledger-amount.is-open");
@@ -283,7 +283,11 @@ describe("what the card says a person owes", () => {
     expect(page).toContain("const offsetShares = new Map<string, OffsetShare>()");
     expect(page).toContain("item: loot.name");
     expect(page).toContain("on: loot.droppedOn");
-    expect(page).toContain("sale: loot.saleAmount");
+    // In the sale's own unit, not off `saleAmount`: that column is null for a sale made in real
+    // money, so reading it directly would print no price at all on the row meant to let the share
+    // be checked against one. See saleMoney.
+    expect(page).toContain("sale: sold?.amount ?? null");
+    expect(page).toContain("currency: split.currency");
   });
 
   it("splits only the drops an offset actually names", () => {
@@ -414,11 +418,17 @@ describe("what the figures on the card are counted in", () => {
     // built from `pay` on both sides and offsetOf sums `pay`, so a line drawn in `nets` put a
     // 703,703,488 offset directly under the 668,518,313 share it was made of. The party page this
     // row links to leads with `pay` too, and carries the fee underneath.
-    expect(source).toContain('signed(line.direction === "owe" ? -line.pay : line.pay)');
+    expect(source).toContain(
+      'signed(line.direction === "owe" ? -line.pay : line.pay, line.currency)',
+    );
+    // And in the line's OWN unit. A share of a sale made in real money is cents, so drawing it
+    // through the meso formatter would state $333.34 as 33,334 mesos: a thousandth of the debt,
+    // with nothing on screen to say which unit was meant. See lib/money.ts.
+    expect(source).toContain("formatMoney(line.pay, line.currency, true)");
     // The hover list behind the `shares` part is one direction, because that part is: what they owe
-    // you. What you owe is not in it and is not netted off it.
-    expect(source).toContain('.filter((line) => line.direction === "owed")');
-    expect(source).toContain("formatMesos(line.pay, true)");
+    // you. What you owe is not in it and is not netted off it. Mesos only, for the same reason: it
+    // is the breakdown of a meso figure, and a dollar share is not one of its components.
+    expect(source).toContain('line.direction === "owed" && line.currency === "MESO"');
     // No figure on this card comes off the fee, so `nets` is not read here at all.
     expect(source).not.toContain("line.nets");
   });

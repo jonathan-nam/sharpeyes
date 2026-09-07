@@ -12,6 +12,7 @@
 
 import { formatMesos } from "./drop-split";
 import { splitOf } from "./loot";
+import type { Currency } from "./money";
 import type { PartyLootPool } from "@/types/loot";
 import type { Party, PartyMember } from "@/types/party";
 
@@ -49,11 +50,24 @@ export type WalletLine = {
    * the wrong seat paid on every line you are owed.
    */
   payeeId: string;
-  /** Mesos that have to move: what the sender lists, before the receiver's Auction House fee. */
+  /** What has to move: what the sender lists, before the receiver's Auction House fee. */
   pay: number;
-  /** What the receiver is left holding, after that fee. */
+  /** What the receiver is left holding, after that fee. Equal to `pay` when there is no fee. */
   nets: number;
+  /** The unit both figures are in, off the drop's own sale. Cents when USD. See splitOf. */
+  currency: Currency;
 };
+
+/**
+ * The same pair of totals in each unit a sale can be priced in.
+ *
+ * TWO SUMS, NEVER ONE. There is no rate anywhere in this app, so there is no honest way to add
+ * $1,000 to 600b, and the sum that looks like an answer would be the wrong number this repo exists
+ * to refuse. A screen shows whichever of these is non-zero, or both.
+ */
+export type Owings = { owe: number; owed: number; net: number };
+
+const noOwings = (): Owings => ({ owe: 0, owed: 0, net: 0 });
 
 // Coupon debt is NOT here, and no longer has a meso figure anywhere. It is a count of pieces:
 // coupons are single-trade, so only the holder can sell them and what they fetched is not knowable
@@ -73,6 +87,8 @@ export type Counterparty = {
   owed: number;
   /** owed - owe. Positive means they owe you. */
   net: number;
+  /** The same three figures for shares of a sale made in real money. See Owings. */
+  usd: Owings;
   lines: WalletLine[];
 };
 
@@ -82,6 +98,8 @@ export type Wallet = {
   owe: number;
   owed: number;
   net: number;
+  /** The same three figures for shares of a sale made in real money. See Owings. */
+  usd: Owings;
   /**
    * Sold drops whose split cannot be read at all, because a seat it names is gone. Counted rather
    * than skipped: a wallet that quietly leaves out a debt is the wrong number this repo exists to
@@ -159,13 +177,15 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
             owe: 0,
             owed: 0,
             net: 0,
+            usd: noOwings(),
             lines: [],
           };
           groups.set(key, group);
         }
 
-        group[direction] += share.pay;
-        group.net = group.owed - group.owe;
+        const side = split.currency === "USD" ? group.usd : group;
+        side[direction] += share.pay;
+        side.net = side.owed - side.owe;
         group.lines.push({
           partyId: pool.partyId,
           lootId: loot.id,
@@ -181,6 +201,7 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
           payeeId: member.id,
           pay: share.pay,
           nets: share.nets,
+          currency: split.currency,
         });
       }
     }
@@ -189,16 +210,26 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
   const counterparties = [...groups.values()].sort(
     // By how much is outstanding either way, not by the net: a pair who owe each other 5b are the
     // relationship to look at first even when it nets to nothing.
-    (a, b) => b.owe + b.owed - (a.owe + a.owed) || a.name.localeCompare(b.name),
+    //
+    // Mesos first and dollars as the tie-break, rather than one key made of both. Adding the two
+    // would be the rate this app refuses to invent, and it would be doing it where nobody could see
+    // it: an order is not a figure, so a wrong one is never caught.
+    (a, b) =>
+      b.owe + b.owed - (a.owe + a.owed) ||
+      b.usd.owe + b.usd.owed - (a.usd.owe + a.usd.owed) ||
+      a.name.localeCompare(b.name),
   );
   const owe = counterparties.reduce((sum, c) => sum + c.owe, 0);
   const owed = counterparties.reduce((sum, c) => sum + c.owed, 0);
+  const usdOwe = counterparties.reduce((sum, c) => sum + c.usd.owe, 0);
+  const usdOwed = counterparties.reduce((sum, c) => sum + c.usd.owed, 0);
 
   return {
     counterparties,
     owe,
     owed,
     net: owed - owe,
+    usd: { owe: usdOwe, owed: usdOwed, net: usdOwed - usdOwe },
     unreadable,
     betweenOthers,
     betweenMine,

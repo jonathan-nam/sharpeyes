@@ -4,9 +4,9 @@ import { useState, type ReactNode } from "react";
 import { CopyAmount } from "@/components/copy-amount";
 import { LootSaleForm } from "@/components/loot-sale-form";
 import { apiAssetUrl } from "@/lib/api";
-import { formatMesos } from "@/lib/drop-split";
+import { copyText, formatMoney } from "@/lib/money";
 import { sharesLabel } from "@/lib/shares";
-import { divides, formatDropped, splitOf, statusLabel } from "@/lib/loot";
+import { divides, formatDropped, saleMoney, splitOf, statusLabel } from "@/lib/loot";
 import { canTrade, isPerMember } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Loot, SellLootBody } from "@/types/loot";
@@ -97,6 +97,16 @@ export function LootRow({
   // Against every seat, not `ran`: a payout pinned before somebody left still names them, and
   // reading it against the week's roster would refuse a split that is perfectly readable.
   const result = splitOf(loot, party.seats);
+  // Every figure on a sold row is in the sale's own unit, read off the split rather than assumed.
+  // Mesos where nothing else is said, which is what an unsold row's absent figures were anyway.
+  const currency = result?.currency ?? "MESO";
+  const money = (value: number) => formatMoney(value, currency, true);
+  const priced = saleMoney(loot);
+  const sold = priced === null ? "" : formatMoney(priced.amount, priced.currency, true);
+  // Silent in dollars, where the two methods are the same arithmetic and naming one states a
+  // choice that was never offered. See the sale form.
+  const splitWord =
+    currency === "USD" ? "" : `, ${loot.splitMethod === "FAIR" ? "fair" : "lazy"} split`;
   // Heroic worlds do not trade. The row stays, because a Heroic player still logs what fell; what
   // goes is every control that would turn a drop into money. The backend refuses the sale too, so
   // this is what the rule looks like rather than the whole of it.
@@ -262,19 +272,17 @@ export function LootRow({
                   its receiver pays. */}
               {bought ? (
                 <p className="loot-sold-line">
-                  Bought by {result.seller.name} for{" "}
-                  <strong>{formatMesos(loot.saleAmount ?? 0, true)}</strong>,{" "}
-                  {loot.splitMethod === "FAIR" ? "fair" : "lazy"} split. Their share
+                  Bought by {result.seller.name} for <strong>{sold}</strong>
+                  {splitWord}. Their share
                   {result.seller.shares === 1 ? " is" : ` (${result.seller.shares} shares) is`}{" "}
-                  <strong>{formatMesos(result.seller.keeps, true)}</strong>, and they hand over{" "}
-                  <strong>{formatMesos(result.seller.paysOut, true)}</strong>.
+                  <strong>{money(result.seller.keeps)}</strong>, and they hand over{" "}
+                  <strong>{money(result.seller.paysOut)}</strong>.
                 </p>
               ) : (
                 <p className="loot-sold-line">
-                  {loot.amountBasis === "LISTED" ? "Listed at" : "Received"}{" "}
-                  <strong>{formatMesos(loot.saleAmount ?? 0, true)}</strong> by {result.seller.name}
-                  , {loot.splitMethod === "FAIR" ? "fair" : "lazy"} split. They keep{" "}
-                  <strong>{formatMesos(result.seller.keeps, true)}</strong>
+                  {loot.amountBasis === "LISTED" ? "Listed at" : "Received"} <strong>{sold}</strong>{" "}
+                  by {result.seller.name}
+                  {splitWord}. They keep <strong>{money(result.seller.keeps)}</strong>
                   {result.seller.shares === 1 ? "" : ` on ${result.seller.shares} shares`}.
                 </p>
               )}
@@ -283,11 +291,21 @@ export function LootRow({
                 {result.shares.map((share) => (
                   <li key={share.memberId} className={share.paid ? "is-paid" : undefined}>
                     <span className="loot-share-name">{share.name}</span>
-                    {/* The raw digits, because this gets pasted into the game's price box. */}
-                    <CopyAmount value={share.pay} display={formatMesos(share.pay, true)} />
+                    {/* The raw digits, because this gets pasted into the game's price box, or into
+                        whatever is moving the dollars. See copyText. */}
+                    <CopyAmount
+                      value={share.pay}
+                      display={money(share.pay)}
+                      copy={copyText(share.pay, result.currency)}
+                    />
+                    {/* What the fee costs, where there is one. A dollar sale pays none, so the same
+                        span would read "nets $333.34 at 0%": the pay figure again, and a rate
+                        stated only to say it did not apply. */}
                     <span className="loot-share-nets">
-                      nets {formatMesos(share.nets, true)} at {(share.fee * 100).toFixed(0)}%
-                      {sharesLabel(share.shares) && ` \u00b7 ${sharesLabel(share.shares)}`}
+                      {share.fee > 0 &&
+                        `nets ${money(share.nets)} at ${(share.fee * 100).toFixed(0)}%`}
+                      {share.fee > 0 && sharesLabel(share.shares) && " \u00b7 "}
+                      {sharesLabel(share.shares)}
                     </span>
                     {/* A TOGGLE, and the paid state has to look like one. It read "paid" in a green
                         pill, which is what a status badge looks like, so undoing a share marked paid

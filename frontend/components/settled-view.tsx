@@ -5,6 +5,7 @@ import { useState } from "react";
 import { apiAssetUrl } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatMesos } from "@/lib/drop-split";
+import { formatDollars, formatMoney } from "@/lib/money";
 import { formatDropped } from "@/lib/loot";
 import { consolidateSettled } from "@/lib/settled-log";
 import type { SettledLine, SettledRecord, SettledTotals } from "@/lib/settled-log";
@@ -146,8 +147,12 @@ function SettledRow({
         <span className="droplog-amounts">
           {row.kind === "MONEY" && row.sale?.pooled !== null && row.sale !== null ? (
             <>
-              <span className="droplog-take">{formatMesos(row.sale.yourTake ?? 0, true)}</span>
-              <span className="loot-share-nets">of {formatMesos(row.sale.pooled, true)}</span>
+              <span className="droplog-take">
+                {formatMoney(row.sale.yourTake ?? 0, row.sale.currency, true)}
+              </span>
+              <span className="loot-share-nets">
+                of {formatMoney(row.sale.pooled, row.sale.currency, true)}
+              </span>
             </>
           ) : row.kind === "PIECES" ? (
             <>
@@ -216,10 +221,19 @@ function SettledTiles({
               Auction House fee, and adding them is the confident wrong number this repo exists to
               prevent. See the header of lib/drop-log.ts. */}
             <span className="stat-value is-good">{formatMesos(totals.pooled, true)}</span>
+            {/* Under the mesos, never folded into them. Only when there is one: a $0.00 on every
+                account that has never sold for real money would be a unit nobody uses, stated
+                everywhere. See lib/money.ts. */}
+            {totals.usd.pooled > 0 && (
+              <span className="stat-usd">{formatDollars(totals.usd.pooled)}</span>
+            )}
           </div>
           <div className="stat-tile">
             <span className="stat-label">My Share</span>
             <span className="stat-value is-good">{formatMesos(totals.yourTake, true)}</span>
+            {totals.usd.yourTake > 0 && (
+              <span className="stat-usd">{formatDollars(totals.usd.yourTake)}</span>
+            )}
           </div>
         </>
       )}

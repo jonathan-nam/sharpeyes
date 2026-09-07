@@ -34,6 +34,13 @@ export type Loot = {
   // sale, the payout rows and takenByMemberId.
   status: string;
   saleAmount: number | null;
+  // What it fetched in real money, in cents, when that is what it sold for. Set INSTEAD of
+  // saleAmount, never beside it: see V76.
+  //
+  // OPTIONAL for the reason recordedAt is. lib/cache.ts hands back whatever shape the API had when
+  // the page last fetched, so a tab open across the deploy that adds this sees a dollar sale as one
+  // with no price at all, and says so, rather than reading its cents as mesos.
+  saleUsdCents?: number | null;
   // LISTED, RECEIVED, or BOUGHT when a party member bought it off the party. BOUGHT is what the
   // whole drop is worth, the buyer's own share included, with no Auction House cut off the top: the
   // buyer keeps their share and hands over the rest. Read by basisOf() in lib/loot.ts, which
@@ -119,6 +126,8 @@ export type LogDropBody = {
 
 export type SellLootBody = {
   amount: number;
+  // Cents, when it sold for real money. Set, the server stores this and ignores `amount`.
+  usdCents?: number;
   amountBasis: string;
   splitMethod: string;
   sellerMemberId: string;

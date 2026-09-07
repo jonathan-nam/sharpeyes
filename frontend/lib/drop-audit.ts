@@ -17,6 +17,7 @@ import { splitOf } from "./loot";
 import { holderKey } from "./vestige-ledger";
 import { couponSide, dropStatusLabel } from "./drop-log";
 import type { DropEntry } from "./drop-log";
+import type { Currency } from "./money";
 import type { Boss } from "@/types/boss";
 import type { WorldType } from "./world";
 import type { Loot, PartyLootPool } from "@/types/loot";
@@ -60,6 +61,8 @@ export type AuditEvent =
       /** What there was to split, fee already off. Null when the split names a seat that has left. */
       pooled: number | null;
       yourTake: number | null;
+      /** The unit all three figures are in. Cents when USD. See lib/money.ts. */
+      currency: Currency;
     }
   | { kind: "TAKEN"; key: string; at: null; by: string }
   | {
@@ -69,6 +72,8 @@ export type AuditEvent =
       at: string | null;
       who: string;
       amount: number;
+      /** The unit `amount` is in, off the sale it is a share of. */
+      currency: Currency;
     }
   | {
       /** A share discharged against a debt of yours rather than sent. See V58. */
@@ -78,6 +83,8 @@ export type AuditEvent =
       who: string;
       /** Null when the split names a seat that has left, so no share can be read. */
       amount: number | null;
+      /** The unit `amount` is in, off the sale it is a share of. */
+      currency: Currency;
     }
   | {
       /** The act that closed a coupon night's books. See V52. */
@@ -88,7 +95,15 @@ export type AuditEvent =
       pieces: number;
       writtenOff: number;
     }
-  | { kind: "OWED"; key: string; at: null; who: string; amount: number };
+  | {
+      kind: "OWED";
+      key: string;
+      at: null;
+      who: string;
+      amount: number;
+      /** The unit `amount` is in, off the sale it is a share of. */
+      currency: Currency;
+    };
 
 export type DropAudit = {
   lootId: string;
@@ -224,6 +239,7 @@ export function buildDropAudit(
       seller: entry.sellerName,
       pooled: entry.pooled,
       yourTake: entry.yourTake,
+      currency: entry.currency,
     });
   }
 
@@ -246,6 +262,7 @@ export function buildDropAudit(
         at: debt.incurredAt,
         who,
         amount: payFor.get(payout.memberId)?.pay ?? null,
+        currency: entry.currency,
       });
     }
   }
@@ -264,6 +281,7 @@ export function buildDropAudit(
             at: payout.paidAt,
             who: share.name,
             amount: share.pay,
+            currency: entry.currency,
           }
         : {
             kind: "OWED",
@@ -271,6 +289,7 @@ export function buildDropAudit(
             at: null,
             who: share.name,
             amount: share.pay,
+            currency: entry.currency,
           },
     );
   }

@@ -1,5 +1,6 @@
 import { cellState, clearOfCell } from "./boss-clears";
 import { splitOf } from "./loot";
+import type { Currency } from "./money";
 import type { Loot } from "@/types/loot";
 import type { PartyMember, SeatedParty } from "@/types/party";
 
@@ -83,9 +84,11 @@ export function yourClear(
 
 /** What one night leaves in YOUR hands, and whether it has arrived. */
 export type YourShare = {
-  /** Mesos you end up holding, after the fee on the transfer to you. */
+  /** What you end up holding, after the fee on the transfer to you. In `currency`. */
   nets: number;
   paid: boolean;
+  /** The unit `nets` is in, off the night's own sale. Cents when USD. */
+  currency: Currency;
 };
 
 /**
@@ -107,9 +110,12 @@ export type YourShare = {
 export function yourShare(night: Loot, party: SeatedParty): YourShare | null {
   const split = splitOf(night, party.seats);
   if (!split) return null;
+  // Carried out with the figure, never looked up beside it: a share of a dollar sale is cents, and
+  // cents drawn through the meso formatter are a thousandth of the debt. See lib/money.ts.
+  const currency = split.currency;
   if (party.mySeatIds.includes(split.seller.memberId)) {
-    return { nets: split.seller.keeps, paid: true };
+    return { nets: split.seller.keeps, paid: true, currency };
   }
   const mine = split.shares.find((share) => party.mySeatIds.includes(share.memberId));
-  return mine ? { nets: mine.nets, paid: mine.paid } : null;
+  return mine ? { nets: mine.nets, paid: mine.paid, currency } : null;
 }

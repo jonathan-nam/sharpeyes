@@ -269,6 +269,7 @@ private fun ResultRow.toLootResponse(
         weekStart = weekOf(this[PartyLoot.droppedOn]).toString(),
         status = statusOf(sold, takenBy != null, payouts),
         saleAmount = this[PartyLoot.saleAmount],
+        saleUsdCents = this[PartyLoot.saleUsdCents],
         amountBasis = this[PartyLoot.amountBasis],
         splitMethod = this[PartyLoot.splitMethod],
         sellerShares = this[PartyLoot.sellerShares],
