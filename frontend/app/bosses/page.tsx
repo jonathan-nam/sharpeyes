@@ -11,7 +11,7 @@ import { WeekStepper } from "@/components/week-stepper";
 import { apiFetch } from "@/lib/api";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { type CrossedReset, WEEKLY_CADENCE } from "@/lib/reset-countdown";
-import { peek, put } from "@/lib/cache";
+import { peek, put, storedAt } from "@/lib/cache";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
 
@@ -40,8 +40,9 @@ export default function BossesPage() {
   const [characters, setCharacters] = useState<Character[]>(seededCharacters ?? []);
   const [view, setView] = useState<BossClearsView | null>(peek<BossClearsView>(CLEARS_KEY) ?? null);
   // When the view was received, so the countdown can correct for a browser clock that disagrees
-  // with the server's. See lib/reset-countdown.ts.
-  const [receivedAt, setReceivedAt] = useState<number>(() => Date.now());
+  // with the server's. A seeded view arrived with the request that cached it, not now: see
+  // storedAt in lib/cache.ts, and lib/reset-countdown.ts.
+  const [receivedAt, setReceivedAt] = useState<number>(() => storedAt(CLEARS_KEY) ?? Date.now());
   const [state, setState] = useState<LoadState>(
     seededBosses && seededCharacters ? "loaded" : "loading",
   );
