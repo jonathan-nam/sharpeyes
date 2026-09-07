@@ -418,8 +418,12 @@ function SettlementCard({
    * It went missing when Settle was pulled off a card with nothing to collect, and pulling it was
    * right; what was wrong was leaving no act in its place. Jared's card said "you owe 289,382,716"
    * with nothing to do about it, which is a ledger you cannot keep.
+   *
+   * Dollars are in it for the same reason. `owes` is the meso figure alone (an offset cannot be
+   * made in dollars, see offsetOf), so without this a share of a real money sale that YOU owe drew
+   * the same dead card the note above is about.
    */
-  const sendable = owes > 0 || row.holding > 0;
+  const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;
 
   /**
    * What an act moves, pot by pot.
@@ -431,6 +435,18 @@ function SettlementCard({
     shares > 0 && row.holding > 0
       ? `${formatMesos(shares, true)} of shares and ${formatMesos(row.holding, true)} you are holding`
       : formatMesos(shares > 0 ? shares : row.holding, true);
+
+  /**
+   * The same, with the dollar half beside it, for the acts that move both.
+   *
+   * Never one sum, there being no rate to add them at, and never the mesos alone: a caption that
+   * names one unit describes half of what its button does. Settle collected $333.33 while saying
+   * only that it recorded 2.32b sent, which is a button doing something it did not mention.
+   */
+  const movedBoth = (shares: number, cents: number) =>
+    [shares > 0 || row.holding > 0 ? moved(shares) : null, cents > 0 ? formatDollars(cents) : null]
+      .filter(Boolean)
+      .join(" and ");
 
   // The sales the held money is still sitting on, where they can be told exactly. See undecidedSales.
   const held = undecidedSales(row);
@@ -1034,7 +1050,7 @@ function SettlementCard({
                 Mark Sent
               </button>
               <span className="ledger-progress">
-                {`records ${moved(owes)} sent to ${row.name}`}
+                {`records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}`}
               </span>
             </span>
           )}
@@ -1049,10 +1065,18 @@ function SettlementCard({
               >
                 Settle
               </button>
+              {/* What it COLLECTS first, in both units, then what it also records as sent. The
+                  collecting half used to go unsaid whenever you owed them something, so on a card
+                  running both ways the only figure named was the one leaving your hands. */}
               <span className="ledger-progress">
-                {owes
-                  ? `also records ${formatMesos(owes, true)} sent to ${row.name}`
-                  : `marks ${row.lines.length} ${row.lines.length === 1 ? "share" : "shares"} paid`}
+                {[
+                  row.usd.owed > 0 ? `collects ${formatDollars(row.usd.owed)}` : null,
+                  owes
+                    ? `also records ${formatMesos(owes, true)} sent to ${row.name}`
+                    : `marks ${row.lines.length} ${row.lines.length === 1 ? "share" : "shares"} paid`,
+                ]
+                  .filter(Boolean)
+                  .join(" \u00b7 ")}
               </span>
             </span>
           )}
