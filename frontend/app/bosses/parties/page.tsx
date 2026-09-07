@@ -153,6 +153,10 @@ export default function PartiesPage() {
   // Why the last write to a pool did not land, and whose. Carried with the party's id so the row
   // that failed is the row that says so, rather than every open panel on the page.
   const [poolError, setPoolError] = useState<{ partyId: string; message: string } | null>(null);
+  // The same, for the one control on this page that writes to a party this account does not own.
+  // Kept apart from poolError: they are about different halves of the page, and one message slot
+  // would put a refusal from somebody else's card on your own.
+  const [leaveError, setLeaveError] = useState<{ partyId: string; message: string } | null>(null);
   // What this page is: the arrangements on this week. A solo pool is a pool rather than a party, and
   // a retired config is a boss this character no longer runs, so neither is a row here. Every figure
   // read as a ledger takes `everyParty` instead, because a debt does not stop being owed for having
@@ -489,6 +493,40 @@ export default function PartiesPage() {
     put(PARTY_LIST_KEY, refreshed);
     setPools(poolResult);
     put(POOLS_KEY, poolResult);
+  }
+
+  async function refreshSeated() {
+    const refreshed = await apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, getToken);
+    setSeated(refreshed);
+    put(SEATED_KEY, refreshed);
+  }
+
+  /**
+   * Takes this account's seat out of a party somebody else owns.
+   *
+   * The one write on this page that is not the owner's, and the only thing on a shared card that
+   * nobody else can answer for you. Refetched rather than filtered out here: what the leave left
+   * behind is the server's to say, and a seat kept for a night already played reads differently
+   * from one that never existed.
+   */
+  async function leaveShared(party: SeatedParty) {
+    setLeaveError(null);
+    try {
+      await write(party.id, async () => {
+        await apiFetch<unknown>(`${PARTIES_KEY}/${party.id}/leave`, { method: "POST" }, getToken);
+        await readBack(refreshSeated);
+      });
+    } catch (e) {
+      setLeaveError({
+        partyId: party.id,
+        message:
+          e instanceof StaleAfterWrite
+            ? SAVED_BUT_STALE
+            : e instanceof ApiError
+              ? e.body
+              : "That didn't save.",
+      });
+    }
   }
 
   /**
@@ -1123,6 +1161,9 @@ export default function PartiesPage() {
               bosses={bosses}
               characterOrder={characters.map((c) => c.id)}
               clearOf={(party) => yourClear(party, clearsByCharacter)}
+              onLeave={leaveShared}
+              isSaving={isSaving}
+              leaveError={leaveError}
             />
           </>
         )}
