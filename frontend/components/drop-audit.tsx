@@ -2,6 +2,7 @@ import Link from "next/link";
 import { apiAssetUrl } from "@/lib/api";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { formatMesos } from "@/lib/drop-split";
+import { formatMoney } from "@/lib/money";
 import { formatDroppedWithYear } from "@/lib/loot";
 import { worldLabel } from "@/lib/world";
 import type { AuditEvent, DropAudit } from "@/lib/drop-audit";
@@ -58,7 +59,7 @@ function detail(event: AuditEvent, audit: DropAudit): React.ReactNode {
         ? `${event.other} picked up ${event.pieces} of yours`
         : `you picked up ${event.pieces} of ${event.other}'s`;
     case "SOLD": {
-      const price = formatMesos(event.amount, true);
+      const price = formatMoney(event.amount, event.currency, true);
       const by = event.seller ?? "somebody who has left";
       if (event.basis === "BOUGHT") return `bought by ${by} for ${price}`;
       return `${event.basis === "LISTED" ? "listed at" : "received"} ${price} by ${by}`;
@@ -97,20 +98,24 @@ function figure(event: AuditEvent): React.ReactNode {
         <span className="loot-share-nets">split unreadable</span>
       ) : (
         <>
-          <span className="droplog-take">{formatMesos(event.yourTake, true)}</span>
-          <span className="loot-share-nets">of {formatMesos(event.pooled, true)}</span>
+          <span className="droplog-take">{formatMoney(event.yourTake, event.currency, true)}</span>
+          <span className="loot-share-nets">
+            of {formatMoney(event.pooled, event.currency, true)}
+          </span>
         </>
       );
     case "TAKEN":
       return <span className="loot-share-nets">nothing owed</span>;
     case "PAID":
     case "OWED":
-      return <span className="droplog-take">{formatMesos(event.amount, true)}</span>;
+      return (
+        <span className="droplog-take">{formatMoney(event.amount, event.currency, true)}</span>
+      );
     case "OFFSET":
       return event.amount === null ? (
         <span className="loot-share-nets">split unreadable</span>
       ) : (
-        <span className="droplog-take">{formatMesos(event.amount, true)}</span>
+        <span className="droplog-take">{formatMoney(event.amount, event.currency, true)}</span>
       );
     case "SETTLED":
       return (

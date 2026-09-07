@@ -68,7 +68,11 @@ describe("yourShare", () => {
   it("is exactly what the owner's own split says for that seat", () => {
     const split = splitOf(sold(), seats)!;
     const theirs = split.shares.find((s) => s.memberId === "m2")!;
-    expect(yourShare(sold(), party(["m2"]))).toEqual({ nets: theirs.nets, paid: false });
+    expect(yourShare(sold(), party(["m2"]))).toEqual({
+      nets: theirs.nets,
+      paid: false,
+      currency: "MESO",
+    });
   });
 
   it("carries the paid flag from your own payout row", () => {
@@ -79,7 +83,11 @@ describe("yourShare", () => {
   // they are the one paying out, so what they hold is what they kept.
   it("gives the seller what they keep, already in hand", () => {
     const split = splitOf(sold(), seats)!;
-    expect(yourShare(sold(), party(["m1"]))).toEqual({ nets: split.seller.keeps, paid: true });
+    expect(yourShare(sold(), party(["m1"]))).toEqual({
+      nets: split.seller.keeps,
+      paid: true,
+      currency: "MESO",
+    });
   });
 
   it("says nothing about a drop still in the pool", () => {

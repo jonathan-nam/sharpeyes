@@ -17,7 +17,8 @@
 // thing.
 
 import { formatWeekStart } from "./boss-clears";
-import { splitOf, statusLabel } from "./loot";
+import { saleMoney, splitOf, statusLabel } from "./loot";
+import type { Currency } from "./money";
 import type { CouponsOutstanding } from "./loot";
 import { closureKeyOf, couponGapOf, ranSeats, yourShare } from "./vestige-ledger";
 import { canTrade, isPerMember } from "./world";
@@ -186,7 +187,16 @@ export type DropEntry = {
   status: string;
   /** When it sold, which is the day a money drop was finished. Null while it is still in the pool. */
   soldAt: string | null;
+  /** What it sold for, IN `currency`. Cents for a dollar sale, mesos otherwise. See saleMoney. */
   saleAmount: number | null;
+  /**
+   * The unit `saleAmount`, `pooled` and `yourTake` are all in.
+   *
+   * On the entry rather than worked out again at each reader, and on EVERY entry rather than only
+   * the sold ones, so there is no branch where a figure arrives without one. Mesos where nothing
+   * sold, which is the unit an absent figure was always in.
+   */
+  currency: Currency;
   amountBasis: string | null;
   splitMethod: string | null;
   /** Who took it, where a world cannot sell. Null everywhere else, and on a seat that has left. */
@@ -216,6 +226,8 @@ export type DropGroup = {
   entries: DropEntry[];
   pooled: number;
   yourTake: number;
+  /** The same pair over the group's dollar sales, in cents. Never added to the two above. */
+  usd: { pooled: number; yourTake: number };
 };
 
 export type DropLogTotals = {
@@ -242,6 +254,14 @@ export type DropLogTotals = {
   pooled: number;
   /** Across sold drops: your side of them. */
   yourTake: number;
+  /**
+   * The same pair over dollar sales, in cents.
+   *
+   * A SECOND SUM, never folded into the first. There is no rate in this app, so a total made of
+   * both units would be a figure with no meaning stated as confidently as one with a meaning.
+   * Every screen drawing these shows whichever is non-zero. See lib/money.ts.
+   */
+  usd: { pooled: number; yourTake: number };
   /** Sold drops whose split cannot be read. Their money is in neither total above. */
   unreadable: number;
 };
@@ -351,6 +371,7 @@ export function buildDropLog(
     for (const loot of pool.loot) {
       const sold = loot.soldAt !== null;
       const split = sold ? splitOf(loot, party.seats) : null;
+      const priced = saleMoney(loot);
       const unreadable = sold && split === null;
 
       // Only a PIECE drop divides by count. Everything else is one thing that sells for one price
@@ -389,7 +410,8 @@ export function buildDropLog(
         perMember: loot.perMember,
         status: loot.status,
         soldAt: loot.soldAt,
-        saleAmount: loot.saleAmount,
+        saleAmount: priced?.amount ?? null,
+        currency: priced?.currency ?? "MESO",
         amountBasis: loot.amountBasis,
         splitMethod: loot.splitMethod,
         // Off `seats` and never `members`: a seat that has since left the party still took the item,
@@ -492,8 +514,9 @@ function totalsOf(entries: DropEntry[]): DropLogTotals {
     sold: entries.filter((e) => e.status === "SOLD" || e.status === "PAID_OUT").length,
     taken: entries.filter((e) => e.status === "TAKEN").length,
     pending: entries.filter(isOutstanding).length,
-    pooled: entries.reduce((sum, e) => sum + (e.pooled ?? 0), 0),
-    yourTake: entries.reduce((sum, e) => sum + (e.yourTake ?? 0), 0),
+    pooled: sumIn(entries, "MESO", "pooled"),
+    yourTake: sumIn(entries, "MESO", "yourTake"),
+    usd: { pooled: sumIn(entries, "USD", "pooled"), yourTake: sumIn(entries, "USD", "yourTake") },
     unreadable: entries.filter((e) => e.unreadable).length,
   };
 }
@@ -598,12 +621,13 @@ export function groupDrops(entries: DropEntry[], grouping: Grouping): DropGroup[
     let group = groups.get(key);
     if (!group) {
       const label = grouping === "week" ? weekLabel(key) : monthLabel(entry.droppedOn);
-      group = { key, label, entries: [], pooled: 0, yourTake: 0 };
+      group = { key, label, entries: [], pooled: 0, yourTake: 0, usd: { pooled: 0, yourTake: 0 } };
       groups.set(key, group);
     }
     group.entries.push(entry);
-    group.pooled += entry.pooled ?? 0;
-    group.yourTake += entry.yourTake ?? 0;
+    const side = entry.currency === "USD" ? group.usd : group;
+    side.pooled += entry.pooled ?? 0;
+    side.yourTake += entry.yourTake ?? 0;
   }
   // Insertion order: the entries are newest first, and a group's dates are contiguous, so the
   // sections come out newest first without a second sort.
@@ -639,6 +663,8 @@ export type DropLine = {
   /** Summed the way the group subtotals are, and null when there is nothing sold to sum. */
   pooled: number | null;
   yourTake: number | null;
+  /** What the two above are in, or null when nothing sold or the rows disagree. See sumSold. */
+  currency: Currency | null;
 };
 
 /**
@@ -719,14 +745,34 @@ export function foldStatus(entries: DropEntry[]): string {
   return statuses.length === 1 ? statuses[0]! : `${entries.length} runs`;
 }
 
-/** What a set of rows made, or null when none of them sold. Summed over `pooled`, per the header. */
-function sumSold(entries: DropEntry[]): { pooled: number | null; yourTake: number | null } {
+/**
+ * What a set of rows made, or null when none of them sold. Summed over `pooled`, per the header.
+ *
+ * A fold whose rows were sold in DIFFERENT units has no total, and says so rather than adding
+ * cents to mesos. Rare (it takes one stacking drop sold both ways) and refused anyway, because the
+ * figure it would print is the one this project exists to keep off a screen.
+ */
+function sumSold(entries: DropEntry[]): {
+  pooled: number | null;
+  yourTake: number | null;
+  currency: Currency | null;
+} {
   const sold = entries.filter((e) => e.pooled !== null);
-  if (sold.length === 0) return { pooled: null, yourTake: null };
+  if (sold.length === 0) return { pooled: null, yourTake: null, currency: null };
+  const currency = sold[0]!.currency;
+  if (sold.some((e) => e.currency !== currency)) {
+    return { pooled: null, yourTake: null, currency: null };
+  }
   return {
     pooled: sold.reduce((sum, e) => sum + (e.pooled ?? 0), 0),
     yourTake: sold.reduce((sum, e) => sum + (e.yourTake ?? 0), 0),
+    currency,
   };
+}
+
+/** One unit's share of a column, so the two are summed apart and never together. */
+function sumIn(entries: DropEntry[], currency: Currency, key: "pooled" | "yourTake"): number {
+  return entries.reduce((sum, e) => sum + (e.currency === currency ? (e[key] ?? 0) : 0), 0);
 }
 
 /**
@@ -748,6 +794,8 @@ export type RunFold = {
   entries: DropEntry[];
   pooled: number | null;
   yourTake: number | null;
+  /** What the two above are in, or null when nothing sold or the rows disagree. See sumSold. */
+  currency: Currency | null;
 };
 
 /**
@@ -779,7 +827,7 @@ export function foldRuns(
     const key = axis === "character" ? entry.characterId : entry.bossKey;
     let fold = byKey.get(key);
     if (!fold) {
-      fold = { key, yours: 0, entries: [], pooled: null, yourTake: null };
+      fold = { key, yours: 0, entries: [], pooled: null, yourTake: null, currency: null };
       byKey.set(key, fold);
       folds.push(fold);
     }

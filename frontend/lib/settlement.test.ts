@@ -1832,6 +1832,7 @@ describe("splitting an offset written before one-row-per-share", () => {
     lootId,
     memberId,
     item: "Grindstone of Faith",
+    currency: "MESO",
     iconUrl: null,
     boss: "Lotus",
     members: ["Bro"],

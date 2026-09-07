@@ -23,6 +23,7 @@ import { spendOldestFirst, spendSales } from "./piece-ledger";
 import type { AnsweredSale } from "./piece-ledger";
 import { SELF_KEY, answeredKey, holderFromKey, holderKey } from "./vestige-ledger";
 import type { CouponSale, Holder, HolderLedger, SaleCredit } from "./vestige-ledger";
+import type { Currency } from "./money";
 import type { Owings, Wallet, WalletLine } from "./wallet";
 import type { ProceedsDisposal, SettlementDebt, SettlementDebtPayout } from "@/types/vestige";
 
@@ -876,6 +877,8 @@ export type OffsetShare = {
   share: number;
   /** What the whole lot sold for, so the share can be checked against it. Null if never sold. */
   sale: number | null;
+  /** The unit `share` and `sale` are both in. Cents when USD. See lib/money.ts. */
+  currency: Currency;
   partyId: string;
 };
 
@@ -1040,8 +1043,13 @@ export type Offset = {
  * remainder stays yours in mesos, which the net was already saying and the button now says too.
  */
 export function offsetOf(row: Settlement): Offset {
+  // MESO SHARES ONLY. An offset writes a signed row into settlement_debt (V57), which is a meso
+  // ledger, and it comes off `row.mesos`, which is a meso figure. A share of a dollar sale has no
+  // rate to enter either at, so including one would take cents off a meso debt and call the
+  // difference settled. Marking it sent still works, that being a boolean rather than a
+  // subtraction, and the headline carries the dollars in their own unit either way.
   const parts: OffsetPart[] = row.lines
-    .filter((line) => line.direction === "owe")
+    .filter((line) => line.direction === "owe" && line.currency === "MESO")
     .map((line) => ({ lootId: line.lootId, memberId: line.payeeId, amount: line.pay }));
   // Off the parts, never alongside them: the button says one figure and writes the other, so working
   // them out separately is how a row list stops adding up to the total above it.

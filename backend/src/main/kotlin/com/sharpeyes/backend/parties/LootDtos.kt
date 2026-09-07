@@ -154,14 +154,6 @@ data class LogDropRequest(
 @Serializable
 data class SellLootRequest(
     val amount: Long,
-    /**
-     * Cents, when it sold for real money. Set, [amount] is ignored and the pot is this instead.
-     *
-     * The split itself is unchanged: cents divide the way mesos do. What changes is that no
-     * Auction House stood in the way, so nothing is taken off the top and nothing is taken off a
-     * payout hop either. See splitOf on the client.
-     */
-    val usdCents: Long? = null,
     // LISTED (what it was listed at), RECEIVED (what landed in the seller's inventory), or BOUGHT
     // (what the whole drop is worth, the buyer's own share included, with no Auction House cut off
     // the top). BOUGHT is the pot and not what changed hands: the buyer keeps their share of it and
@@ -181,6 +173,17 @@ data class SellLootRequest(
      * silently short a person.
      */
     val shares: Map<String, Int> = emptyMap(),
+    /**
+     * Cents, when it sold for real money. Set, [amount] is ignored and the pot is this instead.
+     *
+     * The split itself is unchanged: cents divide the way mesos do. What changes is that no Auction
+     * House stood in the way, so nothing comes off the top and nothing comes off a payout hop
+     * either. See splitOf on the client.
+     *
+     * LAST, away from the price it replaces, so the dozen positional callers this request already
+     * had keep meaning what they meant. Every one of them is a meso sale.
+     */
+    val usdCents: Long? = null,
 )
 
 /**

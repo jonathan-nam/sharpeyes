@@ -57,7 +57,7 @@ import {
   type DropGroup,
   type Grouping,
 } from "@/lib/drop-log";
-import { formatDropped, splitOf } from "@/lib/loot";
+import { formatDropped, saleMoney, splitOf } from "@/lib/loot";
 import {
   type LotRow,
   type LotSaleBody,
@@ -529,6 +529,9 @@ export default function DropLogPage() {
         if (!wanted.has(loot.id)) continue;
         const split = splitOf(loot, party.seats);
         if (split === null) continue;
+        // The sale in its own unit, so the row's "sold for" and the share under it agree. Reading
+        // `saleAmount` alone would print nothing at all for a sale made in real money.
+        const sold = saleMoney(loot);
         const boss = bossByKey.get(loot.bossKey ?? "");
         for (const share of split.shares) {
           offsetShares.set(shareKey(loot.id, share.memberId), {
@@ -543,7 +546,8 @@ export default function DropLogPage() {
             members: split.shares.map((s) => s.name),
             on: loot.droppedOn,
             share: share.pay,
-            sale: loot.saleAmount,
+            sale: sold?.amount ?? null,
+            currency: split.currency,
             partyId: pool.partyId,
           });
         }

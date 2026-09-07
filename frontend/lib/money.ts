@@ -59,6 +59,16 @@ export function formatMoney(value: number, currency: Currency, grouped = false):
 }
 
 /**
+ * What a figure should put on the clipboard: no grouping, no currency mark, exact.
+ *
+ * Mesos paste into the game's price box, which takes digits. Dollars paste into whatever is moving
+ * the money, which takes `333.34` and not the 33334 cents the app holds it as.
+ */
+export function copyText(value: number, currency: Currency): string {
+  return currency === "USD" ? (value / 100).toFixed(2) : String(value);
+}
+
+/**
  * The short form, for recapping something already entered. Never for a figure somebody is sending:
  * shortMesos rounds, and a rounded payout is the wrong payout.
  */

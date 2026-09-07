@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { clearClass, clearStateLabel } from "@/lib/boss-clears";
 import { difficultyLabel } from "@/lib/boss-difficulty";
-import { formatMesos } from "@/lib/drop-split";
-import { formatDropped, statusLabel } from "@/lib/loot";
+import { formatMoney } from "@/lib/money";
+import { formatDropped, saleMoney, statusLabel } from "@/lib/loot";
 import { bySeatedCharacter, yourShare } from "@/lib/shared-parties";
 import type { Boss } from "@/types/boss";
 import type { SeatedParty } from "@/types/party";
@@ -93,6 +93,8 @@ export function SharedParties({
                 <ul className="shared-nights">
                   {party.nights.map((night) => {
                     const mine = yourShare(night, party);
+                    // The party's figure in the night's own unit, which is the sale's. See saleMoney.
+                    const sold = saleMoney(night);
                     return (
                       <li key={night.id}>
                         <span className="shared-night-drop">
@@ -105,12 +107,15 @@ export function SharedParties({
                         <span className="shared-night-status">{statusLabel(night.status)}</span>
                         {/* What the party got for it, so your own figure below can be checked against
                         something rather than taken on trust. */}
-                        {night.saleAmount !== null && (
-                          <span className="shared-night-sold">{formatMesos(night.saleAmount)}</span>
+                        {sold !== null && (
+                          <span className="shared-night-sold">
+                            {formatMoney(sold.amount, sold.currency)}
+                          </span>
                         )}
                         {mine && (
                           <span className="shared-night-yours">
-                            You: {formatMesos(mine.nets)} {mine.paid ? "paid" : "owed"}
+                            You: {formatMoney(mine.nets, mine.currency)}{" "}
+                            {mine.paid ? "paid" : "owed"}
                           </span>
                         )}
                       </li>
