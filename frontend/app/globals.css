@@ -2958,12 +2958,6 @@ button.link:disabled {
   margin-top: 16px;
 }
 
-.routine-count {
-  margin: 0 0 12px;
-  color: var(--muted-2);
-  font-size: var(--text-base);
-}
-
 .routine-group {
   margin-bottom: 18px;
 }
