@@ -131,6 +131,21 @@ describe("one section for what is unsettled", () => {
     expect(ledger).not.toContain("money I'm holding");
   });
 
+  it("folds the coupon nights behind the step that counts them, same shape as the rest", () => {
+    // A fourth foldable thing on this card, so it wears the card's shape: label, chevron, figure,
+    // in that order. The step says what the nights come to, which is what the section is read for;
+    // WHICH nights it came off is the follow-up, so it starts closed like the three above it.
+    expect(ledger).toContain("const [showNights, setShowNights] = useState(false);");
+    const at = ledger.indexOf('<span className="ledger-step">{couponName ?? "Coupons"}</span>');
+    expect(at, "the coupon step is gone").toBeGreaterThan(-1);
+    const line = ledger.slice(at, ledger.indexOf("</div>", at));
+    expect(line, "the coupon step lost its chevron").toContain("party-row-toggle");
+    expect(line.indexOf("party-row-toggle")).toBeLessThan(line.indexOf("ledger-amount"));
+    // And both lists are inside the fold the chevron names, or it would open onto half of them.
+    expect(ledger).toContain("aria-controls={`nights-${row.key}`}");
+    expect(ledger).toContain("<div id={`nights-${row.key}`}>");
+  });
+
   it("puts the figure on the heading's line, with its own way into the sales", () => {
     // A bare 500,000,000 on a row of its own under the heading read as a row of the list. What it is
     // NOT is a total of the section: the shares under it run both ways and are in the card's header
@@ -300,8 +315,10 @@ describe("what a column draws and how wide it lets itself get", () => {
     expect(ledger).toContain("const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);");
     expect(ledger).toContain("{theirNights.length > 0 && (");
     expect(ledger).toContain("{myNights.length > 0 && (");
-    expect(ledger).toContain("<PieceNights drops={theirNights}");
-    expect(ledger).toContain("<PieceNights drops={myNights}");
+    // The filtered arrays are what gets drawn, which is the claim. Not pinned to the whole tag:
+    // one of these wraps and one does not, so the tag prefix was really pinning prettier.
+    expect(ledger).toContain("drops={theirNights}");
+    expect(ledger).toContain("drops={myNights}");
     // And nothing is drawn off the raw arrays, which is the question that was being asked wrong.
     expect(ledger).not.toContain("row.drops.length > 0");
     expect(ledger).not.toContain("row.owedDrops.length > 0");
