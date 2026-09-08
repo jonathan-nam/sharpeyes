@@ -992,20 +992,11 @@ function SettlementCard({
                     </>
                   )}
 
-                  {/* Only the nights the closing act will NOT close. The ones it will are the rows
-                      directly above, so counting them back read as a second fact and matched
-                      nothing else on the card: 22 was eleven rows in each pile, and no screen in
-                      this app has 22 of anything else.
-
-                      A night owing a third person cannot be closed for one of them, so it stays
-                      open and is said. Silence there would be the count quietly going short. It
-                      folds WITH the lists it is about, being a statement about which of them the
-                      button will reach. */}
-                  {pair.shared > 0 && (
-                    <span className="ledger-progress">
-                      {`${pair.shared} shared with others, not closed here`}
-                    </span>
-                  )}
+                  {/* No count of the nights the closing act will not reach. Each of those rows says
+                      so itself, in the list right here: see the marker in PieceNights. The count
+                      was the same fact a second time, one level up, in a unit nothing else on the
+                      card is in. The rule the "closes 22 bosses" figure went under, applied to the
+                      figure that replaced it. */}
                 </div>
               )}
 

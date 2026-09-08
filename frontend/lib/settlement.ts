@@ -793,7 +793,14 @@ export type PairSettlement = {
   theirs: string[];
   /** Nights in your own pile it closes: coupons of theirs you were holding. */
   yours: string[];
-  /** Nights left open because the same night owes somebody else. A count, said on the card. */
+  /**
+   * Nights left open because the same night owes somebody else.
+   *
+   * NOT drawn any more. It was a count on the card, and each of those nights already says so on
+   * its own row in the list right above where the count sat. Kept because it is what
+   * `theirs` and `yours` are missing, so a reader of this type can tell a short list from a
+   * complete one, and because `offered` is decided by the same exclusion.
+   */
   shared: number;
   /**
    * Whether there is anything for one handover to close. `theirs` and `yours` are what it closes.
