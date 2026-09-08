@@ -6992,6 +6992,15 @@ button.link:disabled {
   gap: 10px;
 }
 
+/* The act on a share line, wearing the Closing Actions buttons' face rather than the paid pill's.
+   They are the same kind of thing, and a pill next to a squared button reads as a different one.
+
+   Only the position is its own: pushed to the end of the line so a list of them makes a column, in
+   the way .loot-paid did for the pill it replaced. */
+.ledger-line-act {
+  margin-left: auto;
+}
+
 /* The card's one instruction, and it is a count. Sits directly above the control it is about, so the
    number and the box that changes it read as one thing rather than as a note about it. */
 .ledger-progress {
