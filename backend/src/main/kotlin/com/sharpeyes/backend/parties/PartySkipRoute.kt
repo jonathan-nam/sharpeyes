@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.parseWeekParam
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -9,7 +10,6 @@ import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 
 // One route, in a file of its own, as the drop log's is. See LootLogRoute.kt.
@@ -48,7 +48,7 @@ internal suspend fun RoutingContext.setSkipRoute() {
         }
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val now = Clock.System.now()
             val bossId = bossIdOfParty(partyId)

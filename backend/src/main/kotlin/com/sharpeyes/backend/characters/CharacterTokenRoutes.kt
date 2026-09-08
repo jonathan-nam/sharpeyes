@@ -4,6 +4,7 @@ import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.RedemptionRule
 import com.sharpeyes.backend.db.TokenCatalog
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.tokens.isBossToken
@@ -18,7 +19,6 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
 
 // What a character HOLDS, kept apart from what a character IS.
@@ -39,7 +39,7 @@ import kotlin.uuid.Uuid
 internal suspend fun RoutingContext.getAllCharacterTokens() {
     val (userId, email) = call.principalIdAndEmail()
     val byCharacter =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             CharacterTokenCount
                 .innerJoin(TokenCatalog)
@@ -67,7 +67,7 @@ internal suspend fun RoutingContext.getCharacterTokens() {
     val characterId = call.parseUuidParam("id") ?: return
 
     val tokens =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             // Ownership check first: a character that isn't this user's must 404
             // rather than return an empty token list, which would leak existence.

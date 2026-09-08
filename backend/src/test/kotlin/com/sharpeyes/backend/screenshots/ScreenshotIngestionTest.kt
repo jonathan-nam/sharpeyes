@@ -251,7 +251,7 @@ class ScreenshotIngestionTest {
         val result = runBlocking { ingest(fake, pinnedCharacterId = null) }
         assertEquals(ScreenshotOutcome.UNRESOLVABLE, result.outcome)
 
-        val resolved = resolveScreenshot(TEST_USER_ID, Uuid.parse(result.screenshotId), newCharacter)
+        val resolved = runBlocking { resolveScreenshot(TEST_USER_ID, Uuid.parse(result.screenshotId), newCharacter) }
 
         assertTrue(resolved)
         assertEquals(4, tokenCountFor(newCharacter))
@@ -263,7 +263,7 @@ class ScreenshotIngestionTest {
         val fake = FakeScreenshotParser(parsedOutcome(hud = null, tokens = emptyList()))
         val result = runBlocking { ingest(fake, pinnedCharacterId = null) }
 
-        val ignored = ignoreScreenshot(TEST_USER_ID, Uuid.parse(result.screenshotId))
+        val ignored = runBlocking { ignoreScreenshot(TEST_USER_ID, Uuid.parse(result.screenshotId)) }
 
         assertTrue(ignored)
         assertEquals("IGNORED", screenshotParseStatus(result.screenshotId))

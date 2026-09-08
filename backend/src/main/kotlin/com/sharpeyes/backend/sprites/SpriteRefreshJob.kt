@@ -7,6 +7,7 @@ import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.services.NexonLookupService
 import io.ktor.server.application.Application
 import io.ktor.server.application.log
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -261,7 +262,11 @@ fun sweepOrphanedSprites(now: Instant): Int {
  * the work: wasteful against Nexon, but every write here is idempotent, so not wrong.
  */
 fun Application.startSpriteRefresh(job: SpriteRefreshJob) {
-    launch {
+    // On Dispatchers.IO, not the Application's own dispatcher, which is Netty's event loop. The
+    // transactions below are blocking JDBC, so a bare `launch` put a tick's worth of them on one of
+    // the two threads that also serve every request. Nothing here is on a request's path, so it
+    // keeps plain `transaction` rather than dbQuery: this launch is what takes it off the loop.
+    launch(Dispatchers.IO) {
         // Registering costs one query and no outbound call, and an unregistered sprite is a BROKEN
         // IMAGE rather than an uncached one, so it does not wait for the first tick.
         runCatching { transaction { registerUnknownSprites() } }

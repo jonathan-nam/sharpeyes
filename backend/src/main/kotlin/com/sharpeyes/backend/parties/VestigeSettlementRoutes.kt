@@ -5,6 +5,7 @@ import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeSettlement
 import com.sharpeyes.backend.db.VestigeSettlementLoot
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -27,7 +28,6 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -71,7 +71,7 @@ fun Route.vestigeSettlementRoutes() {
 private suspend fun RoutingContext.listSettlements() {
     val (userId, email) = call.principalIdAndEmail()
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             settlementsFor(userId)
         }
@@ -88,7 +88,7 @@ private suspend fun RoutingContext.addSettlementRoute() {
 
     val loot = request.lootIds.mapNotNull { Uuid.parseOrNull(it) }.distinct()
     val result =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             if (holder.kind == "PERSON") {
@@ -99,7 +99,7 @@ private suspend fun RoutingContext.addSettlementRoute() {
                             .where { (Person.id eq person) and (Person.userId eq userId) }
                             .empty()
                             .not()
-                if (!theirs) return@transaction null
+                if (!theirs) return@dbQuery null
             }
 
             // Every drop has to be one of yours. Without this a settlement could retire somebody
@@ -111,7 +111,7 @@ private suspend fun RoutingContext.addSettlementRoute() {
                     .where { (PartyLoot.id inList loot) and (Party.userId eq userId) }
                     .map { it[PartyLoot.id] }
                     .toSet()
-            if (yours.size != loot.size) return@transaction null
+            if (yours.size != loot.size) return@dbQuery null
 
             val now = Clock.System.now()
             val settlementId = Uuid.random()
@@ -142,7 +142,7 @@ private suspend fun RoutingContext.deleteSettlementRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val settlementId = call.parseUuidParam("settlementId") ?: return
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             // The loot rows go with it by cascade, so reopening a pile brings back every drop it
             // closed rather than half of them.

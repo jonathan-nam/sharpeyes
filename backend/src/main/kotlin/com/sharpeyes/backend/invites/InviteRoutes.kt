@@ -3,6 +3,7 @@ package com.sharpeyes.backend.invites
 import com.sharpeyes.backend.db.AccountInvite
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
@@ -26,7 +27,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
@@ -63,7 +63,7 @@ fun Route.joinRoutes() {
 private suspend fun RoutingContext.listInvitesRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val invites =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             AccountInvite
                 .join(Person, JoinType.INNER, AccountInvite.personId, Person.id)
@@ -95,11 +95,11 @@ private suspend fun RoutingContext.createInviteRoute() {
     val now = Clock.System.now()
     val token = newInviteToken()
     val created =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             // Derived, never sent: the client does not tell the server the user's own name.
-            val senderName = senderNameFor(userId) ?: return@transaction null
-            val payload = buildInvitePayload(userId, personId, senderName) ?: return@transaction null
+            val senderName = senderNameFor(userId) ?: return@dbQuery null
+            val payload = buildInvitePayload(userId, personId, senderName) ?: return@dbQuery null
 
             AccountInvite.deleteWhere {
                 (AccountInvite.userId eq userId) and
@@ -157,8 +157,8 @@ internal fun partyLabels(
 private suspend fun RoutingContext.previewInviteRoute() {
     val token = call.parameters["token"].orEmpty()
     val preview =
-        transaction {
-            val payload = liveInviteFor(token)?.second ?: return@transaction null
+        dbQuery {
+            val payload = liveInviteFor(token)?.second ?: return@dbQuery null
             val bossNames =
                 BossCatalog
                     .selectAll()
@@ -191,16 +191,16 @@ private suspend fun RoutingContext.acceptInviteRoute() {
     val confirmed = call.receiveNullable<AcceptInviteRequest>()?.characters
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
-            val (invite, payload) = liveInviteFor(token) ?: return@transaction Refusal.Unknown
-            if (payload.version != INVITE_PAYLOAD_VERSION) return@transaction Refusal.Stale
+            val (invite, payload) = liveInviteFor(token) ?: return@dbQuery Refusal.Unknown
+            if (payload.version != INVITE_PAYLOAD_VERSION) return@dbQuery Refusal.Stale
             // Redeeming your own link would link an account to itself and copy its parties back
             // onto it under different ids.
-            if (invite[AccountInvite.userId] == userId) return@transaction Refusal.Own
+            if (invite[AccountInvite.userId] == userId) return@dbQuery Refusal.Own
             // Nothing to take is not the same as nothing to give: the link is left unspent so the
             // same one still works once they know which of these characters is theirs.
-            if (confirmed != null && confirmed.isEmpty()) return@transaction Refusal.NothingTaken
+            if (confirmed != null && confirmed.isEmpty()) return@dbQuery Refusal.NothingTaken
 
             // Spent before the rows are written, inside the same transaction: two requests racing
             // the same link both pass the checks above, and the unique token_hash does not stop the
@@ -213,7 +213,7 @@ private suspend fun RoutingContext.acceptInviteRoute() {
                     it[acceptedAt] = now
                     it[acceptedBy] = userId
                 } > 0
-            if (!spent) return@transaction Refusal.Unknown
+            if (!spent) return@dbQuery Refusal.Unknown
 
             acceptInvite(payload, userId, confirmed, invite[AccountInvite.personId], now)
         }

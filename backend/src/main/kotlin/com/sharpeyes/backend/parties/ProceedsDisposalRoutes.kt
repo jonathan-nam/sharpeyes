@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -20,7 +21,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -67,7 +67,7 @@ fun Route.proceedsDisposalRoutes() {
 private suspend fun RoutingContext.listDisposals() {
     val (userId, email) = call.principalIdAndEmail()
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             disposalsFor(userId)
         }
@@ -83,11 +83,11 @@ private suspend fun RoutingContext.addDisposalRoute() {
     if (refusal != null) return call.respond(HttpStatusCode.BadRequest, refusal)
 
     val result =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             // Scoped to the account, which the foreign key does not do. See ownsPerson.
-            if (holder.kind == "PERSON" && !ownsPerson(userId, person)) return@transaction null
+            if (holder.kind == "PERSON" && !ownsPerson(userId, person)) return@dbQuery null
 
             val now = Clock.System.now()
             VestigeProceedsDisposal.insert {
@@ -116,7 +116,7 @@ private suspend fun RoutingContext.deleteDisposalRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val disposalId = call.parseUuidParam("disposalId") ?: return
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val gone =
                 VestigeProceedsDisposal.deleteWhere {

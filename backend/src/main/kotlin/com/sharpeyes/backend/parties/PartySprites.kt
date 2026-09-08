@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.sprites.SpriteCache
 import com.sharpeyes.backend.users.ensureUser
@@ -7,7 +8,6 @@ import io.ktor.server.routing.RoutingContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 
@@ -34,7 +34,7 @@ internal suspend fun RoutingContext.lookUpSprites(
     spriteCache: SpriteCache,
 ): Map<String, String?> {
     val known =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             seatSpritesByCharacter(userId)
         }
@@ -66,7 +66,7 @@ internal suspend fun RoutingContext.lookUpSprites(
                 }.awaitAll()
                 .toMap()
         }
-    transaction {
+    dbQuery {
         found.values.forEach { (url, bytes) -> url?.let { spriteCache.store(it, bytes) } }
     }
     return found.mapValues { (_, urlAndBytes) -> urlAndBytes.first }

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
@@ -10,7 +11,6 @@ import io.ktor.server.routing.RoutingContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -44,7 +44,7 @@ internal suspend fun RoutingContext.logDropRoute() {
     val characterId = Uuid.parseOrNull(request.characterId)
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val dropId = request.dropKey?.let { dropIdForKey(it) }
             val bossId = bossIdForKey(request.bossKey)

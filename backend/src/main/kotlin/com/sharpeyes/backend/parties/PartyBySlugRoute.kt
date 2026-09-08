@@ -1,12 +1,12 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 // One route, in a file of its own, as the skip's is. See PartySkipRoute.kt.
 
@@ -22,7 +22,7 @@ internal suspend fun RoutingContext.getPartyBySlug() {
     val (userId, email) = call.principalIdAndEmail()
     val path = call.parameters.getAll("path").orEmpty()
     val party =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             findPartyBySlug(path, userId)
         }

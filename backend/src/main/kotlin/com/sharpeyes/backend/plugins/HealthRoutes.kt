@@ -132,5 +132,8 @@ fun Route.healthRoutes() {
 /**
  * The cheapest question that still proves the database answered. Shared by GET and HEAD so the two
  * cannot drift into checking different things.
+ *
+ * Plain `transaction` rather than dbQuery: dbReachable already runs this on a daemon thread of its
+ * own so it can be abandoned on timeout, which is off the event loop by a different route.
  */
 private fun dbProbe(): Boolean = transaction { exec("SELECT 1") { rows -> rows.next() } } == true

@@ -4,6 +4,7 @@ import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.inActiveWorld
@@ -15,7 +16,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
 
 // The parties somebody else owns that one of YOUR characters sits in.
@@ -119,7 +119,7 @@ private fun nightsRunBy(
 internal suspend fun RoutingContext.listSeatedParties() {
     val (userId, email) = call.principalIdAndEmail()
     val parties =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             partiesSeatedIn(userId)
         }

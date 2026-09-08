@@ -8,6 +8,7 @@ import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Screenshots
 import com.sharpeyes.backend.db.TokenCatalog
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.services.DetectedBossClear
 import com.sharpeyes.backend.services.DetectedToken
 import com.sharpeyes.backend.services.ScreenshotParseOutcome
@@ -25,7 +26,6 @@ import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.upsert
 import kotlin.time.Clock
@@ -54,7 +54,7 @@ suspend fun ingestScreenshot(
             .decode(request.imageBase64)
     val parseOutcome = screenshotParser.parseScreenshot(imageBytes, request.mediaType)
 
-    return transaction {
+    return dbQuery {
         ensureUser(userId, email)
         when (parseOutcome) {
             is ScreenshotParseOutcome.Failed -> insertFailedScreenshot(userId, pinnedCharacterId, parseOutcome.reason)
@@ -296,27 +296,27 @@ private fun upsertTokenCounts(
 // existing = call this directly) plus mismatch's one-click fix and
 // unresolvable's manual picker. None of them need the image again, since
 // the parsed result was already persisted to `rawParseResult`.
-fun resolveScreenshot(
+suspend fun resolveScreenshot(
     userId: String,
     screenshotId: Uuid,
     newCharacterId: Uuid,
 ): Boolean =
-    transaction {
+    dbQuery {
         val row =
             Screenshots
                 .selectAll()
                 .where { (Screenshots.id eq screenshotId) and (Screenshots.userId eq userId) }
-                .singleOrNull() ?: return@transaction false
-        if (row[Screenshots.parseStatus] != "NEEDS_REVIEW") return@transaction false
-        val rawResponse = row[Screenshots.rawParseResult] ?: return@transaction false
+                .singleOrNull() ?: return@dbQuery false
+        if (row[Screenshots.parseStatus] != "NEEDS_REVIEW") return@dbQuery false
+        val rawResponse = row[Screenshots.rawParseResult] ?: return@dbQuery false
         val parsed = Json.decodeFromJsonElement<ScreenshotParseResult>(rawResponse)
         // Either payload alone is a real result to file: a planner-only capture has no
         // tokenCounts, and an inventory with no planner in frame has no bossClears. Testing
         // tokenCounts alone (as this did) would refuse to resolve every planner capture, which is
         // the one kind of upload most likely to need review, since a planner has no grid to
         // attribute from.
-        if (parsed.tokenCounts == null && parsed.bossClears == null) return@transaction false
-        findOwnedCharacter(newCharacterId, userId) ?: return@transaction false
+        if (parsed.tokenCounts == null && parsed.bossClears == null) return@dbQuery false
+        findOwnedCharacter(newCharacterId, userId) ?: return@dbQuery false
 
         val capturedAt = Clock.System.now()
         upsertTokenCounts(
@@ -334,11 +334,11 @@ fun resolveScreenshot(
         true
     }
 
-fun ignoreScreenshot(
+suspend fun ignoreScreenshot(
     userId: String,
     screenshotId: Uuid,
 ): Boolean =
-    transaction {
+    dbQuery {
         Screenshots.update({ (Screenshots.id eq screenshotId) and (Screenshots.userId eq userId) }) {
             it[parseStatus] = "IGNORED"
         } > 0

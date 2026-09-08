@@ -4,6 +4,7 @@ import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.RedemptionRule
 import com.sharpeyes.backend.db.TokenCatalog
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.inActiveWorld
@@ -20,7 +21,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 fun Route.tokenRoutes() {
     get { getTokenTotals() }
@@ -40,7 +40,7 @@ fun Route.tokenRoutes() {
 private suspend fun RoutingContext.getTokenCatalog() {
     val (userId, email) = call.principalIdAndEmail()
     val items =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             bossTokenCatalog()
         }
@@ -97,7 +97,7 @@ data class TokenCatalogResponse(
 private suspend fun RoutingContext.getTokenTotals() {
     val (userId, email) = call.principalIdAndEmail()
     val totals =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             tokenTotalsFor(userId)
         }

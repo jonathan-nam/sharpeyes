@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.PartyLootBundle
 import com.sharpeyes.backend.db.VestigeSettlementLoot
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -12,7 +13,6 @@ import io.ktor.server.routing.RoutingContext
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
 
 // Who picked up which stacks of a drop: the read, and PUT /{lootId}/bundles, registered by
@@ -100,7 +100,7 @@ internal suspend fun RoutingContext.setBundlesRoute() {
     val request = call.receive<LootBundlesRequest>()
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val loot = findLoot(lootId, partyId)
             when {

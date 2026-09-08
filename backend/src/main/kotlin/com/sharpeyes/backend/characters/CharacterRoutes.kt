@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.characters
 
 import com.sharpeyes.backend.db.Characters
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.span
@@ -24,7 +25,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
@@ -67,7 +67,7 @@ private suspend fun RoutingContext.createCharacter(
     val newId = Uuid.random()
 
     val created =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             // Append to the end of this user's carousel. position is dense, so the count is
             // the next free slot.
@@ -92,7 +92,7 @@ private suspend fun RoutingContext.createCharacter(
             // nothing here can. Placing them in a world picked for them is the failure the world
             // comment above describes, and V74 is what makes refusing possible: before it the
             // account always held a world, whether or not anyone had chosen it.
-            val world = detected?.worldType ?: activeWorldFor(userId) ?: return@transaction null
+            val world = detected?.worldType ?: activeWorldFor(userId) ?: return@dbQuery null
             Characters.insert {
                 it[id] = newId
                 it[Characters.userId] = userId
@@ -127,7 +127,7 @@ private suspend fun RoutingContext.createCharacter(
 private suspend fun RoutingContext.listCharacters() {
     val (userId, email) = call.principalIdAndEmail()
     val characters =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             charactersInActiveWorld(userId)
         }
@@ -154,7 +154,7 @@ private suspend fun RoutingContext.reorderCharacters() {
     val order = parsed.filterNotNull()
 
     val reordered =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             // The world being shown, because that is the list the caller was looking at. It cannot
             // name a character it was never sent, and requiring the whole account would refuse
@@ -169,7 +169,7 @@ private suspend fun RoutingContext.reorderCharacters() {
             // Must be exactly that set, no missing, extra or duplicate ids, or position would end
             // up with holes or collisions.
             if (order.size != shown.size || order.toSet() != shown.map { it.first }.toSet()) {
-                return@transaction null
+                return@dbQuery null
             }
             // Permute the slots these characters already hold rather than numbering from zero. The
             // other world's characters keep theirs, so position stays dense across the account and
@@ -195,7 +195,7 @@ private suspend fun RoutingContext.getCharacter() {
     val characterId = call.parseUuidParam("id") ?: return
 
     val character =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             findOwnedCharacter(characterId, userId)
         }
@@ -208,7 +208,7 @@ private suspend fun RoutingContext.updateCharacter() {
     val request = call.receive<UpdateCharacterRequest>()
 
     val updated =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val rowsChanged =
                 Characters.update({ (Characters.id eq characterId) and (Characters.userId eq userId) }) { row ->
@@ -229,7 +229,7 @@ private suspend fun RoutingContext.refreshCharacter(
     val characterId = call.parseUuidParam("id") ?: return
 
     val existingName =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             findOwnedCharacter(characterId, userId)?.name
         }
@@ -241,7 +241,7 @@ private suspend fun RoutingContext.refreshCharacter(
     val lookup = call.span("nexon") { nexonLookupService.lookup(existingName) }
     val spriteBytes = lookup?.spriteImgUrl?.let { call.span("sprite") { spriteCache.fetch(it) } }
     val refreshed =
-        transaction {
+        dbQuery {
             // A transient lookup failure leaves existing level/job/sprite untouched rather than
             // nulling out previously-good data.
             if (lookup != null) {
@@ -258,7 +258,7 @@ private suspend fun RoutingContext.deleteCharacter() {
     val characterId = call.parseUuidParam("id") ?: return
 
     val rowsDeleted =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             Characters.deleteWhere { (Characters.id eq characterId) and (Characters.userId eq userId) }
         }

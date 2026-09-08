@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.sprites
 
+import com.sharpeyes.backend.plugins.dbQuery
 import io.ktor.http.CacheControl
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
@@ -11,7 +12,6 @@ import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 // A year, and immutable. Safe in a way the seeded icons are not: the key is a hash of the URL and
 // the URL encodes the outfit, so these bytes cannot change under their path. A new outfit is a new
@@ -33,7 +33,7 @@ fun Route.spriteRoutes() {
             return@get
         }
 
-        val cached = transaction { cachedSprite(key) }
+        val cached = dbQuery { cachedSprite(key) }
         when {
             cached == null -> call.respond(HttpStatusCode.NotFound)
             cached.image != null -> {

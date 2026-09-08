@@ -3,6 +3,7 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.db.VestigeTrancheShare
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -24,7 +25,6 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -162,7 +162,7 @@ fun Route.vestigeRoutes() {
 private suspend fun RoutingContext.listTranches() {
     val (userId, email) = call.principalIdAndEmail()
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             tranchesFor(userId)
         }
@@ -182,13 +182,13 @@ private suspend fun RoutingContext.addTrancheRoute() {
     if (refusal != null) return call.respond(HttpStatusCode.BadRequest, refusal)
 
     val result =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             if (holder.kind == PERSON) {
                 // Scoped to the account, which the foreign key does not do: without this a tranche
                 // could be filed against somebody else's person and read back as one of theirs.
-                if (!ownsPerson(userId, person)) return@transaction null
+                if (!ownsPerson(userId, person)) return@dbQuery null
             }
             // The same check for every creditor named. A share filed against somebody else's person
             // would credit a stranger and read back on this account's ledger as a debt discharged.
@@ -196,7 +196,7 @@ private suspend fun RoutingContext.addTrancheRoute() {
                 shares.map { it.holder.personId?.let { id -> runCatching { Uuid.parse(id) }.getOrNull() } }
             shares.forEachIndexed { i, share ->
                 if (share.holder.kind == PERSON && !ownsPerson(userId, creditors[i])) {
-                    return@transaction null
+                    return@dbQuery null
                 }
             }
 
@@ -240,7 +240,7 @@ private suspend fun RoutingContext.deleteTrancheRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val trancheId = call.parseUuidParam("trancheId") ?: return
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val gone =
                 VestigeTranche.deleteWhere {
