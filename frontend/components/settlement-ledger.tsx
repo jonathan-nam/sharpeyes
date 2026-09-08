@@ -863,7 +863,7 @@ function SettlementCard({
                             means "I received it" on one line and "I sent it" on the next. */}
                         <button
                           type="button"
-                          className="loot-paid"
+                          className="party-save ledger-line-act"
                           disabled={busy}
                           onClick={() =>
                             void write(
