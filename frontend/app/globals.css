@@ -2483,8 +2483,17 @@ button.link:disabled {
    --------------------------------------------------------------------------- */
 
 /* The table can outgrow the column once a roster is wide, so it scrolls inside
-   itself rather than pushing the page sideways. */
+   itself rather than pushing the page sideways.
+
+   POSITIONED, or it does not clip the .visually-hidden label every cell carries. Those are
+   absolutely positioned, so with nothing positioned between them and the page they laid out at
+   their static position OUTSIDE this box, and the DOCUMENT grew a scrollbar to reach them:
+   measured 121px of it on the built page at 1024px with a roster of six. Scrolling that strip
+   takes the whole page sideways, and the name column is pinned to THIS box rather than to the
+   window, so it left the screen and uncovered the marks it had been painted over.
+   See boss-matrix-sticky.test.ts. */
 .boss-matrix {
+  position: relative;
   overflow-x: auto;
 }
 
@@ -2651,6 +2660,17 @@ button.link:disabled {
   font-size: var(--text-sm);
   font-weight: 600;
   text-align: left;
+}
+
+/* Held against the left edge with the boss names, which is the column it labels. The cell spans
+   the whole table, so scrolling took the word off the left of the scrollport and left seventeen
+   rows under a heading that was no longer on screen.
+   8px is .boss-cadence's own left padding: at 0 the word would jump to the table's edge the moment
+   it stuck, and at 8 it never moves at all. */
+.boss-cadence-label {
+  position: sticky;
+  left: 8px;
+  display: inline-block;
 }
 
 /* The names' column, declared on the table's <col> so that both tables lay out from the same
@@ -6355,6 +6375,9 @@ button.link:disabled {
    bigger than the six seats a party has, so the gaps in a person's column are half of the plan. */
 .run-grid {
   margin-top: 14px;
+  /* Its cells carry .visually-hidden labels too, so it needs the same containing block the boss
+     matrix does or they escape this clip and stretch the page. See .boss-matrix. */
+  position: relative;
   overflow-x: auto;
 }
 

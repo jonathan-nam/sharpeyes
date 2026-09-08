@@ -215,7 +215,9 @@ export function BossMatrix({
                   next, which the table still has to carry. */}
                 <tr className="boss-cadence-row">
                   <th className="boss-cadence" scope="colgroup" colSpan={columns.length + 1}>
-                    {cadenceLabel(cadence)}
+                    {/* Pinned on the span, not the cell: the cell spans every column, so it is
+                        already at the left edge and has nothing to stick to. */}
+                    <span className="boss-cadence-label">{cadenceLabel(cadence)}</span>
                   </th>
                 </tr>
 
