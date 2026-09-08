@@ -40,8 +40,10 @@ describe("what the card says a person owes", () => {
     // A piece debt has no price. Putting it through a meso formatter would be the first step back
     // towards pricing it, which is what #354 deleted. Netted into ONE count now, and the direction is
     // in the words: netting a count of the same coupon between the same two people values nothing.
-    expect(source).toContain("${row.piecesNet} coupons to hand over");
-    expect(source).toContain("${-row.piecesNet} coupons owed");
+    // The noun moved to the step above it, which names the coupon, so repeating it here was the
+    // same fact twice on one line. The count is still raw either way, which is what this pins.
+    expect(source).toContain("${row.piecesNet} to hand over");
+    expect(source).toContain("${-row.piecesNet} owed");
   });
 
   it("leaves the arithmetic uncoloured, and signs every component instead", () => {
