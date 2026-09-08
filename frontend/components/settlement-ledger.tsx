@@ -284,6 +284,9 @@ function SettlementCard({
   // moves when Offset is pressed rather than before. See sharesYouOwe.
   const youOwe = row.owedByYou + row.sharesYouOwe;
   const toCopy = row.mesos > 0 ? row.mesos : youOwe > 0 ? youOwe : null;
+  // Whether the headline says anything. Since the coupons left it, a card can be held here by its
+  // pieces alone, and this line would then be an empty one. See #629.
+  const headline = toCopy !== null || row.usd.owed > 0 || row.usd.owe > 0;
 
   /**
    * The drops behind the shares figure, on hover.
@@ -451,6 +454,14 @@ function SettlementCard({
   const theirNights = row.drops.filter((drop) => drop.pieces > 0);
   const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);
 
+  /**
+   * Whether there is a coupon debt to draw, which the section's gate and its step both ask.
+   *
+   * Zero net is not drawn: the coupon relationship is a running balance and a balance at zero is
+   * nothing to close. See the step for the rest.
+   */
+  const couponsOpen = row.piecesNet !== 0 && (theirNights.length > 0 || myNights.length > 0);
+
   /** Everything of theirs that can come off their debt. */
   const offsetAll = async () => {
     if (offset.offered) await onOffsetShares(row.holder, row.name, offset.parts);
@@ -517,48 +528,45 @@ function SettlementCard({
               and its own arithmetic never read as two different kinds of thing.
 
               The money is copyable: it is the figure that gets pasted into the game's trade box, and
-              retiring the Wallet took the only place on this account where that was possible. The
-              pieces are not, being a count of coupons rather than a price. */}
-          <span className={"loot-meta ledger-summary is-open"}>
-            {/* ONE count, netted, because one handover settles the pair: holding 90 of theirs
-                while they hold 20 of yours is 70 changing hands. Which way it runs is in the words,
-                since "pieces" alone said nothing about direction and the card used to print both
-                sides and leave the subtraction to you. */}
-            {row.piecesNet !== 0 && (
-              <span>
-                {row.piecesNet > 0
-                  ? `${row.piecesNet} coupons to hand over`
-                  : `${-row.piecesNet} coupons owed`}
-              </span>
-            )}
-            {toCopy !== null && (
-              <CopyAmount
-                value={toCopy}
-                display={
-                  row.mesos > 0
-                    ? `${formatMesos(row.mesos, true)} owed`
-                    : `you owe ${formatMesos(youOwe, true)}`
-                }
-              />
-            )}
-            {/* Both directions, said rather than netted. The headline is what they owe you and it
+              retiring the Wallet took the only place on this account where that was possible.
+
+              MONEY ONLY. The netted coupon count used to sit here too, which made one line carry two
+              units with nothing saying they could not be added. It says the same words one section
+              down, on the step that names the coupon it is a count OF.
+
+              Drawn only when it has something in it. A card can now be held here by its coupons
+              alone, and this is the line that would have been an empty one: see #629. */}
+          {headline && (
+            <span className={"loot-meta ledger-summary is-open"}>
+              {toCopy !== null && (
+                <CopyAmount
+                  value={toCopy}
+                  display={
+                    row.mesos > 0
+                      ? `${formatMesos(row.mesos, true)} owed`
+                      : `you owe ${formatMesos(youOwe, true)}`
+                  }
+                />
+              )}
+              {/* Both directions, said rather than netted. The headline is what they owe you and it
                 stays that until an act moves it, so a card running both ways has to carry the other
                 side out loud or it would say nothing about money you have to send. */}
-            {row.mesos > 0 && youOwe > 0 && <span>{`you owe ${formatMesos(youOwe, true)}`}</span>}
-            {/* A THIRD UNIT, said the way the coupons above are: on its own, in both directions,
+              {row.mesos > 0 && youOwe > 0 && <span>{`you owe ${formatMesos(youOwe, true)}`}</span>}
+              {/* A THIRD UNIT, said the way the coupons above are: on its own, in both directions,
                 and never netted against the mesos. There is no rate in this app, so $333.34 and
                 600b cannot become one figure, and the one that looked like they had would be the
                 confident wrong number. Copyable for the same reason the mesos are: it is what gets
                 pasted into whatever moves the money. See lib/money.ts. */}
-            {row.usd.owed > 0 && (
-              <CopyAmount
-                value={row.usd.owed}
-                display={`${formatDollars(row.usd.owed)} owed`}
-                copy={copyText(row.usd.owed, "USD")}
-              />
-            )}
-            {row.usd.owe > 0 && <span>{`you owe ${formatDollars(row.usd.owe)}`}</span>}
-          </span>
+              {row.usd.owed > 0 && (
+                <CopyAmount
+                  value={row.usd.owed}
+                  display={`${formatDollars(row.usd.owed)} owed`}
+                  copy={copyText(row.usd.owed, "USD")}
+                />
+              )}
+              {row.usd.owe > 0 && <span>{`you owe ${formatDollars(row.usd.owe)}`}</span>}
+            </span>
+          )}
         </span>
         {/* Money they sent beyond anything priced, which is a payment for the pieces. Out here rather
             than in the net below: a piece debt has no price for it to count down, and netting it
@@ -745,7 +753,7 @@ function SettlementCard({
 
           The card is one person's, so the heading does not name them again. It used to, and the two
           halves were two sections with nothing between them but a rule. */}
-      {(row.lines.length > 0 || row.holding > 0 || paidOut.length > 0) && (
+      {(row.lines.length > 0 || row.holding > 0 || paidOut.length > 0 || couponsOpen) && (
         <div className="ledger-entry">
           {/* The heading, its chevron, then the figure, which is the shape Owed and Offsets wear
               too. Copyable, like the card's own headline, because sending it means pasting it into a
@@ -909,36 +917,49 @@ function SettlementCard({
               ))}
             </span>
           )}
-        </div>
-      )}
+          {/* The nights the coupons are still sitting on, both directions, and the act that closes
+              them. No price on either side: what a coupon fetched is only known where somebody sold
+              it and said so, and that is already money in this same section.
 
-      {/* The nights the coupons are still sitting on, both directions, and the act that closes them.
-          No price on either side: what a coupon fetched is only known where somebody sold it and said
-          so, and that is already money on the card above.
+              IN Unsettled Amounts, under a step naming the coupon, which is where a reader looks
+              for what is outstanding. It was a section of its own headed only by whose inventory,
+              so the one screen that lists what stands between two people said "Extreme Kalos the
+              Guardian, 390" and never once said what 390 of.
 
-          Headed by WHOSE INVENTORY, not by "pieces". Each list is one side of the netted count in the
-          header and already subtracted from it, so under a bare "PIECES" they read as a claim on top:
-          a card netting to 130 listed a 20 under it, and 20 was not 20 more. The two sides also cancel
-          against each other before either is drawn, so together they come to exactly the header.
+              The netted count rides the step, in the words the header used to carry: one handover
+              settles the pair, holding 90 of theirs while they hold 20 of yours is 70 changing
+              hands, and which way it runs is in the words because "pieces" alone said nothing
+              about direction.
 
-          Drawn whenever there is a night, even where none of them can be closed. The button is what
-          the refusal takes away, never the list: a card that went quiet about what is outstanding
-          would be hiding exactly what it is for.
+              Each list is one side of that count and already subtracted from it, so under a bare
+              "PIECES" they read as a claim on top: a card netting to 130 listed a 20 under it, and
+              20 was not 20 more. The two sides cancel before either is drawn, so together they come
+              to exactly the step.
 
-          NOT drawn when the two sides cancel. Nothing is outstanding in coupons, so there is nothing
-          to hand over and nothing to read: the coupon relationship is a running balance, and a
-          balance at zero is not a thing anybody has to close. It comes straight back the moment a
-          night tips it either way, with every night still on it. */}
-      {row.piecesNet !== 0 && (theirNights.length > 0 || myNights.length > 0) && (
-        <div className="ledger-entry">
-          {theirNights.length > 0 && (
+              Drawn whenever there is a night, even where none of them can be closed. The button is
+              what the refusal takes away, never the list: a card that went quiet about what is
+              outstanding would be hiding exactly what it is for.
+
+              NOT drawn when the two sides cancel. Nothing is outstanding in coupons, so there is
+              nothing to hand over and nothing to read: the coupon relationship is a running
+              balance, and a balance at zero is not a thing anybody has to close. It comes straight
+              back the moment a night tips it either way, with every night still on it. */}
+          {couponsOpen && (
             <>
-              <span className="ledger-step">{`${row.name} is holding`}</span>
-              <PieceNights drops={theirNights} bossByKey={bossByKey} partyById={partyById} />
-            </>
-          )}
+              <div className="ledger-step-line">
+                <span className="ledger-step">{couponName ?? "Coupons"}</span>
+                <span className="ledger-amount">
+                  {row.piecesNet > 0 ? `${row.piecesNet} to hand over` : `${-row.piecesNet} owed`}
+                </span>
+              </div>
+              {theirNights.length > 0 && (
+                <>
+                  <span className="ledger-step">{`${row.name} is holding`}</span>
+                  <PieceNights drops={theirNights} bossByKey={bossByKey} partyById={partyById} />
+                </>
+              )}
 
-          {/* The one thing the netting cannot decide for the two of you. Their coupons come off what
+              {/* The one thing the netting cannot decide for the two of you. Their coupons come off what
               you owe them ONLY if they agree to that; they may want the mesos and to give the
               coupons back. So it is an act with a price on it, never an assumption, and until
               somebody records one the pieces stay a count. Same act as the purchase on the Sale
@@ -946,57 +967,57 @@ function SettlementCard({
 
               Drawn beside the lists rather than inside one of them: a pill has nowhere else to be
               taken back, so it must not go with the heading above it when that heading goes. */}
-          {keptRows.length > 0 && (
-            <span className="ledger-tranches">
-              {keptRows.map((tranche) => (
-                <span key={tranche.id} className="ledger-tranche">
-                  {`${tranche.pieces} kept for ${formatMesos(tranche.amount ?? 0, true)}`}
-                  <button
-                    type="button"
-                    className="link ledger-drop-sale"
-                    disabled={busy}
-                    onClick={() => void write(onRemoveKeep(tranche.id), null)}
-                    aria-label={`Remove ${tranche.pieces} coupons ${row.name} kept`}
-                  >
-                    ×
-                  </button>
+              {keptRows.length > 0 && (
+                <span className="ledger-tranches">
+                  {keptRows.map((tranche) => (
+                    <span key={tranche.id} className="ledger-tranche">
+                      {`${tranche.pieces} kept for ${formatMesos(tranche.amount ?? 0, true)}`}
+                      <button
+                        type="button"
+                        className="link ledger-drop-sale"
+                        disabled={busy}
+                        onClick={() => void write(onRemoveKeep(tranche.id), null)}
+                        aria-label={`Remove ${tranche.pieces} coupons ${row.name} kept`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
                 </span>
-              ))}
-            </span>
-          )}
-          {row.pieces > 0 && (
-            <form
-              className="ledger-sale"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (keeps)
-                  void write(onKeepPieces(row.holder, row.pieces, keeps), () => setKept(""));
-              }}
-            >
-              <label className="loot-share-input">
-                {`${row.name} keeps ${row.pieces} for`}
-                <input
-                  className="split-input"
-                  value={kept}
-                  onChange={(e) => setKept(e.target.value)}
-                  placeholder="400m"
-                  inputMode="decimal"
-                  aria-label={`What ${row.name} pays to keep the ${row.pieces} coupons of yours`}
-                />
-              </label>
-              <button type="submit" className="party-save" disabled={busy || keeps === null}>
-                Add
-              </button>
-            </form>
-          )}
-          {myNights.length > 0 && (
-            <>
-              <span className="ledger-step">I am holding</span>
-              <PieceNights drops={myNights} bossByKey={bossByKey} partyById={partyById} />
-            </>
-          )}
+              )}
+              {row.pieces > 0 && (
+                <form
+                  className="ledger-sale"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    if (keeps)
+                      void write(onKeepPieces(row.holder, row.pieces, keeps), () => setKept(""));
+                  }}
+                >
+                  <label className="loot-share-input">
+                    {`${row.name} keeps ${row.pieces} for`}
+                    <input
+                      className="split-input"
+                      value={kept}
+                      onChange={(e) => setKept(e.target.value)}
+                      placeholder="400m"
+                      inputMode="decimal"
+                      aria-label={`What ${row.name} pays to keep the ${row.pieces} coupons of yours`}
+                    />
+                  </label>
+                  <button type="submit" className="party-save" disabled={busy || keeps === null}>
+                    Add
+                  </button>
+                </form>
+              )}
+              {myNights.length > 0 && (
+                <>
+                  <span className="ledger-step">I am holding</span>
+                  <PieceNights drops={myNights} bossByKey={bossByKey} partyById={partyById} />
+                </>
+              )}
 
-          {/* Only the nights the closing act will NOT close. The ones it will are the rows directly
+              {/* Only the nights the closing act will NOT close. The ones it will are the rows directly
               above, so counting them back read as a second fact and matched nothing else on the
               card: 22 was eleven rows in each pile, and no screen in this app has 22 of anything
               else.
@@ -1004,10 +1025,12 @@ function SettlementCard({
               A night owing a third person cannot be closed for one of them, so it stays open and is
               said. Silence there would be the count quietly going short. It stays with the lists it
               is about rather than following the button down to `closing actions`. */}
-          {pair.shared > 0 && (
-            <span className="ledger-progress">
-              {`${pair.shared} shared with others, not closed here`}
-            </span>
+              {pair.shared > 0 && (
+                <span className="ledger-progress">
+                  {`${pair.shared} shared with others, not closed here`}
+                </span>
+              )}
+            </>
           )}
         </div>
       )}
@@ -1324,7 +1347,10 @@ function PieceNights({
           const party = partyById.get(drop.partyId);
           return (
             <li key={`${drop.lootId}:${drop.pieces}`} className="ledger-drop">
-              <div className="ledger-drop-head">
+              {/* One line. The parts are a boss, a looter, a week and a count, and wrapped they
+                  came out two rows tall each, so a pile of nights stopped being scannable. Same
+                  treatment, same reason, as the history entries. */}
+              <div className="ledger-drop-head is-oneline">
                 <Link href={partyHrefById(drop.partyId, partyById)} className="loot-name">
                   {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
                 </Link>
