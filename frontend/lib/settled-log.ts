@@ -15,6 +15,7 @@
 // were people bending down, and closing the books with Bro says nothing about Jared, so a night
 // settled with both is TWO records. Folding them would name one person and quietly drop the other.
 
+import { settledForYou } from "./drop-log";
 import type { DropEntry } from "./drop-log";
 import type { Currency } from "./money";
 import { NO_COUPON_MONEY, holderKey } from "./vestige-ledger";
@@ -116,7 +117,11 @@ export function buildSettledLog(
     // its status stays PENDING for ever. Reading the status here would file every coupon night the
     // account has ever had as unfinished.
     if (entry.pieces) continue;
-    if (entry.status !== "PAID_OUT" && entry.status !== "TAKEN") continue;
+    // Settled HERE, which is not the same as the party being square. Reading PAID_OUT held a drop
+    // open on an unpaid share between two other people: they settle that between themselves and
+    // nothing about it reaches this account, so the only ways out were to wait for ever or to tick
+    // a box asserting something nobody here can see. See settledForYou.
+    if (!settledForYou(entry)) continue;
 
     const taken = entry.status === "TAKEN";
     out.push({

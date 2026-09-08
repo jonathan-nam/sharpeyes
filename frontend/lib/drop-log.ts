@@ -19,17 +19,13 @@
 import { formatWeekStart } from "./boss-clears";
 import { saleMoney, splitOf, statusLabel } from "./loot";
 import type { Currency } from "./money";
+import { isMine } from "./wallet";
 import type { CouponsOutstanding } from "./loot";
 import { closureKeyOf, couponGapOf, ranSeats, yourShare } from "./vestige-ledger";
 import { canTrade, isPerMember } from "./world";
 import type { BossDrop, DropTables } from "@/types/drop";
 import type { Loot, PartyLootPool } from "@/types/loot";
 import type { Party, PartyMember } from "@/types/party";
-
-/** A seat is yours when it links to your roster. Same test the wallet uses. */
-function isMine(member: PartyMember): boolean {
-  return member.characterId !== null;
-}
 
 /** The catalog row behind a logged drop, or null for free text or a boss with no table. */
 function catalogDrop(loot: Loot, dropTables: DropTables): BossDrop | null {
@@ -214,6 +210,19 @@ export type DropEntry = {
   yourTake: number | null;
   /** True when it sold but the split names a seat that has left, so no figure can be shown. */
   unreadable: boolean;
+  /**
+   * Unpaid shares this account could act on: it sold the drop, or it is the one owed.
+   *
+   * What decides whether the drop is finished HERE. See settledForYou.
+   */
+  unpaidYours: number;
+  /**
+   * Unpaid shares between two OTHER people, which this account can neither settle nor verify.
+   *
+   * Carried rather than dropped so a screen can say so if it ever needs to. Nothing gates on it,
+   * deliberately: gating on it is the bug settledForYou exists to fix.
+   */
+  unpaidOthers: number;
 };
 
 /** How the log is broken up. A view choice: the totals above it are the same either way. */
@@ -374,6 +383,20 @@ export function buildDropLog(
       const priced = saleMoney(loot);
       const unreadable = sold && split === null;
 
+      // Unpaid shares, split by whether this account could do anything about one.
+      //
+      // A share is yours when it crosses your hands: you sold it, so it is money leaving them, or
+      // you are the one owed. A share between two OTHER people is real and is neither yours to
+      // settle nor yours to SEE: they pay each other directly and nothing about it reaches this
+      // account. The same test as betweenOthers in lib/wallet.ts, asked for a different reason.
+      const seatMine = (id: string | null) => {
+        const seat = id === null ? undefined : party.seats.find((m) => m.id === id);
+        return seat !== undefined && isMine(seat);
+      };
+      const sellerMine = seatMine(loot.sellerMemberId);
+      const unpaid = loot.payouts.filter((payout) => !payout.paid);
+      const unpaidYours = unpaid.filter((payout) => sellerMine || seatMine(payout.memberId)).length;
+
       // Only a PIECE drop divides by count. Everything else is one thing that sells for one price
       // and divides as money, and a third of an item is not a number to put on a row.
       const pieces = isPieceDrop(loot, party, dropTables);
@@ -418,6 +441,8 @@ export function buildDropLog(
         // and resolving it through this week's roster would lose the name the week after they left.
         takenByName: party.seats.find((s) => s.id === loot.takenByMemberId)?.name ?? null,
         ranWith: ranWith(loot, party),
+        unpaidYours,
+        unpaidOthers: unpaid.length - unpaidYours,
         sellerName: split?.seller.name ?? null,
         pooled: split?.split.sellerReceives ?? null,
         yourTake: split ? takeFor(loot, party.seats) : null,
@@ -442,6 +467,24 @@ export function buildDropLog(
  * "not sold" says nothing about it. What is left to do is `owedToYou`, and a party that divided
  * evenly leaves it at zero.
  */
+/**
+ * Whether this drop is finished as far as THIS account can tell.
+ *
+ * NOT the same question as the party being square, and deliberately not. The server's PAID_OUT
+ * wants every payout ticked, including ones between two other people: Scanian pays Daphynn
+ * directly and nothing about that reaches here, so waiting on it is waiting for a fact nobody on
+ * this account can observe, and ticking it to move the drop along would be recording a guess.
+ * Prefer refusing over guessing means the drop has to be able to finish without one.
+ *
+ * So: every share this account could move has moved. What the party still owes between its other
+ * members stays true, stays on the party's own row, and stops holding this account's books open.
+ */
+export function settledForYou(entry: DropEntry): boolean {
+  if (entry.pieces) return false;
+  if (entry.status === "TAKEN") return true;
+  return entry.soldAt !== null && entry.unpaidYours === 0;
+}
+
 export function isOutstanding(entry: DropEntry): boolean {
   // A piece drop is never counted here, whoever is holding it. It is said in COUPONS instead, by the
   // party row's own figure, and counting it both ways read as two things to do: one coupon drop
@@ -502,6 +545,10 @@ export function dropStatusLabel(entry: DropEntry): string {
     if (entry.owedByYou > 0) return "To hand over";
     return "Yours";
   }
+  // "Settled" the moment nothing here is yours to move, which is what this account can answer for.
+  // Off statusLabel's own word for it rather than a second spelling: two words for one state is how
+  // two screens come to disagree about whether a drop is done.
+  if (settledForYou(entry) && entry.status === "SOLD") return statusLabel("PAID_OUT");
   return statusLabel(entry.status);
 }
 

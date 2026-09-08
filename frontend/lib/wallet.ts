@@ -16,8 +16,14 @@ import type { Currency } from "./money";
 import type { PartyLootPool } from "@/types/loot";
 import type { Party, PartyMember } from "@/types/party";
 
-/** A seat is yours when it links to your roster. The config's own character always is. */
-function isMine(member: PartyMember): boolean {
+/**
+ * A seat is yours when it links to your roster. The config's own character always is.
+ *
+ * Exported because the Drop Log asks the same question for a different purpose: which unpaid shares
+ * this account could do anything about. Two spellings of "mine" would drift, and the two screens
+ * would disagree about whose debt a row is.
+ */
+export function isMine(member: PartyMember): boolean {
   return member.characterId !== null;
 }
 

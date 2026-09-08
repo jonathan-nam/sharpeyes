@@ -169,11 +169,64 @@ describe("what the Settled View records", () => {
     expect([rows[0]!.sale?.amount, rows[0]!.sale?.basis]).toEqual([10_000 * M, "RECEIVED"]);
   });
 
-  it("leaves out a drop still in the pool, and one sold but not paid out", () => {
-    const rows = buildSettledLog(
-      logOf([drop({ id: "l1", status: "PENDING" }), drop({ id: "l2", status: "SOLD" })]),
-    );
+  it("leaves out a drop still in the pool, and one sold whose share YOU still owe", () => {
+    // The unpaid payout is the point of the second one. It used to carry a bare status of SOLD with
+    // its only payout already ticked, which the server cannot produce (it derives the status from
+    // the payouts) and which now reads as settled, correctly.
+    const owing = drop({
+      id: "l2",
+      status: "SOLD",
+      payouts: [{ memberId: "m2", paid: false, paidAt: null, shares: 1 }],
+    });
+    // PENDING means UNSOLD, so the row has to say so in full: a bare status override left a soldAt
+    // and a paid payout on it, which the server cannot produce either.
+    const pending = drop({
+      id: "l1",
+      status: "PENDING",
+      soldAt: null,
+      saleAmount: null,
+      amountBasis: null,
+      splitMethod: null,
+      sellerMemberId: null,
+      payouts: [],
+    });
+    const rows = buildSettledLog(logOf([pending, owing]));
     expect(rows).toEqual([]);
+  });
+
+  it("records a drop whose only unpaid share is between two OTHER people", () => {
+    // The case this rule exists for. Somebody else sold it, you have been paid, and the share still
+    // open is theirs to settle with a third person: they do it directly and nothing about it
+    // reaches this account. Waiting on it means waiting for a fact nobody here can observe, and
+    // ticking it to move the drop along would be recording a guess. See settledForYou.
+    const seats = [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton"), theirs("m3", "Jared")];
+    const theirSale = drop({
+      status: "SOLD",
+      sellerMemberId: "m2",
+      ranThatWeek: ["m1", "m2", "m3"],
+      payouts: [
+        { memberId: "m1", paid: true, paidAt: "2026-08-07T11:00:00Z", shares: 1 },
+        { memberId: "m3", paid: false, paidAt: null, shares: 1 },
+      ],
+    });
+    const rows = buildSettledLog(logOf([theirSale], [], { members: seats, seats }));
+    expect(rows.map((r) => r.name)).toEqual(["Grindstone of Faith"]);
+  });
+
+  it("still holds a drop open where the unpaid share is one YOU are owed", () => {
+    // The mirror, and the reason this is not just "settled once you stop caring": a share running
+    // towards you is one you can see arrive, so it goes on holding the drop open.
+    const seats = [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton"), theirs("m3", "Jared")];
+    const theirSale = drop({
+      status: "SOLD",
+      sellerMemberId: "m2",
+      ranThatWeek: ["m1", "m2", "m3"],
+      payouts: [
+        { memberId: "m1", paid: false, paidAt: null, shares: 1 },
+        { memberId: "m3", paid: true, paidAt: "2026-08-07T11:00:00Z", shares: 1 },
+      ],
+    });
+    expect(buildSettledLog(logOf([theirSale], [], { members: seats, seats }))).toEqual([]);
   });
 
   it("records a drop that was taken, with no sale and no settlement date", () => {
