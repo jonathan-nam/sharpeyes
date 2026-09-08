@@ -7166,9 +7166,12 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 
 /* Below this the line runs out. Measured: two folds in, at 390px, a 15-digit figure and the date
    leave the name at nothing and still spill 6px past the card, so the row wraps instead. One line is
-   worth having where there is width for it, and never worth the figure sliding off the end. */
+   worth having where there is width for it, and never worth the figure sliding off the end.
+
+   Not a typed entry, which holds its line at every width: a note, a figure and the ×, with none of
+   the icon, date and second figure that run the line out here. */
 @media (max-width: 560px) {
-  .ledger-drop-head.is-oneline {
+  .ledger-drop-head.is-oneline:not(.is-typed) {
     flex-wrap: wrap;
   }
 }
@@ -7190,14 +7193,6 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 
 .ledger-drop-head .loot-name {
   text-decoration: none;
-}
-
-/* A typed note, which is the one name on a settlement card nobody chose the length of: 120
-   characters, and nothing says any of them is a space. Every other `.loot-name` is a drop or a boss
-   out of the catalog and breaks at its spaces, so only this one is allowed to break mid-word. */
-.ledger-drop-head .loot-name.is-note {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .ledger-drop-head .loot-name:hover {

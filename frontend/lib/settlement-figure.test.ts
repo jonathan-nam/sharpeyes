@@ -251,8 +251,10 @@ describe("what the card says a person owes", () => {
     // And below 560px the line runs out. Measured at 390px: a 15-digit figure and the date leave the
     // name at nothing and still spill 6px past the card, so the row wraps rather than lose the
     // figure off the end. One line is worth having where there is width for it, and no further.
+    // A typed entry is exempt: it carries none of the icon, date and second figure that run the
+    // line out, so it holds one line at every width. See ledger-pair.test.ts.
     expect(css).toMatch(
-      /@media \(max-width: 560px\) \{\s*\.ledger-drop-head\.is-oneline \{\s*flex-wrap: wrap;/,
+      /@media \(max-width: 560px\) \{\s*\.ledger-drop-head\.is-oneline:not\(\.is-typed\) \{\s*flex-wrap: wrap;/,
     );
   });
 

@@ -1478,13 +1478,14 @@ function EnteredRow({
 }) {
   return (
     <li className="ledger-drop">
-      <div className="ledger-drop-head">
+      {/* ONE LINE per entry. A note is up to 120 characters against half a card, and wrapped it
+          carried the figure and the × down and out past the card's edge. Truncated, the note is the
+          only part of the row that gives, and the title carries the whole of it. */}
+      <div className="ledger-drop-head is-oneline is-typed" title={entry.note ?? undefined}>
         {/* No empty toggle frame. It was kept to line this up with a folded row, but the folds are
             all under `offsets` and nothing in THIS list has one, so the frame indented the only row
             wearing it by 28px (18px of toggle and the head's 10px gap) past the parts above it. */}
-        {/* Its own class: this is the one name on the card nobody chose the length of. See
-            `.loot-name.is-note`. */}
-        <span className="loot-name is-note">{entry.note ?? "entered"}</span>
+        <span className="loot-name">{entry.note ?? "entered"}</span>
         <span className="ledger-amount">{signed(entry.amount)}</span>
         <ArmedRemove
           busy={busy}
