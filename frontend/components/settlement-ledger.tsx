@@ -244,6 +244,9 @@ function SettlementCard({
   // Whether the sales behind the money you are holding are open. Folded, like the offsets history:
   // the figure is what you act on and the rows are the check on it.
   const [showHeld, setShowHeld] = useState(false);
+  // Closed to start, the way the held sales above are. The step says the count, which is the fact
+  // this section is read for; WHICH nights it came off is the follow-up question.
+  const [showNights, setShowNights] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
 
   // What they are paying to keep the coupons of yours they hold. Above zero, matching the server: a
@@ -948,15 +951,62 @@ function SettlementCard({
             <>
               <div className="ledger-step-line">
                 <span className="ledger-step">{couponName ?? "Coupons"}</span>
+                {/* The same fold the held sales wear, on the row that carries the count. A pile of
+                    nights is a long list to leave open under a figure that already says what they
+                    come to. */}
+                <button
+                  type="button"
+                  className="party-row-toggle"
+                  aria-expanded={showNights}
+                  aria-controls={`nights-${row.key}`}
+                  onClick={() => setShowNights((open) => !open)}
+                >
+                  <span className="party-row-chevron" aria-hidden="true" />
+                  <span className="visually-hidden">
+                    {`${showNights ? "Hide" : "Show"} the ${plural(
+                      theirNights.length + myNights.length,
+                      "night",
+                    )} behind it`}
+                  </span>
+                </button>
                 <span className="ledger-amount">
                   {row.piecesNet > 0 ? `${row.piecesNet} to hand over` : `${-row.piecesNet} owed`}
                 </span>
               </div>
-              {theirNights.length > 0 && (
-                <>
-                  <span className="ledger-step">{`${row.name} is holding`}</span>
-                  <PieceNights drops={theirNights} bossByKey={bossByKey} partyById={partyById} />
-                </>
+              {showNights && (
+                <div id={`nights-${row.key}`}>
+                  {theirNights.length > 0 && (
+                    <>
+                      <span className="ledger-step">{`${row.name} is holding`}</span>
+                      <PieceNights
+                        drops={theirNights}
+                        bossByKey={bossByKey}
+                        partyById={partyById}
+                      />
+                    </>
+                  )}
+                  {myNights.length > 0 && (
+                    <>
+                      <span className="ledger-step">I am holding</span>
+                      <PieceNights drops={myNights} bossByKey={bossByKey} partyById={partyById} />
+                    </>
+                  )}
+
+                  {/* Only the nights the closing act will NOT close. The ones it will are the rows
+                      directly above, so counting them back read as a second fact and matched
+                      nothing else on the card: 22 was eleven rows in each pile, and no screen in
+                      this app has 22 of anything else.
+
+                      A night owing a third person cannot be closed for one of them, so it stays
+                      open and is said. Silence there would be the count quietly going short. It
+                      folds WITH the lists it is about, being a statement about which of them the
+                      button will reach. */}
+                  {pair.shared > 0 && (
+                    <span className="ledger-progress">
+                      {`${pair.shared} shared with others, not closed here`}
+                    </span>
+                  )}
+                </div>
               )}
 
               {/* The one thing the netting cannot decide for the two of you. Their coupons come off what
@@ -1009,26 +1059,6 @@ function SettlementCard({
                     Add
                   </button>
                 </form>
-              )}
-              {myNights.length > 0 && (
-                <>
-                  <span className="ledger-step">I am holding</span>
-                  <PieceNights drops={myNights} bossByKey={bossByKey} partyById={partyById} />
-                </>
-              )}
-
-              {/* Only the nights the closing act will NOT close. The ones it will are the rows directly
-              above, so counting them back read as a second fact and matched nothing else on the
-              card: 22 was eleven rows in each pile, and no screen in this app has 22 of anything
-              else.
-
-              A night owing a third person cannot be closed for one of them, so it stays open and is
-              said. Silence there would be the count quietly going short. It stays with the lists it
-              is about rather than following the button down to `closing actions`. */}
-              {pair.shared > 0 && (
-                <span className="ledger-progress">
-                  {`${pair.shared} shared with others, not closed here`}
-                </span>
               )}
             </>
           )}
