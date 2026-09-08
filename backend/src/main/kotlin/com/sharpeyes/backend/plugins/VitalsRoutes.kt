@@ -17,7 +17,10 @@ private val json = Json { ignoreUnknownKeys = true }
 // Web-vitals names we accept, plus our own app-level mark. The endpoint is
 // unauthenticated, so the log line must be built only from values we recognise: an
 // unrecognised name is dropped rather than echoed into the log.
-private val ALLOWED_NAMES = setOf("LCP", "FCP", "CLS", "INP", "TTFB", "FID", "inventory-ready")
+// "data-ready" is ours, sent by lib/rum.ts, and carries a route like the rest so one name covers
+// every page. Held in step with the frontend by frontend/lib/rum-names.test.ts, because the name it
+// replaced sat here thresholded for months with nothing sending it, and dropping is silent.
+private val ALLOWED_NAMES = setOf("LCP", "FCP", "CLS", "INP", "TTFB", "FID", "data-ready")
 
 // Google's web-vitals "poor" cutoffs (ms, except CLS which is unitless), plus our own
 // mark. A real user over these gets a louder level, mirroring Timing.kt's SLOW: a slow
@@ -28,7 +31,10 @@ private const val INP_POOR_MS = 500.0
 private const val TTFB_POOR_MS = 1800.0
 private const val CLS_POOR = 0.25
 private const val FID_POOR_MS = 300.0
-private const val INVENTORY_READY_POOR_MS = 3000.0
+
+// LCP's good/needs-improvement boundary, not its 4000ms POOR bar: the 2.8s load this mark was
+// added for would have cleared 4000 and told us the page was fine.
+private const val DATA_READY_POOR_MS = 2500.0
 
 private val POOR =
     mapOf(
@@ -38,7 +44,7 @@ private val POOR =
         "TTFB" to TTFB_POOR_MS,
         "CLS" to CLS_POOR,
         "FID" to FID_POOR_MS,
-        "inventory-ready" to INVENTORY_READY_POOR_MS,
+        "data-ready" to DATA_READY_POOR_MS,
     )
 
 // Below this, keep decimals (CLS is a small fraction); at or above, a whole millisecond.

@@ -12,6 +12,7 @@ import { apiFetch } from "@/lib/api";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { type CrossedReset, WEEKLY_CADENCE } from "@/lib/reset-countdown";
 import { peek, put, storedAt } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
 
@@ -147,6 +148,7 @@ export default function BossesPage() {
         put(BOSSES_KEY, bossResult);
         put(CHARACTERS_KEY, characterResult);
         setState("loaded");
+        reportDataReady();
       })
       // Only show the error state if we have nothing at all: a failed refresh behind data we
       // already have should not blank the page.

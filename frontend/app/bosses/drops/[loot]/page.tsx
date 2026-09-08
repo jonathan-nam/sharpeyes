@@ -9,6 +9,7 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { peek, put } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import { buildDropAudit } from "@/lib/drop-audit";
 import { buildDropLog, isUntradeablePiece } from "@/lib/drop-log";
 import { closedByHolder, foldSeats } from "@/lib/vestige-ledger";
@@ -94,6 +95,7 @@ export default function DropAuditPage() {
           put(BOSSES_KEY, bossResult);
           put(DROPS_KEY, dropResult);
           setState("loaded");
+          reportDataReady();
         },
       )
       .catch(() => setState("error"));
