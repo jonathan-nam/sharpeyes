@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   bandCount,
+  bandFill,
   cadenceLabel,
   cellState,
   cellStateLabel,
@@ -385,6 +386,26 @@ describe("bandCount", () => {
 
   it("says an empty band in words, having no column head to read a glyph against", () => {
     expect(bandCount({ cleared: 0, total: 0 })).toBe("none to run");
+  });
+});
+
+describe("bandFill", () => {
+  it("is the fraction, said as a width", () => {
+    expect(bandFill({ cleared: 6, total: 12 }).width).toBe("50%");
+    expect(bandFill({ cleared: 17, total: 17 }).width).toBe("100%");
+  });
+
+  // The floor under it is 12px, which on the 198px track a band gets reads as about 6%. Anything
+  // that took the floor at zero would draw that 6% for a band with no clears in it, contradicting
+  // the count on the line above.
+  it("refuses the floor to a band with nothing cleared", () => {
+    expect(bandFill({ cleared: 0, total: 49 })).toEqual({ width: "0%", nonzero: false });
+    expect(bandFill({ cleared: 1, total: 49 }).nonzero).toBe(true);
+  });
+
+  it("draws nothing where there is nothing to run, rather than dividing by it", () => {
+    expect(bandFill({ cleared: 0, total: 0 })).toEqual({ width: "0%", nonzero: false });
+    expect(bandFill({ cleared: 12, total: null })).toEqual({ width: "0%", nonzero: false });
   });
 });
 

@@ -224,6 +224,18 @@ export function bandCount(p: ClearProgress): string {
 }
 
 /**
+ * The band bar's fill: how wide, and whether it may take the floor that stops a small one drawing
+ * as a dot (see .boss-progress-bar in globals.css).
+ *
+ * Nothing cleared never may. A floor on zero would paint a bar for a band with no clears in it,
+ * which is the count's own figure contradicted by the picture beside it.
+ */
+export function bandFill(p: ClearProgress): { width: string; nonzero: boolean } {
+  if (!p.total) return { width: "0%", nonzero: false };
+  return { width: `${(p.cleared / p.total) * 100}%`, nonzero: p.cleared > 0 };
+}
+
+/**
  * The same answer for a cell, where the row already says "cleared".
  *
  * A character with nothing to run gets the matrix's own "doesn't run" glyph rather than 0/0, which

@@ -1,6 +1,6 @@
 "use client";
 
-import { type BossBand, bandCount, cadenceLabel, progressLabel } from "@/lib/boss-clears";
+import { type BossBand, bandCount, bandFill, cadenceLabel, progressLabel } from "@/lib/boss-clears";
 
 // The totals read the other way up from the table. The table follows the planner, which puts the
 // rarest reset first; the totals are read at a glance, and the glance is nearly always at the week.
@@ -22,28 +22,37 @@ export function BossBands({ bands, loading }: { bands: BossBand[]; loading?: boo
     <span className="boss-band-totals">
       {[...bands]
         .sort((a, b) => TOTALS_ORDER.indexOf(a.cadence) - TOTALS_ORDER.indexOf(b.cadence))
-        .map(({ cadence, progress }) => (
-          <span key={cadence} className="boss-band-row">
-            <span className="boss-band-name">{cadenceLabel(cadence)}</span>
-            {/* The bar is a picture of the figure and the figure has dropped the word, so the
-                words go here for a reader with neither. */}
-            {!loading && <span className="visually-hidden">{progressLabel(progress)}</span>}
-            <span className="boss-band-count" aria-hidden="true">
-              {loading ? <span className="skeleton sk-line" /> : bandCount(progress)}
-            </span>
-            {/* Never the bar alone. It is a second reading of the figure beside it, so a band with
-                nothing to run keeps the space and draws no track: an empty track is a bar reading
-                zero. The figures are withheld while loading for the same reason, the skeleton's
-                rows being invented (see SKELETON_BOSSES). */}
-            {!loading && progress.total ? (
-              <span className="boss-progress-bar" aria-hidden="true">
-                <span style={{ width: `${(progress.cleared / progress.total) * 100}%` }} />
+        .map(({ cadence, progress }) => {
+          const fill = bandFill(progress);
+          return (
+            <span key={cadence} className="boss-band-row">
+              <span className="boss-band-name">{cadenceLabel(cadence)}</span>
+              {/* The bar is a picture of the figure and the figure has dropped the word, so the
+                  words go here for a reader with neither. */}
+              {!loading && <span className="visually-hidden">{progressLabel(progress)}</span>}
+              <span className="boss-band-count" aria-hidden="true">
+                {loading ? <span className="skeleton sk-line" /> : bandCount(progress)}
               </span>
-            ) : (
-              <span aria-hidden="true" />
-            )}
-          </span>
-        ))}
+              {/* Never the bar alone. It is a second reading of the figure beside it, so a band
+                  with nothing to run keeps the space and draws no track: an empty track is a bar
+                  reading zero. The figures are withheld while loading for the same reason, the
+                  skeleton's rows being invented (see SKELETON_BOSSES).
+
+                  The floor rides on a class rather than on the width, so a band with nothing
+                  cleared cannot pick it up. See bandFill. */}
+              {!loading && progress.total ? (
+                <span className="boss-progress-bar" aria-hidden="true">
+                  <span
+                    className={fill.nonzero ? "is-nonzero" : undefined}
+                    style={{ width: fill.width }}
+                  />
+                </span>
+              ) : (
+                <span aria-hidden="true" />
+              )}
+            </span>
+          );
+        })}
     </span>
   );
 }

@@ -34,3 +34,32 @@ describe("the band figures in the corner cell", () => {
     expect(Number((found as RegExpMatchArray)[1])).toBeGreaterThan(BASE_CELL_PADDING);
   });
 });
+
+/**
+ * A 1/49 band drew as a lone dot: the fill came out 4px wide on a 198px track, and at 6px tall with
+ * a 4px radius that is a circle, sitting on a track of --surface-2 that is 15/255 off the page
+ * behind it. Two things fixed it and neither shows up in a test that does not look at the CSS.
+ */
+describe("a band bar with very little in it", () => {
+  it("draws its track as a rule that can be seen, not as a field", () => {
+    // --surface-2 is the app's filled-block colour, which is what it was and what made the track
+    // disappear. Any of the --line tokens is a rule; this only refuses the field.
+    expect(rule(".boss-progress-bar")).not.toMatch(/background:\s*var\(--surface-2\)/);
+  });
+
+  it("floors the fill past its own height, so a small one is not a circle", () => {
+    const found = rule(".boss-progress-bar > span.is-nonzero").match(/min-width:\s*(\d+)px/);
+    expect(found, "the fill has no floor, so one clear in fifty draws as a dot").not.toBeNull();
+    const height = rule(".boss-progress-bar").match(/height:\s*(\d+)px/);
+    expect(Number((found as RegExpMatchArray)[1])).toBeGreaterThan(
+      Number((height as RegExpMatchArray)[1]),
+    );
+  });
+
+  // The floor overstates the fill, so it may only ever reach a fill that is already non-zero. On
+  // `> span` it would paint 6% of the track for a band with no clears at all; bandFill is the other
+  // half of this pair.
+  it("keeps the floor off every fill but the non-zero one", () => {
+    expect(rule(".boss-progress-bar > span")).not.toMatch(/min-width/);
+  });
+});
