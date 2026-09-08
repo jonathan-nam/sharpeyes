@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ApiError, apiFetch } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import { type PersonDraft, toDraft, unclaimed } from "@/lib/people-board";
 import { spriteByName } from "@/lib/sprite-by-name";
 import type { Character } from "@/types/character";
@@ -69,6 +70,7 @@ export default function PeoplePage() {
         put(PARTIES_KEY, partyResult);
         put(CHARACTERS_KEY, characterResult);
         setState("loaded");
+        reportDataReady();
       })
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
     // eslint-disable-next-line react-hooks/exhaustive-deps

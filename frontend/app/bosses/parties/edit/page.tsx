@@ -9,6 +9,7 @@ import { CharacterPicker } from "@/components/character-picker";
 import { PartyConfigEditor } from "@/components/party-config-editor";
 import { ApiError, apiFetch } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { spriteByName } from "@/lib/sprite-by-name";
 import { useRowWrites } from "@/lib/use-row-writes";
@@ -88,6 +89,7 @@ export default function EditPartiesPage() {
         // Open on the first character rather than on a prompt to choose one.
         setSelected((current) => current ?? characterResult[0]?.id ?? null);
         setState("loaded");
+        reportDataReady();
       })
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
     // eslint-disable-next-line react-hooks/exhaustive-deps

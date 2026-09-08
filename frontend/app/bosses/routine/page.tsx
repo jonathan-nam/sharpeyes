@@ -10,6 +10,7 @@ import { CharacterPicker } from "@/components/character-picker";
 import { ApiError, apiFetch } from "@/lib/api";
 import { nextSkips } from "@/lib/boss-clears";
 import { peek, put } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import { partiedBossKeys } from "@/lib/parties";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { useRowWrites } from "@/lib/use-row-writes";
@@ -89,6 +90,7 @@ export default function BossRoutinePage() {
         // Open on the first character rather than on a prompt to choose one, like Edit parties.
         setSelected((current) => current ?? characterResult[0]?.id ?? null);
         setState("loaded");
+        reportDataReady();
       })
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
     // eslint-disable-next-line react-hooks/exhaustive-deps

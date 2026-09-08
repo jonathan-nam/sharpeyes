@@ -4,11 +4,11 @@ import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import { OtherWorld } from "@/components/other-world";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { InventoryPanel, type InventoryItem } from "@/components/inventory-panel";
 import { CharactersSkeleton } from "@/components/loading-skeleton";
 import { apiFetch } from "@/lib/api";
-import { reportVital } from "@/lib/rum";
+import { reportDataReady } from "@/lib/rum";
 import { invalidate, peek, put } from "@/lib/cache";
 import { STARTING_COUNT, addableItems } from "@/lib/add-item";
 import {
@@ -35,19 +35,6 @@ const CATALOG_KEY = "/api/tokens/catalog";
 
 export default function CharactersPage() {
   const { getToken, isLoaded } = useAuth();
-
-  // The app-level "initial load" number: how long from arriving on this page to the
-  // inventory actually being on screen. Web vitals measure the document (LCP, TTFB);
-  // this measures the fetch-to-paint gap that is ours to control. Reported once per
-  // visit, whether the page was hard-loaded or navigated to from the landing page.
-  const arrivedAt = useRef(0);
-  const reportedReady = useRef(false);
-
-  // Stamp the arrival time in an effect, not during render (performance.now() is impure).
-  // Declared before the report effect below, so it always runs first on the same commit.
-  useEffect(() => {
-    arrivedAt.current = performance.now();
-  }, []);
 
   // Seed from cache so a repeat visit paints immediately instead of flashing a
   // loading state while it re-fetches data it already had. The fetch below still
@@ -124,6 +111,7 @@ export default function CharactersPage() {
           put(CATALOG_KEY, catalogResult);
         }
         setState("loaded");
+        reportDataReady();
       })
       // Only show the error state if we have nothing at all. A failed refresh
       // behind data we already have should not blank the page.

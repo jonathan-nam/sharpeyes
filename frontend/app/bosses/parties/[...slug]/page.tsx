@@ -13,6 +13,7 @@ import { preloadBossArt } from "@/lib/preload-boss-art";
 import { useRowWrites } from "@/lib/use-row-writes";
 import { ApiError, SAVED_BUT_STALE, StaleAfterWrite, apiFetch, readBack } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import {
   buildDropLog,
   couponsOutstandingByParty,
@@ -131,6 +132,7 @@ export default function PartyPage() {
             put(POOLS_KEY, poolResult);
           }
           setState("loaded");
+          reportDataReady();
         },
       )
       .catch(() => setState("error"));

@@ -51,6 +51,24 @@ const nextConfig: NextConfig = {
     return [{ source: "/preview-api/:path*", destination: `${previewApi}/:path*` }];
   },
 
+  // The two brand faces are 468kb together, and Next serves everything in public/ as
+  // `max-age=0, must-revalidate`, so a fresh browser session spends a conditional round trip on
+  // each before any text can be drawn in the right font. The hashed bundles beside them already
+  // get a year and `immutable`; these had nothing.
+  //
+  // Their names carry no content hash, so this cache is only safe while the bytes behind a name
+  // never change: REPLACE A FACE UNDER A NEW FILENAME, updating the @font-face src in globals.css,
+  // rather than overwriting it in place. Overwriting serves the old face for up to a year, which is
+  // the same trap NEXT_PUBLIC_ASSET_VERSION exists to keep off the icons.
+  async headers() {
+    return [
+      {
+        source: "/fonts/:file*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
+  },
+
   // The section moved from /characters to /inventory. Keep old bookmarks and in-flight
   // sessions working with a permanent redirect. The API routes (/api/characters) are the
   // data resource and are unaffected.

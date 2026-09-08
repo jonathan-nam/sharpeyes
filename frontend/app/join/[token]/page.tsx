@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { PageSwap } from "@/components/page-swap";
 import { SignInButton } from "@/components/sign-in-button";
 import { ApiError, apiFetch } from "@/lib/api";
+import { reportDataReady } from "@/lib/rum";
 import {
   invitedSummary,
   joinCallbackPath,
@@ -55,6 +56,7 @@ export default function JoinPage() {
         setPreview(result);
         setMine(result.characters);
         setState("loaded");
+        reportDataReady();
       })
       // Unknown, expired and already used are one answer from the backend on purpose, so they are
       // one answer here too.

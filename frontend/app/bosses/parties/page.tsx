@@ -24,6 +24,7 @@ import { SharedParties } from "@/components/shared-parties";
 import { yourClear } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { peek, put, storedAt } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import { buildDropLog, couponsOutstandingByParty, pieceStatusByParty } from "@/lib/drop-log";
 import { dropsInWeek, NOTHING_OUTSTANDING } from "@/lib/loot";
 import { closedByHolder, outstanding, runningBalance, stillOpen } from "@/lib/vestige-ledger";
@@ -320,6 +321,7 @@ export default function PartiesPage() {
             put(SEATED_KEY, seatedResult);
           }
           setState("loaded");
+          reportDataReady();
         },
       )
       // Only blank the page if there is nothing to show: a failed refresh behind data we already

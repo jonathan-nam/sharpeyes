@@ -28,13 +28,24 @@ export type Metric = {
   id?: string;
 };
 
+// Where the current navigation started, and whether it was a client-side one. Zero is the
+// document's own navigation start, which is what performance.now() already counts from.
+let navStartedAt = 0;
+let softNav = false;
+let reportedDataReady = false;
+
 // The coarse, anonymous context every report carries. Read fresh per report: connection
 // and route can both change during a session. Shared with report-error.ts, which reports
 // the same load from the same browser and would otherwise describe it differently.
-export function reportContext() {
-  const nav = (
-    performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined
-  )?.type;
+export function reportContext(navOverride?: string) {
+  // The document's own navigation type, which is what a core web vital measures however many
+  // client-side navs happened since. Only a caller that is timing the nav itself overrides this:
+  // useReportWebVitals re-delivers buffered LCP and TTFB on every route change, so labelling them
+  // all "soft" would claim the document's numbers belonged to the last click.
+  const nav =
+    navOverride ??
+    (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)
+      ?.type;
   // Non-standard but widely shipped; absent on Safari/Firefox, hence optional.
   const conn = (navigator as { connection?: { effectiveType?: string } }).connection?.effectiveType;
   const device = window.matchMedia("(max-width: 768px)").matches ? "mobile" : "desktop";
@@ -47,7 +58,58 @@ export function reportContext() {
   return { nav, conn, device, tz, lang: navigator.language, v: ASSET_VERSION };
 }
 
-export function reportVital(metric: Metric): void {
+/** The backend allows this name explicitly (VitalsRoutes.kt), so the two have to agree. */
+const DATA_READY = "data-ready";
+
+/**
+ * The path the document was opened on, read once at module load.
+ *
+ * Which is what makes the guard below survive StrictMode: it double-invokes mount effects, so a
+ * ref counting mounts reports the landed-on page as a navigation to itself and measures it from the
+ * remount instead of from navigation start. A URL cannot be double-invoked.
+ */
+const landedPath = typeof location === "undefined" ? null : location.pathname;
+
+/**
+ * A client-side route change: a new page, and a new zero to measure it from.
+ *
+ * Without this the mark could only be trusted on the page that was landed on, because a page
+ * reached by a nav would be timed from the document's navigation start and so report the whole
+ * session. Most loads here are client-side navs, which would leave the metric technically present
+ * and practically empty, the state it was already in.
+ */
+export function markSoftNavigation(path: string): void {
+  if (typeof performance === "undefined") return;
+  // The first commit names the page we landed on, which is already zeroed at navigation start.
+  // Only skipped while that is still the current navigation, so coming BACK to it later counts.
+  if (!softNav && path === landedPath) return;
+  navStartedAt = performance.now();
+  softNav = true;
+  reportedDataReady = false;
+}
+
+/**
+ * The moment the numbers on screen are real.
+ *
+ * Every web vital scored a /bosses/drops load "good" (LCP 685ms) while its sixteen API calls did
+ * not finish for about 2.8s, because LCP times the skeleton painting and stops there. So the wait
+ * users actually complain about was the one thing nothing measured.
+ *
+ * Once per navigation. A page refetches on write and this must not report that as a fresh load.
+ */
+export function reportDataReady(): void {
+  if (reportedDataReady || typeof performance === "undefined") return;
+  reportedDataReady = true;
+  // No rating: the bar lives in the backend's POOR table so there is one place to move it.
+  // The two kinds of load must not pool, so a soft one says so: a hard load carries the document
+  // and the JS, a soft one is the data fan-out alone.
+  reportVital(
+    { name: DATA_READY, value: performance.now() - navStartedAt },
+    softNav ? "soft" : undefined,
+  );
+}
+
+export function reportVital(metric: Metric, navOverride?: string): void {
   const route = typeof location !== "undefined" ? location.pathname : undefined;
 
   // Mirror into the dev console + window.__perf() buffer, on the same gate as every
@@ -57,7 +119,7 @@ export function reportVital(metric: Metric): void {
 
   if (!sampledIn) return;
 
-  beacon("/api/vitals", { ...metric, route, ...reportContext() });
+  beacon("/api/vitals", { ...metric, route, ...reportContext(navOverride) });
 }
 
 /**

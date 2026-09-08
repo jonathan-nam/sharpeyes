@@ -26,6 +26,7 @@ import {
 } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { peek, put } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import {
   type OffsetShare,
   buildSettlement,
@@ -239,6 +240,7 @@ export default function DropLogPage() {
         put(DROPS_KEY, dropResult);
         put(CHARACTERS_KEY, characterResult);
         setState("loaded");
+        reportDataReady();
       })
       // The pools are never cached, so there is nothing to fall back to.
       .catch(() => setState("error"));

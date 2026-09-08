@@ -36,6 +36,7 @@ import {
   tradeOffs,
 } from "@/lib/boss-run-plan";
 import { peek, put } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
 import { runningThisPeriod } from "@/lib/parties";
 import { closedByHolder, outstanding, runningBalance, stillOpen } from "@/lib/vestige-ledger";
 import { shareConfig } from "@/lib/vestige-stacks";
@@ -315,6 +316,7 @@ export default function RunOrderPage() {
           put(SETTLEMENTS_KEY, nextSettlements);
         }
         setState("loaded");
+        reportDataReady();
       })
       .catch(() => {
         // Signed out lands here too, and that is not a failure: it is the standalone tool. The
