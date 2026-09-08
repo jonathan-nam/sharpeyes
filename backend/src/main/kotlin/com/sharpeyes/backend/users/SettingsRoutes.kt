@@ -2,6 +2,7 @@ package com.sharpeyes.backend.users
 
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Users
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.sprites.spriteProxyPath
 import io.ktor.http.HttpStatusCode
@@ -19,7 +20,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.uuid.Uuid
 
@@ -70,7 +70,7 @@ fun Route.settingsRoutes() {
 private suspend fun RoutingContext.getSettings() {
     val (userId, email) = call.principalIdAndEmail()
     val settings =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             settingsFor(userId)
         }
@@ -122,7 +122,7 @@ private suspend fun RoutingContext.saveSettings() {
     }
 
     val settings =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             setActiveWorld(userId, worldType)
             settingsFor(userId)
@@ -142,9 +142,9 @@ private suspend fun RoutingContext.saveMainCharacter() {
     }
 
     val settings =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
-            if (!setMainCharacter(userId, characterId)) return@transaction null
+            if (!setMainCharacter(userId, characterId)) return@dbQuery null
             settingsFor(userId)
         }
 

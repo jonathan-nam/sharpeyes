@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.bosses
 
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
@@ -10,7 +11,6 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import kotlinx.datetime.LocalDate
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -28,7 +28,7 @@ fun Route.bossRoutes() {
 internal suspend fun RoutingContext.getDropTables() {
     val (userId, email) = call.principalIdAndEmail()
     val tables =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             dropTables()
         }
@@ -41,7 +41,7 @@ internal suspend fun RoutingContext.getDropTables() {
 internal suspend fun RoutingContext.listBosses() {
     val (userId, email) = call.principalIdAndEmail()
     val bosses =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             bossCatalog()
         }
@@ -65,7 +65,7 @@ internal suspend fun RoutingContext.getCurrentBossClears() {
         }
 
     val view =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             clearsView(userId, week, now)
         }
@@ -91,7 +91,7 @@ internal suspend fun RoutingContext.setBossClearRoute() {
     val now = Clock.System.now()
 
     val view =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             if (!setBossClearByHand(userId, characterId, request.bossKey, request.cleared, now)) {
                 null
@@ -118,7 +118,7 @@ internal suspend fun RoutingContext.setBossRoutineRoute() {
     val now = Clock.System.now()
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val refusal = setBossRoutine(userId, characterId, request.skippedBossKeys, now)
             refusal ?: clearsView(userId, null, now)

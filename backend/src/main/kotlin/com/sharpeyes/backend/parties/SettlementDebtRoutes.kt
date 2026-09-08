@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -22,7 +23,6 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -109,7 +109,7 @@ fun Route.settlementDebtRoutes() {
 private suspend fun RoutingContext.listDebts() {
     val (userId, email) = call.principalIdAndEmail()
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             debtsFor(userId)
         }
@@ -136,12 +136,12 @@ private suspend fun RoutingContext.addDebtRoute() {
     }
 
     val result =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             // Scoped to the account, the check the foreign key does not make. See ownsPerson.
             if (holder.kind == "PERSON" && !ownsPerson(userId, person)) {
-                return@transaction DebtWrite.NotYourPerson
+                return@dbQuery DebtWrite.NotYourPerson
             }
 
             val now = Clock.System.now()
@@ -159,7 +159,7 @@ private suspend fun RoutingContext.addDebtRoute() {
                 it[createdAt] = now
             }
             val shares = payouts.map { it.first!! to it.second!! }
-            if (anyDischarged(shares)) return@transaction DebtWrite.AlreadyDischarged
+            if (anyDischarged(shares)) return@dbQuery DebtWrite.AlreadyDischarged
 
             // Whatever the offset discharged. Not checked against the payout rows themselves: the
             // settle that marked them paid ran first and is the one that had to prove they exist, and
@@ -187,7 +187,7 @@ private suspend fun RoutingContext.deleteDebtRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val debtId = call.parseUuidParam("debtId") ?: return
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val gone =
                 SettlementDebt.deleteWhere {

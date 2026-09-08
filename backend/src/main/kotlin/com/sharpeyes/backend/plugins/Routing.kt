@@ -26,7 +26,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 /**
  * The two endpoints a browser talks to with no credentials at all.
@@ -106,7 +105,7 @@ fun Application.configureRouting(
                 val userId = principal!!.payload.subject
 
                 val dbTimestamp =
-                    transaction {
+                    dbQuery {
                         exec("SELECT NOW()") { rows ->
                             rows.next()
                             rows.getString(1)

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
@@ -7,7 +8,6 @@ import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -32,7 +32,7 @@ internal suspend fun RoutingContext.setSoloDifficultyRoute() {
             ?: return call.respond(HttpStatusCode.BadRequest, "malformed characterId")
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val bossId = bossIdForKey(request.bossKey)
             when {

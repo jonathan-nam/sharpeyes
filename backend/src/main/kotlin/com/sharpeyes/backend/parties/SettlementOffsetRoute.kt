@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
@@ -11,7 +12,6 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
@@ -103,7 +103,7 @@ internal suspend fun RoutingContext.offsetSharesRoute() {
         request.parts.map { OffsetPart(Uuid.parse(it.lootId), Uuid.parse(it.memberId), it.amount) }
 
     val result =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             writeOffset(userId, holder, note, parts, Clock.System.now())
         }

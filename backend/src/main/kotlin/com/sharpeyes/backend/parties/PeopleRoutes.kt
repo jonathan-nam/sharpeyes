@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -15,7 +16,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 
@@ -36,7 +36,7 @@ private suspend fun RoutingContext.unlinkPersonRoute() {
     val personId = call.parseUuidParam("personId") ?: return
 
     val people =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             if (unlinkPerson(userId, personId)) peopleFor(userId) else null
         }
@@ -46,7 +46,7 @@ private suspend fun RoutingContext.unlinkPersonRoute() {
 private suspend fun RoutingContext.listPeople() {
     val (userId, email) = call.principalIdAndEmail()
     val people =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             peopleFor(userId)
         }
@@ -58,7 +58,7 @@ private suspend fun RoutingContext.savePeopleRoute() {
     val request = call.receive<SavePeopleRequest>()
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val problem = validatePeople(request)
             if (problem != null) {
@@ -109,7 +109,7 @@ private suspend fun RoutingContext.pinPersonRoute() {
     val request = call.receive<PinPersonRequest>()
 
     val people =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val changed =
                 Person.update({ (Person.id eq personId) and (Person.userId eq userId) }) {

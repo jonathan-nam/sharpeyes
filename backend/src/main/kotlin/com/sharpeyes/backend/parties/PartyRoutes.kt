@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.services.NexonLookupService
@@ -20,7 +21,6 @@ import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -88,7 +88,7 @@ private suspend fun RoutingContext.listParties() {
     val includeSolo = call.request.queryParameters["solo"] == "include"
     val includeRetired = call.request.queryParameters["retired"] == "include"
     val parties =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             partiesFor(userId, week, includeSolo, includeRetired)
         }
@@ -105,7 +105,7 @@ private suspend fun RoutingContext.listParties() {
 private suspend fun RoutingContext.listAllLoot() {
     val (userId, email) = call.principalIdAndEmail()
     val pools =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             allLootFor(userId)
         }
@@ -116,7 +116,7 @@ private suspend fun RoutingContext.getParty() {
     val (userId, email) = call.principalIdAndEmail()
     val partyId = call.parseUuidParam("id") ?: return
     val party =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             findParty(partyId, userId)
         }
@@ -144,7 +144,7 @@ private suspend fun RoutingContext.createPartyRoute(
     val sprites = lookUpSprites(userId, request.members, email, nexonLookupService, spriteCache)
 
     val outcome =
-        transaction {
+        dbQuery {
             val now = Clock.System.now()
             val characterId = Uuid.parseOrNull(request.characterId)
             val bossId = bossIdForKey(request.bossKey)
@@ -189,7 +189,7 @@ private suspend fun RoutingContext.savePartyRoute(
     val sprites = lookUpSprites(userId, request.members, email, nexonLookupService, spriteCache)
 
     val outcome =
-        transaction {
+        dbQuery {
             val now = Clock.System.now()
             if (!ownsParty(partyId, userId)) {
                 null
@@ -237,7 +237,7 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
     val sprites = lookUpSprites(userId, request.members.orEmpty(), email, nexonLookupService, spriteCache)
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val characterId = characterIdOfParty(partyId)
             val thisWeek = currentWeek()
@@ -293,7 +293,7 @@ private suspend fun RoutingContext.setClearRoute() {
     val request = call.receive<SetClearRequest>()
 
     val party =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val found = findParty(partyId, userId)
             if (found != null) {
@@ -317,7 +317,7 @@ private suspend fun RoutingContext.deletePartyRoute() {
     // drops stay in the wallet and the Drop Log. See retireOrDeleteParty. Both answers are 204,
     // because both mean the same thing to the caller: it is off the list.
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             retireOrDeleteParty(partyId, userId, Clock.System.now())
         }

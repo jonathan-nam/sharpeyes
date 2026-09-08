@@ -3,6 +3,7 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -15,7 +16,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -144,7 +144,7 @@ internal suspend fun RoutingContext.leavePartyRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val partyId = call.parseUuidParam("id") ?: return
     val left =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             leaveParty(userId, partyId, Clock.System.now())
         }

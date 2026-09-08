@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.VestigePayment
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -20,7 +21,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -65,7 +65,7 @@ fun Route.vestigePaymentRoutes() {
 private suspend fun RoutingContext.listPayments() {
     val (userId, email) = call.principalIdAndEmail()
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             paymentsFor(userId)
         }
@@ -82,11 +82,11 @@ private suspend fun RoutingContext.addPaymentRoute() {
     if (refusal != null) return call.respond(HttpStatusCode.BadRequest, refusal)
 
     val result =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             // Scoped to the account, which the foreign key does not do. See ownsPerson.
-            if (holder.kind == "PERSON" && !ownsPerson(userId, person)) return@transaction null
+            if (holder.kind == "PERSON" && !ownsPerson(userId, person)) return@dbQuery null
 
             val now = Clock.System.now()
             VestigePayment.insert {
@@ -115,7 +115,7 @@ private suspend fun RoutingContext.deletePaymentRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val paymentId = call.parseUuidParam("paymentId") ?: return
     val rows =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val gone =
                 VestigePayment.deleteWhere {

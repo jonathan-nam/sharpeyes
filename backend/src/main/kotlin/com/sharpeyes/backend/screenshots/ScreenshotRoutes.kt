@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.screenshots
 
 import com.sharpeyes.backend.characters.findOwnedCharacter
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.span
@@ -12,7 +13,6 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.post
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
 
 fun Route.screenshotRoutes(screenshotParser: ScreenshotParser) {
@@ -34,7 +34,7 @@ private suspend fun RoutingContext.uploadScreenshot(screenshotParser: Screenshot
     // 404 anyway. Also stops a screenshot from ever getting attributed
     // under another user's guessed/stolen character id.
     if (pinnedCharacterId != null) {
-        val owned = transaction { findOwnedCharacter(pinnedCharacterId, userId) }
+        val owned = dbQuery { findOwnedCharacter(pinnedCharacterId, userId) }
         if (owned == null) {
             call.respond(HttpStatusCode.NotFound)
             return

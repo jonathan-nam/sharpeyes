@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
@@ -14,7 +15,6 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -39,7 +39,7 @@ private suspend fun RoutingContext.listLoot() {
     val (userId, email) = call.principalIdAndEmail()
     val partyId = call.parseUuidParam("id") ?: return
     val loot =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             if (!ownsParty(partyId, userId)) null else lootFor(partyId)
         }
@@ -57,7 +57,7 @@ private suspend fun RoutingContext.addLootRoute() {
     // arrangement sent with a drop is part of the same act, so neither lands or both do.
     val outcome =
         try {
-            transaction {
+            dbQuery {
                 ensureUser(userId, email)
                 val dropId = request.dropKey?.let { dropIdForKey(it) }
                 val bossId = request.bossKey?.let { bossIdForKey(it) }
@@ -98,7 +98,7 @@ private suspend fun RoutingContext.sellLootRoute() {
     val sellerId = Uuid.parseOrNull(request.sellerMemberId)
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             val loot = findLoot(lootId, partyId)
             when {
@@ -131,7 +131,7 @@ private suspend fun RoutingContext.unsellLootRoute() {
     val lootId = call.parseUuidParam("lootId") ?: return
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             when {
                 !ownsParty(partyId, userId) -> null
@@ -152,7 +152,7 @@ private suspend fun RoutingContext.setPayoutRoute() {
     val request = call.receive<PayoutRequest>()
 
     val outcome =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             when {
                 !ownsParty(partyId, userId) -> null
@@ -190,7 +190,7 @@ internal suspend fun RoutingContext.settleRoute() {
 
     val named = refs.map { (lootId, memberId) -> lootId!! to memberId!! }
     val pools =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             if (settlePayouts(userId, named, Clock.System.now())) allLootFor(userId) else null
         }
@@ -209,7 +209,7 @@ private suspend fun RoutingContext.deleteLootRoute() {
     val lootId = call.parseUuidParam("lootId") ?: return
 
     val deleted =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             ownsParty(partyId, userId) && deleteLoot(lootId, partyId)
         }

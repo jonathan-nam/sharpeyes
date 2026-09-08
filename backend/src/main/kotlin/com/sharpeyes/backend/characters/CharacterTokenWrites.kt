@@ -2,6 +2,7 @@ package com.sharpeyes.backend.characters
 
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.TokenCatalog
+import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.tokens.isBossToken
@@ -15,7 +16,6 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.upsert
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
@@ -50,12 +50,12 @@ internal suspend fun RoutingContext.setCharacterTokenCount() {
     }
 
     val written =
-        transaction {
+        dbQuery {
             ensureUser(userId, email)
             // Ownership first, and a 404 rather than a 403: a character that is not yours must not
             // be distinguishable from one that does not exist.
-            if (findOwnedCharacter(characterId, userId) == null) return@transaction false
-            if (!isAddableToken(tokenId)) return@transaction false
+            if (findOwnedCharacter(characterId, userId) == null) return@dbQuery false
+            if (!isAddableToken(tokenId)) return@dbQuery false
             writeTokenCount(characterId, tokenId, request.quantity)
             true
         }
