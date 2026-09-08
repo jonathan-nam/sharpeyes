@@ -2734,7 +2734,7 @@ button.link:disabled {
   display: block;
   height: 100%;
   border-radius: var(--radius-sm);
-  background: var(--accent);
+  background: var(--good);
 }
 
 /* A floor, so one clear in a band of fifty draws as a bar rather than a dot: the fill is 6px tall
