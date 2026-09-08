@@ -2723,7 +2723,10 @@ button.link:disabled {
 .boss-progress-bar {
   height: 6px;
   border-radius: var(--radius-sm);
-  background: var(--surface-2);
+  /* --line, not --surface-2: this is a 6px rule on --bg, not a field, and #202020 on #111 is
+     15/255. With the track invisible, a 1/49 fill read as a stray dot floating under the bars.
+     Same reason the cadence bands are a tint rather than a grey. */
+  background: var(--line);
   overflow: hidden;
 }
 
@@ -2732,6 +2735,14 @@ button.link:disabled {
   height: 100%;
   border-radius: var(--radius-sm);
   background: var(--accent);
+}
+
+/* A floor, so one clear in a band of fifty draws as a bar rather than a dot: the fill is 6px tall
+   with a 4px radius, so under about 12px it renders as a circle. Measured on the 198px track a
+   214px column leaves, where 1/49 is 4px. It overstates a small fill (12px reads as 6%), which the
+   count on the line above is what settles. Never on a zero fill, hence the class; see bandFill. */
+.boss-progress-bar > span.is-nonzero {
+  min-width: 12px;
 }
 
 /* Closes the band. The line above it is heavier than the one between bosses, so the summary reads
