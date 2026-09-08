@@ -464,6 +464,8 @@ function SettlementCard({
    * nothing to close. See the step for the rest.
    */
   const couponsOpen = row.piecesNet !== 0 && (theirNights.length > 0 || myNights.length > 0);
+  // Whether the coupon lists need telling apart. See the note where they are drawn.
+  const bothWays = theirNights.length > 0 && myNights.length > 0;
 
   /** Everything of theirs that can come off their debt. */
   const offsetAll = async () => {
@@ -975,9 +977,19 @@ function SettlementCard({
               </div>
               {showNights && (
                 <div id={`nights-${row.key}`}>
+                  {/* Whose inventory, and ONLY where that is a question.
+
+                      With nights on one side the step above has already said it: a pile of theirs
+                      you hold is "to hand over" and a pile of yours they hold is "owed", and the
+                      net cannot disagree with the only list making it. A label under that was the
+                      direction a second time.
+
+                      With both, it is the whole question. Nothing on a night's own row says which
+                      inventory it sits in, so two unlabelled lists would run together into one
+                      list that reads as all pointing the same way. */}
                   {theirNights.length > 0 && (
                     <>
-                      <span className="ledger-step">{`${row.name} is holding`}</span>
+                      {bothWays && <span className="ledger-step">{`${row.name} is holding`}</span>}
                       <PieceNights
                         drops={theirNights}
                         bossByKey={bossByKey}
@@ -987,7 +999,7 @@ function SettlementCard({
                   )}
                   {myNights.length > 0 && (
                     <>
-                      <span className="ledger-step">I am holding</span>
+                      {bothWays && <span className="ledger-step">I am holding</span>}
                       <PieceNights drops={myNights} bossByKey={bossByKey} partyById={partyById} />
                     </>
                   )}

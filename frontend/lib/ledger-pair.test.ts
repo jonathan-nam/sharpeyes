@@ -146,6 +146,18 @@ describe("one section for what is unsettled", () => {
     expect(ledger).toContain("<div id={`nights-${row.key}`}>");
   });
 
+  it("names whose inventory only where both sides have nights", () => {
+    // One list and the step above it has already said the direction: a pile of theirs you hold is
+    // "to hand over", a pile of yours they hold is "owed", and the net cannot disagree with the
+    // only list making it. A label under that was the direction a second time.
+    //
+    // Two lists and it is the whole question, since nothing on a night's own row says which
+    // inventory it sits in: unlabelled they run together into one list reading all one way.
+    expect(ledger).toContain("const bothWays = theirNights.length > 0 && myNights.length > 0;");
+    expect(ledger).toContain('{bothWays && <span className="ledger-step">I am holding</span>}');
+    expect(ledger).toContain("{bothWays && <span className=");
+  });
+
   it("puts the figure on the heading's line, with its own way into the sales", () => {
     // A bare 500,000,000 on a row of its own under the heading read as a row of the list. What it is
     // NOT is a total of the section: the shares under it run both ways and are in the card's header
