@@ -59,14 +59,9 @@ export function BossRoutineEditor({
   onDifficulty: (bossKey: string, difficulty: string | null) => void;
 }) {
   const cadences = CADENCE_ORDER.filter((c) => bosses.some((b) => b.reset === c));
-  const runningCount = bosses.filter((b) => !skipped.has(b.bossKey)).length;
 
   return (
     <section className="routine">
-      <p className="routine-count">
-        {characterName} runs {runningCount} of {bosses.length}.
-      </p>
-
       {cadences.map((cadence) => (
         <div key={cadence} className="routine-group">
           <h2 className="routine-cadence">{cadenceLabel(cadence)}</h2>
