@@ -455,8 +455,12 @@ describe("what the figures on the card are counted in", () => {
     expect(source).not.toContain('"boss" : "bosses"');
     expect(source).not.toContain("pair.nights");
     expect(source).not.toContain("closes ${");
-    // What no list says stays: a night owing a third person is drawn and cannot be closed here.
-    expect(source).toContain("${pair.shared} shared with others, not closed here");
+    // Nor the count of what it will not cover, which was the same mistake one step along. The
+    // premise this used to carry ("what no list says stays") was simply untrue: each of those
+    // nights IS in the list and says so on its own row, so the count was the fact a second time,
+    // in a unit nothing else on the card is in.
+    expect(source).not.toContain("shared with others, not closed here");
+    expect(source).toContain('{drop.shared && " \u00b7 owes somebody else too"}');
     // And nothing is left on the type to invite it back.
     expect(settlement).not.toMatch(/^\s*nights\??:/m);
   });

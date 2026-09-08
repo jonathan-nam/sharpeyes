@@ -227,7 +227,10 @@ describe("every act in one step", () => {
       '<span className="ledger-progress">closes the coupon nights on both sides</span>',
     );
     expect(ledger).not.toContain("row.piecesNet)} coupons`");
-    expect(ledger).toContain("${pair.shared} shared with others, not closed here");
+    // Nor the count of what it will NOT close, which was the same reasoning stopping one step
+    // short. Each of those nights says so on its own row: see the marker in PieceNights.
+    expect(ledger).not.toContain("shared with others, not closed here");
+    expect(ledger).toContain('{drop.shared && " \u00b7 owes somebody else too"}');
   });
 
   it("titles every act the same way, so one is not a different kind of thing", () => {
