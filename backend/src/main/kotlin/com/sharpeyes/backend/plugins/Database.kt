@@ -11,11 +11,23 @@ import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import kotlin.time.Duration.Companion.seconds
 
 // Postgres is a container sharing a 2 GB box with nginx, the auth service and two backend
 // replicas, and each replica holds its own pool. Keep it small rather than taking Hikari's
 // default of 10 twice over.
 private const val MAX_POOL_SIZE = 5
+
+/**
+ * How long a request waits for a connection before giving up.
+ *
+ * Set because dbQuery makes this the queue: every concurrent read now waits here rather than on an
+ * event loop thread, which is the point, but Hikari's default wait is 30 SECONDS. A page's queries
+ * take tens of milliseconds, so anything approaching this is a pool that is not coming back, and a
+ * fast 500 that gets logged with a reason (see Timing.kt) beats a request that hangs half a minute
+ * and tells nobody. HealthRoutes.kt bounds its own probe for the same reason.
+ */
+private val CONNECTION_TIMEOUT = 10.seconds
 
 fun Application.configureDatabase() {
     val jdbcUrl = "jdbc:postgresql://${Env.dbHost}:${Env.dbPort}/${Env.dbName}"
@@ -34,6 +46,7 @@ fun Application.configureDatabase() {
             password = Env.dbPassword
             driverClassName = "org.postgresql.Driver"
             maximumPoolSize = MAX_POOL_SIZE
+            connectionTimeout = CONNECTION_TIMEOUT.inWholeMilliseconds
             poolName = "sharpeyes-hikari"
         }
     val dataSource = HikariDataSource(hikariConfig)
