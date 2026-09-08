@@ -339,17 +339,23 @@ describe("what a column draws and how wide it lets itself get", () => {
     expect(ledger.indexOf("</>", at)).toBeLessThan(pills);
   });
 
-  it("lets a typed note break rather than size the column it is in", () => {
+  it("holds a typed entry to ONE line, whatever its note says", () => {
     // A grid item's default min-width is `auto`, which is its longest word: one 120-character note
     // with no space in it sized the whole half and pushed its row's × out over the half beside it.
     expect(rule(".ledger-pair > .ledger-entry")).toMatch(/min-width:\s*0/);
-    // Only the note breaks mid-word. Every other `.loot-name` is a drop or a boss out of the
-    // catalog and breaks at its spaces.
+    // Breaking the note mid-word kept the × inside the card but took the row to four lines. It
+    // truncates instead, and the whole note is the row's title.
     expect(ledger).toContain(
-      '<span className="loot-name is-note">{entry.note ?? "entered"}</span>',
+      '<div className="ledger-drop-head is-oneline is-typed" title={entry.note ?? undefined}>',
     );
-    const note = rule(".ledger-drop-head .loot-name.is-note");
-    expect(note).toMatch(/overflow-wrap:\s*anywhere/);
-    expect(note).toMatch(/min-width:\s*0/);
+    const name = rule(".ledger-drop-head.is-oneline .loot-name");
+    expect(name).toMatch(/text-overflow:\s*ellipsis/);
+    expect(name).toMatch(/white-space:\s*nowrap/);
+    expect(name).toMatch(/min-width:\s*0/);
+    // The figure and the × never give, so a long note cannot push either off the row.
+    expect(rule(".ledger-drop-head.is-oneline .ledger-amount")).toMatch(/flex:\s*none/);
+    expect(css).toContain(".ledger-drop-head.is-oneline button.ledger-drop-sale");
+    // And no width takes it back to two lines.
+    expect(css).toContain(".ledger-drop-head.is-oneline:not(.is-typed)");
   });
 });
