@@ -20,7 +20,7 @@ private val json = Json { ignoreUnknownKeys = true }
 // "data-ready" is ours, sent by lib/rum.ts, and carries a route like the rest so one name covers
 // every page. Held in step with the frontend by frontend/lib/rum-names.test.ts, because the name it
 // replaced sat here thresholded for months with nothing sending it, and dropping is silent.
-private val ALLOWED_NAMES = setOf("LCP", "FCP", "CLS", "INP", "TTFB", "FID", "data-ready")
+private val ALLOWED_NAMES = setOf("LCP", "FCP", "CLS", "INP", "TTFB", "FID", "data-ready", "auth-ready")
 
 // Google's web-vitals "poor" cutoffs (ms, except CLS which is unitless), plus our own
 // mark. A real user over these gets a louder level, mirroring Timing.kt's SLOW: a slow
@@ -36,6 +36,10 @@ private const val FID_POOR_MS = 300.0
 // added for would have cleared 4000 and told us the page was fine.
 private const val DATA_READY_POOR_MS = 2500.0
 
+// Two round trips to the auth service, and nothing on the page can be asked for until they are
+// done. A second of that is not a slow network, it is the auth service in trouble.
+private const val AUTH_READY_POOR_MS = 1000.0
+
 private val POOR =
     mapOf(
         "LCP" to LCP_POOR_MS,
@@ -45,6 +49,7 @@ private val POOR =
         "CLS" to CLS_POOR,
         "FID" to FID_POOR_MS,
         "data-ready" to DATA_READY_POOR_MS,
+        "auth-ready" to AUTH_READY_POOR_MS,
     )
 
 // Below this, keep decimals (CLS is a small fraction); at or above, a whole millisecond.
