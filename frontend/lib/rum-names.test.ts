@@ -45,6 +45,15 @@ describe("rum metric names", () => {
     expect(allowedNames()).toContain(sent);
   });
 
+  // The same pair of checks for auth-ready, a name of ours for the same reason: nothing on the page
+  // can be asked for until a token exists, and that wait had only ever been estimated.
+  it("sends an auth-ready name the backend accepts and rates", () => {
+    const sent = rum.match(/const AUTH_READY = "([^"]+)"/)?.[1];
+    expect(sent, "lib/rum.ts should define AUTH_READY").toBeTruthy();
+    expect(allowedNames()).toContain(sent);
+    expect(thresholdedNames()).toContain(sent);
+  });
+
   it("gives data-ready a threshold, or a slow load never warns", () => {
     const sent = rum.match(/const DATA_READY = "([^"]+)"/)?.[1];
     expect(thresholdedNames()).toContain(sent);

@@ -88,6 +88,31 @@ export function markSoftNavigation(path: string): void {
   reportedDataReady = false;
 }
 
+/** Also allowed by the backend explicitly (VitalsRoutes.kt). */
+const AUTH_READY = "auth-ready";
+
+let reportedAuthReady = false;
+
+/**
+ * The moment a token exists to spend on the API.
+ *
+ * Nothing can be asked for before this. A page waits for the session to answer, then trades the
+ * cookie for a JWT, and only then does its first data request go out, so this is pure latency in
+ * front of everything data-ready measures. Estimated at ~130ms from subtracting a warm load's other
+ * parts, which is a subtraction rather than a measurement, and two of those estimates have already
+ * been wrong by a lot.
+ *
+ * Measured before deciding whether to overlap the two round trips, because that means touching the
+ * gate that #412 came out of: a refetch racing the token 401'd and a night was logged twice.
+ *
+ * Once per document. A soft nav reuses the held token and has nothing to wait for.
+ */
+export function reportAuthReady(): void {
+  if (reportedAuthReady || typeof performance === "undefined") return;
+  reportedAuthReady = true;
+  reportVital({ name: AUTH_READY, value: performance.now() });
+}
+
 /**
  * The moment the numbers on screen are real.
  *

@@ -1,6 +1,7 @@
 "use client";
 
 import { AUTH_BASE_PATH, authClient } from "./auth-client";
+import { reportAuthReady } from "./rum";
 
 /**
  * The bearer token every API call carries, held rather than re-asked for.
@@ -58,9 +59,14 @@ async function fetchToken(): Promise<string | null> {
 
 export async function getSessionToken(): Promise<string | null> {
   if (held && Date.now() < held.expiresAtMs - REFRESH_MARGIN_MS) return held.token;
-  inFlight ??= fetchToken().finally(() => {
-    inFlight = null;
-  });
+  inFlight ??= fetchToken()
+    .finally(() => {
+      inFlight = null;
+    })
+    // Reported here rather than at the call site: this is the first moment anything COULD be
+    // asked for, and every data request on the page is waiting behind it. reportAuthReady only
+    // takes the first one. See lib/rum.ts.
+    .finally(reportAuthReady);
   return inFlight;
 }
 
