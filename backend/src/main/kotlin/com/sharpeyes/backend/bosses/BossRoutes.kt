@@ -137,7 +137,7 @@ internal suspend fun RoutingContext.setBossRoutineRoute() {
 }
 
 /** The matrix as of [now], for the current period when [week] is null. Call inside a transaction. */
-private fun clearsView(
+internal fun clearsView(
     userId: String,
     week: LocalDate?,
     now: Instant,

@@ -33,6 +33,11 @@ import kotlin.time.measureTimedValue
  */
 fun Route.pageRoutes() {
     get("/drop-log") { dropLogPage() }
+
+    // Party View takes two rather than one, and PartiesPageResponse.kt says why: six of its nine
+    // reads are ones the page is built to survive losing.
+    get("/parties") { partiesPage() }
+    get("/parties/extras") { partiesExtras() }
 }
 
 private suspend fun RoutingContext.dropLogPage() {

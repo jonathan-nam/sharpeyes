@@ -30,6 +30,13 @@ import kotlinx.serialization.Serializable
  * same functions those endpoints call, so there is no second implementation to drift. A rename here
  * deserialises as an absent list on the client rather than an error, so the field names get a guard
  * on the frontend side once a page reads this.
+ *
+ * The response is big and that is not the problem, which is worth writing down because it looks
+ * like it should be. Measured against the dev copy of real data: 190kb of JSON, of which `pools` is
+ * 55% and `parties` 29%, gzipping to 25kb (13%) in about 3ms. Serialising it costs 3-5ms warm. So
+ * the whole payload is maybe 25-35ms of an endpoint that measures 261-399ms in prod, and the rest
+ * is the queries. Slimming it, or splitting the catalog out to be cached client-side (`drops` is
+ * 7%), buys single-digit milliseconds for real coupling. Do not start there.
  */
 @Serializable
 data class DropLogPageResponse(
