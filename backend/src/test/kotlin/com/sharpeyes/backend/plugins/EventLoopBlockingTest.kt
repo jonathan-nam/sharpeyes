@@ -29,6 +29,9 @@ class EventLoopBlockingTest {
             "HealthRoutes.kt" to "probes on its own abandonable thread",
             // A background loop, launched on Dispatchers.IO rather than the Application scope.
             "SpriteRefreshJob.kt" to "launched on Dispatchers.IO",
+            // Runs on the boot thread before /health can answer, so there is no request to block
+            // and no event loop serving one yet. Blocking is the point: see Warmup.kt.
+            "Warmup.kt" to "runs at boot, before the server serves",
         )
 
     private fun kotlinSources(): List<File> =

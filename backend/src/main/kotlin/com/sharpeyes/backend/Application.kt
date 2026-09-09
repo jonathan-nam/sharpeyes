@@ -8,6 +8,7 @@ import com.sharpeyes.backend.plugins.configureRouting
 import com.sharpeyes.backend.plugins.configureSecurity
 import com.sharpeyes.backend.plugins.configureSerialization
 import com.sharpeyes.backend.plugins.configureTiming
+import com.sharpeyes.backend.plugins.warmReadPaths
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.services.VisionServiceClient
 import com.sharpeyes.backend.services.createNexonHttpClient
@@ -50,6 +51,10 @@ fun Application.module() {
     val spriteCache = SpriteCache(nexonHttpClient)
 
     configureRouting(nexonLookupService, screenshotParser, spriteCache)
+
+    // Before /health can answer, so a restarted replica warms on the deploy's time rather than the
+    // next visitor's. See Warmup.kt for the measurement.
+    warmReadPaths()
 
     // An outfit is the player's to change and nothing tells us when they have, so the sprite URL is
     // re-asked for on a clock. See SpriteRefreshJob.
