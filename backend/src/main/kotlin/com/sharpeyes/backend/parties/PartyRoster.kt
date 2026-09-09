@@ -71,6 +71,81 @@ internal fun rosterFor(
 ): List<Uuid> = rostersFor(listOf(partyId), week)[partyId].orEmpty()
 
 /**
+ * Every roster and week share for a set of parties across a set of weeks, in two queries.
+ *
+ * [rostersFor] costs three queries per week (seats, this week's overrides, and the shares off the
+ * same table), and a pool spans months: a Drop Log read asked for eight weeks, so twenty-four
+ * queries, eight of them the identical seat read. This asks once for the seats and once for every
+ * week's overrides, and does the same grouping in memory.
+ *
+ * Equivalence with the per-week functions is the whole requirement, since this decides who a drop
+ * divides by. LootWeekBatchTest asserts it against [rostersFor] and [weekSharesFor] themselves
+ * rather than against a copy of their logic.
+ */
+internal fun weekRostersFor(
+    partyIds: List<Uuid>,
+    weeks: Set<LocalDate>,
+): WeekRosters {
+    if (partyIds.isEmpty() || weeks.isEmpty()) return WeekRosters(emptyList(), emptyMap(), emptyMap())
+
+    val seatOrder =
+        PartyMember
+            .selectAll()
+            .where { PartyMember.partyId inList partyIds }
+            .orderBy(PartyMember.position)
+            .map { Triple(it[PartyMember.partyId], it[PartyMember.id], it[PartyMember.standing]) }
+
+    val weekRows =
+        PartyWeekSeat
+            .selectAll()
+            .where { (PartyWeekSeat.partyId inList partyIds) and (PartyWeekSeat.weekStart inList weeks.toList()) }
+            .map {
+                Triple(
+                    it[PartyWeekSeat.partyId] to it[PartyWeekSeat.weekStart],
+                    it[PartyWeekSeat.memberId],
+                    it[PartyWeekSeat.shares],
+                )
+            }
+
+    // A key exists for every (party, week) with ANY row, whatever its shares. That is the
+    // distinction rostersFor turns on: no rows means the standing roster ran, and rows with null
+    // shares still mean the week was spelled out. See V55 and #509.
+    val overridden = weekRows.groupBy({ it.first }) { it.second }.mapValues { (_, ids) -> ids.toSet() }
+
+    // Shares drop the null rows, and a party left with none gets no entry at all, which is what
+    // weekSharesFor's mapNotNull does.
+    val shares =
+        weekRows
+            .mapNotNull { (key, memberId, share) -> share?.let { Triple(key, memberId, it) } }
+            .groupBy({ it.first }) { it.second to it.third }
+            .mapValues { (_, pairs) -> pairs.toMap() }
+
+    return WeekRosters(seatOrder, overridden, shares)
+}
+
+/** The answers [weekRostersFor] read, asked per party and week. */
+internal class WeekRosters(
+    private val seatOrder: List<Triple<Uuid, Uuid, Boolean>>,
+    private val overridden: Map<Pair<Uuid, LocalDate>, Set<Uuid>>,
+    private val shares: Map<Pair<Uuid, LocalDate>, Map<Uuid, Int>>,
+) {
+    /** Ordered by the seat's own position, as rostersFor is, so a week's roster is not shuffled. */
+    fun roster(
+        partyId: Uuid,
+        week: LocalDate,
+    ): List<Uuid> {
+        val seats = seatOrder.filter { it.first == partyId }
+        val thisWeek = overridden[partyId to week]
+        return seats.filter { if (thisWeek == null) it.third else it.second in thisWeek }.map { it.second }
+    }
+
+    fun shares(
+        partyId: Uuid,
+        week: LocalDate,
+    ): Map<Uuid, Int>? = shares[partyId to week]
+}
+
+/**
  * Which of these parties had [week] spelled out, rather than running the usual roster.
  *
  * What tells "the usual party, which happens to be these three" from "these three, this week". The

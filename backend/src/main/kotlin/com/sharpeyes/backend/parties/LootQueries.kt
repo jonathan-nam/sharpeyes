@@ -97,12 +97,11 @@ private fun payoutsFor(lootIds: List<Uuid>): Map<Uuid, List<LootPayoutResponse>>
  * Batched a week at a time rather than asked per drop, since a pool is usually a handful of drops
  * spread over very few weeks.
  */
-private fun ranThatWeekFor(rows: List<ResultRow>): Map<Uuid, List<String>> {
-    val (alone, withOthers) = rows.partition { it[PartyLoot.solo] }
-    val rostersByWeek =
-        withOthers
-            .groupBy({ weekOf(it[PartyLoot.droppedOn]) }) { it[PartyLoot.partyId] }
-            .mapValues { (week, partyIds) -> rostersFor(partyIds.distinct(), week) }
+private fun ranThatWeekFor(
+    rows: List<ResultRow>,
+    weekRosters: WeekRosters,
+): Map<Uuid, List<String>> {
+    val alone = rows.filter { it[PartyLoot.solo] }
     val ownSeats = ownSeatsOf(alone.map { it[PartyLoot.partyId] }.distinct())
 
     return rows.associate { row ->
@@ -110,7 +109,7 @@ private fun ranThatWeekFor(rows: List<ResultRow>): Map<Uuid, List<String>> {
             if (row[PartyLoot.solo]) {
                 ownSeats[row[PartyLoot.partyId]]
             } else {
-                rostersByWeek[weekOf(row[PartyLoot.droppedOn])]?.get(row[PartyLoot.partyId])
+                weekRosters.roster(row[PartyLoot.partyId], weekOf(row[PartyLoot.droppedOn]))
             }
         row[PartyLoot.id] to ran.orEmpty().map { it.toString() }
     }
@@ -126,17 +125,14 @@ private fun ranThatWeekFor(rows: List<ResultRow>): Map<Uuid, List<String>> {
  * the deal that divides it is the one that was in force THEN. Without this the pinning is a table
  * nobody reads, and agreeing a new split re-divides every outstanding drop by it.
  */
-private fun sharesThatWeekFor(rows: List<ResultRow>): Map<Uuid, Map<String, Int>> {
-    val sharesByWeek =
-        rows
-            .groupBy({ weekOf(it[PartyLoot.droppedOn]) }) { it[PartyLoot.partyId] }
-            .mapValues { (week, partyIds) -> weekSharesFor(partyIds.distinct(), week) }
-
-    return rows.associate { row ->
-        val shares = sharesByWeek[weekOf(row[PartyLoot.droppedOn])]?.get(row[PartyLoot.partyId])
+private fun sharesThatWeekFor(
+    rows: List<ResultRow>,
+    weekRosters: WeekRosters,
+): Map<Uuid, Map<String, Int>> =
+    rows.associate { row ->
+        val shares = weekRosters.shares(row[PartyLoot.partyId], weekOf(row[PartyLoot.droppedOn]))
         row[PartyLoot.id] to shares.orEmpty().mapKeys { it.key.toString() }
     }
-}
 
 internal fun lootFor(partyId: Uuid): List<LootResponse> {
     val rows =
@@ -150,8 +146,14 @@ internal fun lootFor(partyId: Uuid): List<LootResponse> {
     if (rows.isEmpty()) return emptyList()
 
     val payoutsByLoot = payoutsFor(rows.map { it[PartyLoot.id] })
-    val ranByLoot = ranThatWeekFor(rows)
-    val sharesByLoot = sharesThatWeekFor(rows)
+    // Every week these drops fell in, asked for at once. See weekRostersFor.
+    val weekRosters =
+        weekRostersFor(
+            rows.map { it[PartyLoot.partyId] }.distinct(),
+            rows.map { weekOf(it[PartyLoot.droppedOn]) }.toSet(),
+        )
+    val ranByLoot = ranThatWeekFor(rows, weekRosters)
+    val sharesByLoot = sharesThatWeekFor(rows, weekRosters)
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
     return rows.map {
         it.toLootResponse(
@@ -184,8 +186,14 @@ internal fun allLootFor(userId: String): List<PartyLootPoolResponse> {
     if (rows.isEmpty()) return emptyList()
 
     val payoutsByLoot = payoutsFor(rows.map { it[PartyLoot.id] })
-    val ranByLoot = ranThatWeekFor(rows)
-    val sharesByLoot = sharesThatWeekFor(rows)
+    // Every week these drops fell in, asked for at once. See weekRostersFor.
+    val weekRosters =
+        weekRostersFor(
+            rows.map { it[PartyLoot.partyId] }.distinct(),
+            rows.map { weekOf(it[PartyLoot.droppedOn]) }.toSet(),
+        )
+    val ranByLoot = ranThatWeekFor(rows, weekRosters)
+    val sharesByLoot = sharesThatWeekFor(rows, weekRosters)
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
     val response = { row: ResultRow ->
         row.toLootResponse(
