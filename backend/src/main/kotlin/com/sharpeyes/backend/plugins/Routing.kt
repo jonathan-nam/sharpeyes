@@ -4,6 +4,7 @@ import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
 import com.sharpeyes.backend.invites.inviteRoutes
 import com.sharpeyes.backend.invites.joinRoutes
+import com.sharpeyes.backend.pages.pageRoutes
 import com.sharpeyes.backend.parties.partyRoutes
 import com.sharpeyes.backend.parties.peopleRoutes
 import com.sharpeyes.backend.parties.vestigeLedgerRoutes
@@ -117,6 +118,13 @@ fun Application.configureRouting(
 
             route("/api/characters") {
                 characterRoutes(nexonLookupService, spriteCache)
+            }
+
+            // A whole screen's reads in one request, for the pages heavy enough that the
+            // per-request cost of the individual endpoints is what they are waiting on. The
+            // resources underneath stay; see pages/DropLogPageRoutes.kt.
+            route("/api/pages") {
+                pageRoutes()
             }
 
             route("/api/screenshots") {
