@@ -72,7 +72,17 @@ data class BossDropResponse(
  * One query for the lot rather than one per boss: the whole catalog is a few dozen rows, and the
  * client needs the table for whichever boss the user picks next. Must run inside a transaction.
  */
-internal fun dropTables(): Map<String, List<BossDropResponse>> {
+@Volatile
+private var heldDropTables: Map<String, List<BossDropResponse>>? = null
+
+/**
+ * Held for the life of the process, for the reason bossCatalog is: same rows for every account, and
+ * `R__drop_catalog.sql` is a repeatable migration, so a change to them arrives as a deploy.
+ */
+internal fun dropTables(): Map<String, List<BossDropResponse>> =
+    heldDropTables ?: readDropTables().also { heldDropTables = it }
+
+private fun readDropTables(): Map<String, List<BossDropResponse>> {
     // One query for every amount, keyed the way the rows below need it. A join would multiply each
     // drop by its difficulties and the group-by would count one drop several times.
     val amounts =

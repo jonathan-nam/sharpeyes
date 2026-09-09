@@ -25,7 +25,24 @@ import kotlin.uuid.Uuid
 // tests can exercise these exact queries without standing up Ktor and a JWT.
 // All of these must be called from inside a `transaction { }` block.
 
-internal fun bossCatalog(): List<BossResponse> =
+/**
+ * The boss catalog, read once per process.
+ *
+ * Held rather than re-queried because it is the same rows for every account and cannot change while
+ * the process lives: `R__boss_catalog.sql` is a repeatable migration, so a catalog change arrives
+ * as a deploy, and Flyway runs it during boot before anything serves. Nothing writes these tables at
+ * runtime, which CatalogIsReadOnlyTest keeps true, because that is the assumption this cache is.
+ *
+ * Worth little today (under a millisecond a call on the dev copy) and worth more per user added: it
+ * is identical work repeated for everyone, and the boot warmup fills it before the first request.
+ */
+@Volatile
+private var heldCatalog: List<BossResponse>? = null
+
+internal fun bossCatalog(): List<BossResponse> = heldCatalog ?: readBossCatalog().also { heldCatalog = it }
+
+// A race here costs one extra read and stores an identical answer, so it is left unsynchronised.
+private fun readBossCatalog(): List<BossResponse> =
     BossCatalog
         .selectAll()
         .orderBy(BossCatalog.sortOrder)

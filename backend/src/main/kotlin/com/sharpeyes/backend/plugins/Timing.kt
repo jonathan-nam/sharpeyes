@@ -10,6 +10,7 @@ import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
 import io.ktor.util.AttributeKey
 import org.slf4j.LoggerFactory
+import kotlin.time.Duration
 import kotlin.time.TimeSource
 
 private val log = LoggerFactory.getLogger("Timing")
@@ -132,6 +133,25 @@ suspend fun <T> ApplicationCall.span(
             .getOrNull(SPANS)
             ?.add(Span(name, mark.elapsedMillis()))
     }
+}
+
+/**
+ * Attach a span that was timed somewhere [span] cannot reach.
+ *
+ * [span] wraps a suspend block, and the work worth splitting inside a `dbQuery { }` is not suspend:
+ * Exposed's transaction takes a plain lambda, which is what stops a nested dbQuery and also stops a
+ * span. So the caller measures with `measureTime` and hands the result here.
+ *
+ * Same output either way, a `Server-Timing` entry and a name on the log line, so a reader cannot
+ * tell which one produced it.
+ */
+fun ApplicationCall.addSpan(
+    name: String,
+    elapsed: Duration,
+) {
+    attributes
+        .getOrNull(SPANS)
+        ?.add(Span(name, elapsed.inWholeMicroseconds / MICROS_PER_MILLI))
 }
 
 fun Application.configureTiming() {
