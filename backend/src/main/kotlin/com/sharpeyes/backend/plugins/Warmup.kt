@@ -1,9 +1,9 @@
 package com.sharpeyes.backend.plugins
 
 import com.sharpeyes.backend.db.Users
-import com.sharpeyes.backend.parties.allLootFor
-import com.sharpeyes.backend.parties.partiesFor
+import com.sharpeyes.backend.pages.dropLogPageFor
 import io.ktor.server.application.Application
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
@@ -52,18 +52,23 @@ fun Application.warmReadPaths() {
                 return
             }
 
-            // More than one pass, because one is not all of it: measured first-real-read after
-            // warming was 1071ms cold, 324ms after a single pass and 200ms after five. Three is
-            // where it stops paying, and the cost lands on a boot nobody is waiting on.
+            // Read AND serialise, because priming the reads alone was measurably not enough. The
+            // first version of this warmed only the queries and prod's first request went from
+            // 1097-1120ms to 931ms, against the 1071 -> 200ms the queries showed in isolation. The
+            // gap is the rest of answering: `Json.encodeToString` of this payload measured 45ms on
+            // its first call against 3-5ms after, on a 190kb response.
+            //
+            // More than one pass: first-real-read after warming was 324ms after a single pass and
+            // 200ms after five, against 1071ms cold. Three is where it stops paying, and the cost
+            // lands on a boot nobody is waiting on.
             //
             // Never fatal. A replica that could not warm is slow once, but a replica that refused to
             // boot over it would be down, and deploy.sh reads a failed health check as a bad deploy.
             runCatching {
                 repeat(WARMUP_PASSES) {
-                    transaction {
-                        partiesFor(someone, week = null, includeSolo = true, includeRetired = true)
-                        allLootFor(someone)
-                    }
+                    val page = transaction { dropLogPageFor(someone) }
+                    // Discarded. Encoding it is the point, not the string.
+                    Json.encodeToString(page)
                 }
             }.onFailure { log.warn("Warmup failed, first request will pay for it", it) }
         }
