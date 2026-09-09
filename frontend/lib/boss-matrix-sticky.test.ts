@@ -15,6 +15,23 @@ const rule = (selector: string) => {
 };
 
 /**
+ * The block for a selector that carries `needle`, not the first block that happens to share the
+ * selector. `.boss-col-head, .boss-name` has two: one sets box-sizing and width, the other pins
+ * the column, and indexOf finds the wrong one.
+ */
+const ruleWith = (selector: string, needle: string): string => {
+  let at = css.indexOf(`\n${selector} {`);
+  while (at > -1) {
+    const body = css.slice(at, css.indexOf("}", at));
+    if (body.includes(needle)) return body;
+    at = css.indexOf(`\n${selector} {`, at + 1);
+  }
+  // Thrown rather than expect.fail, which is not typed as `never` and leaves this `string |
+  // undefined` for every caller.
+  throw new Error(`no rule for ${selector} containing "${needle}"`);
+};
+
+/**
  * The matrix scrolls sideways inside itself so that a wide roster cannot stretch the page. Two
  * things defeated that, and both looked like the same bug from the outside.
  *
@@ -75,5 +92,53 @@ describe("the cadence heading stays with its rows", () => {
   it("keeps the span the pin hangs on", () => {
     // Sticky on the <th> would do nothing: it spans the table, so it is never scrolled past.
     expect(matrix).toContain('<span className="boss-cadence-label">{cadenceLabel(cadence)}</span>');
+  });
+});
+
+/**
+ * Scrolled hard right, the first character's mark lands within a pixel of the scrollport's left
+ * clip: at 6 characters and 290px of scroll its centre sits at -3.5. The pinned column covers that
+ * ground opaquely, but it is a composited layer whose bounds snap to whole pixels while the
+ * scrolled content does not, and `.page` is margin:0 auto so the clip falls on a half pixel at
+ * every odd window width. The half pixel between the two painted the mark, which read as pale dots
+ * down the left of the boss art, one per row.
+ *
+ * The skirt is that same opaque background carried past the cell, into ground the scrollport clips,
+ * so no rounding can expose what is behind it. Reported on Windows and NOT reproducible in this
+ * repo's headless Chromium, which composites on the CPU (and hangs in captureScreenshot without
+ * --disable-gpu), so there is no screenshot to diff and these are the only guards.
+ */
+describe("the pinned column covers the clip boundary", () => {
+  // The block that PINS the column, not the one that sizes it. See ruleWith.
+  const pinned = () => ruleWith(".boss-col-head,\n.boss-name", "position: sticky");
+  const skirt = (declared: string) => declared.match(/box-shadow:\s*(-?\d+)px 0 0 0 ([^;]+);/);
+
+  it("carries a skirt past its own left edge", () => {
+    const found = skirt(pinned());
+    expect(found, "the pinned cells have no skirt to cover the clip boundary").not.toBeNull();
+    // Negative, or it paints to the RIGHT and hides a mark that is meant to be read.
+    expect(Number((found as RegExpMatchArray)[1])).toBeLessThan(0);
+    // Wider than the sub-pixel it exists for, so layer snapping cannot land outside it.
+    expect(Math.abs(Number((found as RegExpMatchArray)[1]))).toBeGreaterThanOrEqual(2);
+  });
+
+  it("paints the skirt in the background's own colour, not a guess at it", () => {
+    const found = skirt(pinned());
+    const declared = pinned().match(/background:\s*([^;]+);/);
+    expect(found?.[2], "no skirt colour to compare").toBeTruthy();
+    expect(declared?.[1], "the pinned cell declares no background").toBeTruthy();
+    expect(found?.[2]?.trim()).toBe(declared?.[1]?.trim());
+  });
+
+  it("restates it wherever the pinned background is restated", () => {
+    // The hover band sets its own background on the cell, so it has to set its own skirt too, or
+    // the two drift and a hovered row skirts in the untinted colour.
+    const at = css.indexOf(":hover .boss-name {");
+    expect(at, "no hover rule on the pinned cell").toBeGreaterThan(-1);
+    const hover = css.slice(at, css.indexOf("}", at));
+    expect(hover).toMatch(/background:\s*color-mix/);
+    expect(hover, "the hover band sets a background with no matching skirt").toMatch(
+      /box-shadow:\s*-\d+px 0 0 0 color-mix/,
+    );
   });
 });

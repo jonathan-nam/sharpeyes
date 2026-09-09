@@ -2820,17 +2820,31 @@ button.link:disabled {
 /* Held against the left edge while the characters scroll past. Without it, reaching the fifth
    character means reading marks whose row is no longer labelled.
    It has to be opaque, which is why the stripe and the hover band are restated here rather than
-   inherited from the row: a background on the cell paints over the one on the <tr>. */
+   inherited from the row: a background on the cell paints over the one on the <tr>.
+
+   The box-shadow is a SKIRT, not decoration: the same opaque background carried 3px further left
+   than the cell, where the scrollport clips it away. Scrolled hard right, the first character's
+   mark lands within a pixel of that clip (measured: at 6 characters and 290px of scroll, its
+   centre sits at -3.5), and the sticky cell is a composited layer whose bounds snap to whole
+   pixels while the scrolled content does not. The half pixel between the two paints the mark
+   instead of this background, which reads as pale dots down the left of the boss art, one per
+   row. `.page` is margin:0 auto, so the clip lands on a half pixel at every odd window width.
+   Reported on Windows and NOT reproducible in this repo's headless Chromium, which composites on
+   the CPU: see boss-matrix-sticky.test.ts. */
 .boss-col-head,
 .boss-name {
   position: sticky;
   left: 0;
   z-index: 1;
   background: var(--boss-row-bg, var(--bg));
+  box-shadow: -3px 0 0 0 var(--boss-row-bg, var(--bg));
 }
 
+/* The skirt above is restated with the background, or a hovered row's would be the untinted
+   colour. Sub-pixel either way, but the two are one value and drift is what a second copy does. */
 .boss-table tbody tr:not(.boss-cadence-row):not(.boss-progress-row):hover .boss-name {
   background: color-mix(in srgb, var(--accent) 15%, var(--boss-row-bg, var(--bg)));
+  box-shadow: -3px 0 0 0 color-mix(in srgb, var(--accent) 15%, var(--boss-row-bg, var(--bg)));
 }
 
 .boss-name {
