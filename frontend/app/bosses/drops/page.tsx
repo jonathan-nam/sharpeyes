@@ -98,6 +98,7 @@ import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
 import type { Loot, LogDropBody, PartyLootPool, SellLootBody, SettleBody } from "@/types/loot";
+import type { DropLogPage } from "@/types/page";
 import type { Party, Person } from "@/types/party";
 import type {
   OffsetShares,
@@ -113,6 +114,10 @@ import type {
 // lib/drop-log.ts's, which is splitOf()'s, which is splitDrop()'s. Nothing here adds anything up.
 
 type LoadState = "loading" | "loaded" | "error";
+
+// Every read below, in one request. The individual keys stay: they name the cache entries other
+// pages seed from, and the resources this composes. See types/page.ts.
+const PAGE_KEY = "/api/pages/drop-log";
 
 // Solo pools included, and retired configs too: both hold drops whose configs are off every list,
 // and buildDropLog skips a pool whose config it cannot find, so without these the log would quietly
@@ -180,69 +185,51 @@ export default function DropLogPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Every read this page needs, in one request. See types/page.ts for why it is one.
+   *
+   * Also the refetch after a write, so a write reads back the whole screen rather than the seven
+   * lists the pools happen to touch. That is a request more honest than what it replaced: a sale
+   * moves debts and disposals as well as pools.
+   */
   async function load(token?: string | null) {
     const withToken = token !== undefined ? () => Promise.resolve(token) : getToken;
-    const [
-      partyResult,
-      poolResult,
-      trancheResult,
-      paymentResult,
-      settlementResult,
-      debtResult,
-      disposalResult,
-    ] = await Promise.all([
-      apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, withToken),
-      apiFetch<PartyLootPool[]>(POOLS_KEY, { method: "GET" }, withToken),
-      apiFetch<VestigeTranche[]>(TRANCHES_KEY, { method: "GET" }, withToken),
-      apiFetch<VestigePayment[]>(PAYMENTS_KEY, { method: "GET" }, withToken),
-      apiFetch<VestigeSettlement[]>(SETTLEMENTS_KEY, { method: "GET" }, withToken),
-      apiFetch<SettlementDebt[]>(DEBTS_KEY, { method: "GET" }, withToken),
-      apiFetch<ProceedsDisposal[]>(DISPOSALS_KEY, { method: "GET" }, withToken),
-    ]);
-    setParties(partyResult);
-    setPools(poolResult);
-    setTranches(trancheResult);
-    setPayments(paymentResult);
-    setSettlements(settlementResult);
-    setDebts(debtResult);
-    setDisposals(disposalResult);
-    put(PARTIES_KEY, partyResult);
+    const page = await apiFetch<DropLogPage>(PAGE_KEY, { method: "GET" }, withToken);
+
+    setParties(page.parties);
+    setPools(page.pools);
+    setTranches(page.tranches);
+    setPayments(page.payments);
+    setSettlements(page.settlements);
+    setDebts(page.debts);
+    setDisposals(page.disposals);
+    setBosses(page.bosses);
+    setDropTables(page.drops);
+    setCharacters(page.characters);
+    setPeople(page.people);
+
+    // The keys other pages seed from on their way in. Only the ones that were cached before, since
+    // a key nobody peeks at is a payload kept alive for nothing.
+    put(PARTIES_KEY, page.parties);
+    put(BOSSES_KEY, page.bosses);
+    put(DROPS_KEY, page.drops);
+    put(CHARACTERS_KEY, page.characters);
+    put(PEOPLE_KEY, page.people);
   }
 
   useEffect(() => {
     // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
     if (!isLoaded) return;
-    // One token for the whole burst: getToken() can round-trip to auth.
+    // One token, one request. getToken() can round-trip to auth, so it is spent once either way.
     getToken()
-      .then((token) => {
-        const withToken = () => Promise.resolve(token);
-        return Promise.all([
-          load(token),
-          apiFetch<Boss[]>(BOSSES_KEY, { method: "GET" }, withToken),
-          // The whole catalog's drop tables, as the party page fetches them: a few dozen rows, and
-          // the picker needs whichever boss is chosen next.
-          apiFetch<DropTables>(DROPS_KEY, { method: "GET" }, withToken),
-          apiFetch<Character[]>(CHARACTERS_KEY, { method: "GET" }, withToken),
-          // Only to NAME a card. A person owed something whose seat has since left every party is
-          // still owed it, and without this their card is titled with their id.
-          apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, withToken).catch(() => null),
-        ]);
-      })
-      .then(([, bossResult, dropResult, characterResult, peopleResult]) => {
-        setBosses(bossResult);
-        setDropTables(dropResult);
-        setCharacters(characterResult);
-        if (peopleResult) {
-          setPeople(peopleResult);
-          put(PEOPLE_KEY, peopleResult);
-        }
-        put(BOSSES_KEY, bossResult);
-        put(DROPS_KEY, dropResult);
-        put(CHARACTERS_KEY, characterResult);
+      .then((token) => load(token))
+      .then(() => {
         setState("loaded");
         reportDataReady();
       })
-      // The pools are never cached, so there is nothing to fall back to.
+      // The pools are never cached, so there is nothing to fall back to. One request also means
+      // one outcome: the people list used to be allowed to fail on its own (it only NAMES a card),
+      // and there is no longer a separate failure for it to have.
       .catch(() => setState("error"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
