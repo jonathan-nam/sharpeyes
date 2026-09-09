@@ -51,6 +51,7 @@ import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody, PartyLootPool, SellLootBody } from "@/types/loot";
+import type { PartiesExtras, PartiesPage } from "@/types/parties-page";
 import type { VestigeSettlement } from "@/types/vestige";
 import type {
   Party,
@@ -69,6 +70,11 @@ type LoadState = "loading" | "loaded" | "error";
 //   party       filed by ARRANGEMENT: a duo with the same person across three bosses is one
 //               section, the roster in its banner and a row per boss under it
 type Grouping = "character" | "boss" | "party";
+
+// Party View's two reads, in place of the nine requests this page used to make on load. Two
+// rather than one because six of those nine were allowed to fail: see types/parties-page.ts.
+const PAGE_KEY = "/api/pages/parties";
+const EXTRAS_KEY = "/api/pages/parties/extras";
 
 // The resource, for the writes below. What this page READS is PARTY_LIST_KEY.
 const PARTIES_KEY = "/api/parties";
@@ -253,77 +259,59 @@ export default function PartiesPage() {
   useEffect(() => {
     // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
     if (!isLoaded) return;
-    // One token for the whole burst, as the boss page does: getToken() can round-trip to auth,
-    // and three calls would pay that three times.
+    // A ticket like loadWeek's, taken here rather than borrowed by routing this load through it.
+    // Opening the page and immediately stepping has to leave the week you asked for on screen, not
+    // the current one landing late underneath its label.
+    const ticket = ++latestWeek.current;
+    // One token for both requests: getToken() can round-trip to auth, and two calls would pay it
+    // twice.
     getToken()
       .then((token) => {
         const withToken = () => Promise.resolve(token);
         return Promise.all([
-          // Through loadWeek so this first read takes a ticket like any other. Stepping
-          // immediately after opening the page would otherwise have the initial answer land last
-          // and overwrite the week you asked for.
-          loadWeek(null, { token, clearsOptional: true }),
-          apiFetch<Boss[]>(BOSSES_KEY, { method: "GET" }, withToken),
-          apiFetch<Character[]>(CHARACTERS_KEY, { method: "GET" }, withToken),
-          // Optional, for the same reason the clears are on the first load: losing them costs the
-          // row's drop picker and nothing else, and blanking a page that answers "what is left
-          // this week" over a picker's data says less than leaving it up.
-          apiFetch<DropTables>(DROPS_KEY, { method: "GET" }, withToken).catch(() => null),
-          // Optional too. Losing it costs the roster editor's suggestions, and a name can still
-          // be typed out.
-          apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, withToken).catch(() => null),
-          // Optional, for the coupons-owed figure on a row. Losing it costs that one number, and
-          // a row that says nothing about coupons beats a page that says nothing at all.
-          apiFetch<PartyLootPool[]>(POOLS_KEY, { method: "GET" }, withToken).catch(() => null),
-          // Optional, and what stops the coupons figure counting a debt somebody has already closed.
-          // Losing it overstates that number rather than blanking the page. See V52.
-          apiFetch<VestigeSettlement[]>(SETTLEMENTS_KEY, { method: "GET" }, withToken).catch(
-            () => null,
-          ),
-          // Optional as well. Losing it costs the section for parties somebody else keeps the book
-          // for, which is a section this account may well not have, and never the page.
-          apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, withToken).catch(() => null),
+          apiFetch<PartiesPage>(PAGE_KEY, { method: "GET" }, withToken),
+          // Still allowed to fail, as all six of these were when they were six requests. Losing
+          // them costs the drop picker, the roster editor's suggestions, a row's coupons figure
+          // (and the correction that stops it counting a closed debt, see V52), and the section for
+          // parties somebody else keeps the book for. Never the page. See types/parties-page.ts.
+          apiFetch<PartiesExtras>(EXTRAS_KEY, { method: "GET" }, withToken).catch(() => null),
         ]);
       })
-      .then(
-        ([
-          ,
-          bossResult,
-          characterResult,
-          dropResult,
-          peopleResult,
-          poolResult,
-          settlementResult,
-          seatedResult,
-        ]) => {
-          setBosses(bossResult);
-          setCharacters(characterResult);
-          put(BOSSES_KEY, bossResult);
-          put(CHARACTERS_KEY, characterResult);
-          if (dropResult) {
-            setDropTables(dropResult);
-            put(DROPS_KEY, dropResult);
+      .then(([page, extras]) => {
+        // Whether a step overtook this load. The two week-dependent lists must not land under a
+        // label for another week, which is what loadWeek's ticket guards and what this load used to
+        // borrow by going through it. Everything else here is the same whatever week is shown.
+        const current = ticket === latestWeek.current;
+
+        if (current) {
+          setEveryParty(page.parties);
+          put(PARTY_LIST_KEY, page.parties);
+        }
+        setBosses(page.bosses);
+        setCharacters(page.characters);
+        put(BOSSES_KEY, page.bosses);
+        put(CHARACTERS_KEY, page.characters);
+
+        if (extras) {
+          if (current) {
+            setView(extras.clears);
+            setReceivedAt(Date.now());
+            put(CLEARS_KEY, extras.clears);
           }
-          if (peopleResult) {
-            setPeople(peopleResult);
-            put(PEOPLE_KEY, peopleResult);
-          }
-          if (poolResult) {
-            setPools(poolResult);
-            put(POOLS_KEY, poolResult);
-          }
-          if (settlementResult) {
-            setSettlements(settlementResult);
-            put(SETTLEMENTS_KEY, settlementResult);
-          }
-          if (seatedResult) {
-            setSeated(seatedResult);
-            put(SEATED_KEY, seatedResult);
-          }
-          setState("loaded");
-          reportDataReady();
-        },
-      )
+          setDropTables(extras.drops);
+          put(DROPS_KEY, extras.drops);
+          setPeople(extras.people);
+          put(PEOPLE_KEY, extras.people);
+          setPools(extras.pools);
+          put(POOLS_KEY, extras.pools);
+          setSettlements(extras.settlements);
+          put(SETTLEMENTS_KEY, extras.settlements);
+          setSeated(extras.seated);
+          put(SEATED_KEY, extras.seated);
+        }
+        setState("loaded");
+        reportDataReady();
+      })
       // Only blank the page if there is nothing to show: a failed refresh behind data we already
       // have should leave that data up.
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
