@@ -2482,15 +2482,54 @@ button.link:disabled {
    a check under DAILY and a check under MONTHLY do not mean the same thing.
    --------------------------------------------------------------------------- */
 
-/* The table can outgrow the column once a roster is wide, so it scrolls inside
-   itself rather than pushing the page sideways.
+/* The names beside the marks, not inside them. The gutter does not scroll, so nothing can pass
+   behind the boss art: see the `gutter` note in boss-matrix.tsx for the three fixes it took to
+   stop trying to win that with paint order.
+
+   The two sides keep step because their row heights are declared rather than shared. Every one of
+   the four is measured off the single-table layout this replaced, and
+   boss-matrix-rows.test.ts checks the sides still line up. */
+.boss-matrix-wrap {
+  /* The boss names' share, and the narrowest a character column may be drawn. Declared here
+     rather than on the table because the gutter is sized from the first and the marks from the
+     second. */
+  --boss-name-col: 214px;
+  --boss-char-min: 112px;
+  /* Measured on the one-table layout: heads 148 (a 112px sprite and the IGN under it), band 25,
+     boss row 37 (a 26px portrait and 5px either side), the Cleared row 30. */
+  --boss-head-h: 148px;
+  /* 26, not the 25 the one-table layout measured: the label's line box comes to 25.5, so at 25 the
+     declared height loses to the content on the gutter side only and every row below it sat half a
+     pixel low. A declared height is only shared if it is the taller of the two. */
+  --boss-band-h: 26px;
+  --boss-row-h: 37px;
+  --boss-progress-h: 30px;
+}
+
+.boss-matrix-split {
+  display: flex;
+  align-items: flex-start;
+}
+
+.boss-matrix-gutter {
+  flex: none;
+  width: var(--boss-name-col);
+}
+
+/* min-width, or the pane refuses to shrink below its table and pushes the page sideways: a flex
+   item's min-width is auto, which is its content. Same trap as the character tiles. */
+.boss-matrix-panes {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The marks can outgrow their pane once a roster is wide, so they scroll inside
+   it rather than pushing the page sideways.
 
    POSITIONED, or it does not clip the .visually-hidden label every cell carries. Those are
    absolutely positioned, so with nothing positioned between them and the page they laid out at
    their static position OUTSIDE this box, and the DOCUMENT grew a scrollbar to reach them:
-   measured 121px of it on the built page at 1024px with a roster of six. Scrolling that strip
-   takes the whole page sideways, and the name column is pinned to THIS box rather than to the
-   window, so it left the screen and uncovered the marks it had been painted over.
+   measured 121px of it on the built page at 1024px with a roster of six.
    See boss-matrix-sticky.test.ts. */
 .boss-matrix {
   position: relative;
@@ -2512,25 +2551,62 @@ button.link:disabled {
    fixes the columns at a stride the sprite fits in and shows fewer of them, rather than dividing a
    phone's width by four and cropping the art down both sides. */
 .boss-table {
-  /* The boss names' share, and the narrowest a character column may be drawn. Declared here
-     because the table's own width is measured from both. */
-  --boss-name-col: 214px;
-  --boss-char-min: 112px;
-  width: max(
-    100%,
-    calc(var(--boss-name-col) + (100% - var(--boss-name-col)) * var(--boss-span, 1)),
-    calc(var(--boss-name-col) + var(--boss-char-min) * var(--boss-cols, 1))
-  );
   table-layout: fixed;
   border-collapse: collapse;
   font-size: var(--text-base);
+}
+
+/* The names' own table: the gutter's width, exactly, so the column cannot drift from the box that
+   holds it. */
+.boss-table.is-gutter {
+  width: 100%;
+}
+
+/* The marks fill their pane, so this page's block ends on the same edge as the inventory window
+   and the header's profile icon. Hugging the content instead left a ragged right edge that read as
+   a different page.
+
+   Past four characters they fill a MULTIPLE of the pane instead, and the rest is scrolled to.
+   --boss-span is that multiple and --boss-cols the roster's size, both set by the component: it is
+   the only side that knows them. Fixed layout is what splits the width evenly between the columns
+   without being told to, since none of them declares one.
+
+   The second term no longer subtracts the names, because the names are not in this table: the
+   pane is already the width the marks have. The third is a floor, and it is what a window too
+   narrow to hold four sprites hits. It fixes the columns at a stride the sprite fits in and shows
+   fewer of them, rather than dividing a phone's width by four and cropping the art down both
+   sides. */
+.boss-table.is-marks {
+  width: max(
+    100%,
+    calc(100% * var(--boss-span, 1)),
+    calc(var(--boss-char-min) * var(--boss-cols, 1))
+  );
+}
+
+/* Declared rather than shared, now that the names and the marks are different tables. Both sides
+   set all four, so neither can be the one that decides a row's height. */
+.boss-table thead tr {
+  height: var(--boss-head-h);
+}
+
+.boss-table .boss-cadence-row {
+  height: var(--boss-band-h);
+}
+
+.boss-table tbody tr:not(.boss-cadence-row):not(.boss-progress-row) {
+  height: var(--boss-row-h);
+}
+
+.boss-table .boss-progress-row {
+  height: var(--boss-progress-h);
 }
 
 /* Half a column of names and a 48px sprite, so a phone still gets two characters on screen rather
    than the names and a sliver. Measured, not guessed: at 214px of names a 360px window showed 0.6
    of one character column. */
 @media (width <= 560px) {
-  .boss-table {
+  .boss-matrix-wrap {
     --boss-name-col: 120px;
     --boss-char-min: 64px;
   }
@@ -2557,8 +2633,11 @@ button.link:disabled {
    signal instead, so the band reads the same at either stripe parity.
    Both bands are semi-transparent and the cell one paints over the row one, so where they cross
    (the cell under the cursor) composites to ~28% on its own. That is deliberate: no third rule to
-   keep in step with these two. */
-.boss-table tbody tr:not(.boss-cadence-row):not(.boss-progress-row):hover,
+   keep in step with these two.
+
+   A CLASS on the row, not `:hover`. The names and the marks are separate tables, so hovering one
+   row has to light the other side's too, which only the component can know. See hoveredRow. */
+.boss-table tbody tr.is-row-hover,
 .boss-table .boss-cell.is-col-hover,
 .boss-table .boss-progress-cell.is-col-hover,
 .boss-table .boss-char-head.is-col-hover {
@@ -2660,17 +2739,6 @@ button.link:disabled {
   font-size: var(--text-sm);
   font-weight: 600;
   text-align: left;
-}
-
-/* Held against the left edge with the boss names, which is the column it labels. The cell spans
-   the whole table, so scrolling took the word off the left of the scrollport and left seventeen
-   rows under a heading that was no longer on screen.
-   8px is .boss-cadence's own left padding: at 0 the word would jump to the table's edge the moment
-   it stuck, and at 8 it never moves at all. */
-.boss-cadence-label {
-  position: sticky;
-  left: 8px;
-  display: inline-block;
 }
 
 /* The names' column, declared on the table's <col> so that both tables lay out from the same
@@ -2817,34 +2885,31 @@ button.link:disabled {
   width: var(--boss-name-col);
 }
 
-/* Held against the left edge while the characters scroll past. Without it, reaching the fifth
-   character means reading marks whose row is no longer labelled.
-   It has to be opaque, which is why the stripe and the hover band are restated here rather than
-   inherited from the row: a background on the cell paints over the one on the <tr>.
+/* NOT sticky, and that is the whole point: the names are in the gutter now, outside the box the
+   marks scroll in, so there is nothing behind them to hold them in front of. Three fixes went into
+   trying to win that with paint order (sticky plus z-index, then a 3px background skirt) and all
+   of them lost, because a sticky cell and the content scrolling under it are separate composited
+   layers and the ordering is the compositor's to decide. See the `gutter` note in boss-matrix.tsx.
 
-   The box-shadow is a SKIRT, not decoration: the same opaque background carried 3px further left
-   than the cell, where the scrollport clips it away. Scrolled hard right, the first character's
-   mark lands within a pixel of that clip (measured: at 6 characters and 290px of scroll, its
-   centre sits at -3.5), and the sticky cell is a composited layer whose bounds snap to whole
-   pixels while the scrolled content does not. The half pixel between the two paints the mark
-   instead of this background, which reads as pale dots down the left of the boss art, one per
-   row. `.page` is margin:0 auto, so the clip lands on a half pixel at every odd window width.
-   Reported on Windows and NOT reproducible in this repo's headless Chromium, which composites on
-   the CPU: see boss-matrix-sticky.test.ts. */
+   Still opaque and still restating the stripe: the gutter sits on the page, not on the row, so a
+   transparent cell would show --bg through a striped row. */
 .boss-col-head,
 .boss-name {
-  position: sticky;
-  left: 0;
-  z-index: 1;
   background: var(--boss-row-bg, var(--bg));
-  box-shadow: -3px 0 0 0 var(--boss-row-bg, var(--bg));
 }
 
-/* The skirt above is restated with the background, or a hovered row's would be the untinted
-   colour. Sub-pixel either way, but the two are one value and drift is what a second copy does. */
-.boss-table tbody tr:not(.boss-cadence-row):not(.boss-progress-row):hover .boss-name {
+/* Held at the top of the window with the character heads beside it, which is the one axis the
+   gutter still shares with a scrolling box (the page's). Its own box, the same height as
+   .boss-matrix-head, so the two stay level. */
+.boss-matrix-gutter-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+}
+
+.boss-table tbody tr.is-row-hover .boss-name {
   background: color-mix(in srgb, var(--accent) 15%, var(--boss-row-bg, var(--bg)));
-  box-shadow: -3px 0 0 0 color-mix(in srgb, var(--accent) 15%, var(--boss-row-bg, var(--bg)));
 }
 
 .boss-name {

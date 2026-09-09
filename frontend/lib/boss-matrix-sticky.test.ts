@@ -16,8 +16,8 @@ const rule = (selector: string) => {
 
 /**
  * The block for a selector that carries `needle`, not the first block that happens to share the
- * selector. `.boss-col-head, .boss-name` has two: one sets box-sizing and width, the other pins
- * the column, and indexOf finds the wrong one.
+ * selector. `.boss-col-head, .boss-name` has two: one sets box-sizing and width, the other the
+ * background, and indexOf finds the wrong one.
  */
 const ruleWith = (selector: string, needle: string): string => {
   let at = css.indexOf(`\n${selector} {`);
@@ -32,23 +32,16 @@ const ruleWith = (selector: string, needle: string): string => {
 };
 
 /**
- * The matrix scrolls sideways inside itself so that a wide roster cannot stretch the page. Two
- * things defeated that, and both looked like the same bug from the outside.
- *
- * The .visually-hidden label in every cell is absolutely positioned, and with nothing positioned
- * between it and the page its containing block was the page: it laid out at its static position
- * OUT in the part of the table that is scrolled away, and the document grew to fit it. Measured at
- * 1024px on a roster of six, the page could scroll 125px into an empty strip. Scrolling it moved
- * the whole page, and the name column is pinned to the matrix rather than to the window, so the
- * names left the screen and the marks they had been painted over appeared beside them. It was
- * reported as the names not being pinned and as residual text under the bands.
+ * The matrix scrolls sideways inside itself so that a wide roster cannot stretch the page. The
+ * .visually-hidden label in every cell is absolutely positioned, and with nothing positioned
+ * between it and the page its containing block WAS the page: it laid out at its static position
+ * out in the part of the table that is scrolled away, and the document grew to reach it. Measured
+ * at 1024px on a roster of six, the page could scroll 121px into an empty strip.
  */
 describe("the matrix keeps its sideways scroll to itself", () => {
   it("gives the scrollport a containing block, so the cells' hidden labels are clipped with it", () => {
     const declared = rule(".boss-matrix");
     expect(declared).toMatch(/overflow-x:\s*auto/);
-    // Any `position` but static will do it. The point is that SOMETHING between the labels and the
-    // page establishes a containing block inside the clip.
     expect(declared, ".boss-matrix clips overflow but is not a containing block").toMatch(
       /position:\s*(relative|sticky|absolute|fixed)/,
     );
@@ -60,85 +53,71 @@ describe("the matrix keeps its sideways scroll to itself", () => {
     expect(declared).toMatch(/position:\s*(relative|sticky|absolute|fixed)/);
   });
 
-  // The premise of both. If the utility ever stops being out-of-flow the rules above are merely
-  // harmless, but this is the line that says why they exist.
   it("is fixing an out-of-flow label, not a wide one", () => {
     expect(rule(".visually-hidden")).toMatch(/position:\s*absolute/);
     expect(rule(".visually-hidden")).toMatch(/width:\s*1px/);
   });
-});
 
-/**
- * The cadence heading labels the rows under it, so it has to still be on screen while they are.
- * Its cell spans every column, which means the cell is already at the left edge and has nothing to
- * stick to: the label inside it is what sticks. Without this, scrolling to the fifth character left
- * seventeen rows under a heading that was off the left of the scrollport.
- */
-describe("the cadence heading stays with its rows", () => {
-  it("pins the label rather than the cell", () => {
-    expect(rule(".boss-cadence-label")).toMatch(/position:\s*sticky/);
-  });
-
-  it("pins it at the cell's own left padding, so it does not jump when it sticks", () => {
-    // At left:0 the word sits at 8px until it sticks and then snaps to the table's edge. Matching
-    // the padding means the sticky position IS the resting one, so it never moves at all.
-    const padding = rule(".boss-cadence").match(/padding:\s*\d+px\s+(\d+)px/);
-    expect(padding, ".boss-cadence has no horizontal padding to match").not.toBeNull();
-    const left = rule(".boss-cadence-label").match(/left:\s*(\d+)px/);
-    expect(left, ".boss-cadence-label is sticky with no left offset to stick at").not.toBeNull();
-    expect(Number((left as RegExpMatchArray)[1])).toBe(Number((padding as RegExpMatchArray)[1]));
-  });
-
-  it("keeps the span the pin hangs on", () => {
-    // Sticky on the <th> would do nothing: it spans the table, so it is never scrolled past.
-    expect(matrix).toContain('<span className="boss-cadence-label">{cadenceLabel(cadence)}</span>');
+  it("keeps the pane able to shrink, so a wide roster still cannot stretch the page", () => {
+    // A flex item's min-width is auto, which is its content, and its content is a table as wide as
+    // the roster. Without this the pane refuses to shrink and pushes the page sideways instead of
+    // scrolling. Same trap as the character tiles.
+    expect(rule(".boss-matrix-panes")).toMatch(/min-width:\s*0/);
   });
 });
 
 /**
- * Scrolled hard right, the first character's mark lands within a pixel of the scrollport's left
- * clip: at 6 characters and 290px of scroll its centre sits at -3.5. The pinned column covers that
- * ground opaquely, but it is a composited layer whose bounds snap to whole pixels while the
- * scrolled content does not, and `.page` is margin:0 auto so the clip falls on a half pixel at
- * every odd window width. The half pixel between the two painted the mark, which read as pale dots
- * down the left of the boss art, one per row.
+ * The boss names sit in a gutter BESIDE the scrolling box, not pinned inside it.
  *
- * The skirt is that same opaque background carried past the cell, into ground the scrollport clips,
- * so no rounding can expose what is behind it. Reported on Windows and NOT reproducible in this
- * repo's headless Chromium, which composites on the CPU (and hangs in captureScreenshot without
- * --disable-gpu), so there is no screenshot to diff and these are the only guards.
+ * Sticky was tried three ways and lost every time: on its own, then with z-index, then with a 3px
+ * background skirt. A sticky cell and the content scrolling under it are separate composited
+ * layers, so which one wins is the compositor's to decide, not ours. Measured at six characters and
+ * 290px of scroll, the first character's tick sits 1.95px beneath the pinned cell, and it was
+ * reported showing through as pale dots down the left of the boss art, one per row.
+ *
+ * Out of the scrollport there is nothing behind the names at all. That is a fact about the boxes
+ * rather than about paint, which is why it is the only version of this fix that could be verified
+ * here: measured, the scroller's clip begins exactly where the gutter ends, at every window width.
  */
-describe("the pinned column covers the clip boundary", () => {
-  // The block that PINS the column, not the one that sizes it. See ruleWith.
-  const pinned = () => ruleWith(".boss-col-head,\n.boss-name", "position: sticky");
-  const skirt = (declared: string) => declared.match(/box-shadow:\s*(-?\d+)px 0 0 0 ([^;]+);/);
-
-  it("carries a skirt past its own left edge", () => {
-    const found = skirt(pinned());
-    expect(found, "the pinned cells have no skirt to cover the clip boundary").not.toBeNull();
-    // Negative, or it paints to the RIGHT and hides a mark that is meant to be read.
-    expect(Number((found as RegExpMatchArray)[1])).toBeLessThan(0);
-    // Wider than the sub-pixel it exists for, so layer snapping cannot land outside it.
-    expect(Math.abs(Number((found as RegExpMatchArray)[1]))).toBeGreaterThanOrEqual(2);
-  });
-
-  it("paints the skirt in the background's own colour, not a guess at it", () => {
-    const found = skirt(pinned());
-    const declared = pinned().match(/background:\s*([^;]+);/);
-    expect(found?.[2], "no skirt colour to compare").toBeTruthy();
-    expect(declared?.[1], "the pinned cell declares no background").toBeTruthy();
-    expect(found?.[2]?.trim()).toBe(declared?.[1]?.trim());
-  });
-
-  it("restates it wherever the pinned background is restated", () => {
-    // The hover band sets its own background on the cell, so it has to set its own skirt too, or
-    // the two drift and a hovered row skirts in the untinted colour.
-    const at = css.indexOf(":hover .boss-name {");
-    expect(at, "no hover rule on the pinned cell").toBeGreaterThan(-1);
-    const hover = css.slice(at, css.indexOf("}", at));
-    expect(hover).toMatch(/background:\s*color-mix/);
-    expect(hover, "the hover band sets a background with no matching skirt").toMatch(
-      /box-shadow:\s*-\d+px 0 0 0 color-mix/,
+describe("the boss names are outside the scrolling box", () => {
+  it("does not pin them, because there is nothing left to pin them in front of", () => {
+    const declared = ruleWith(".boss-col-head,\n.boss-name", "background");
+    expect(declared, "the names are sticky again, which is what kept leaking").not.toMatch(
+      /position:\s*sticky/,
     );
+    // The skirt was the last of the three paint-order fixes. It painted outside the cell, where
+    // the scrollport clips it, so it never covered the 2px inside the cell that actually leaked.
+    expect(
+      declared,
+      "the skirt is back, and it was aimed at the wrong side of the clip",
+    ).not.toMatch(/box-shadow/);
+  });
+
+  it("still paints them opaque, since the gutter sits on the page and not on the row", () => {
+    expect(ruleWith(".boss-col-head,\n.boss-name", "background")).toMatch(
+      /background:\s*var\(--boss-row-bg, var\(--bg\)\)/,
+    );
+  });
+
+  it("puts the gutter beside the scroller in the markup, not inside it", () => {
+    // The guarantee is structural, so it has to be visible in the structure: the gutter is a
+    // sibling of the panes, and the marks table carries no name cells.
+    expect(matrix).toContain('<div className="boss-matrix-split"> {gutter}');
+    expect(matrix).toContain('<div className="boss-matrix-panes">');
+    const marks = matrix.slice(matrix.indexOf('className="boss-matrix-panes"'));
+    expect(marks, "a name cell is still in the scrolling table").not.toContain(
+      'className="boss-name" scope="row"',
+    );
+  });
+
+  it("draws the row band from state, since two tables cannot share a :hover", () => {
+    expect(
+      rule(
+        ".boss-table tbody tr.is-row-hover,\n.boss-table .boss-cell.is-col-hover,\n.boss-table .boss-progress-cell.is-col-hover,\n.boss-table .boss-char-head.is-col-hover",
+      ),
+    ).toMatch(/background:\s*color-mix/);
+    expect(matrix).toContain("setHoveredRow");
+    // Cleared with the column, or the band stays lit on whichever row the cursor left by.
+    expect(matrix).toContain("setHoveredRow(null)");
   });
 });
