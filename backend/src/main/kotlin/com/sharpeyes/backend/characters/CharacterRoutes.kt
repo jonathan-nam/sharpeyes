@@ -135,7 +135,7 @@ private suspend fun RoutingContext.listCharacters() {
 }
 
 /** This account's characters in the world it is looking at, in carousel order. */
-private fun charactersInActiveWorld(userId: String): List<CharacterResponse> =
+internal fun charactersInActiveWorld(userId: String): List<CharacterResponse> =
     Characters
         .selectAll()
         .where { (Characters.userId eq userId) and inActiveWorld(userId) }
