@@ -1,5 +1,5 @@
 import type { Character } from "@/types/character";
-import type { Party } from "@/types/party";
+import type { Party, SeatedParty } from "@/types/party";
 
 /**
  * Every character name the app can draw a sprite for, to the backend-relative path of that sprite.
@@ -12,10 +12,16 @@ import type { Party } from "@/types/party";
  * and nobody else's; the party seats cover everybody you run with, whose sprite the backend looked
  * up when the seat was saved. A seat that never resolved carries null and is simply not in here.
  *
+ * Parties you are IN count as much as parties you own. An account that joined by a link owns no
+ * config at all, so reading only your own left every face on its People page blank.
+ *
  * Resolve what comes out with spriteUrl(): these paths are backend-relative, and assigning one to
  * an <img> unresolved asks the frontend's own origin, which is a 404 in dev and in prod both.
  */
-export function spriteByName(characters: Character[], parties: Party[]): Map<string, string> {
+export function spriteByName(
+  characters: Character[],
+  parties: (Party | SeatedParty)[],
+): Map<string, string> {
   const sprites = new Map<string, string>();
   for (const party of parties) {
     // Every seat, not the week's roster: somebody who has left the party is still drawn on the

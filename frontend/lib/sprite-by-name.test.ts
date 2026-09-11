@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { spriteByName } from "./sprite-by-name";
 import type { Character } from "@/types/character";
-import type { Party, PartyMember } from "@/types/party";
+import type { Party, PartyMember, SeatedParty } from "@/types/party";
 
 const seat = (name: string, spriteImgUrl: string | null): PartyMember => ({
   id: `seat-${name}`,
@@ -38,6 +38,16 @@ const config = (id: string, members: PartyMember[]): Party => ({
   clearedByHand: false,
   createdAt: "2026-08-09T00:00:00Z",
   updatedAt: "2026-08-09T00:00:00Z",
+});
+
+const shared = (id: string, seats: PartyMember[]): SeatedParty => ({
+  id,
+  bossKey: "lotus",
+  difficulty: null,
+  minutes: null,
+  seats,
+  mySeatIds: [],
+  nights: [],
 });
 
 const character = (name: string, spriteImgUrl: string | null): Character => ({
@@ -85,6 +95,13 @@ describe("spriteByName", () => {
     const map = spriteByName([character("Nobody", null)], parties);
     expect(map.has("Ghost")).toBe(false);
     expect(map.has("Nobody")).toBe(false);
+  });
+
+  it("finds the faces in a party somebody else owns", () => {
+    // An account that joined by a link owns no config, so this is the only list it has.
+    expect(spriteByName([], [shared("p1", [seat("Bro", "/sprites/bro.png")])]).get("Bro")).toBe(
+      "/sprites/bro.png",
+    );
   });
 
   it("says nothing about a name it has never seen", () => {

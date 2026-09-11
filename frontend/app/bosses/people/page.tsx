@@ -13,12 +13,13 @@ import { type PersonDraft, toDraft, unclaimed } from "@/lib/people-board";
 import { spriteByName } from "@/lib/sprite-by-name";
 import type { Character } from "@/types/character";
 import type { Invite } from "@/types/invite";
-import type { Party, Person, SavePeopleBody } from "@/types/party";
+import type { Party, Person, SavePeopleBody, SeatedParty } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
 const PEOPLE_KEY = "/api/people";
 const PARTIES_KEY = "/api/parties";
+const SEATED_KEY = "/api/parties/seated";
 const CHARACTERS_KEY = "/api/characters";
 const INVITES_KEY = "/api/invites";
 
@@ -30,11 +31,15 @@ const INVITES_KEY = "/api/invites";
 // unclaimed pile readable: a column of unfamiliar names is the thing you cannot sort, and a column
 // of faces is. Parties are fetched for the seats and for their art, own characters for the art of
 // yours, which is the newer of the two. See lib/sprite-by-name.ts.
+//
+// The parties you are IN are read as well as the ones you own. An account that arrived by a link
+// owns no config, so its every face came from the one list it has nothing in.
 export default function PeoplePage() {
   const { getToken, isLoaded } = useAuth();
 
   const [people, setPeople] = useState<Person[]>(peek<Person[]>(PEOPLE_KEY) ?? []);
   const [parties, setParties] = useState<Party[]>(peek<Party[]>(PARTIES_KEY) ?? []);
+  const [seated, setSeated] = useState<SeatedParty[]>(peek<SeatedParty[]>(SEATED_KEY) ?? []);
   const [characters, setCharacters] = useState<Character[]>(
     peek<Character[]>(CHARACTERS_KEY) ?? [],
   );
@@ -59,16 +64,19 @@ export default function PeoplePage() {
           apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, withToken),
           apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, withToken),
           apiFetch<Character[]>(CHARACTERS_KEY, { method: "GET" }, withToken),
+          apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, withToken),
         ]);
       })
-      .then(([peopleResult, partyResult, characterResult]) => {
+      .then(([peopleResult, partyResult, characterResult, seatedResult]) => {
         setPeople(peopleResult);
         setDraft(toDraft(peopleResult));
         setParties(partyResult);
         setCharacters(characterResult);
+        setSeated(seatedResult);
         put(PEOPLE_KEY, peopleResult);
         put(PARTIES_KEY, partyResult);
         put(CHARACTERS_KEY, characterResult);
+        put(SEATED_KEY, seatedResult);
         setState("loaded");
         reportDataReady();
       })
@@ -161,7 +169,7 @@ export default function PeoplePage() {
     }
   }
 
-  const sprites = spriteByName(characters, parties);
+  const sprites = spriteByName(characters, [...parties, ...seated]);
   const mine = characters.map((c) => c.name);
   // Against the DRAFT, not the saved list: a character dragged onto somebody has to leave the pile
   // as it is dropped, before anything is saved.
