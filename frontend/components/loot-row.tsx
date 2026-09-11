@@ -24,6 +24,7 @@ export function LootRow({
   yours,
   pieces,
   couponRemovable = true,
+  readOnly = false,
   busy,
   onSell,
   onUnsell,
@@ -70,6 +71,11 @@ export function LootRow({
    * about. The pool's own page keeps it, so a mis-logged stack can still be corrected.
    */
   couponRemovable?: boolean;
+  /**
+   * A party somebody else keeps the book for. The row still says everything it says; it just
+   * offers nothing to press, because every write here lands in their pool. See PartyResponse.yours.
+   */
+  readOnly?: boolean;
   busy: boolean;
   onSell: (body: SellLootBody) => void;
   onUnsell: () => void;
@@ -167,7 +173,7 @@ export function LootRow({
       {/* A piece row has no sale, so Remove is all it has: the pieces are priced on the Drop Log and
           everything else here would act on a pot that does not exist. Withheld where the row heads a
           config, which would go with it. See couponRemovable. */}
-      {loot.status === "PENDING" && canSell && pieces && couponRemovable && (
+      {loot.status === "PENDING" && canSell && pieces && couponRemovable && !readOnly && (
         <div className="loot-actions">
           <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
             Remove
@@ -175,7 +181,7 @@ export function LootRow({
         </div>
       )}
 
-      {loot.status === "PENDING" && !canSell && (
+      {loot.status === "PENDING" && !canSell && !readOnly && (
         <div className="loot-actions">
           {/* Nobody takes an instanced drop: it is already in every inventory that ran, so naming
               a seat would hand the party's one copy to somebody when there was never one copy.
@@ -208,23 +214,28 @@ export function LootRow({
               // says the drop is spoken for.
               "Somebody no longer in the party"}
           </span>
-          <button
-            type="button"
-            className="party-cancel"
-            onClick={() => onSetTaken(null)}
-            disabled={busy}
-          >
-            Put back
-          </button>
-          <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-            Remove
-          </button>
+          {!readOnly && (
+            <>
+              <button
+                type="button"
+                className="party-cancel"
+                onClick={() => onSetTaken(null)}
+                disabled={busy}
+              >
+                Put back
+              </button>
+              <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+                Remove
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {loot.status === "PENDING" &&
         canSell &&
         !pieces &&
+        !readOnly &&
         (selling ? (
           <LootSaleForm
             ran={ran}
@@ -312,31 +323,39 @@ export function LootRow({
                         by mistake was not discoverable at all: the one click anybody found flipped
                         it back. The x is this app's own undo mark, the same one a tranche row and an
                         entered debt carry. */}
-                    <button
-                      type="button"
-                      className={share.paid ? "loot-paid is-paid" : "loot-paid"}
-                      onClick={() => onSetPaid(share.memberId, !share.paid)}
-                      disabled={busy}
-                      aria-label={
-                        share.paid ? `Mark ${share.name} unpaid` : `Mark ${share.name} paid`
-                      }
-                    >
-                      {share.paid ? "paid \u00d7" : "mark paid"}
-                    </button>
+                    {readOnly ? (
+                      <span className={share.paid ? "loot-paid is-paid" : "loot-paid"}>
+                        {share.paid ? "paid" : "unpaid"}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={share.paid ? "loot-paid is-paid" : "loot-paid"}
+                        onClick={() => onSetPaid(share.memberId, !share.paid)}
+                        disabled={busy}
+                        aria-label={
+                          share.paid ? `Mark ${share.name} unpaid` : `Mark ${share.name} paid`
+                        }
+                      >
+                        {share.paid ? "paid \u00d7" : "mark paid"}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
             </>
           )}
 
-          <div className="loot-actions">
-            <button type="button" className="party-cancel" onClick={onUnsell} disabled={busy}>
-              Undo sale
-            </button>
-            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-              Remove
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="loot-actions">
+              <button type="button" className="party-cancel" onClick={onUnsell} disabled={busy}>
+                Undo sale
+              </button>
+              <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+                Remove
+              </button>
+            </div>
+          )}
         </>
       )}
 

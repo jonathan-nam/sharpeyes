@@ -85,6 +85,7 @@ export function LootList({
   splitElsewhere,
   couponRemovable,
   editing,
+  readOnly = false,
   panel,
   busy,
   isSaving,
@@ -141,6 +142,8 @@ export function LootList({
    * inputs, so one press opens everything on the row that can be answered.
    */
   editing?: boolean;
+  /** Somebody else's pool: every row reads, none of them offer a write. See LootRow.readOnly. */
+  readOnly?: boolean;
   /**
    * These rows are a Party View row's panel rather than a page, so the two kinds are named.
    *
@@ -187,6 +190,7 @@ export function LootList({
         party={party}
         bossByKey={bossByKey}
         isSaving={isSaving}
+        readOnly={readOnly}
         onSell={onSell}
         onUnsell={onUnsell}
         onSetTaken={onSetTaken}
@@ -207,6 +211,7 @@ export function LootList({
         editing={editing}
         busy={busy}
         isSaving={isSaving}
+        readOnly={readOnly}
         onSell={onSell}
         onUnsell={onUnsell}
         onSetTaken={onSetTaken}
@@ -279,6 +284,7 @@ function LootGroup({
   splitElsewhere,
   couponRemovable,
   editing,
+  readOnly = false,
   busy,
   pieces,
   isSaving,
@@ -305,6 +311,7 @@ function LootGroup({
   couponRemovable?: boolean;
   /** Whether those boxes take typing. See LootList. */
   editing?: boolean;
+  readOnly?: boolean;
   /** Whether the row's own write is in flight. */
   busy?: boolean;
   /** These rows are stacks of pieces, which do not sell here. See LootRow's `pieces`. */
@@ -353,6 +360,7 @@ function LootGroup({
               yours={statusOf?.get(item.id)?.yours ?? null}
               pieces={pieces}
               couponRemovable={couponRemovable}
+              readOnly={readOnly}
               busy={isSaving(item.id)}
               onSell={(body) => onSell(item.id, body)}
               onUnsell={() => onUnsell(item.id)}
