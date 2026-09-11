@@ -5,6 +5,8 @@ import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.services.NexonLookupService
+import com.sharpeyes.backend.sprites.SpriteCache
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -41,10 +43,13 @@ import kotlin.uuid.Uuid
 /** Strict on purpose. A stored payload with a field we do not know is one to refuse, not to guess at. */
 private val payloadJson = Json
 
-fun Route.inviteRoutes() {
+fun Route.inviteRoutes(
+    nexonLookupService: NexonLookupService,
+    spriteCache: SpriteCache,
+) {
     get { listInvitesRoute() }
     post { createInviteRoute() }
-    post("/{token}/accept") { acceptInviteRoute() }
+    post("/{token}/accept") { acceptInviteRoute(nexonLookupService, spriteCache) }
 }
 
 /**
@@ -183,7 +188,10 @@ private suspend fun RoutingContext.previewInviteRoute() {
  * The account itself need not be empty: acceptInvite binds a character it already has rather than
  * making a second one.
  */
-private suspend fun RoutingContext.acceptInviteRoute() {
+private suspend fun RoutingContext.acceptInviteRoute(
+    nexonLookupService: NexonLookupService,
+    spriteCache: SpriteCache,
+) {
     val (userId, email) = call.principalIdAndEmail()
     val token = call.parameters["token"].orEmpty()
     val now = Clock.System.now()
@@ -217,6 +225,10 @@ private suspend fun RoutingContext.acceptInviteRoute() {
 
             acceptInvite(payload, userId, confirmed, invite[AccountInvite.personId], now)
         }
+
+    // After the rows are committed and before the answer: the page this redirects to is the
+    // account's first, and a roster of names with no level or job is what it showed without this.
+    if (outcome is AcceptedInvite) fillUnaskedCharacters(userId, nexonLookupService, spriteCache)
 
     when (outcome) {
         Refusal.Unknown -> call.respond(HttpStatusCode.NotFound)
