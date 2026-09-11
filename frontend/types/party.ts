@@ -88,6 +88,13 @@ export type Party = {
   cleared: boolean | null;
   // Ticked here rather than read off a planner capture.
   clearedByHand: boolean;
+  /**
+   * False for a party somebody else keeps the book for, which you reach by holding a seat in it.
+   *
+   * Optional because a tab open across the deploy that added it holds payloads without the field,
+   * so read it as `yours !== false`. Every write on a pool is the owner's; see isSeatedIn.
+   */
+  yours?: boolean;
   createdAt: string;
   updatedAt: string;
 };
