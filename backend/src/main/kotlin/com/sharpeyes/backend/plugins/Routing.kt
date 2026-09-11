@@ -155,7 +155,7 @@ fun Application.configureRouting(
             }
 
             route("/api/invites") {
-                inviteRoutes()
+                inviteRoutes(nexonLookupService, spriteCache)
             }
         }
     }

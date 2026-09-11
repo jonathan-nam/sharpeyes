@@ -514,6 +514,22 @@ class AccountInviteTest {
     }
 
     @Test
+    fun `a character a link created is one nothing has asked Nexon about`() {
+        transaction {
+            val mine = addCharacter(senderId, "mechyfechy", position = 0)
+            attribute("Bro", "CreedBratton")
+            config(mine, "kalos-the-guardian", listOf("CreedBratton"))
+            invite("Bro")
+
+            // A payload names the recipient's characters and nothing else about them: the sender
+            // has no row for somebody else's character, only seats naming one. So the level and job
+            // come from a lookup, and a null sprite_checked_at is what both the accept route and
+            // the daily job find them by.
+            assertEquals(listOf("CreedBratton"), unaskedCharacters(recipientId).map { it.name })
+        }
+    }
+
+    @Test
     fun `a link is sent under your main character's name, and is never asked for`() {
         transaction {
             addCharacter(senderId, "mechyfechy", position = 0)
