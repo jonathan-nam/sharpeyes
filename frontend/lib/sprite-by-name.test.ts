@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { spriteByName } from "./sprite-by-name";
 import type { Character } from "@/types/character";
-import type { Party, PartyMember, SeatedParty } from "@/types/party";
+import type { Party, PartyMember } from "@/types/party";
 
 const seat = (name: string, spriteImgUrl: string | null): PartyMember => ({
   id: `seat-${name}`,
@@ -40,14 +40,10 @@ const config = (id: string, members: PartyMember[]): Party => ({
   updatedAt: "2026-08-09T00:00:00Z",
 });
 
-const shared = (id: string, seats: PartyMember[]): SeatedParty => ({
-  id,
-  bossKey: "lotus",
-  difficulty: null,
-  minutes: null,
-  seats,
-  mySeatIds: [],
-  nights: [],
+/** One somebody else keeps the book for, which is a party like any other with `yours` false. */
+const shared = (id: string, seats: PartyMember[]): Party => ({
+  ...config(id, seats),
+  yours: false,
 });
 
 const character = (name: string, spriteImgUrl: string | null): Character => ({

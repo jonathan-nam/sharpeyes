@@ -21,7 +21,6 @@ import {
 } from "@/lib/api";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
 import { SharedParties } from "@/components/shared-parties";
-import { yourClear } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { peek, put, storedAt } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
@@ -132,7 +131,11 @@ export default function PartiesPage() {
 
   const [everyParty, setEveryParty] = useState<Party[]>(seededParties ?? []);
   const [bosses, setBosses] = useState<Boss[]>(seededBosses ?? []);
-  const [seated, setSeated] = useState<SeatedParty[]>(peek<SeatedParty[]>(SEATED_KEY) ?? []);
+  // Filtered on the way out of the cache: a tab open across this deploy holds the shape this
+  // section used to take, and a card built from one would draw a party with no boss. See lib/cache.ts.
+  const [seated, setSeated] = useState<SeatedParty[]>(
+    (peek<SeatedParty[]>(SEATED_KEY) ?? []).filter((row) => row.party),
+  );
   const [characters, setCharacters] = useState<Character[]>(seededCharacters ?? []);
   const [dropTables, setDropTables] = useState<DropTables>(peek<DropTables>(DROPS_KEY) ?? {});
   const [people, setPeople] = useState<Person[]>(peek<Person[]>(PEOPLE_KEY) ?? []);
@@ -1108,12 +1111,7 @@ export default function PartiesPage() {
                 </section>
               ))}
 
-            <SharedParties
-              parties={seated}
-              bosses={bosses}
-              characterOrder={characters.map((c) => c.id)}
-              clearOf={(party) => yourClear(party, clearsByCharacter)}
-            />
+            <SharedParties parties={seated} bosses={bosses} characters={characters} />
           </>
         )}
       </PageSwap>

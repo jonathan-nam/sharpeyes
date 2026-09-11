@@ -61,39 +61,47 @@ internal fun partiesSeatedIn(userId: String): List<SeatedPartyResponse> {
                         // Never your own. Those are partiesFor's, with their pool and their money,
                         // and returning them here too would be two answers to one party.
                         (Party.userId neq userId)
-                }.map { it[Party.id] to it[PartyMember.id].toString() }
+                }.map { Seat(it[Party.id], it[PartyMember.id].toString(), it[PartyMember.linkedCharacterId]!!) }
         }
     if (mySeats.isEmpty()) return emptyList()
 
-    val seatsByParty = mySeats.groupBy({ it.first }) { it.second }
+    val seatsByParty = mySeats.groupBy { it.partyId }
     val partyIds = seatsByParty.keys.toList()
-    val nightsByParty =
-        partyIds.associateWith { partyId ->
-            nightsRunBy(partyId, seatsByParty[partyId].orEmpty().toSet())
-        }
-    // Read with YOUR user id, not the owner's: "whose character is this" is answered by your own
-    // people list, which is the only address book you have. Their name for somebody is theirs.
-    val seats = seatsFor(partyIds, userId)
+    val rows =
+        Party
+            .innerJoin(BossCatalog)
+            .join(Characters, JoinType.INNER, Party.characterId, Characters.id)
+            .selectAll()
+            .where { Party.id inList partyIds }
+            .orderBy(BossCatalog.sortOrder)
+            .toList()
 
-    return Party
-        .innerJoin(BossCatalog)
-        .join(Characters, JoinType.INNER, Party.characterId, Characters.id)
-        .selectAll()
-        .where { Party.id inList partyIds }
-        .orderBy(BossCatalog.sortOrder)
-        .map { row ->
-            val partyId = row[Party.id]
-            SeatedPartyResponse(
-                id = partyId.toString(),
-                bossKey = row[BossCatalog.bossKey],
-                difficulty = row[Party.difficulty],
-                minutes = row[Party.minutes],
-                seats = seats[partyId].orEmpty(),
-                mySeatIds = seatsByParty[partyId].orEmpty(),
-                nights = nightsByParty[partyId].orEmpty(),
-            )
-        }
+    // Read as YOU, which is what makes the card the owner's party and the reading yours: whose
+    // character each seat is comes off your own people list, and the clear answers for the
+    // character of yours that sits in it.
+    val parties =
+        partiesFromRows(
+            rows,
+            userId,
+            asCharacter = seatsByParty.mapValues { (_, seats) -> seats.first().characterId },
+        )
+
+    return parties.map { party ->
+        val seats = seatsByParty[Uuid.parse(party.id)].orEmpty()
+        SeatedPartyResponse(
+            party = party,
+            mySeatIds = seats.map { it.memberId },
+            yourCharacterId = seats.first().characterId.toString(),
+        )
+    }
 }
+
+/** One seat of yours in somebody else's party. */
+private data class Seat(
+    val partyId: Uuid,
+    val memberId: String,
+    val characterId: Uuid,
+)
 
 /**
  * True when this user may READ the config: they own it, or they hold a seat in it.
@@ -145,23 +153,6 @@ internal fun seatedCharacterIn(
         .firstOrNull()
         ?.get(PartyMember.linkedCharacterId)
 }
-
-/**
- * The drops from this pool that [mySeatIds] were on the roster for.
- *
- * Read off the pool's own rows rather than re-queried, so a night reads the same for a member as it
- * does for the owner. `ranThatWeek` is already the seats that ran the week a drop fell, resolved
- * per row against that week's roster (see rostersFor), which is exactly the question being asked:
- * a pool spans months and a member was not there for most of it.
- *
- * A row nobody is recorded as having run is left out. That is a pool row whose week has no roster
- * behind it, so it cannot say whether this account was there, and showing it would be answering
- * that question with a guess.
- */
-private fun nightsRunBy(
-    partyId: Uuid,
-    mySeatIds: Set<String>,
-): List<LootResponse> = lootFor(partyId).filter { loot -> loot.ranThatWeek.any { it in mySeatIds } }
 
 /**
  * GET /api/parties/seated. The parties you are in but do not own.
