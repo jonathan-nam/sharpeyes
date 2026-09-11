@@ -105,6 +105,10 @@ data class PartyResponse(
     // Ticked here rather than read off a planner. A number you can trace to a capture and one
     // somebody typed are not equally trustworthy, so the two are not drawn identically.
     val clearedByHand: Boolean = false,
+    // False for a party somebody else keeps the book for, which you reach by holding a seat in it.
+    // Every write on a pool is the owner's, so this is what the screen reads to know it is a
+    // reader: two people logging one night is a double count. See isSeatedIn.
+    val yours: Boolean = true,
     val createdAt: String,
     val updatedAt: String,
 )

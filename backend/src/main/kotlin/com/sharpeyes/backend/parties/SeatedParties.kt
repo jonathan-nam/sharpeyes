@@ -11,6 +11,8 @@ import com.sharpeyes.backend.users.inActiveWorld
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
 import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.alias
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -94,6 +96,57 @@ internal fun partiesSeatedIn(userId: String): List<SeatedPartyResponse> {
 }
 
 /**
+ * True when this user may READ the config: they own it, or they hold a seat in it.
+ *
+ * Deliberately not ownsParty's job. Every write stays on that one, because a pool with two
+ * keyboards logs one night twice, which is the failure this repo exists to prevent.
+ */
+internal fun canReadParty(
+    partyId: Uuid,
+    userId: String,
+): Boolean = ownsParty(partyId, userId) || isSeatedIn(partyId, userId)
+
+/**
+ * True when one of this account's characters holds a standing seat in [partyId].
+ *
+ * The same rule partiesSeatedIn is built on, asked about one party: you reach a party by owning a
+ * character whose seat states so as a foreign key. It says what may be READ and never what may be
+ * written, because every write lands in the owner's pool. See ownsParty, which is the other half.
+ *
+ * Must be called from inside a `transaction { }` block.
+ */
+internal fun isSeatedIn(
+    partyId: Uuid,
+    userId: String,
+): Boolean = seatedCharacterIn(partyId, userId) != null
+
+/**
+ * The character of this account's that sits in [partyId], or null when none does.
+ *
+ * What a member's clear is read against: boss_clear is per CHARACTER, so the owner's tick answers
+ * "have they run it" where a member's screen is asking "have I". The first seat by position when
+ * two of your characters are in one party, which is the seat the party is filed under anyway.
+ *
+ * Must be called from inside a `transaction { }` block.
+ */
+internal fun seatedCharacterIn(
+    partyId: Uuid,
+    userId: String,
+): Uuid? {
+    val theirCharacter = Characters.alias("seated_character")
+    return PartyMember
+        .join(theirCharacter, JoinType.INNER, PartyMember.linkedCharacterId, theirCharacter[Characters.id])
+        .selectAll()
+        .where {
+            (PartyMember.partyId eq partyId) and
+                (PartyMember.standing eq true) and
+                (theirCharacter[Characters.userId] eq userId)
+        }.orderBy(PartyMember.position)
+        .firstOrNull()
+        ?.get(PartyMember.linkedCharacterId)
+}
+
+/**
  * The drops from this pool that [mySeatIds] were on the roster for.
  *
  * Read off the pool's own rows rather than re-queried, so a night reads the same for a member as it
@@ -125,3 +178,23 @@ internal suspend fun RoutingContext.listSeatedParties() {
         }
     call.respond(parties)
 }
+
+/**
+ * Who is asking about a party: its owner, or somebody with a seat in it. Null is neither, which is
+ * every other account and the answer that keeps two accounts apart.
+ */
+internal data class PartyViewer(
+    val owner: Boolean,
+    /** The member's own character, which their clear is read against. Null for the owner. */
+    val asCharacter: Uuid?,
+)
+
+internal fun viewerOf(
+    row: ResultRow,
+    userId: String,
+): PartyViewer? =
+    if (row[Party.userId] == userId) {
+        PartyViewer(owner = true, asCharacter = null)
+    } else {
+        seatedCharacterIn(row[Party.id], userId)?.let { PartyViewer(owner = false, asCharacter = it) }
+    }

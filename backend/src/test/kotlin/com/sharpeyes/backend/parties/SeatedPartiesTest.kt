@@ -1,7 +1,9 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.bosses.weekOf
 import com.sharpeyes.backend.config.Env
+import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
@@ -24,6 +26,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -200,6 +203,81 @@ class SeatedPartiesTest {
             // characterId stays the owner's alone. V75 says so as a CHECK, and the coupon ledger
             // reads a non-null value as SELF.
             assertEquals(null, seat.characterId)
+        }
+    }
+
+    @Test
+    fun `the party a seat reaches is readable, and says it is not yours`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            character(stranger, "Nosy")
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton"))
+            val partyId = Uuid.parse(party.id)
+
+            // The same row the owner reads, which is what makes the two screens one screen.
+            val seen = assertNotNull(findParty(partyId, member))
+            assertEquals(party.id, seen.id)
+            assertEquals(listOf("mechyfechy", "CreedBratton"), seen.seats.map { it.name })
+            assertFalse(seen.yours)
+            assertTrue(findParty(partyId, owner)!!.yours)
+
+            // And the negative, which is the one that matters: no seat, no party.
+            assertNull(findParty(partyId, stranger))
+        }
+    }
+
+    @Test
+    fun `a member may read the pool and still not write it`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            character(stranger, "Nosy")
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton"))
+            val partyId = Uuid.parse(party.id)
+
+            assertTrue(canReadParty(partyId, member))
+            // The line the whole feature rests on. Every write starts with ownsParty, so a pool
+            // with two keyboards logging one night is not reachable from here.
+            assertFalse(ownsParty(partyId, member))
+            assertFalse(canReadParty(partyId, stranger))
+        }
+    }
+
+    @Test
+    fun `the clear on a shared party answers for YOUR character`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            val mine = character(member, "CreedBratton")
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton"))
+            val partyId = Uuid.parse(party.id)
+
+            // Their character has run it, the owner's has not. boss_clear is per CHARACTER, so the
+            // owner's tick answers "have they", and a member reading it would be told they had run
+            // a boss they have not.
+            setClear(mine, "kalos-the-guardian")
+
+            assertEquals(true, findParty(partyId, member)!!.cleared)
+            assertNull(findParty(partyId, owner)!!.cleared)
+        }
+    }
+
+    /** [character] has run [bossKey] this period, ticked by hand. */
+    private fun setClear(
+        character: Uuid,
+        bossKey: String,
+    ) {
+        val boss = bossIdForKey(bossKey)!!
+        val reset = bossResetOf(boss)!!
+        BossClear.insert {
+            it[characterId] = character
+            it[bossCatalogId] = boss
+            it[periodStart] = periodStartFor(reset, Clock.System.now())
+            it[cleared] = true
+            it[capturedAt] = Clock.System.now()
         }
     }
 

@@ -295,7 +295,9 @@ private suspend fun RoutingContext.setClearRoute() {
     val party =
         dbQuery {
             ensureUser(userId, email)
-            val found = findParty(partyId, userId)
+            // Yours only. findParty answers for a party you are merely seated in, and the clear
+            // this writes is the OWNER's character's: see setPartyClear.
+            val found = findParty(partyId, userId)?.takeIf { it.yours }
             if (found != null) {
                 val boss =
                     BossCatalog

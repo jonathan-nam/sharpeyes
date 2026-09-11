@@ -41,7 +41,9 @@ private suspend fun RoutingContext.listLoot() {
     val loot =
         dbQuery {
             ensureUser(userId, email)
-            if (!ownsParty(partyId, userId)) null else lootFor(partyId)
+            // The one read here a member reaches. Every write below stays on ownsParty: the pool
+            // is the owner's book, and two people writing it is one night counted twice.
+            if (!canReadParty(partyId, userId)) null else lootFor(partyId)
         }
     if (loot == null) call.respond(HttpStatusCode.NotFound) else call.respond(loot)
 }

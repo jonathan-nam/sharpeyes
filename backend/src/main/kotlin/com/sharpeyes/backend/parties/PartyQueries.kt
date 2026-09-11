@@ -115,13 +115,17 @@ internal fun findParty(
     partyId: Uuid,
     userId: String,
 ): PartyResponse? {
-    val row =
+    val seen =
         Party
             .innerJoin(BossCatalog)
             .join(Characters, JoinType.INNER, Party.characterId, Characters.id)
             .selectAll()
-            .where { (Party.id eq partyId) and (Party.userId eq userId) }
-            .firstOrNull() ?: return null
+            .where { Party.id eq partyId }
+            .firstOrNull()
+            // A party somebody else keeps the book for is readable by the people in it, and by
+            // nobody else. See viewerOf.
+            ?.let { found -> viewerOf(found, userId)?.let { found to it } } ?: return null
+    val (row, viewer) = seen
     // This week's roster, because this is the page a drop is added and sold on, and those land in
     // the week it is now. The pool below it is all time, so an old drop stays settleable, and it
     // reads its payouts against `seats` rather than this.
@@ -134,16 +138,18 @@ internal fun findParty(
             // for a monthly boss is not the month `week` started in. See periodShown.
             skippedThisPeriod = partyId in notRunningIn(listOf(row), week = null, now = Clock.System.now()),
         )
-    return row.toPartyResponse(
-        slug = partySlug(partyId, characterSlugsFor(userId)[row[Party.characterId]], row[BossCatalog.bossKey]),
-        members = ranIn(seats, rosterFor(partyId, week)),
-        seats = seats,
-        // All time, unlike the list's. This is the page that sells a drop and pays it out, so a
-        // week that hid an old one would put it beyond the only controls that can settle it.
-        loot = lootCountsFor(listOf(partyId), week = null)[partyId] ?: LootCounts(0, 0, 0),
-        clear = clearStateFor(listOf(row))[partyId] ?: ClearState(null, false),
-        week = state,
-    )
+    val party =
+        row.toPartyResponse(
+            slug = partySlug(partyId, characterSlugsFor(userId)[row[Party.characterId]], row[BossCatalog.bossKey]),
+            members = ranIn(seats, rosterFor(partyId, week)),
+            seats = seats,
+            // All time, unlike the list's. This is the page that sells a drop and pays it out, so a
+            // week that hid an old one would put it beyond the only controls that can settle it.
+            loot = lootCountsFor(listOf(partyId), week = null)[partyId] ?: LootCounts(0, 0, 0),
+            clear = clearStateFor(listOf(row), viewer.asCharacter)[partyId] ?: ClearState(null, false),
+            week = state,
+        )
+    return party.copy(yours = viewer.owner)
 }
 
 /** True when the config exists and belongs to this user. The ownership check every write starts with. */
@@ -286,7 +292,16 @@ internal data class WeekState(
     val skippedThisPeriod: Boolean,
 )
 
-private fun clearStateFor(rows: List<ResultRow>): Map<Uuid, ClearState> {
+/**
+ * Whether each config's boss is cleared, and how that was known.
+ *
+ * [asCharacter] replaces the config's own character, for a member reading somebody else's party:
+ * the owner's tick says whether THEY have run it. See seatedCharacterIn.
+ */
+private fun clearStateFor(
+    rows: List<ResultRow>,
+    asCharacter: Uuid? = null,
+): Map<Uuid, ClearState> {
     if (rows.isEmpty()) return emptyMap()
     val now = Clock.System.now()
 
@@ -297,7 +312,7 @@ private fun clearStateFor(rows: List<ResultRow>): Map<Uuid, ClearState> {
         rows.associate { row ->
             row[Party.id] to
                 Triple(
-                    row[Party.characterId],
+                    asCharacter ?: row[Party.characterId],
                     row[Party.bossCatalogId],
                     periodStartFor(row[BossCatalog.reset], now),
                 )
