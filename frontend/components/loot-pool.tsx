@@ -25,6 +25,7 @@ export function LootPool({
   stacks,
   piecePickup,
   adding,
+  readOnly = false,
   isSaving,
   onAdd,
   onSell,
@@ -54,6 +55,11 @@ export function LootPool({
   piecePickup?: NightPickup;
   /** The picker's own add. Not the rows': one drop being logged does not lock the pool. */
   adding: boolean;
+  /**
+   * A party somebody else keeps the book for. The pool reads the same; what goes is everything
+   * that would write into it, which is theirs alone. See PartyResponse.yours.
+   */
+  readOnly?: boolean;
   /** Whether THIS drop's write is in flight, by its id. */
   isSaving: (lootId: string) => boolean;
   onAdd: (body: AddLootBody) => void;
@@ -96,7 +102,7 @@ export function LootPool({
     <section className="loot-pool">
       <div className="loot-pool-head">
         <h2 className="loot-pool-title">Loot pool</h2>
-        {correctable && (
+        {correctable && !readOnly && (
           <button
             type="button"
             className="party-cancel"
@@ -107,14 +113,16 @@ export function LootPool({
         )}
       </div>
 
-      <DropPicker
-        bossKey={party.bossKey}
-        worldType={party.worldType}
-        table={dropTables[party.bossKey]}
-        difficulty={party.difficulty}
-        busy={adding}
-        onAdd={onAdd}
-      />
+      {!readOnly && (
+        <DropPicker
+          bossKey={party.bossKey}
+          worldType={party.worldType}
+          table={dropTables[party.bossKey]}
+          difficulty={party.difficulty}
+          busy={adding}
+          onAdd={onAdd}
+        />
+      )}
 
       {/* Nothing of THIS config's. A pool holding only other arrangements' nights is not empty, and
           saying it was would be the screen disagreeing with the line under it. */}
@@ -160,6 +168,7 @@ export function LootPool({
             splitElsewhere
             editing={editing}
             isSaving={isSaving}
+            readOnly={readOnly}
             onSell={onSell}
             onUnsell={onUnsell}
             onSetTaken={onSetTaken}
@@ -208,6 +217,7 @@ export function LootPool({
                   splitElsewhere
                   editing={editing}
                   isSaving={isSaving}
+                  readOnly={readOnly}
                   onSell={onSell}
                   onUnsell={onUnsell}
                   onSetTaken={onSetTaken}

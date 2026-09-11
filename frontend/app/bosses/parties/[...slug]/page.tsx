@@ -3,7 +3,7 @@
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
@@ -12,7 +12,7 @@ import { bossLabel } from "@/lib/boss-difficulty";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { useRowWrites } from "@/lib/use-row-writes";
 import { ApiError, SAVED_BUT_STALE, StaleAfterWrite, apiFetch, readBack } from "@/lib/api";
-import { peek, put } from "@/lib/cache";
+import { invalidate, peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import {
   buildDropLog,
@@ -49,6 +49,8 @@ const VESTIGE = "vestige-of-erion";
 // Rows are keyed by their drop's id while they save. The picker is not a row, so it takes a name of
 // its own. See lib/use-row-writes.ts.
 const ADD_DROP = "add-drop";
+// Not a row either, and the only write on this page that is a member's. See leave().
+const LEAVE = "leave";
 
 export default function PartyPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -56,6 +58,7 @@ export default function PartyPage() {
 
   const { getToken, isLoaded } = useAuth();
   const params = useParams<{ slug: string[] }>();
+  const router = useRouter();
   // The path as the server reads it: "rune/lomien", or one segment for a uuid, which is what an
   // older link carries. See backend PartySlug.kt.
   const slug = params.slug.join("/");
@@ -181,6 +184,28 @@ export default function PartyPage() {
       method: "PUT",
       body: JSON.stringify({ bundles }),
     });
+
+  // A party somebody else keeps the book for. The screen is the same one; what it does not carry
+  // is anything that would write into their pool. See PartyResponse.yours.
+  const readOnly = party?.yours === false;
+  const [leaving, setLeaving] = useState(false);
+
+  /** Takes this account's seat out of a party it does not own, and leaves the page with it. */
+  async function leave() {
+    if (!party) return;
+    setError(null);
+    try {
+      await write(LEAVE, () =>
+        apiFetch<unknown>(`/api/parties/${party.id}/leave`, { method: "POST" }, getToken),
+      );
+      // Invalidated rather than patched: the party is gone from every list this account has, and
+      // the list is what the page goes back to.
+      invalidate("/api/parties");
+      router.push("/bosses/parties");
+    } catch (e) {
+      setError(e instanceof ApiError && e.body !== "" ? e.body : "Couldn't leave that party.");
+    }
+  }
 
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
   // Counted from the rows on screen rather than from the party's stored counters, which were read
@@ -390,6 +415,7 @@ export default function PartyPage() {
               dropTables={dropTables}
               bossByKey={bossByKey}
               adding={isSaving(ADD_DROP)}
+              readOnly={readOnly}
               isSaving={isSaving}
               onAdd={add}
               onSell={sell}
@@ -398,6 +424,40 @@ export default function PartyPage() {
               onSetPaid={setPaid}
               onDelete={remove}
             />
+
+            {readOnly && (
+              <p className="shared-party-act">
+                {leaving ? (
+                  <>
+                    <button
+                      type="button"
+                      className="party-delete"
+                      onClick={leave}
+                      disabled={isSaving(LEAVE)}
+                    >
+                      Leave this party?
+                    </button>
+                    <button
+                      type="button"
+                      className="party-cancel"
+                      onClick={() => setLeaving(false)}
+                      disabled={isSaving(LEAVE)}
+                    >
+                      Stay
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className="party-delete"
+                    onClick={() => setLeaving(true)}
+                    disabled={isSaving(LEAVE)}
+                  >
+                    Leave
+                  </button>
+                )}
+              </p>
+            )}
           </>
         )}
       </PageSwap>

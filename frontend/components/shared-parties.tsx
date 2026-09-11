@@ -1,4 +1,4 @@
-import { useState } from "react";
+import Link from "next/link";
 import { clearClass, clearStateLabel } from "@/lib/boss-clears";
 import { difficultyLabel } from "@/lib/boss-difficulty";
 import { formatMoney } from "@/lib/money";
@@ -9,19 +9,14 @@ import type { SeatedParty } from "@/types/party";
 
 // The parties somebody else keeps the book for, and the nights of them you were on.
 //
-// One control, and it is about your own seat. The pool is theirs to record, so a member who wants a
-// night changed still asks the person who logged it; leaving is the one thing here nobody else can
-// answer for you. Every other write would go into their pool, where two people logging one night is
-// a double count.
+// No controls. The pool is theirs to record, so a member who wants a night changed asks the person
+// who logged it, and leaving is on the party's own page with everything else about it.
 
 export function SharedParties({
   parties,
   bosses,
   characterOrder,
   clearOf,
-  onLeave,
-  isSaving,
-  leaveError,
 }: {
   parties: SeatedParty[];
   bosses: Boss[];
@@ -44,12 +39,6 @@ export function SharedParties({
    * of reading them, and a second way is how two screens come to disagree about the same tick.
    */
   clearOf: (party: SeatedParty) => boolean | null;
-  /** Takes this account's seat out of a party it does not own. */
-  onLeave: (party: SeatedParty) => void;
-  /** Keyed by party id, the way the owner's own cards are. */
-  isSaving: (key: string) => boolean;
-  /** The server's own reason, kept with the party it was about. */
-  leaveError: { partyId: string; message: string } | null;
 }) {
   if (parties.length === 0) return null;
   const nameOf = (bossKey: string) => bosses.find((b) => b.bossKey === bossKey)?.name ?? bossKey;
@@ -74,7 +63,9 @@ export function SharedParties({
           {group.parties.map((party) => (
             <div className="shared-party" key={party.id}>
               <h3 className="config-boss">
-                {nameOf(party.bossKey)}
+                {/* By id, not by a slug: a slug names the OWNER's character, and this account has
+                    no name for it. See partySlug. */}
+                <Link href={`/bosses/parties/${party.id}`}>{nameOf(party.bossKey)}</Link>
                 {party.difficulty && (
                   <span className="party-difficulty">{difficultyLabel(party.difficulty)}</span>
                 )}
@@ -123,66 +114,10 @@ export function SharedParties({
                   })}
                 </ul>
               )}
-              <LeaveSeat
-                boss={nameOf(party.bossKey)}
-                onLeave={() => onLeave(party)}
-                saving={isSaving(party.id)}
-                error={leaveError?.partyId === party.id ? leaveError.message : null}
-              />
             </div>
           ))}
         </div>
       ))}
     </section>
-  );
-}
-
-/**
- * Leaving, in two presses.
- *
- * Confirmed rather than done on the first click: it edits somebody else's roster, and this account
- * cannot put itself back afterwards, only the owner can. The boss is named in the question because
- * the button sits on one card among however many the page is showing.
- */
-function LeaveSeat({
-  boss,
-  onLeave,
-  saving,
-  error,
-}: {
-  boss: string;
-  onLeave: () => void;
-  saving: boolean;
-  error: string | null;
-}) {
-  const [confirming, setConfirming] = useState(false);
-  return (
-    <p className="shared-party-act">
-      {confirming ? (
-        <>
-          <button type="button" className="party-delete" onClick={onLeave} disabled={saving}>
-            Leave {boss}?
-          </button>
-          <button
-            type="button"
-            className="party-cancel"
-            onClick={() => setConfirming(false)}
-            disabled={saving}
-          >
-            Stay
-          </button>
-        </>
-      ) : (
-        <button
-          type="button"
-          className="party-delete"
-          onClick={() => setConfirming(true)}
-          disabled={saving}
-        >
-          Leave
-        </button>
-      )}
-      {error && <span className="split-error">{error}</span>}
-    </p>
   );
 }
