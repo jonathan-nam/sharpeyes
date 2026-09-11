@@ -159,7 +159,7 @@ class AccountInviteTest {
             // One row carries the arrangement, and the member reads it there. It used to be copied
             // onto a second row, which is the thing that could then disagree: difficulty is what
             // boss_drop_amount joins on, so two answers to it is two answers to what fell.
-            val party = partiesSeatedIn(recipientId).single()
+            val party = partiesSeatedIn(recipientId).single().party
             assertEquals("CHAOS", party.difficulty)
             assertEquals(12, party.minutes)
             assertEquals(source.toString(), party.id)

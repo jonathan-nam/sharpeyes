@@ -183,16 +183,12 @@ export type SavePeopleBody = {
 };
 
 // One party somebody ELSE owns that a character of yours is seated in. Mirrors the backend's
-// SeatedPartyResponse. Deliberately not a Party: that one carries pool totals spanning nights this
-// account was not on, and no slug, because a party's URL resolves only for its owner.
+// SeatedPartyResponse: the party itself is the owner's own row, read exactly as they read it, plus
+// the two facts only your account can answer about it.
 export type SeatedParty = {
-  id: string;
-  bossKey: string;
-  difficulty: string | null;
-  minutes: number | null;
-  seats: PartyMember[];
-  // Which of those seats are yours.
+  party: Party;
+  // Which of its seats are yours.
   mySeatIds: string[];
-  // Only the nights you were on the roster for. The party's own record of each, unreduced.
-  nights: Loot[];
+  // The character of yours that sits in it, which is the heading it is filed under.
+  yourCharacterId: string;
 };

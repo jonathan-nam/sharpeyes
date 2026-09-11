@@ -1,5 +1,5 @@
 import type { Character } from "@/types/character";
-import type { Party, SeatedParty } from "@/types/party";
+import type { Party } from "@/types/party";
 
 /**
  * Every character name the app can draw a sprite for, to the backend-relative path of that sprite.
@@ -18,10 +18,7 @@ import type { Party, SeatedParty } from "@/types/party";
  * Resolve what comes out with spriteUrl(): these paths are backend-relative, and assigning one to
  * an <img> unresolved asks the frontend's own origin, which is a 404 in dev and in prod both.
  */
-export function spriteByName(
-  characters: Character[],
-  parties: (Party | SeatedParty)[],
-): Map<string, string> {
+export function spriteByName(characters: Character[], parties: Party[]): Map<string, string> {
   const sprites = new Map<string, string>();
   for (const party of parties) {
     // Every seat, not the week's roster: somebody who has left the party is still drawn on the

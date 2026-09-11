@@ -143,33 +143,20 @@ data class PersonResponse(
 /**
  * One party you are IN but do not own.
  *
- * Its own response type, not PartyResponse. That one carries pending, awaiting and settled loot
- * counts for the WHOLE pool, and those totals span nights this account was not on.
+ * The party itself is the owner's own row, read exactly as they read it, so the two accounts are
+ * looking at one thing. What this adds is the two facts only the reader's account can answer: which
+ * seats are theirs, and which of their characters the party is filed under.
  *
- * No slug either. A party's URL is built from its OWNER's character slugs and resolves only for
- * them, so handing one to a member would be handing them a 404.
+ * The party's slug is its uuid here. A readable slug is built from the OWNER's character names and
+ * resolves only for them, so partySlug falls back for anybody else. See characterSlugsFor.
  */
 @Serializable
 data class SeatedPartyResponse(
-    val id: String,
-    val bossKey: String,
-    val difficulty: String?,
-    val minutes: Int?,
-    // Every seat, the owner's own character first, as on any config. This is also what says whose
-    // party it is: the first seat is the character the config belongs to.
-    val seats: List<PartyMemberResponse>,
-    // Which of those seats are yours, so the caller never works it out by name.
+    val party: PartyResponse,
+    // Which of its seats are yours, so the caller never works it out by name.
     val mySeatIds: List<String>,
-    /**
-     * The nights YOU were on the roster for, and nothing else.
-     *
-     * The narrowing is by night, which is the whole of what a member is entitled to see: a pool
-     * spans months and they were not there for most of it. Within a night they get the party's own
-     * record as it stands, unreduced, because they were in the party that night and because a
-     * smaller shape would mean a second implementation of the money maths beside splitOf. Two
-     * answers to what somebody is owed is worse than one answer they can check.
-     */
-    val nights: List<LootResponse> = emptyList(),
+    // The character of yours that sits in it, which is the list heading this belongs under.
+    val yourCharacterId: String,
 )
 
 /** PUT /api/people/{personId}/pinned. One flag, so a pin cannot rewrite the people list. */

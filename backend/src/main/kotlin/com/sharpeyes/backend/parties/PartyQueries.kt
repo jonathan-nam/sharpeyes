@@ -83,6 +83,27 @@ internal fun partiesFor(
                 (Party.userId eq userId) and inActiveWorld(userId) and wanted
             }.orderBy(BossCatalog.sortOrder)
             .toList()
+    return partiesFromRows(rows, userId, week)
+}
+
+/**
+ * The response for each of [rows], read as [userId].
+ *
+ * One batch of queries for the lot, which is the whole reason this is not a loop over findParty:
+ * a list of seventeen parties would be a hundred round trips.
+ *
+ * [asCharacter] names, per party, the reader's OWN character in a party they do not own. A party in
+ * that map is somebody else's book, so it comes back with `yours` false and its clear read against
+ * the reader's character rather than the owner's. See seatedCharacterIn.
+ *
+ * Must be called from inside a `transaction { }` block.
+ */
+internal fun partiesFromRows(
+    rows: List<ResultRow>,
+    userId: String,
+    week: LocalDate? = null,
+    asCharacter: Map<Uuid, Uuid> = emptyMap(),
+): List<PartyResponse> {
     if (rows.isEmpty()) return emptyList()
 
     val shown = week ?: currentWeek()
@@ -90,7 +111,7 @@ internal fun partiesFor(
     val seatsByParty = seatsFor(partyIds, userId)
     val rosters = rostersFor(partyIds, shown)
     val counts = lootCountsFor(partyIds, shown)
-    val clears = clearStateFor(rows)
+    val clears = clearStateFor(rows, asCharacter)
     val spelledOut = weeksSpelledOut(partyIds, shown)
     // Against the week being SHOWN, not against now, so stepping back says what was said about that
     // week rather than what is true today. The trap `cleared` falls into: see clearStateFor.
@@ -100,14 +121,16 @@ internal fun partiesFor(
     return rows.map { row ->
         val id = row[Party.id]
         val seats = seatsByParty[id].orEmpty()
-        row.toPartyResponse(
-            slug = partySlug(id, characterSlugs[row[Party.characterId]], row[BossCatalog.bossKey]),
-            members = ranIn(seats, rosters[id].orEmpty()),
-            seats = seats,
-            loot = counts[id] ?: LootCounts(0, 0, 0),
-            clear = clears[id] ?: ClearState(null, false),
-            week = WeekState(usualRoster = id !in spelledOut, skippedThisPeriod = id in off),
-        )
+        val party =
+            row.toPartyResponse(
+                slug = partySlug(id, characterSlugs[row[Party.characterId]], row[BossCatalog.bossKey]),
+                members = ranIn(seats, rosters[id].orEmpty()),
+                seats = seats,
+                loot = counts[id] ?: LootCounts(0, 0, 0),
+                clear = clears[id] ?: ClearState(null, false),
+                week = WeekState(usualRoster = id !in spelledOut, skippedThisPeriod = id in off),
+            )
+        if (id in asCharacter) party.copy(yours = false) else party
     }
 }
 
@@ -131,6 +154,8 @@ internal fun findParty(
     // reads its payouts against `seats` rather than this.
     val week = currentWeek()
     val seats = seatsFor(listOf(partyId), userId)[partyId].orEmpty()
+    val asCharacter = viewer.asCharacter?.let { mapOf(partyId to it) }.orEmpty()
+    val clears = clearStateFor(listOf(row), asCharacter)
     val state =
         WeekState(
             usualRoster = partyId !in weeksSpelledOut(listOf(partyId), week),
@@ -146,7 +171,7 @@ internal fun findParty(
             // All time, unlike the list's. This is the page that sells a drop and pays it out, so a
             // week that hid an old one would put it beyond the only controls that can settle it.
             loot = lootCountsFor(listOf(partyId), week = null)[partyId] ?: LootCounts(0, 0, 0),
-            clear = clearStateFor(listOf(row), viewer.asCharacter)[partyId] ?: ClearState(null, false),
+            clear = clears[partyId] ?: ClearState(null, false),
             week = state,
         )
     return party.copy(yours = viewer.owner)
@@ -295,12 +320,12 @@ internal data class WeekState(
 /**
  * Whether each config's boss is cleared, and how that was known.
  *
- * [asCharacter] replaces the config's own character, for a member reading somebody else's party:
+ * [asCharacter] replaces a config's own character, per party, for a member reading somebody else's:
  * the owner's tick says whether THEY have run it. See seatedCharacterIn.
  */
 private fun clearStateFor(
     rows: List<ResultRow>,
-    asCharacter: Uuid? = null,
+    asCharacter: Map<Uuid, Uuid> = emptyMap(),
 ): Map<Uuid, ClearState> {
     if (rows.isEmpty()) return emptyMap()
     val now = Clock.System.now()
@@ -312,7 +337,7 @@ private fun clearStateFor(
         rows.associate { row ->
             row[Party.id] to
                 Triple(
-                    asCharacter ?: row[Party.characterId],
+                    asCharacter[row[Party.id]] ?: row[Party.characterId],
                     row[Party.bossCatalogId],
                     periodStartFor(row[BossCatalog.reset], now),
                 )

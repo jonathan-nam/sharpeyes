@@ -169,7 +169,7 @@ export default function PeoplePage() {
     }
   }
 
-  const sprites = spriteByName(characters, [...parties, ...seated]);
+  const sprites = spriteByName(characters, [...parties, ...seated.map((row) => row.party)]);
   const mine = characters.map((c) => c.name);
   // Against the DRAFT, not the saved list: a character dragged onto somebody has to leave the pile
   // as it is dropped, before anything is saved.

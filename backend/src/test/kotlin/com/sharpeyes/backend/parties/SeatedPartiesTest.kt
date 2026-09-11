@@ -124,9 +124,15 @@ class SeatedPartiesTest {
             val party = config(theirs, listOf("CreedBratton"))
 
             val seated = partiesSeatedIn(member)
-            assertEquals(listOf(party.id), seated.map { it.id })
+            assertEquals(listOf(party.id), seated.map { it.party.id })
             // The whole roster, as the owner arranged it, and which seat is mine.
-            assertEquals(listOf("mechyfechy", "CreedBratton"), seated.single().seats.map { it.name })
+            assertEquals(
+                listOf("mechyfechy", "CreedBratton"),
+                seated
+                    .single()
+                    .party.seats
+                    .map { it.name },
+            )
             assertEquals(listOf(party.members[1].id), seated.single().mySeatIds)
         }
     }
@@ -295,7 +301,7 @@ class SeatedPartiesTest {
         )
 
     @Test
-    fun `a member sees the nights they were on the roster for`() {
+    fun `a member sees the pool, counted as the owner counts it`() {
         transaction {
             val theirs = character(owner, "mechyfechy")
             character(member, "CreedBratton")
@@ -303,17 +309,17 @@ class SeatedPartiesTest {
             val party = config(theirs, listOf("CreedBratton"))
             drop(party, LocalDate.parse("2026-07-20"))
 
-            val nights = partiesSeatedIn(member).single().nights
-            assertEquals(1, nights.size)
-            // The party's own record of that night, not a reduced copy of it: a second shape would
-            // be a second implementation of what somebody is owed.
-            assertEquals("Grindstone of Faith", nights.single().name)
-            assertTrue(nights.single().ranThatWeek.contains(party.members[1].id))
+            val seen = partiesSeatedIn(member).single()
+            assertEquals(party.id, seen.party.id)
+            assertFalse(seen.party.yours)
+            // The party's own counters, not a narrowing of them. The pool is one book and both
+            // accounts read it, which is what stops the two screens disagreeing about it.
+            assertEquals(findParty(Uuid.parse(party.id), owner)!!.pendingLoot, seen.party.pendingLoot)
         }
     }
 
     @Test
-    fun `a night the member was not on stays out of it`() {
+    fun `a night the member was not on is still the party's night`() {
         transaction {
             val theirs = character(owner, "mechyfechy")
             character(member, "CreedBratton")
@@ -331,9 +337,27 @@ class SeatedPartiesTest {
             )
             drop(party, night)
 
-            // A pool spans months and a member was not there for most of it. This is the claim the
-            // whole read exists to make, and the one that costs money if it is wrong.
-            assertEquals(emptyList(), partiesSeatedIn(member).single().nights)
+            // Not hidden. A member reads the party's whole pool, the way its owner does, and which
+            // nights they ran is answered by the roster on each of them. The narrowing this read
+            // used to do is what made the two screens two different screens.
+            assertEquals(1, lootFor(Uuid.parse(party.id)).size)
+            assertTrue(canReadParty(Uuid.parse(party.id), member))
+        }
+    }
+
+    @Test
+    fun `a seat of yours names the character the party is filed under`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            val mine = character(member, "CreedBratton")
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton"))
+
+            val seen = partiesSeatedIn(member).single()
+            assertEquals(listOf(party.members[1].id), seen.mySeatIds)
+            // Which of YOUR characters it is, so the list can file it under the same heading your
+            // own parties sit under. The party's own characterId is the owner's.
+            assertEquals(mine.toString(), seen.yourCharacterId)
         }
     }
 
