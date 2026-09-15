@@ -64,6 +64,11 @@
   // they belong to the machine, and the container should borrow them rather than keep its
   // own copy. (VS Code already forwards .gitconfig and SSH agent by itself.)
   //
+  // ~/.ssh is on the list for the Lightsail key, which agent forwarding does NOT cover: a
+  // deploy runs `ssh -i ~/.ssh/lightsail.pem`, and the file has to be there. Container-local
+  // it died with each rebuild, and prod could not be deployed from a session until it was
+  // dragged back in by hand. `*.pem` is gitignored and pinned by both ci.yml secret guards.
+  //
   // initializeCommand runs on the HOST before the container is created. Without it, a bind
   // mount whose source does not exist fails the whole container build -- which is a
   // spectacular way to break a fresh clone for someone who has never used the AWS CLI.
@@ -72,11 +77,12 @@
   // rebuild silently discards everything learned about this machine and this project, and
   // the next session starts by rediscovering it. That is precisely what a memory is for,
   // and precisely what makes losing it expensive.
-  "initializeCommand": "mkdir -p ${localEnv:HOME}/.aws ${localEnv:HOME}/.config/gh ${localEnv:HOME}/.claude",
+  "initializeCommand": "mkdir -p ${localEnv:HOME}/.aws ${localEnv:HOME}/.config/gh ${localEnv:HOME}/.claude ${localEnv:HOME}/.ssh",
   "mounts": [
     "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached",
     "source=${localEnv:HOME}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached",
-    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
   ],
 
   "postCreateCommand": "bash .devcontainer/post-create.sh",
