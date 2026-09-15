@@ -5,6 +5,7 @@ import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
 import { WorldChoice } from "@/components/world-choice";
 import { PASSWORD_LOGIN } from "@/lib/auth-client";
+import { HOME_ACTIONS } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
 
@@ -34,9 +35,13 @@ export default function Home() {
         <section className="hero">
           <SharpEyesMark size={64} />
           <h1>Welcome back</h1>
-          <p>
-            <Link href="/inventory">See where you stand</Link>.
-          </p>
+          <nav className="hero-actions">
+            {HOME_ACTIONS.map((item) => (
+              <Link key={item.href} href={item.href}>
+                {item.label}
+              </Link>
+            ))}
+          </nav>
         </section>
       ) : (
         <section className="hero">

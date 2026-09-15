@@ -1641,6 +1641,31 @@ img.user-avatar-img {
   margin: 0 0 12px;
 }
 
+/* The welcome-back screen's way in: one button per section, wrapping when five will not fit on a
+   line. Same face as the world cards above, at one line each. */
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.hero-actions a {
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink-strong);
+  font-size: var(--text-lg);
+  text-decoration: none;
+}
+
+.hero-actions a:hover {
+  border-color: var(--ink-strong);
+  background: var(--surface-2);
+}
+
 /* --- Sectioned inventory ---------------------------------------------------------------- */
 
 .ms-section {
