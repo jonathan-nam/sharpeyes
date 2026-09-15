@@ -75,7 +75,7 @@ describe("folding `owed`", () => {
     // rows made that figure. Open by default it also disagreed with its own arrow.
     expect(ledger).toContain("const [showOwed, setShowOwed] = useState(false);");
     expect(ledger).toContain("const [showOff, setShowOff] = useState(false);");
-    expect(ledger).toContain("const [showHeld, setShowHeld] = useState(false);");
+    expect(ledger).toContain("const [showUnsettled, setShowUnsettled] = useState(false);");
   });
 
   it("draws no chevron where there is no list to fold", () => {
@@ -123,9 +123,12 @@ describe("one section for what is unsettled", () => {
     expect(at, "the heading is gone").toBeGreaterThan(-1);
     const section = ledger.slice(at, ledger.indexOf("Closing Actions", at));
     expect(section).toContain('<span className="ledger-step">shares</span>');
-    // The held money has no step over it saying where it came from: its figure is on the section's
-    // own heading line, and the rows it opens onto say it, one sale each.
-    expect(section).toContain("<CopyAmount value={row.holding}");
+    // ONE FIGURE over the pair, which is what one press of Offset moves. The held money was the
+    // whole of it, so the other half of the act had a figure nowhere and the two came off what they
+    // owe you one after the other. See unsettledParts for why adding these two is safe.
+    expect(section).toContain("<CopyAmount value={unsettled}");
+    expect(ledger).toContain("mesos: offset.amount,");
+    expect(ledger).toContain("mesos: row.holding,");
     expect(ledger).not.toContain("coupon sales</span>");
     // The card is one person's, so neither heading names them again.
     expect(ledger).not.toContain("money I'm holding");
@@ -158,17 +161,23 @@ describe("one section for what is unsettled", () => {
     expect(ledger).toContain("{bothWays && <span className=");
   });
 
-  it("puts the figure on the heading's line, with its own way into the sales", () => {
+  it("puts the figure on the heading's line, opening onto the parts that make it", () => {
     // A bare 500,000,000 on a row of its own under the heading read as a row of the list. What it is
-    // NOT is a total of the section: the shares under it run both ways and are in the card's header
-    // already, so the chevron opens onto the sales it is made of and onto nothing else.
+    // still NOT is a total of the whole section: the shares running the other way are under `Owed`,
+    // and a count of coupons is the one thing this account never adds to a pile of mesos.
     const at = ledger.indexOf(
       '<div className="ledger-step-line">\n            <span className="ledger-heading">Unsettled Amounts',
     );
     expect(at, "the figure is off the heading's line").toBeGreaterThan(-1);
     const head = ledger.slice(at, ledger.indexOf("</div>", at));
-    expect(head).toContain("<CopyAmount value={row.holding}");
-    expect(head).toContain("aria-controls={`held-${row.key}`}");
+    expect(head).toContain("<CopyAmount value={unsettled}");
+    expect(head).toContain("aria-controls={`unsettled-${row.key}`}");
+    // The fold names both parts, so what the heading became is not a total nobody can decompose:
+    // the sum is the card's own, on the card, exactly as `owedTotal` is.
+    expect(ledger).toContain('<div className="ledger-fold" id={`unsettled-${row.key}`}');
+    expect(ledger).toContain(
+      "const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);",
+    );
   });
 
   it("draws the art on both lists in the section, at one size and legibly", () => {
@@ -181,7 +190,9 @@ describe("one section for what is unsettled", () => {
     expect(wallet).toContain("iconUrl: loot.iconUrl,");
     // One rule over both lists, so neither can drift: an offset's row and a share's are the same
     // kind of row, and a sale row under the same heading is one too.
-    const both = rule(".ledger-drop-head .loot-icon,\n.ledger-entry > .loot-shares .loot-icon");
+    const both = rule(
+      ".ledger-drop-head .loot-icon,\n.ledger-entry > .ledger-fold > .loot-shares .loot-icon",
+    );
     expect(both).toMatch(/width:\s*32px/);
     expect(both).toMatch(/image-rendering:\s*auto/);
   });
@@ -207,17 +218,21 @@ describe("every act in one step", () => {
     expect(ledger.match(/^\s*Offset$/gm)).toHaveLength(1);
   });
 
-  it("writes each pot on its own, since they are two facts", () => {
+  it("writes both pots in ONE call, one press being one act", () => {
+    // They were two calls, on the reasoning that a share is a claim and their money is already here.
+    // They are still two facts and the server still writes them as two rows; what cannot be two is
+    // the REQUEST, because both come off what they owe you and each answer drew the card. One press
+    // of Offset walked Bro's owed figure down by the shares, then down again by the money.
     expect(ledger).toContain(
-      "if (offset.offered) await onOffsetShares(row.holder, row.name, offset.parts);",
+      "onOffsetAll(row.holder, row.name, offset.offered ? offset.parts : [], heldOrNone)",
     );
     expect(ledger).toContain(
-      'if (row.holding > 0) await onDisposeProceeds(row.holder, row.holding, "OFFSET");',
+      "const sendAll = () => onSendAll(row.holder, owedByYouShares(row), heldOrNone);",
     );
-    expect(ledger).toContain("if (owes > 0) await onSettleShares(owedByYouShares(row));");
-    expect(ledger).toContain(
-      'if (row.holding > 0) await onDisposeProceeds(row.holder, row.holding, "PAID");',
-    );
+    // Undefined and never nought: a disposal of nothing is a row saying an act happened that did not.
+    expect(ledger).toContain("const heldOrNone = row.holding > 0 ? row.holding : undefined;");
+    // And the two-request shape is gone from the card entirely, not just from the button.
+    expect(ledger).not.toContain("onDisposeProceeds");
   });
 
   it("puts every act after the step that heads them, and none before it", () => {

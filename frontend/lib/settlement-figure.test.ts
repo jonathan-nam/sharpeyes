@@ -79,7 +79,7 @@ describe("what the card says a person owes", () => {
   it("puts the nights behind the shares figure on hover, and marks that it has them", () => {
     // The same list sits under its own step further down, with two forms between the two, so the
     // figure and the nights it came off did not read as the same thing.
-    expect(source).toContain("const behindShares = row.lines");
+    expect(source).toContain('const behindShares = behind("owed");');
     expect(source).toContain("title={part.detail || undefined}");
     expect(source).toContain('part.detail ? "loot-name has-detail" : "loot-name"');
     expect(css).toContain(".loot-name.has-detail");
@@ -119,31 +119,43 @@ describe("what the card says a person owes", () => {
   it("hands the server every share, since the history is one row per share", () => {
     // A press covering three nights wrote ONE entry: 5.6b against "offset against Bro", with which
     // three of them a fold down from a figure that named none. The rows are what the act was, and
-    // writeOffset is where they are written now, so what this side owes is the whole list of shares
+    // writeClose is where they are written now, so what this side owes is the whole list of shares
     // with the figure the button quoted for each. See SettlementDebtRoutes.kt for the rows.
-    expect(page).toContain("parts: parts.map((part) => ({");
-    expect(page).toContain("amount: part.amount,");
+    //
+    // The parts go on the wire as the card built them, `amount` and all, rather than being rebuilt
+    // here: a second spelling of one figure is how the rows come to a different sum from the total.
+    expect(page).toContain(
+      'closeWrite("offset", { holder, note: `offset against ${name}`, parts, holding })',
+    );
     // Off the same parts the button quoted a total from, so the rows cannot come to a different sum.
-    expect(source).toContain("onOffsetShares(row.holder, row.name, offset.parts)");
+    expect(source).toContain(
+      "onOffsetAll(row.holder, row.name, offset.offered ? offset.parts : [], heldOrNone)",
+    );
     expect(settlement).toContain("parts.reduce((sum, part) => sum + part.amount, 0)");
   });
 
-  it("is ONE request, the halves of an offset cancelling in the net", () => {
+  it("is ONE request, every list the act moves coming off the one answer", () => {
     // It was a settle and then an entry per share, each drawn as it landed, and the state between
     // them is the debt un-offset: Bro's card went 253.86b, 254b, 253.86b over two round trips, which
     // reads as a button that did nothing. A failure in the gap left it there for good.
+    //
+    // The coupon money was the same failure one step out, and the one that got reported: it was a
+    // disposal AFTER the offset, both come off what they owe you, so one press drew the figure down
+    // by the shares and then down again by the money.
     const handler = page.slice(
-      page.indexOf("onOffsetShares={async"),
-      page.indexOf("{/* What the cards above do NOT cover"),
+      page.indexOf("async function closeWrite("),
+      page.indexOf("/** The same, for an entered debt."),
     );
-    expect(handler).toContain("`${DEBTS_KEY}/offset`");
-    // Neither of the page's write helpers: each draws the moment it lands, and this act has two
+    expect(handler).toContain("`${DEBTS_KEY}/${act}`");
+    // None of the page's other write helpers: each draws the moment it lands, and this act has
     // halves that must be drawn together or not at all.
     expect(handler).not.toContain("settleShares(");
     expect(handler).not.toContain("debtWrite(");
-    // Both lists off the one answer, so there is no repaint between them.
+    expect(handler).not.toContain("disposalWrite(");
+    // Every list off the one answer, in the one tick, so there is no repaint between them.
     expect(handler).toContain("setPools(done.pools);");
     expect(handler).toContain("setDebts(done.debts);");
+    expect(handler).toContain("setDisposals(done.disposals);");
   });
 
   it("promises the figures the headline actually moves by", () => {
@@ -153,9 +165,10 @@ describe("what the card says a person owes", () => {
     expect(source).toContain(
       "takes ${moved(offset.offered ? offset.amount : 0)} off what ${row.name} owes you",
     );
-    // POT BY POT, never one sum of the two. One Offset covers the shares you owe and their own money
-    // you are holding, and the act writes them as two calls; a single figure over the pair would be
-    // an addition this card makes nowhere else.
+    // POT BY POT in the CAPTION, which is a sentence about what a press will record: one Offset
+    // covers the shares you owe and their own money you are holding, and naming them separately is
+    // what says which row each lands on. The section heading above it carries their sum, that being
+    // the figure the press comes to: see unsettledParts for why adding these two is safe.
     expect(source).toContain(
       "? `${formatMesos(shares, true)} of shares and ${formatMesos(row.holding, true)} you are holding`",
     );
@@ -352,8 +365,13 @@ describe("what the card says a person owes", () => {
   it("lets the money you are HOLDING be copied too, it being the one you send", () => {
     // "I paid them" beside it means the mesos went across in a trade, so this is a figure that gets
     // pasted, and it was the only one on the card with an act behind it and no way to take it.
+    // The TOTAL now, the shares you owe added to it: one press of Offset moves both, so the figure
+    // worth pasting into a trade box is the one the press comes to. See unsettledParts.
     expect(source).toContain(
-      "<CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />",
+      "<CopyAmount value={unsettled} display={formatMesos(unsettled, true)} />",
+    );
+    expect(source).toContain(
+      "const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);",
     );
   });
 
@@ -444,7 +462,10 @@ describe("what the figures on the card are counted in", () => {
     // The hover list behind the `shares` part is one direction, because that part is: what they owe
     // you. What you owe is not in it and is not netted off it. Mesos only, for the same reason: it
     // is the breakdown of a meso figure, and a dollar share is not one of its components.
-    expect(source).toContain('line.direction === "owed" && line.currency === "MESO"');
+    expect(source).toContain(
+      '.filter((line) => line.direction === direction && line.currency === "MESO")',
+    );
+    expect(source).toContain('const behindShares = behind("owed");');
     // No figure on this card comes off the fee, so `nets` is not read here at all.
     expect(source).not.toContain("line.nets");
   });

@@ -112,14 +112,31 @@ export type SettlementDebt = {
   incurredAt: string;
 };
 
-// What an offset moved: the shares it marked paid and the entries it was recorded as. See V57.
+// What a closing act moved: the shares it marked paid, the entries it was recorded as, and what it
+// decided about their coupon money. See V57 and V61.
 //
-// Both, because it wrote both, in one transaction. Two answers would be two repaints, and the halves
-// of an offset cancel in the net, so the card drew the debt un-offset in between and finished on the
-// figure it started on.
+// All of it, because it wrote all of it, in one transaction. Two answers would be two repaints, and
+// the halves of an offset cancel in the net, so the card drew the debt un-offset in between and
+// finished on the figure it started on. The third list is the same failure one step out: a press
+// covering the shares and the money walked what they owe you down in two visible steps.
 export type OffsetShares = {
   pools: PartyLootPool[];
   debts: SettlementDebt[];
+  disposals: ProceedsDisposal[];
+};
+
+// POST /api/settlement-debts/offset, and /sent for the same act pointed the other way.
+//
+// `holding` is their own money a sale of their coupons left in your hands, which one press decides
+// about alongside the shares. Absent where there is none.
+export type CloseSettlementBody = {
+  holder: Holder;
+  note?: string;
+  // `amount` only where the act prices something, which is an offset: it is the figure the entry
+  // carries. Sending prices nothing, and a share of a DOLLAR sale is settled by it, so there is no
+  // meso figure to put on one. The server refuses an offset whose share names none.
+  parts: { lootId: string; memberId: string; amount?: number }[];
+  holding?: number;
 };
 
 // What became of the money a sale of somebody else's coupons left in your hands. See V61.

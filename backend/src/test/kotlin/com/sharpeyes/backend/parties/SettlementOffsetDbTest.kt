@@ -171,13 +171,17 @@ class SettlementOffsetDbTest {
                 val bro = person(userId, "Bro")
                 val (lootId, members) = nightOwing(userId, seats = 2)
                 val result =
-                    writeOffset(
+                    writeClose(
                         userId,
                         holderFor(bro),
-                        "offset against Bro",
-                        listOf(
-                            OffsetPart(lootId, members[0], 703_703_488),
-                            OffsetPart(lootId, members[1], 139_548_023),
+                        CloseAct(
+                            CLOSE_OFFSET,
+                            "offset against Bro",
+                            listOf(
+                                OffsetPart(lootId, members[0], 703_703_488),
+                                OffsetPart(lootId, members[1], 139_548_023),
+                            ),
+                            null,
                         ),
                         Clock.System.now(),
                     )
@@ -232,13 +236,17 @@ class SettlementOffsetDbTest {
             }
 
             val result =
-                writeOffset(
+                writeClose(
                     userId,
                     holderFor(bro),
-                    "offset against Bro",
-                    listOf(
-                        OffsetPart(lootId, members[0], 703_703_488),
-                        OffsetPart(lootId, members[1], 139_548_023),
+                    CloseAct(
+                        CLOSE_OFFSET,
+                        "offset against Bro",
+                        listOf(
+                            OffsetPart(lootId, members[0], 703_703_488),
+                            OffsetPart(lootId, members[1], 139_548_023),
+                        ),
+                        null,
                     ),
                     now,
                 )
@@ -250,6 +258,94 @@ class SettlementOffsetDbTest {
     }
 
     @Test
+    fun `settles the shares and the coupon money together, one press being one write`() {
+        val answer =
+            transaction {
+                ensureUser(userId, "offset@example.com")
+                val bro = person(userId, "Bro")
+                val (lootId, members) = nightOwing(userId, seats = 1)
+                val result =
+                    writeClose(
+                        userId,
+                        holderFor(bro),
+                        CloseAct(
+                            CLOSE_OFFSET,
+                            "offset against Bro",
+                            listOf(OffsetPart(lootId, members[0], 703_703_488)),
+                            2_412_222_150,
+                        ),
+                        Clock.System.now(),
+                    )
+                assertIs<OffsetWrite.Wrote>(result)
+                assertEquals(1, paidRows(lootId))
+                result.answer
+            }
+
+        // Both pots off one answer. As two requests the card redrew between them and what Bro owed
+        // went down by the shares, then down again by the money, for one press of one button.
+        assertEquals(listOf(-703_703_488L), answer.debts.map { it.amount })
+        assertEquals(listOf(2_412_222_150L), answer.disposals.map { it.amount })
+        assertEquals(listOf("OFFSET"), answer.disposals.map { it.kind })
+    }
+
+    @Test
+    fun `sending writes the disposal and no entry, their debt not having moved`() {
+        val answer =
+            transaction {
+                ensureUser(userId, "offset@example.com")
+                val bro = person(userId, "Bro")
+                val (lootId, members) = nightOwing(userId, seats = 1)
+                val result =
+                    writeClose(
+                        userId,
+                        holderFor(bro),
+                        CloseAct(
+                            CLOSE_PAID,
+                            null,
+                            listOf(OffsetPart(lootId, members[0], 703_703_488)),
+                            2_412_222_150,
+                        ),
+                        Clock.System.now(),
+                    )
+                assertIs<OffsetWrite.Wrote>(result)
+                // The share is settled either way: what differs is whether anything came off what
+                // they owe you, and money you sent did not.
+                assertEquals(1, paidRows(lootId))
+                result.answer
+            }
+
+        assertTrue(answer.debts.isEmpty())
+        assertEquals(listOf("PAID"), answer.disposals.map { it.kind })
+    }
+
+    @Test
+    fun `a refused act leaves the coupon money undecided too`() {
+        transaction {
+            ensureUser(userId, "offset@example.com")
+            ensureUser(strangerId, "stranger@example.com")
+            val bro = person(userId, "Bro")
+            val (lootId, members) = nightOwing(strangerId, seats = 1)
+
+            val result =
+                writeClose(
+                    userId,
+                    holderFor(bro),
+                    CloseAct(
+                        CLOSE_OFFSET,
+                        "offset against Bro",
+                        listOf(OffsetPart(lootId, members[0], 703_703_488)),
+                        2_412_222_150,
+                    ),
+                    Clock.System.now(),
+                )
+            assertIs<OffsetWrite.Unreachable>(result)
+            // The third half of the act, and the one the two-request shape could strand: a disposal
+            // that landed on its own says 2.41b came off a debt nothing else on the card agrees to.
+            assertTrue(disposalsFor(userId).isEmpty())
+        }
+    }
+
+    @Test
     fun `a night in somebody else's party settles nothing and records nothing`() {
         transaction {
             ensureUser(userId, "offset@example.com")
@@ -257,11 +353,15 @@ class SettlementOffsetDbTest {
             val (lootId, members) = nightOwing(strangerId, seats = 1)
 
             val result =
-                writeOffset(
+                writeClose(
                     userId,
                     VestigeHolder(kind = "CHARACTER", personId = null, characterName = "bro"),
-                    "offset against bro",
-                    listOf(OffsetPart(lootId, members[0], 703_703_488)),
+                    CloseAct(
+                        CLOSE_OFFSET,
+                        "offset against bro",
+                        listOf(OffsetPart(lootId, members[0], 703_703_488)),
+                        null,
+                    ),
                     Clock.System.now(),
                 )
             assertIs<OffsetWrite.Unreachable>(result)

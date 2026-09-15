@@ -103,6 +103,9 @@ fun Route.settlementDebtRoutes() {
     get { listDebts() }
     post { addDebtRoute() }
     post("/offset") { offsetSharesRoute() }
+    // Writes no debt at all, and lives here because it is the same act over the same two pots: see
+    // SettlementOffsetRoute.kt.
+    post("/sent") { sentSharesRoute() }
     delete("/{debtId}") { deleteDebtRoute() }
 }
 

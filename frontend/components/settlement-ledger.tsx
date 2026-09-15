@@ -82,14 +82,14 @@ export function SettlementLedger({
   onRemovePayment,
   onRemoveDebt,
   keptRows,
-  onDisposeProceeds,
   onRemoveDisposal,
   onKeepPieces,
   onRemoveKeep,
   onSettlePair,
   onSettleShares,
   onPin,
-  onOffsetShares,
+  onOffsetAll,
+  onSendAll,
 }: {
   rows: Settlement[];
   bossByKey: Map<string, Boss>;
@@ -113,13 +113,6 @@ export function SettlementLedger({
   onRemoveDebt: (debtId: string) => Promise<void>;
   /** Purchases each person's pile has recorded against your coupons. See keptOfYours. */
   keptRows: Map<string, VestigeTranche[]>;
-  /**
-   * Says what becomes of their money you are holding: off their debt, or sent to them. See V61.
-   *
-   * The card cannot choose, so it asks. Netting it on arrival was the app deciding something only
-   * the two of you can.
-   */
-  onDisposeProceeds: (holder: Holder, amount: number, kind: "OFFSET" | "PAID") => Promise<void>;
   /** Taking a decision back off, which nothing else on any screen can do. */
   onRemoveDisposal: (disposalId: string) => Promise<void>;
   /**
@@ -136,8 +129,33 @@ export function SettlementLedger({
   onSettleShares: (payouts: { lootId: string; memberId: string }[]) => Promise<void>;
   /** Keeps this person's card drawn with nothing outstanding, or stops. See V59. */
   onPin: (row: Settlement, pinned: boolean) => Promise<void>;
-  /** Marks the shares paid AND records the offset, which takes it off what they owe. See V57. */
-  onOffsetShares: (holder: Holder, name: string, parts: OffsetPart[]) => Promise<void>;
+  /**
+   * Discharges everything of theirs you are sitting on against what they owe you. See V57 and V61.
+   *
+   * BOTH POTS in one call, and that is the whole reason it is one: the shares you owe and their own
+   * money a sale left with you both come off their debt, so written as two the card drew between
+   * them and one press walked the figure down in two steps.
+   *
+   * `holding` is undefined where there is none, which is a card with only shares to settle.
+   */
+  onOffsetAll: (
+    holder: Holder,
+    name: string,
+    parts: OffsetPart[],
+    holding: number | undefined,
+  ) => Promise<void>;
+  /**
+   * The same two pots, recorded as SENT: it left your hands and their debt did not move.
+   *
+   * The shares carry no figure, unlike an offset's. Nothing is priced by sending, so there is no
+   * entry for a figure to go on, and a share of a DOLLAR sale is settled by this and could not be
+   * put on a meso row anyway. See offsetOf for why an offset is the meso half alone.
+   */
+  onSendAll: (
+    holder: Holder,
+    payouts: { lootId: string; memberId: string }[],
+    holding: number | undefined,
+  ) => Promise<void>;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -157,14 +175,14 @@ export function SettlementLedger({
           onRemovePayment={onRemovePayment}
           onRemoveDebt={onRemoveDebt}
           keptRows={keptRows.get(row.key) ?? []}
-          onDisposeProceeds={onDisposeProceeds}
           onRemoveDisposal={onRemoveDisposal}
           onKeepPieces={onKeepPieces}
           onRemoveKeep={onRemoveKeep}
           onSettlePair={onSettlePair}
           onSettleShares={onSettleShares}
           onPin={onPin}
-          onOffsetShares={onOffsetShares}
+          onOffsetAll={onOffsetAll}
+          onSendAll={onSendAll}
         />
       ))}
     </>
@@ -183,14 +201,14 @@ function SettlementCard({
   onRemovePayment,
   onRemoveDebt,
   keptRows,
-  onDisposeProceeds,
   onRemoveDisposal,
   onKeepPieces,
   onRemoveKeep,
   onSettlePair,
   onSettleShares,
   onPin,
-  onOffsetShares,
+  onOffsetAll,
+  onSendAll,
 }: {
   row: Settlement;
   bossByKey: Map<string, Boss>;
@@ -208,13 +226,6 @@ function SettlementCard({
   onRemoveDebt: (debtId: string) => Promise<void>;
   /** This person's pile's purchases of your coupons, so a mistyped one can be taken back. */
   keptRows: VestigeTranche[];
-  /**
-   * Says what becomes of their money you are holding: off their debt, or sent to them. See V61.
-   *
-   * The card cannot choose, so it asks. Netting it on arrival was the app deciding something only
-   * the two of you can.
-   */
-  onDisposeProceeds: (holder: Holder, amount: number, kind: "OFFSET" | "PAID") => Promise<void>;
   /** Taking a decision back off, which nothing else on any screen can do. */
   onRemoveDisposal: (disposalId: string) => Promise<void>;
   /**
@@ -231,8 +242,33 @@ function SettlementCard({
   onSettleShares: (payouts: { lootId: string; memberId: string }[]) => Promise<void>;
   /** Keeps this person's card drawn with nothing outstanding, or stops. See V59. */
   onPin: (row: Settlement, pinned: boolean) => Promise<void>;
-  /** Marks the shares paid AND records the offset, which takes it off what they owe. See V57. */
-  onOffsetShares: (holder: Holder, name: string, parts: OffsetPart[]) => Promise<void>;
+  /**
+   * Discharges everything of theirs you are sitting on against what they owe you. See V57 and V61.
+   *
+   * BOTH POTS in one call, and that is the whole reason it is one: the shares you owe and their own
+   * money a sale left with you both come off their debt, so written as two the card drew between
+   * them and one press walked the figure down in two steps.
+   *
+   * `holding` is undefined where there is none, which is a card with only shares to settle.
+   */
+  onOffsetAll: (
+    holder: Holder,
+    name: string,
+    parts: OffsetPart[],
+    holding: number | undefined,
+  ) => Promise<void>;
+  /**
+   * The same two pots, recorded as SENT: it left your hands and their debt did not move.
+   *
+   * The shares carry no figure, unlike an offset's. Nothing is priced by sending, so there is no
+   * entry for a figure to go on, and a share of a DOLLAR sale is settled by this and could not be
+   * put on a meso row anyway. See offsetOf for why an offset is the meso half alone.
+   */
+  onSendAll: (
+    holder: Holder,
+    payouts: { lootId: string; memberId: string }[],
+    holding: number | undefined,
+  ) => Promise<void>;
 }) {
   const [kept, setKept] = useState("");
   // Whether the history of what has come off is open. Folded by default: it is the half that grows.
@@ -241,9 +277,9 @@ function SettlementCard({
   // is on the heading's line either way, so what opening it adds is which rows made that figure, and
   // it opened with its arrow pointing at a closed panel besides.
   const [showOwed, setShowOwed] = useState(false);
-  // Whether the sales behind the money you are holding are open. Folded, like the offsets history:
-  // the figure is what you act on and the rows are the check on it.
-  const [showHeld, setShowHeld] = useState(false);
+  // Whether the parts of what is unsettled are open, and the sales behind the held half with them.
+  // Folded, like the offsets history: the figure is what you act on and the rows are the check on it.
+  const [showUnsettled, setShowUnsettled] = useState(false);
   // Closed to start, the way the held sales above are. The step says the count, which is the fact
   // this section is read for; WHICH nights it came off is the follow-up question.
   const [showNights, setShowNights] = useState(false);
@@ -299,18 +335,20 @@ function SettlementCard({
    * apart. Only the ones this figure is made of, which is the direction running towards you: what
    * you owe is outside the net and is listed under the step below with the acts that answer it.
    */
-  const behindShares = row.lines
-    // Meso lines only. This is the breakdown of `parts.shares`, which is the meso figure, and a
-    // dollar share listed under it would be an item that total is not made of. The dollars are on
-    // the headline in their own unit and in the shares list below, each in its own.
-    .filter((line) => line.direction === "owed" && line.currency === "MESO")
-    .map((line) => {
-      const boss = bossByKey.get(line.bossKey ?? "");
-      const party = partyById.get(line.partyId);
-      const where = boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss";
-      return `${line.name} \u00b7 ${where} \u00b7 ${line.theirs}: ${formatMoney(line.pay, line.currency, true)}`;
-    })
-    .join("\n");
+  const behind = (direction: "owed" | "owe") =>
+    row.lines
+      // Meso lines only. These are the breakdowns of the two meso figures, and a dollar share listed
+      // under either would be an item that total is not made of. The dollars are on the headline in
+      // their own unit and in the shares list below, each in its own.
+      .filter((line) => line.direction === direction && line.currency === "MESO")
+      .map((line) => {
+        const boss = bossByKey.get(line.bossKey ?? "");
+        const party = partyById.get(line.partyId);
+        const where = boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss";
+        return `${line.name} \u00b7 ${where} \u00b7 ${line.theirs}: ${formatMoney(line.pay, line.currency, true)}`;
+      })
+      .join("\n");
+  const behindShares = behind("owed");
 
   /**
    * A component of the net, always signed: nothing else on the row says which way it pushes.
@@ -450,6 +488,42 @@ function SettlementCard({
   // The sales the held money is still sitting on, where they can be told exactly. See undecidedSales.
   const held = undecidedSales(row);
 
+  /**
+   * What is still to settle with them, in the two shapes it comes in. See offsetOf and V61.
+   *
+   * Shares of a night you owe, and their own money a sale of their coupons left in your hands. These
+   * were two figures the card never added, on the reasoning that a share is a claim on somebody and
+   * the money is already here. That is a true distinction and it is not the reader's question: one
+   * press of Offset moves both, so the figure worth heading the section is the one it moves.
+   *
+   * ONE DIRECTION, which is what makes the addition safe. Both are money running from you to them,
+   * so nothing is being netted. The shares running the other way are what they owe you, and they are
+   * under `Owed` where they have always been: putting them in here too would be one debt in two
+   * totals.
+   *
+   * MESOS ONLY, matching offsetOf. A share of a dollar sale is in neither figure and stays on the
+   * headline in its own unit, there being no rate in this app to add it at.
+   */
+  const unsettledParts = [
+    {
+      key: "shares",
+      // Named for its direction, `Owed` above having a row called `shares` that runs the other way.
+      label: `shares I owe ${row.name}`,
+      mesos: offset.amount,
+      detail: behind("owe"),
+    },
+    {
+      key: "holding",
+      // Their coupons, sold by you. The pieces the money answered for lead the row, the way they do
+      // on the mirror of this under `Owed`.
+      label: countedLabel(row.piecesAnswered.theirs, `coupons of ${row.name}'s I sold`),
+      mesos: row.holding,
+      detail: "",
+    },
+  ].filter((part) => part.mesos > 0);
+  /** The sum of its own rows and nothing else, the way `owedTotal` is. */
+  const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);
+
   // The nights each side will actually DRAW. A night a sale answered for, or one the other side
   // cancelled, sits in the array at zero: settleThePair still closes it, so it is kept, and
   // PieceNights draws it in neither list. A length is not the same question as whether there is a
@@ -467,16 +541,21 @@ function SettlementCard({
   // Whether the coupon lists need telling apart. See the note where they are drawn.
   const bothWays = theirNights.length > 0 && myNights.length > 0;
 
-  /** Everything of theirs that can come off their debt. */
-  const offsetAll = async () => {
-    if (offset.offered) await onOffsetShares(row.holder, row.name, offset.parts);
-    if (row.holding > 0) await onDisposeProceeds(row.holder, row.holding, "OFFSET");
-  };
-  /** Everything of theirs that has left your hands. */
-  const sendAll = async () => {
-    if (owes > 0) await onSettleShares(owedByYouShares(row));
-    if (row.holding > 0) await onDisposeProceeds(row.holder, row.holding, "PAID");
-  };
+  // The coupon money the act decides about, or nothing to decide. Undefined rather than zero: a
+  // disposal of nought is a row saying an act happened that did not.
+  const heldOrNone = row.holding > 0 ? row.holding : undefined;
+  /** Everything of theirs that can come off their debt. ONE call: see onOffsetAll. */
+  const offsetAll = () =>
+    onOffsetAll(row.holder, row.name, offset.offered ? offset.parts : [], heldOrNone);
+  /**
+   * Everything of theirs that has left your hands.
+   *
+   * Every share you owe, whatever it is denominated in. It used to be gated on the meso figure, so a
+   * card whose only debt of yours was a share of a DOLLAR sale drew the button and settled nothing
+   * when it was pressed. Marking a share sent is a boolean, not a subtraction, so it has no unit to
+   * disagree with: see offsetOf for why an offset is the meso half alone.
+   */
+  const sendAll = () => onSendAll(row.holder, owedByYouShares(row), heldOrNone);
 
   /**
    * The nights one act discharged, named. Off the pools rather than the wallet's lines: the settle
@@ -764,30 +843,33 @@ function SettlementCard({
               too. Copyable, like the card's own headline, because sending it means pasting it into a
               trade box.
 
-              The figure is the money of THEIRS you are holding, and it sums the sales in the fold
-              directly under it. It is not a total of the whole section: the shares below run both
-              ways and are in the card's header already, and adding a count of coupons to a pile of
-              mesos is the one sum this account never makes. The `shares` step is what tells them
-              apart, and it is why that step keeps its label while nothing else in here has one. */}
+              The figure is what one press of Offset moves: the shares you owe and their own money
+              you are holding, added. It used to be the held money alone, so the other half of what
+              the button moved appeared as a figure nowhere, and the two came off what they owe you
+              one after the other. What it is still NOT is a total of the whole section: the shares
+              running the other way are under `Owed`, and a count of coupons is the one thing this
+              account never adds to a pile of mesos. See unsettledParts. */}
           <div className="ledger-step-line">
             <span className="ledger-heading">Unsettled Amounts</span>
-            {row.holding > 0 && held.length > 0 && (
+            {unsettledParts.length > 0 && (
               <button
                 type="button"
                 className="party-row-toggle"
-                aria-expanded={showHeld}
-                aria-controls={`held-${row.key}`}
-                onClick={() => setShowHeld((o) => !o)}
+                aria-expanded={showUnsettled}
+                aria-controls={`unsettled-${row.key}`}
+                onClick={() => setShowUnsettled((o) => !o)}
               >
                 <span className="party-row-chevron" aria-hidden="true" />
                 <span className="visually-hidden">
-                  {`${showHeld ? "Hide" : "Show"} the ${plural(held.length, "sale")} behind it`}
+                  {showUnsettled
+                    ? `Hide what is unsettled with ${row.name}`
+                    : `Show what is unsettled with ${row.name}`}
                 </span>
               </button>
             )}
-            {row.holding > 0 && (
+            {unsettled > 0 && (
               <span className="ledger-amount">
-                <CopyAmount value={row.holding} display={formatMesos(row.holding, true)} />
+                <CopyAmount value={unsettled} display={formatMesos(unsettled, true)} />
               </span>
             )}
           </div>
@@ -806,34 +888,52 @@ function SettlementCard({
 
               Keyed by position, a tranche's id having nothing to say here that its coupons and its
               day do not. */}
-          {showHeld && held.length > 0 && (
-            <ul className="loot-shares" id={`held-${row.key}`}>
-              {held.map((sale, i) => (
-                <li key={`held-${i}`}>
-                  {iconUrl ? (
-                    <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
-                  ) : (
-                    <span className="loot-icon" aria-hidden="true" />
-                  )}
-                  <span className="loot-share-name">
-                    {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
-                  </span>
-                  <span className="loot-share-nets">
-                    {[
-                      sale.soldAt && dayOf(sale.soldAt),
-                      // Only where the lot was not all theirs. Their share of a mixed one is a
-                      // figure nobody can check without the lot it came out of.
-                      sale.pieces !== sale.lot.pieces &&
-                        `of ${sale.lot.pieces} for ${formatMesos(sale.lot.amount, true)}`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
-                  <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="ledger-fold" id={`unsettled-${row.key}`} hidden={!showUnsettled}>
+            {unsettledParts.length > 0 && (
+              <ul className="ledger-queue">
+                {unsettledParts.map((part) => (
+                  <li key={part.key} className="ledger-drop">
+                    {/* The nights behind the figure, where there are any, the way the same row
+                        carries them under `Owed`. Unsigned, both parts running the one way. */}
+                    <div className="ledger-drop-head" title={part.detail || undefined}>
+                      <span className={part.detail ? "loot-name has-detail" : "loot-name"}>
+                        {part.label}
+                      </span>
+                      <span className="ledger-amount">{formatMesos(part.mesos, true)}</span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {held.length > 0 && (
+              <ul className="loot-shares">
+                {held.map((sale, i) => (
+                  <li key={`held-${i}`}>
+                    {iconUrl ? (
+                      <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+                    ) : (
+                      <span className="loot-icon" aria-hidden="true" />
+                    )}
+                    <span className="loot-share-name">
+                      {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
+                    </span>
+                    <span className="loot-share-nets">
+                      {[
+                        sale.soldAt && dayOf(sale.soldAt),
+                        // Only where the lot was not all theirs. Their share of a mixed one is a
+                        // figure nobody can check without the lot it came out of.
+                        sale.pieces !== sale.lot.pieces &&
+                          `of ${sale.lot.pieces} for ${formatMesos(sale.lot.amount, true)}`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                    <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
 
           {/* Both directions, each line signed, so a list holding both ways round says which is
               which without a word. `pay`, not `nets`: every other figure on this card is pre-fee, so
