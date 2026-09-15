@@ -16,7 +16,9 @@ const eslintConfig = [
   ...nextTypescript,
   prettier,
   {
-    ignores: [".next/**", "node_modules/**", "next-env.d.ts"],
+    // `.next*` rather than `.next`: a production build is run with NEXT_DIST_DIR=.next-prod (see
+    // next.config.ts on why), and linting a build output fails on its own minified code.
+    ignores: [".next*/**", "node_modules/**", "next-env.d.ts"],
   },
 ];
 

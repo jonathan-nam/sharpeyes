@@ -62,6 +62,28 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
   },
 ];
 
+/**
+ * What the welcome-back screen offers, in the order it draws them.
+ *
+ * A way in, not a second copy of the menu: Run Order and the Split Utility are reached from the
+ * hamburger like everything else. Labels are looked up in SECTIONS rather than written
+ * again, so a section renamed there cannot keep its old name here.
+ */
+export const HOME_HREFS = [
+  "/characters",
+  "/inventory",
+  "/bosses",
+  "/bosses/parties",
+  "/bosses/drops",
+];
+
+/** Resolved at import, so a stale href fails the build's tests rather than a user's click. */
+export const HOME_ACTIONS: SectionItem[] = HOME_HREFS.map((href) => {
+  const item = SECTIONS.flatMap((s) => s.items).find((i) => i.href === href);
+  if (!item) throw new Error(`No section owns ${href}`);
+  return item;
+});
+
 /** Every href the menu routes, hidden ones included. Not narrowed by world: routing is not listing. */
 export const HREFS = SECTIONS.flatMap((s) => s.items.map((i) => i.href));
 
