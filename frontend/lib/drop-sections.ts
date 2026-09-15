@@ -44,10 +44,12 @@ export function saleCards({ unanswered, holders, lots, rows }: SaleCards): numbe
   return (unanswered > 0 ? 1 : 0) + holders + lots + rows;
 }
 
+// The tab labels, which are the nouns and not the furniture. "Ledger" was on three of the four and
+// said nothing that told them apart, next to a "Settled" that never carried it.
 const SECTIONS: DropSection[] = [
-  { key: "drops", label: "Drop Ledger" },
-  { key: "sales", label: "Sale Ledger", interactiveOnly: true },
-  { key: "settlement", label: "Settlement Ledger", interactiveOnly: true },
+  { key: "drops", label: "Drops" },
+  { key: "sales", label: "Sales", interactiveOnly: true },
+  { key: "settlement", label: "Settlements", interactiveOnly: true },
   { key: "settled", label: "Settled", interactiveOnly: true },
 ];
 

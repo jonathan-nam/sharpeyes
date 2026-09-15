@@ -7309,7 +7309,7 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
    ONE SIZE for every row on a settlement card, an offset's and a share's alike: they are the same
    kind of row, and the shares were the half of a section that could not be read. */
 .ledger-drop-head .loot-icon,
-.ledger-entry > .loot-shares .loot-icon {
+.ledger-entry > .ledger-fold > .loot-shares .loot-icon {
   width: 32px;
   height: 32px;
   image-rendering: auto;

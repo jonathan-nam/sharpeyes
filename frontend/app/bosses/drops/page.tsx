@@ -101,6 +101,7 @@ import type { Loot, LogDropBody, PartyLootPool, SellLootBody, SettleBody } from 
 import type { DropLogPage } from "@/types/page";
 import type { Party, Person } from "@/types/party";
 import type {
+  CloseSettlementBody,
   OffsetShares,
   ProceedsDisposal,
   SettlementDebt,
@@ -316,6 +317,33 @@ export default function DropLogPage() {
           getToken,
         ),
       );
+    } catch (e) {
+      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * A closing act, whole: the shares it settles and their coupon money, in one write.
+   *
+   * Not built from the page's other helpers, and it must not be. Each of those draws the moment it
+   * lands, and every list this act moves comes off what they owe you, so two of them in a row is one
+   * button walking one figure down in two steps. All three setStates are in the one tick that
+   * follows the one answer, which is the repaint the endpoint exists for.
+   */
+  async function closeWrite(act: "offset" | "sent", body: CloseSettlementBody) {
+    if (body.parts.length === 0 && body.holding === undefined) return;
+    setBusy(true);
+    try {
+      const done = await apiFetch<OffsetShares>(
+        `${DEBTS_KEY}/${act}`,
+        { method: "POST", body: JSON.stringify(body) },
+        getToken,
+      );
+      setPools(done.pools);
+      setDebts(done.debts);
+      setDisposals(done.disposals);
     } catch (e) {
       throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
@@ -979,14 +1007,9 @@ export default function DropLogPage() {
                   // An ACT and never a netting. Their coupons only come off your debt if they agree
                   // to that, and they may want the mesos instead.
                   keptRows={keptOfYours(tranches)}
-                  // What becomes of their money you are holding. An ACT, because the two things it
-                  // can be end in different places and only the two of you can say which. See V61.
-                  onDisposeProceeds={(holder: Holder, amount, kind) =>
-                    disposalWrite(DISPOSALS_KEY, {
-                      method: "POST",
-                      body: JSON.stringify({ holder, amount, kind }),
-                    })
-                  }
+                  // What becomes of their money you are holding is decided by the closing acts
+                  // below, in the same write as the shares: see closeWrite. Only taking a decision
+                  // back off is its own request, being its own act. See V61.
                   onRemoveDisposal={(disposalId) =>
                     disposalWrite(`${DISPOSALS_KEY}/${disposalId}`, { method: "DELETE" })
                   }
@@ -1052,40 +1075,25 @@ export default function DropLogPage() {
                   // paid and nothing had come off the debt, which walked Bro's card from 253.86b up
                   // to 254b and back down over two round trips. A failure in the gap left it there.
                   //
-                  // The server writes both in one transaction and answers with both lists, so there
-                  // is no order to get right here and no half of the act to leave behind. ONE ROW PER
-                  // SHARE still, so the history reads as the drops it was rather than as a figure
-                  // naming nobody: see writeOffset.
-                  onOffsetShares={async (holder: Holder, name, parts) => {
-                    if (parts.length === 0) return;
-                    setBusy(true);
-                    try {
-                      const done = await apiFetch<OffsetShares>(
-                        `${DEBTS_KEY}/offset`,
-                        {
-                          method: "POST",
-                          body: JSON.stringify({
-                            holder,
-                            // Invisible on the card, which names the drop itself once an entry has
-                            // one share behind it. It is what the debt row says on its own.
-                            note: `offset against ${name}`,
-                            parts: parts.map((part) => ({
-                              lootId: part.lootId,
-                              memberId: part.memberId,
-                              amount: part.amount,
-                            })),
-                          }),
-                        },
-                        getToken,
-                      );
-                      setPools(done.pools);
-                      setDebts(done.debts);
-                    } catch (e) {
-                      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
+                  // The coupon money is in the same request for the same reason one step out. It was
+                  // a disposal of its own after this one, and both come off what they owe you, so a
+                  // press covering the pair took Bro's card down by the shares and then down again
+                  // by the money: one button, one figure, two visible steps.
+                  //
+                  // The server writes all of it in one transaction and answers with every list, so
+                  // there is no order to get right here and no half of the act to leave behind. ONE
+                  // ROW PER SHARE still, so the history reads as the drops it was rather than as a
+                  // figure naming nobody: see writeClose.
+                  onOffsetAll={(holder: Holder, name, parts, holding) =>
+                    // Invisible on the card, which names the drop itself once an entry has one share
+                    // behind it. It is what the debt row says on its own.
+                    closeWrite("offset", { holder, note: `offset against ${name}`, parts, holding })
+                  }
+                  // The same act pointed the other way, and one request for the same reason: the two
+                  // pots it moves are the two the Unsettled Amounts figure is made of.
+                  onSendAll={(holder: Holder, parts, holding) =>
+                    closeWrite("sent", { holder, parts, holding })
+                  }
                 />
 
                 {/* The way in for somebody with no card yet. A card is drawn for a person who already
