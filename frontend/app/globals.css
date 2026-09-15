@@ -1641,14 +1641,17 @@ img.user-avatar-img {
   margin: 0 0 12px;
 }
 
-/* The welcome-back screen's way in: one button per section, wrapping when five will not fit on a
-   line. Same face as the world cards above, at one line each. */
+/* The welcome-back screen's way in: one button per section. Same face as the world cards above,
+   at one line each.
+   Narrower than the hero it sits in, which is what makes five break 3/2. At the hero's own width
+   four fit on a line and the fifth sits alone under them. */
 .hero-actions {
+  max-width: 420px;
+  margin: 20px auto 0;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  margin-top: 20px;
 }
 
 .hero-actions a {
