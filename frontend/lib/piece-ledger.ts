@@ -327,3 +327,39 @@ export function spendSales<
   }
   return nights.map((night) => ({ ...night, pieces: owed.get(night) ?? night.pieces }));
 }
+
+/**
+ * Which nights each sale came off, by the week they fell in, spending exactly as spendSales does.
+ *
+ * The same walk, so the weeks cannot disagree with the nights a card draws as answered: pinned
+ * against spendSales in piece-ledger.test.ts. A sale that the nights cannot cover in full is null, not
+ * a part of it: a week claimed for some of its coupons is a week claimed for money it cannot name.
+ */
+export function placeSales<
+  T extends {
+    pieces: number;
+    droppedOn: string;
+    weekStart: string;
+    recordedAt?: string | null;
+    lootId?: string;
+  },
+  S extends AnsweredSale,
+>(nights: T[], sales: S[]): Map<S, Map<string, number> | null> {
+  const owed = new Map<T, number>(nights.map((night) => [night, night.pieces]));
+  const oldest = [...nights].sort(oldestNightFirst);
+  const out = new Map<S, Map<string, number> | null>();
+  for (const sale of [...sales].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))) {
+    let left = Math.max(0, sale.pieces);
+    const weeks = new Map<string, number>();
+    for (const night of oldest) {
+      if (left <= 0) break;
+      if (night.recordedAt && night.recordedAt > sale.recordedAt) continue;
+      const spent = Math.min(left, owed.get(night)!);
+      left -= spent;
+      owed.set(night, owed.get(night)! - spent);
+      if (spent > 0) weeks.set(night.weekStart, (weeks.get(night.weekStart) ?? 0) + spent);
+    }
+    out.set(sale, left > 0 ? null : weeks);
+  }
+  return out;
+}

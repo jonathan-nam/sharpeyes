@@ -12,6 +12,7 @@ import {
   type OffsetShare,
   moneyRows,
   offsetOf,
+  weekSplit,
   owedByYouShares,
   undecidedSales,
   settleThePair,
@@ -593,41 +594,25 @@ function SettlementCard({
     );
 
   // Each act with the nights behind it, resolved once, so the week picker and the rows read the same.
-  const acts = discharges.map((act) => ({ act, nights: nightsBehind(act.payouts) }));
-  const weeks = [
-    ...new Set(acts.flatMap(({ nights }) => nights.map((n) => n.weekStart).filter(Boolean))),
-  ]
+  // `split` is what it came to in each bossing week, or null where no week can be told.
+  const acts = discharges.map((act) => {
+    const nights = nightsBehind(act.payouts);
+    return { act, nights, split: weekSplit(row, act, nights) };
+  });
+  const weeks = [...new Set(acts.flatMap(({ split }) => (split ? [...split.keys()] : [])))]
     .sort()
     .reverse();
   // A week with no act left behind it falls back to all rather than an empty list.
-  //
-  // An act with no night behind it (a coupon sale, a typed credit) stays in the list under every
-  // week. A sale of coupons names no drop, so placing it in one would be a guess, and dropping it
-  // would hide money that came off the debt. Its amount is left out of the week's total below.
   const weekShown = weeks.includes(week) ? week : "";
+  // An act whose week cannot be told (a typed credit, a payment) stays under every week rather than
+  // vanishing, and is left out of the week's total: hiding it would hide money that came off the
+  // debt, and placing it would be a guess.
   const actsShown = weekShown
-    ? acts.filter(
-        ({ nights }) => nights.length === 0 || nights.some((n) => n.weekStart === weekShown),
-      )
+    ? acts.filter(({ split }) => split === null || split.has(weekShown))
     : acts;
-  // What the shown offsets come to. An act wholly inside the week counts whole. One spanning weeks
-  // counts only its nights in the week, and only when its nights add up to it exactly: otherwise the
-  // split is a guess and there is no figure, so the heading keeps nothing rather than a wrong one.
-  let shownTotal: number | null = weekShown ? 0 : discharged;
-  if (weekShown) {
-    for (const { act, nights } of actsShown) {
-      if (nights.length === 0) continue;
-      const inWeek = nights.filter((n) => n.weekStart === weekShown);
-      if (inWeek.length === nights.length) {
-        shownTotal! += act.amount;
-      } else if (nights.reduce((sum, n) => sum + n.share, 0) === act.amount) {
-        shownTotal! += inWeek.reduce((sum, n) => sum + n.share, 0);
-      } else {
-        shownTotal = null;
-        break;
-      }
-    }
-  }
+  const shownTotal = weekShown
+    ? actsShown.reduce((sum, { split }) => sum + (split?.get(weekShown) ?? 0), 0)
+    : discharged;
 
   return (
     <section className="ledger-card">
@@ -834,9 +819,7 @@ function SettlementCard({
                     {showOff ? `Hide the ${offsets}` : `Show the ${offsets}`}
                   </span>
                 </button>
-                {shownTotal !== null && (
-                  <span className="ledger-amount">{signed(-shownTotal)}</span>
-                )}
+                <span className="ledger-amount">{signed(-shownTotal)}</span>
                 {showOff && weeks.length > 1 && (
                   <select
                     className="ledger-week"

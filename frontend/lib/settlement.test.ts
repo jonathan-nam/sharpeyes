@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSettlement,
+  weekSplit,
   decidedSales,
   settlementTotals,
   isEmpty,
@@ -1950,5 +1951,49 @@ describe("the sales behind the money you are holding", () => {
 
   it("is empty where nothing was ever credited", () => {
     expect(undecidedSales({ sales: [], holding: 0 })).toEqual([]);
+  });
+});
+
+describe("weekSplit", () => {
+  const n = (lootId: string, weekStart: string, pieces: number) => ({
+    lootId,
+    partyId: "p",
+    bossKey: null,
+    weekStart,
+    droppedOn: weekStart,
+    recordedAt: `${weekStart}T01:00:00Z`,
+    pieces,
+    looterName: "x",
+    shared: false,
+  });
+  const sale = (pieces: number, mesos: number, soldAt: string) => ({
+    trancheId: "t",
+    pieces,
+    mesos,
+    lot: { pieces, amount: mesos },
+    soldAt,
+  });
+
+  it("divides a sale over the weeks it came off by pieces, the odd meso on the last", () => {
+    const s = sale(90, 1_000_000_001, "2026-09-01T00:00:00Z");
+    const row = { sales: [s], owedNights: [n("a", "2026-08-06", 60), n("b", "2026-08-13", 60)] };
+    const split = weekSplit(row, { amount: s.mesos, payouts: [], sales: [s] }, [])!;
+    expect([...split]).toEqual([
+      ["2026-08-06", 666_666_667],
+      ["2026-08-13", 333_333_334],
+    ]);
+    expect([...split.values()].reduce((a, b) => a + b, 0)).toBe(s.mesos);
+  });
+
+  it("has no week for a sale the nights cannot cover", () => {
+    const s = sale(90, 900, "2026-09-01T00:00:00Z");
+    const row = { sales: [s], owedNights: [n("a", "2026-08-06", 60)] };
+    expect(weekSplit(row, { amount: 900, payouts: [], sales: [s] }, [])).toBeNull();
+  });
+
+  it("has no week for a typed credit", () => {
+    expect(
+      weekSplit({ sales: [], owedNights: [] }, { amount: 5, payouts: [], sales: [] }, []),
+    ).toBeNull();
   });
 });
