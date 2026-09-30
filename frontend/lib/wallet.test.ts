@@ -125,6 +125,16 @@ describe("buildWallet", () => {
     expect(theySold.net).toBeGreaterThan(0);
   });
 
+  it("carries the week a drop fell in, not the week it sold", () => {
+    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
+    const w = buildWallet(
+      [p],
+      [pool("pa", [sold({ weekStart: "2026-07-16", soldAt: "2026-09-25T10:00:00Z" })])],
+    );
+
+    expect(w.counterparties[0]?.lines[0]?.weekStart).toBe("2026-07-16");
+  });
+
   it("marks a line whose drop a member bought, so no sale is named for it", () => {
     // The debt is the same one and belongs in the same fold. What differs is only that the line
     // cannot say "sold": nothing was.
