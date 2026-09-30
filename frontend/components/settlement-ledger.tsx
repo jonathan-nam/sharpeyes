@@ -605,6 +605,23 @@ function SettlementCard({
   const actsShown = weekShown
     ? acts.filter(({ nights }) => nights.some((n) => n.weekStart === weekShown))
     : acts;
+  // What the shown offsets come to. An act wholly inside the week counts whole. One spanning weeks
+  // counts only its nights in the week, and only when its nights add up to it exactly: otherwise the
+  // split is a guess and there is no figure, so the heading keeps nothing rather than a wrong one.
+  let shownTotal: number | null = weekShown ? 0 : discharged;
+  if (weekShown) {
+    for (const { act, nights } of actsShown) {
+      const inWeek = nights.filter((n) => n.weekStart === weekShown);
+      if (inWeek.length === nights.length) {
+        shownTotal! += act.amount;
+      } else if (nights.reduce((sum, n) => sum + n.share, 0) === act.amount) {
+        shownTotal! += inWeek.reduce((sum, n) => sum + n.share, 0);
+      } else {
+        shownTotal = null;
+        break;
+      }
+    }
+  }
 
   return (
     <section className="ledger-card">
@@ -811,9 +828,12 @@ function SettlementCard({
                     {showOff ? `Hide the ${offsets}` : `Show the ${offsets}`}
                   </span>
                 </button>
-                <span className="ledger-amount">{signed(-discharged)}</span>
+                {shownTotal !== null && (
+                  <span className="ledger-amount">{signed(-shownTotal)}</span>
+                )}
                 {showOff && weeks.length > 1 && (
                   <select
+                    className="ledger-week"
                     value={weekShown}
                     onChange={(e) => setWeek(e.target.value)}
                     aria-label={`Filter the offsets with ${row.name} by the week the drop fell in`}

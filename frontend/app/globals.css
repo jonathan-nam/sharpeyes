@@ -6996,6 +6996,17 @@ button.link:disabled {
 /* A card SECTION, which two of them are: what is unsettled, and what can be done about it. The
    steps are 11px lowercase labels on the figure each one heads, and neither of these heads a figure,
    so they carry a heading's size and weight instead of reading as one more step in the arithmetic. */
+/* The week picker beside Offsets. A select's own width is its longest option, so on a narrow card it
+   pushed past the edge: it gives instead, and takes the line's own leftover width. */
+.ledger-week {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  margin-left: auto;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+}
+
 .ledger-heading {
   font-size: var(--text-base);
   font-weight: 600;
