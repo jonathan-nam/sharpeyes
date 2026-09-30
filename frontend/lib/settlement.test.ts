@@ -1838,6 +1838,7 @@ describe("splitting an offset written before one-row-per-share", () => {
     boss: "Lotus",
     members: ["Bro"],
     on: "2026-08-28",
+    weekStart: "2026-08-27",
     share: amount,
     sale: null,
     partyId: "p1",

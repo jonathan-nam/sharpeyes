@@ -284,12 +284,10 @@ function SettlementCard({
   // this section is read for; WHICH nights it came off is the follow-up question.
   const [showNights, setShowNights] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
-  // The week the shares list is narrowed to, by the week the drop FELL in, never the week it sold.
-  // "" is every week. A week that no longer has a line falls back to all rather than an empty list.
+  // The week the offsets are narrowed to, by the week the drop FELL in, never the week it sold or
+  // was offset. "" is every week. Acts with no drop behind them (a typed credit, a coupon sale) have
+  // no such week and show under "All weeks" only.
   const [week, setWeek] = useState("");
-  const weeks = [...new Set(row.lines.map((line) => line.weekStart))].sort().reverse();
-  const weekShown = weeks.includes(week) ? week : "";
-  const lines = weekShown ? row.lines.filter((line) => line.weekStart === weekShown) : row.lines;
 
   // What they are paying to keep the coupons of yours they hold. Above zero, matching the server: a
   // stack handed over for nothing is not a purchase at a price of nought, it is a handover.
@@ -585,6 +583,7 @@ function SettlementCard({
           boss: "",
           members: [],
           on: "",
+          weekStart: "",
           share: 0,
           // Mesos, being the unit of a zero on a deleted drop: an offset is a meso act, so a share
           // it discharged was one. See offsetOf.
@@ -593,6 +592,19 @@ function SettlementCard({
           partyId: "",
         },
     );
+
+  // Each act with the nights behind it, resolved once, so the week picker and the rows read the same.
+  const acts = discharges.map((act) => ({ act, nights: nightsBehind(act.payouts) }));
+  const weeks = [
+    ...new Set(acts.flatMap(({ nights }) => nights.map((n) => n.weekStart).filter(Boolean))),
+  ]
+    .sort()
+    .reverse();
+  // A week with no act left behind it falls back to all rather than an empty list.
+  const weekShown = weeks.includes(week) ? week : "";
+  const actsShown = weekShown
+    ? acts.filter(({ nights }) => nights.some((n) => n.weekStart === weekShown))
+    : acts;
 
   return (
     <section className="ledger-card">
@@ -800,6 +812,20 @@ function SettlementCard({
                   </span>
                 </button>
                 <span className="ledger-amount">{signed(-discharged)}</span>
+                {showOff && weeks.length > 1 && (
+                  <select
+                    value={weekShown}
+                    onChange={(e) => setWeek(e.target.value)}
+                    aria-label={`Filter the offsets with ${row.name} by the week the drop fell in`}
+                  >
+                    <option value="">All weeks</option>
+                    {weeks.map((w) => (
+                      <option key={w} value={w}>
+                        Week of {formatWeekStart(w)}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* A queue, not a share list. `.loot-shares > li` is a wrapping ROW with a rule above
@@ -808,12 +834,12 @@ function SettlementCard({
                   indents fighting. Drop rows go in a drop queue. */}
               {showOff && (
                 <ul className="ledger-queue" id={`off-${row.key}`}>
-                  {discharges.map((act) => (
+                  {actsShown.map(({ act, nights }) => (
                     <DischargeRow
                       key={act.id}
                       act={act}
                       name={row.name}
-                      shares={nightsBehind(act.payouts)}
+                      shares={nights}
                       iconUrl={iconUrl}
                       busy={busy}
                       signed={signed}
@@ -947,26 +973,9 @@ function SettlementCard({
               offset as a 668,518,313 share. See settlement-figure for the whole card's unit. */}
           {row.lines.length > 0 && (
             <>
-              <div className="ledger-step-line">
-                <span className="ledger-step">shares</span>
-                {weeks.length > 1 && (
-                  <select
-                    value={weekShown}
-                    onChange={(e) => setWeek(e.target.value)}
-                    aria-label={`Filter the shares with ${row.name} by the week they dropped`}
-                  >
-                    <option value="">All weeks</option>
-                    {weeks.map((w) => (
-                      <option key={w} value={w}>
-                        Week of {formatWeekStart(w)} (
-                        {row.lines.filter((line) => line.weekStart === w).length})
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+              <span className="ledger-step">shares</span>
               <ul className="ledger-queue">
-                {lines.map((line) => {
+                {row.lines.map((line) => {
                   const boss = bossByKey.get(line.bossKey ?? "");
                   const party = partyById.get(line.partyId);
                   return (

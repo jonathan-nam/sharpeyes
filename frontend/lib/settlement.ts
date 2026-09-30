@@ -880,6 +880,8 @@ export type OffsetShare = {
   members: string[];
   /** The day it dropped, so two nights on one boss are told apart. */
   on: string;
+  /** The bossing week it FELL in, never the week it sold or was offset. Empty on a deleted drop. */
+  weekStart: string;
   /** This seat's share, which is the money the offset actually discharged. */
   share: number;
   /** What the whole lot sold for, so the share can be checked against it. Null if never sold. */
