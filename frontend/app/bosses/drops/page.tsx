@@ -562,6 +562,7 @@ export default function DropLogPage() {
             // came from, so the row cannot name a roster the figure was not divided by.
             members: split.shares.map((s) => s.name),
             on: loot.droppedOn,
+            weekStart: loot.weekStart,
             share: share.pay,
             sale: sold?.amount ?? null,
             currency: split.currency,
