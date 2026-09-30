@@ -39,6 +39,8 @@ export type WalletLine = {
   iconUrl: string | null;
   bossKey: string | null;
   droppedOn: string;
+  /** The bossing week it FELL in, never the week it sold. The server's Thursday, as on Loot. */
+  weekStart: string;
   direction: Direction;
   /** A member bought it off the party rather than selling it, so no sale can be named. */
   bought: boolean;
@@ -199,6 +201,7 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
           iconUrl: loot.iconUrl,
           bossKey: loot.bossKey,
           droppedOn: loot.droppedOn,
+          weekStart: loot.weekStart,
           direction,
           bought: loot.amountBasis === "BOUGHT",
           mine: mine.name,

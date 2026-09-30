@@ -99,6 +99,7 @@ const line = (lootId: string, pay: number, direction: "owe" | "owed" = "owed"): 
   iconUrl: null,
   bossKey: "baldrix",
   droppedOn: "2026-08-08",
+  weekStart: "2026-08-06",
   direction,
   bought: false,
   mine: "mechyfechy",

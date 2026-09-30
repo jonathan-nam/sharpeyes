@@ -284,6 +284,12 @@ function SettlementCard({
   // this section is read for; WHICH nights it came off is the follow-up question.
   const [showNights, setShowNights] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  // The week the shares list is narrowed to, by the week the drop FELL in, never the week it sold.
+  // "" is every week. A week that no longer has a line falls back to all rather than an empty list.
+  const [week, setWeek] = useState("");
+  const weeks = [...new Set(row.lines.map((line) => line.weekStart))].sort().reverse();
+  const weekShown = weeks.includes(week) ? week : "";
+  const lines = weekShown ? row.lines.filter((line) => line.weekStart === weekShown) : row.lines;
 
   // What they are paying to keep the coupons of yours they hold. Above zero, matching the server: a
   // stack handed over for nothing is not a purchase at a price of nought, it is a handover.
@@ -941,9 +947,26 @@ function SettlementCard({
               offset as a 668,518,313 share. See settlement-figure for the whole card's unit. */}
           {row.lines.length > 0 && (
             <>
-              <span className="ledger-step">shares</span>
+              <div className="ledger-step-line">
+                <span className="ledger-step">shares</span>
+                {weeks.length > 1 && (
+                  <select
+                    value={weekShown}
+                    onChange={(e) => setWeek(e.target.value)}
+                    aria-label={`Filter the shares with ${row.name} by the week they dropped`}
+                  >
+                    <option value="">All weeks</option>
+                    {weeks.map((w) => (
+                      <option key={w} value={w}>
+                        Week of {formatWeekStart(w)} (
+                        {row.lines.filter((line) => line.weekStart === w).length})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
               <ul className="ledger-queue">
-                {row.lines.map((line) => {
+                {lines.map((line) => {
                   const boss = bossByKey.get(line.bossKey ?? "");
                   const party = partyById.get(line.partyId);
                   return (
