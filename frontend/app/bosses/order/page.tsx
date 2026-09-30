@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { StackDraft } from "@/components/drop-picker";
-import { RunDraftEditor } from "@/components/run-draft-editor";
 import { CopyPlan, type RunLog, type RunRotation, RunPlan } from "@/components/run-plan";
 import { pieceNote, rotatingDrops, rotationFor, takesByOwner } from "@/lib/loot-rotation";
 import type { PartyLootPool } from "@/types/loot";
@@ -14,15 +13,12 @@ import { progressLabel } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { DEFAULT_MINUTES } from "@/lib/boss-minutes";
 import {
-  type DraftRun,
   formatDuration,
   formatOffsetShort,
   type NightPerson,
   offsetNow,
   parseOffset,
   rosterFrom,
-  rosterFromDrafts,
-  runsFromDrafts,
   nextHalfHour,
   runsFromParties,
   spanBetween,
@@ -68,7 +64,6 @@ const POOLS_KEY = "/api/parties/loot";
 const LEDGER_PARTIES_KEY = "/api/parties?solo=include&retired=include";
 // What stops that balance counting a night somebody has already closed. See V52.
 const SETTLEMENTS_KEY = "/api/vestige-settlements";
-const DRAFT_KEY = "sharpeyes.run-order.drafts";
 
 // The stacking drop the picker's two blocks are for. One key, because one item behaves this way: a
 // boss drops it in bundles that do not divide by looting alone. See lib/piece-ledger.ts.
@@ -77,10 +72,8 @@ const VESTIGE = "vestige-of-erion";
 /** The windows people actually block out. Anything else goes in the box beside them. */
 const PRESETS = [60, 90, 120, 180, 240];
 
-const NO_DRAFTS: DraftRun[] = [];
 const NO_RUNS: EligibleRun[] = [];
 
-type Source = "parties" | "byHand";
 type LoadState = "loading" | "loaded" | "error";
 
 /** One person's window, as typed. Parsed where it is used, so a half-finished "+3" is not a time. */
@@ -90,9 +83,8 @@ const NO_WINDOW: WindowText = { from: "", until: "" };
 const NO_WINDOWS: Record<string, WindowText> = {};
 
 // The clock only has to be right to the minute it is drawn to, and it is read on every render, so
-// it ticks on its own rather than being recomputed. Same primitive as the drafts below and for the
-// same reason: there is no clock during the prerender, and seeding one from an effect is a
-// setState cascade that also renders the wrong minute first.
+// it ticks on its own rather than being recomputed. There is no clock during the prerender, and
+// seeding one from an effect is a setState cascade that also renders the wrong minute first.
 const CLOCK_TICK = 20_000;
 
 function subscribeToClock(onChange: () => void) {
@@ -126,44 +118,6 @@ function pinOf(window: WindowText | undefined): string | null {
   else if (until !== null) said.push(`to ${formatOffsetShort(until)}`);
 
   return said.length === 0 ? null : `· ${said.join(" · ")}`;
-}
-
-// Hand-typed runs are read through useSyncExternalStore rather than an effect. localStorage does
-// not exist during the prerender, so seeding useState from it hydrates to different markup than
-// the server sent, and loading it in an effect is a setState-in-effect cascade. This is the
-// primitive for exactly that: getServerSnapshot answers the prerender, and React re-reads on the
-// client without a mismatch.
-//
-// The `storage` event fires for OTHER tabs only, so our own writes never come back this way. That
-// is what the `edited` state below is for.
-function subscribeToDrafts(onChange: () => void) {
-  window.addEventListener("storage", onChange);
-  return () => window.removeEventListener("storage", onChange);
-}
-
-function readStoredDrafts(): string | null {
-  try {
-    return window.localStorage.getItem(DRAFT_KEY);
-  } catch {
-    return null;
-  }
-}
-
-/** Nothing on the server, because there is no localStorage to have anything in. */
-function noStoredDrafts(): string | null {
-  return null;
-}
-
-function parseDrafts(raw: string | null): DraftRun[] {
-  if (raw === null) return NO_DRAFTS;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as DraftRun[]) : NO_DRAFTS;
-  } catch {
-    // A corrupt draft is not worth an error on screen. You get an empty form, which is what you
-    // would have had anyway.
-    return NO_DRAFTS;
-  }
 }
 
 export default function RunOrderPage() {
@@ -212,7 +166,6 @@ export default function RunOrderPage() {
   /** Each party's own rows, for the rotation to read its answered weeks off. */
   const lootByParty = new Map(pools.map((pool) => [pool.partyId, pool.loot]));
 
-  const [source, setSource] = useState<Source>("parties");
   const [duration, setDuration] = useState(120);
   const [openOnly, setOpenOnly] = useState(true);
   // Whether a run has to seat everyone who is on, kept across visits: how you plan, not something
@@ -223,7 +176,6 @@ export default function RunOrderPage() {
   // somebody who is not there. See lib/who-is-on.ts.
   const [away, setAway] = useWhoIsOn();
   const [chosen, setChosen] = useState<number | null>(null);
-  const [edited, setEdited] = useState<DraftRun[] | null>(null);
 
   // Whether the night runs to the clock at all. Off, it is an ORDER: nothing bounds it, the windows
   // people gave are not applied, and no time is drawn anywhere. That is a night where the length of
@@ -253,19 +205,6 @@ export default function RunOrderPage() {
   const endAt = endText === null ? null : parseOffset(endText);
   const budget = endAt === null ? duration : spanBetween(startAt, endAt);
   const endShown = endText ?? formatOffsetShort(startAt + budget);
-
-  const storedRaw = useSyncExternalStore(subscribeToDrafts, readStoredDrafts, noStoredDrafts);
-  const stored = useMemo(() => parseDrafts(storedRaw), [storedRaw]);
-  const drafts = edited ?? stored;
-
-  function changeDrafts(next: DraftRun[]) {
-    setEdited(next);
-    try {
-      window.localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
-    } catch {
-      // Private browsing, or a full quota. The tool still works for this sitting.
-    }
-  }
 
   useEffect(() => {
     // Not before Clerk answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
@@ -452,8 +391,6 @@ export default function RunOrderPage() {
     });
   }
 
-  const fromAccount = source === "parties";
-
   // A boss taken off this period is out of the night whatever the toggle says. "Only bosses not
   // cleared" is a narrowing you can turn off to see the rest; "we are not running it" is not one of
   // those, and a plan that scheduled it anyway would be a night built around a boss Party View has
@@ -472,15 +409,9 @@ export default function RunOrderPage() {
     [running, openOnly, answered],
   );
 
-  const roster: NightPerson[] = useMemo(
-    () => (fromAccount ? rosterFrom(usable) : rosterFromDrafts(drafts)),
-    [fromAccount, usable, drafts],
-  );
+  const roster: NightPerson[] = useMemo(() => rosterFrom(usable), [usable]);
 
-  const runs = useMemo(
-    () => (fromAccount ? runsFromParties(usable, bosses) : runsFromDrafts(drafts)),
-    [fromAccount, usable, bosses, drafts],
-  );
+  const runs = useMemo(() => runsFromParties(usable, bosses), [usable, bosses]);
 
   const openedPerson = roster.find((person) => person.id === opened) ?? null;
 
@@ -494,34 +425,29 @@ export default function RunOrderPage() {
   // depths of the chain, and freezing them one by one is what would let them disagree. Server data
   // (parties, bosses) is deliberately not in here, so a write during the night still lands.
   const inputs = useMemo(
-    () => ({ source, budget, openOnly, everyoneOn, away, drafts, startAt, windows, timed }),
-    [source, budget, openOnly, everyoneOn, away, drafts, startAt, windows, timed],
+    () => ({ budget, openOnly, everyoneOn, away, startAt, windows, timed }),
+    [budget, openOnly, everyoneOn, away, startAt, windows, timed],
   );
 
   // What the button compares against. See lib/run-order-submit.ts for why it is a key.
   const key = useMemo(
     () =>
       controlsKey({
-        source,
         openOnly,
         everyoneOn,
         timed,
         away,
         windows,
-        drafts,
         startText,
         endText,
         duration,
       }),
-    [source, openOnly, everyoneOn, timed, away, windows, drafts, startText, endText, duration],
+    [openOnly, everyoneOn, timed, away, windows, startText, endText, duration],
   );
 
   const [asked, setAsked] = useState<{ inputs: typeof inputs; key: string } | null>(null);
   // Deferred so the press itself lands on the tick it is made. planNight is a beam search, and a
   // night of a dozen bosses is long enough to be felt between the click and the button answering.
-  //
-  // Taking the plan AWAY is not deferred, though: a deferred null draws the old plan one more
-  // time, which is the parties plan flashing under the by-hand tab that just replaced it.
   const deferredAsk = useDeferredValue(asked);
   const shownAsk = asked === null ? null : deferredAsk;
   const stale = shownAsk !== asked;
@@ -535,8 +461,6 @@ export default function RunOrderPage() {
     setChosen(null);
   }
 
-  const showingAccount = shown.source === "parties";
-
   // The same two lists again, from the night that was asked for. Not shared with the live ones
   // above: those describe the controls, and these are what the plan is, so a filter ticked after
   // the plan was drawn must move one and not the other.
@@ -546,16 +470,15 @@ export default function RunOrderPage() {
   );
 
   const plannedRuns = useMemo(
-    () => (showingAccount ? runsFromParties(plannedParties, bosses) : runsFromDrafts(shown.drafts)),
-    [showingAccount, plannedParties, bosses, shown.drafts],
+    () => runsFromParties(plannedParties, bosses),
+    [plannedParties, bosses],
   );
 
   // Who is on, as people and as ids. The grid puts a column per person, so it needs the names and
   // the order, not just the set the screening asks for.
   const onTonight = useMemo(() => {
-    const people = showingAccount ? rosterFrom(plannedParties) : rosterFromDrafts(shown.drafts);
-    return people.filter((person) => !shown.away.includes(person.id));
-  }, [showingAccount, plannedParties, shown.drafts, shown.away]);
+    return rosterFrom(plannedParties).filter((person) => !shown.away.includes(person.id));
+  }, [plannedParties, shown.away]);
   const here = useMemo(() => onTonight.map((person) => person.id), [onTonight]);
 
   // Only the eligible half is read. screenRuns still reports what it rejected, and the page no
@@ -704,19 +627,15 @@ export default function RunOrderPage() {
     return pieceNote(rotation.drop, rotation.takes.values());
   };
 
-  // Only a night built from your parties can be answered for: a hand-typed run has no config
-  // behind it, so there is nothing to tick and no pool to log a drop into.
-  const log: RunLog | undefined = showingAccount
-    ? {
-        partyOf: (runId) => partyById.get(runId),
-        rotationOf: (runId) => (showPieces ? (rotations.get(runId) ?? null) : null),
-        dropTable: (bossKey) => dropTables[bossKey],
-        busy: isSaving,
-        onToggleClear: toggleClear,
-        onAddDrop: haveDropTables ? addDrop : undefined,
-        stacksOf: haveDropTables ? stacksFor : undefined,
-      }
-    : undefined;
+  const log: RunLog = {
+    partyOf: (runId) => partyById.get(runId),
+    rotationOf: (runId) => (showPieces ? (rotations.get(runId) ?? null) : null),
+    dropTable: (bossKey) => dropTables[bossKey],
+    busy: isSaving,
+    onToggleClear: toggleClear,
+    onAddDrop: haveDropTables ? addDrop : undefined,
+    stacksOf: haveDropTables ? stacksFor : undefined,
+  };
 
   const cleared = plan.runs.filter(
     (planned) => partyById.get(planned.run.id)?.cleared === true,
@@ -726,56 +645,20 @@ export default function RunOrderPage() {
     <main className="page">
       <h1 className="page-title">Run Order</h1>
 
-      <div className="basis-row" role="group" aria-label="Where the runs come from">
-        {(
-          [
-            ["parties", "From my parties"],
-            ["byHand", "By hand"],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            className={source === value ? "basis-tab active" : "basis-tab"}
-            aria-pressed={source === value}
-            onClick={() => {
-              setSource(value);
-              // Not just outdated: a plan built from your parties, sitting under the by-hand
-              // editor, is a run order for a night this tab is not showing.
-              setAsked(null);
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       {/* The class is on the hint, not the <main>: this page draws most of itself without waiting
           for anything, and hiding all of it to cover one line would blank the controls too. */}
-      {fromAccount && state === "loading" && (
-        <p className="party-hint page-waiting">Loading your parties...</p>
-      )}
+      {state === "loading" && <p className="party-hint page-waiting">Loading your parties...</p>}
 
-      {fromAccount && state === "error" && (
-        <p className="finder-empty">
-          Couldn&apos;t load your parties. You can still{" "}
-          <button type="button" className="party-cancel" onClick={() => setSource("byHand")}>
-            build the night by hand
-          </button>
-          .
-        </p>
-      )}
+      {state === "error" && <p className="finder-empty">Couldn&apos;t load your parties.</p>}
 
-      {fromAccount && state === "loaded" && parties.length === 0 && (
-        <p className="finder-empty">
-          No parties yet. Add some under Party View, or build the night by hand.
-        </p>
+      {state === "loaded" && parties.length === 0 && (
+        <p className="finder-empty">No parties yet. Add some under Party View.</p>
       )}
 
       {/* The filter sits with the parties it narrows, not down in the budget section, because it
           is the only way back out of the state where it has excluded everything. Under a heading
           the plan renders it left a cleared week with a blank page and no control on it. */}
-      {fromAccount && state === "loaded" && parties.length > 0 && (
+      {state === "loaded" && parties.length > 0 && (
         <label className="night-toggle">
           <input
             type="checkbox"
@@ -786,11 +669,10 @@ export default function RunOrderPage() {
         </label>
       )}
 
-      {/* showingAccount, not fromAccount: this describes the runs, so it moves with them rather
-          than a render ahead of them. Counted over the parties still ON the period: counting every
+      {/* Counted over the parties still ON the period: counting every
           config would call a boss taken off by hand a boss that is cleared, which is a different
           answer to "why is there nothing to run". */}
-      {showingAccount && state === "loaded" && parties.length > 0 && runs.length === 0 && (
+      {state === "loaded" && parties.length > 0 && runs.length === 0 && (
         <p className="finder-empty">
           {running.length === 0
             ? "Every boss is off this period."
@@ -798,19 +680,6 @@ export default function RunOrderPage() {
               ? "Your party is cleared this period."
               : `All ${running.length} parties are cleared this period.`}
         </p>
-      )}
-
-      {!fromAccount && (
-        <section className="night-section">
-          <h2 className="night-heading">The runs</h2>
-          {/* Both halves are required, and a run missing either is skipped. Saying so up front
-              beats a row that silently never appears in the plan. */}
-          <p className="party-hint">
-            One row per boss, with the character each person brings. A run needs both to be
-            scheduled.
-          </p>
-          <RunDraftEditor drafts={drafts} onChange={changeDrafts} />
-        </section>
       )}
 
       {roster.length > 0 && (
@@ -867,8 +736,8 @@ export default function RunOrderPage() {
             })}
           </ul>
 
-          {/* Named off the roster rather than off `opened` alone: switching source swaps everybody
-              out, and a row headed by nothing is worse than no row. */}
+          {/* Named off the roster rather than off `opened` alone: a row headed by nothing is worse
+              than no row. */}
           {openedPerson !== null && (
             <div className={timed ? "night-detail" : "night-detail night-off"}>
               <span className="night-detail-who">{openedPerson.name}</span>
