@@ -285,8 +285,7 @@ function SettlementCard({
   const [showNights, setShowNights] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   // The week the offsets are narrowed to, by the week the drop FELL in, never the week it sold or
-  // was offset. "" is every week. Acts with no drop behind them (a typed credit, a coupon sale) have
-  // no such week and show under "All weeks" only.
+  // was offset. "" is every week.
   const [week, setWeek] = useState("");
 
   // What they are paying to keep the coupons of yours they hold. Above zero, matching the server: a
@@ -601,9 +600,15 @@ function SettlementCard({
     .sort()
     .reverse();
   // A week with no act left behind it falls back to all rather than an empty list.
+  //
+  // An act with no night behind it (a coupon sale, a typed credit) stays in the list under every
+  // week. A sale of coupons names no drop, so placing it in one would be a guess, and dropping it
+  // would hide money that came off the debt. Its amount is left out of the week's total below.
   const weekShown = weeks.includes(week) ? week : "";
   const actsShown = weekShown
-    ? acts.filter(({ nights }) => nights.some((n) => n.weekStart === weekShown))
+    ? acts.filter(
+        ({ nights }) => nights.length === 0 || nights.some((n) => n.weekStart === weekShown),
+      )
     : acts;
   // What the shown offsets come to. An act wholly inside the week counts whole. One spanning weeks
   // counts only its nights in the week, and only when its nights add up to it exactly: otherwise the
@@ -611,6 +616,7 @@ function SettlementCard({
   let shownTotal: number | null = weekShown ? 0 : discharged;
   if (weekShown) {
     for (const { act, nights } of actsShown) {
+      if (nights.length === 0) continue;
       const inWeek = nights.filter((n) => n.weekStart === weekShown);
       if (inWeek.length === nights.length) {
         shownTotal! += act.amount;
