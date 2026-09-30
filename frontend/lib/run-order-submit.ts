@@ -9,17 +9,13 @@
 // over, so keying on the resolved minute would call the plan out of date on its own every half
 // hour, with nothing on the page changed.
 
-import type { DraftRun } from "./boss-night";
-
 export type NightControls = {
-  source: string;
   openOnly: boolean;
   everyoneOn: boolean;
   timed: boolean;
   /** Ticked off, in click order. */
   away: string[];
   windows: Record<string, { from: string; until: string }>;
-  drafts: DraftRun[];
   startText: string;
   endText: string | null;
   duration: number;
@@ -27,7 +23,6 @@ export type NightControls = {
 
 export function controlsKey(controls: NightControls): string {
   return JSON.stringify({
-    source: controls.source,
     openOnly: controls.openOnly,
     everyoneOn: controls.everyoneOn,
     timed: controls.timed,
@@ -41,6 +36,5 @@ export function controlsKey(controls: NightControls): string {
     startText: controls.startText.trim(),
     endText: controls.endText === null ? null : controls.endText.trim(),
     duration: controls.duration,
-    drafts: controls.drafts,
   });
 }

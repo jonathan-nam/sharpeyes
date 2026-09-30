@@ -1,23 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { DraftRun } from "@/lib/boss-night";
 import { controlsKey, type NightControls } from "@/lib/run-order-submit";
 
-const DRAFT: DraftRun = {
-  id: "1",
-  bossKey: "lucid",
-  bossName: "Lucid",
-  minutes: 20,
-  seats: [{ character: "Sable", person: "Mel" }],
-};
-
 const NIGHT: NightControls = {
-  source: "parties",
   openOnly: true,
   everyoneOn: true,
   timed: true,
   away: ["you"],
   windows: { you: { from: "+1", until: "" } },
-  drafts: [DRAFT],
   startText: "+0.5",
   endText: null,
   duration: 120,
@@ -49,14 +38,12 @@ describe("the night a run order was built from", () => {
     ["somebody going away", { away: ["you", "b8a"] }],
     ["somebody coming back", { away: [] }],
     ["a window", { windows: { you: { from: "+2", until: "" } } }],
-    ["the source", { source: "byHand" }],
     ["the cleared filter", { openOnly: false }],
     ["the everyone-on filter", { everyoneOn: false }],
     ["the clock going off", { timed: false }],
     ["a start being typed", { startText: "+2" }],
     ["an end being typed", { endText: "+4" }],
     ["a preset", { duration: 180 }],
-    ["a hand-typed run", { drafts: [{ ...DRAFT, minutes: 30 }] }],
   ] as [string, Partial<NightControls>][]) {
     it(`is a different night after ${what}`, () => {
       expect(keyWith(change)).not.toBe(controlsKey(NIGHT));
