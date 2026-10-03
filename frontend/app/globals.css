@@ -14,6 +14,11 @@
 :root {
   color-scheme: dark;
 
+  /* Every arrow in the app, pointing right, drawn as a mask over currentColor. Stroked with round
+     ends to match Maplestory; a sharp filled triangle read as a different typeface, and a glyph
+     falls back to whichever font has it. */
+  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2.5 1 5.5 4 2.5 7' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
   /* One column for the whole app. Every page-level block aligns to it, so the layout moves as one
      piece when the window is resized. It used to be per-component: the dock and finder centred
      themselves at 792px, the carousel stretched to the viewport, and the inventory window and the
@@ -2035,23 +2040,10 @@ img.user-avatar-img {
 }
 
 /* The fold is the only control on this row, so the caret is sized to be seen rather than found:
-   16px at full ink, not 11px of grey. */
-.dock-caret {
-  font-size: var(--text-lg);
-  line-height: 1;
-  color: var(--ink);
-  transition:
-    transform 0.12s ease,
-    color 0.12s;
-}
-
-.dock-toggle:hover .dock-caret {
-  color: var(--ink-strong);
-}
-
-/* Folded, it points at the thing that will appear. */
-.dock-toggle[aria-expanded="false"] .dock-caret {
-  transform: rotate(-90deg);
+   larger than the shared chevron, at the label's full ink. */
+.dock-toggle .dock-caret {
+  width: 11px;
+  height: 11px;
 }
 
 .dock-drop {
@@ -4505,11 +4497,15 @@ button.link:disabled {
   color: var(--muted);
 }
 
+/* A dropdown, so it points down open or shut. */
 .drop-select-arrow {
+  flex: none;
+  width: 8px;
+  height: 8px;
   margin-left: auto;
-  padding-left: 4px;
-  color: var(--muted-2);
-  font-size: var(--text-sm);
+  background: var(--muted-2);
+  mask: var(--chevron) center / contain no-repeat;
+  transform: rotate(90deg);
 }
 
 .loot-list {
@@ -6224,11 +6220,8 @@ button.link:disabled {
   vertical-align: middle;
   width: 8px;
   height: 8px;
-  /* A stroked chevron with round ends, to match Maplestory's strokes; a sharp filled triangle read
-     as a different typeface. A mask rather than a glyph, so no font can lack it. */
   background: currentColor;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2.5 1 5.5 4 2.5 7' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
-    center / contain no-repeat;
+  mask: var(--chevron) center / contain no-repeat;
   transition: transform 120ms ease;
 }
 

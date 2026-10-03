@@ -40,9 +40,7 @@ export function DockShell({
           aria-controls={panelId}
           onClick={() => onOpenChange(!open)}
         >
-          <span className="dock-caret" aria-hidden="true">
-            &#9662;
-          </span>
+          <span className="party-row-chevron dock-caret" aria-hidden="true" />
           {DOCK_LABELS[name]}
         </button>
       </div>

@@ -160,9 +160,7 @@ export function DropSelect({
         <span className={`drop-select-label${chosen.value === "" ? " is-empty" : ""}`}>
           {chosen.label}
         </span>
-        <span className="drop-select-arrow" aria-hidden="true">
-          ▾
-        </span>
+        <span className="drop-select-arrow" aria-hidden="true" />
       </button>
 
       {/* Portalled and fixed, not absolute: two of the screens carrying this picker clip. See

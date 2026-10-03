@@ -92,9 +92,7 @@ export function DropLogSkeleton() {
               <span>Drop</span>
               <button type="button" className="split-input drop-select" disabled>
                 <span className="drop-select-label is-empty">Select a drop...</span>
-                <span className="drop-select-arrow" aria-hidden="true">
-                  &#9662;
-                </span>
+                <span className="drop-select-arrow" aria-hidden="true" />
               </button>
             </label>
             <button type="submit" className="party-save add-plus" disabled>
