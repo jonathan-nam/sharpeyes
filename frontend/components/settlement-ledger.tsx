@@ -13,6 +13,7 @@ import {
   moneyRows,
   offsetOf,
   weekSplit,
+  bossesOfSales,
   owedByYouShares,
   undecidedSales,
   settleThePair,
@@ -24,7 +25,7 @@ import { formatMesos, parseMesos } from "@/lib/drop-split";
 import { copyText, formatDollars, formatMoney } from "@/lib/money";
 import type { Currency } from "@/lib/money";
 import { formatDropped } from "@/lib/loot";
-import type { Holder } from "@/lib/vestige-ledger";
+import type { CouponSale, Holder } from "@/lib/vestige-ledger";
 import type { Boss } from "@/types/boss";
 import type { Party } from "@/types/party";
 import { partyHrefById } from "@/lib/party-path";
@@ -605,6 +606,20 @@ function SettlementCard({
 
   // Each act with the nights behind it, resolved once, so the week picker and the rows read the same.
   // `split` is what it came to in each bossing week, or null where no week can be told.
+  // The bosses a sale of theirs came off, for the rows that list sales. Empty where the nights
+  // cannot cover it, so the row says nothing rather than a guess.
+  const saleBosses = bossesOfSales(row);
+  const bossesOf = (sale: CouponSale): string => {
+    const taken = saleBosses.get(sale);
+    if (!taken) return "";
+    const labels = taken.map(({ bossKey, partyId }) => {
+      const boss = bossByKey.get(bossKey ?? "");
+      return boss
+        ? bossLabel(boss.name, partyById.get(partyId)?.difficulty ?? null)
+        : "Unknown boss";
+    });
+    return [...new Set(labels)].join(", ");
+  };
   const acts = discharges.map((act) => {
     const nights = nightsBehind(act.payouts);
     return { act, nights, split: weekSplit(row, act, nights) };
@@ -867,6 +882,7 @@ function SettlementCard({
                         name={row.name}
                         shares={nights}
                         weeks={split ? [...split.keys()].sort() : []}
+                        bossesOf={bossesOf}
                         iconUrl={iconUrl}
                         busy={busy}
                         signed={signed}
@@ -978,13 +994,7 @@ function SettlementCard({
                       {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
                     </span>
                     <span className="loot-share-nets">
-                      {[
-                        sale.soldAt && dayOf(sale.soldAt),
-                        // Only where the lot was not all theirs. Their share of a mixed one is a
-                        // figure nobody can check without the lot it came out of.
-                        sale.pieces !== sale.lot.pieces &&
-                          `of ${sale.lot.pieces} for ${formatMesos(sale.lot.amount, true)}`,
-                      ]
+                      {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
@@ -1362,6 +1372,7 @@ function DischargeRow({
   name,
   shares,
   weeks,
+  bossesOf,
   iconUrl,
   busy,
   signed,
@@ -1372,6 +1383,8 @@ function DischargeRow({
   shares: OffsetShare[];
   /** The reset weeks its drops fell in, oldest first. Empty where none can be told. */
   weeks: string[];
+  /** The bosses a sale's coupons came off, said once. Empty where they cannot be told. */
+  bossesOf: (sale: CouponSale) => string;
   /** The coupon's own sprite, for the rows whose every piece is one. See CouponSale. */
   iconUrl: string | null;
   busy: boolean;
@@ -1526,15 +1539,7 @@ function DischargeRow({
             <li key={`sale-${i}`}>
               <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
               <span className="loot-share-nets">
-                {[
-                  sale.soldAt && dayOf(sale.soldAt),
-                  // Only where the sale was not all theirs. Their share of a mixed lot is a figure
-                  // nobody can check without the lot it was divided out of.
-                  sale.pieces !== sale.lot.pieces &&
-                    `of ${sale.lot.pieces} for ${formatMesos(sale.lot.amount, true)}`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
+                {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)].filter(Boolean).join(" · ")}
               </span>
               <span className="ledger-amount">{signed(-sale.mesos)}</span>
             </li>
