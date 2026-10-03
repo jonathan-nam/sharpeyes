@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildSettlement,
   weekSplit,
+  bossesOfSales,
   decidedSales,
   settlementTotals,
   isEmpty,
@@ -1994,6 +1995,46 @@ describe("weekSplit", () => {
   it("has no week for a typed credit", () => {
     expect(
       weekSplit({ sales: [], owedNights: [] }, { amount: 5, payouts: [], sales: [] }, []),
+    ).toBeNull();
+  });
+});
+
+describe("bossesOfSales", () => {
+  const n = (lootId: string, bossKey: string, droppedOn: string, pieces: number) => ({
+    lootId,
+    partyId: "p",
+    bossKey,
+    weekStart: droppedOn,
+    droppedOn,
+    recordedAt: `${droppedOn}T01:00:00Z`,
+    pieces,
+    looterName: "x",
+    shared: false,
+  });
+  const sale = (pieces: number) => ({
+    trancheId: "t",
+    pieces,
+    mesos: pieces * 10,
+    lot: { pieces: pieces * 2, amount: pieces * 20 },
+    soldAt: "2026-09-01T00:00:00Z",
+  });
+
+  it("names the bosses a sale came off, biggest share first", () => {
+    const s = sale(90);
+    const row = {
+      sales: [s],
+      owedNights: [n("a", "lotus", "2026-08-06", 30), n("b", "lucid", "2026-08-13", 60)],
+    };
+    expect(bossesOfSales(row).get(s)).toEqual([
+      { bossKey: "lucid", partyId: "p", pieces: 60 },
+      { bossKey: "lotus", partyId: "p", pieces: 30 },
+    ]);
+  });
+
+  it("names none for a sale the nights cannot cover", () => {
+    const s = sale(90);
+    expect(
+      bossesOfSales({ sales: [s], owedNights: [n("a", "lotus", "2026-08-06", 30)] }).get(s),
     ).toBeNull();
   });
 });

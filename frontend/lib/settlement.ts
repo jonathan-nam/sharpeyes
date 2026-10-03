@@ -19,7 +19,7 @@
 // No total is computed here. The shares are lib/wallet.ts's, the pieces and the sale splits are
 // lib/vestige-ledger.ts's, and a second copy of any of them would be a second answer.
 
-import { placeSales, spendOldestFirst, spendSales } from "./piece-ledger";
+import { placeSales, placeSalesOnNights, spendOldestFirst, spendSales } from "./piece-ledger";
 import type { AnsweredSale } from "./piece-ledger";
 import { SELF_KEY, answeredKey, holderFromKey, holderKey } from "./vestige-ledger";
 import type { CouponSale, Holder, HolderLedger, SaleCredit } from "./vestige-ledger";
@@ -1150,6 +1150,43 @@ export function weekSplit(
       left -= part;
       out.set(week, (out.get(week) ?? 0) + part);
     });
+  }
+  return out;
+}
+
+/**
+ * The bosses each coupon sale of theirs came off, biggest first, or null where the nights cannot
+ * cover it. The same oldest-first placement as weekSplit, so the bosses named are the nights the card
+ * already draws as answered.
+ */
+export function bossesOfSales(
+  row: Pick<Settlement, "sales" | "owedNights">,
+): Map<CouponSale, { bossKey: string | null; partyId: string; pieces: number }[] | null> {
+  const wrapped = row.sales.map((sale) => ({
+    sale,
+    pieces: sale.pieces,
+    recordedAt: sale.soldAt ?? "",
+  }));
+  const out = new Map<
+    CouponSale,
+    { bossKey: string | null; partyId: string; pieces: number }[] | null
+  >();
+  for (const [w, taken] of placeSalesOnNights(row.owedNights, wrapped)) {
+    if (taken === null) {
+      out.set(w.sale, null);
+      continue;
+    }
+    const by = new Map<string, { bossKey: string | null; partyId: string; pieces: number }>();
+    for (const { night, pieces } of taken) {
+      const key = `${night.bossKey}:${night.partyId}`;
+      const seen = by.get(key) ?? { bossKey: night.bossKey, partyId: night.partyId, pieces: 0 };
+      seen.pieces += pieces;
+      by.set(key, seen);
+    }
+    out.set(
+      w.sale,
+      [...by.values()].sort((a, b) => b.pieces - a.pieces),
+    );
   }
   return out;
 }
