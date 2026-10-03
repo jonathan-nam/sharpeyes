@@ -4,6 +4,7 @@ import {
   couponNote,
   couponSide,
   foldRuns,
+  forBoss,
   consolidate,
   couponsOutstandingByParty,
   dropStatusLabel,
@@ -411,6 +412,38 @@ describe("forCharacter", () => {
   });
 });
 
+describe("forBoss", () => {
+  it("recomputes the totals rather than scaling them", () => {
+    const log = buildDropLog(
+      [duo()],
+      [pool("pa", [drop({ id: "l1" }), drop({ id: "l2", bossKey: "kalos" })])],
+      {},
+    );
+
+    const only = forBoss(log, "kalos");
+
+    expect(log.totals.drops).toBe(2);
+    expect(only.totals.drops).toBe(1);
+    expect(only.totals.pooled).toBe(only.entries[0]!.pooled);
+    expect(only.entries.map((e) => e.lootId)).toEqual(["l2"]);
+    // Null means every boss, unfiltered.
+    expect(forBoss(log, null)).toBe(log);
+  });
+
+  it("narrows on top of a character filter, down to nothing where the two do not meet", () => {
+    const one = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")]);
+    const two = party("pb", [mine("m3", "otherchar"), theirs("m4", "CreedBratton")]);
+    const log = buildDropLog(
+      [one, two],
+      [pool("pa", [drop({ id: "l1" })]), pool("pb", [drop({ id: "l2", bossKey: "kalos" })])],
+      {},
+    );
+
+    expect(forBoss(forCharacter(log, one.characterId), "limbo").entries).toHaveLength(1);
+    expect(forBoss(forCharacter(log, one.characterId), "kalos").totals.drops).toBe(0);
+  });
+});
+
 describe("monthLabel", () => {
   it("reads the month as written, not as a timezone reads it", () => {
     // new Date("2026-07-01") is UTC midnight, so anyone behind UTC would see June.
@@ -608,7 +641,7 @@ describe("foldRuns", () => {
   };
 
   it("splits a fold by character and subtotals what each of them got", () => {
-    const folds = foldRuns(fold(["char-m1", "char-m2", "char-m3"]).entries, "character");
+    const folds = foldRuns(fold(["char-m1", "char-m2", "char-m3"]).entries);
     expect(folds.map((f) => f.key)).toEqual(["char-m1", "char-m2", "char-m3"]);
     expect(folds.map((f) => f.yours)).toEqual([2, 1, 1]);
     expect(folds[0]!.entries.map((e) => e.lootId)).toEqual(["l4", "l1"]);
@@ -616,23 +649,19 @@ describe("foldRuns", () => {
 
   it("keeps the roster order the fold arrived in, rather than reaching for its own", () => {
     // Two orders for one list is two lists: the runs are already sorted, so this walks them.
-    const folds = foldRuns(fold(["char-m3", "char-m1", "char-m2"]).entries, "character");
+    const folds = foldRuns(fold(["char-m3", "char-m1", "char-m2"]).entries);
     expect(folds.map((f) => f.key)).toEqual(["char-m3", "char-m1", "char-m2"]);
   });
 
   it("loses no run: every row behind the fold is behind exactly one character", () => {
     const line = fold(["char-m1", "char-m2", "char-m3"]);
-    const behind = foldRuns(line.entries, "character").flatMap((f) =>
-      f.entries.map((e) => e.lootId),
-    );
+    const behind = foldRuns(line.entries).flatMap((f) => f.entries.map((e) => e.lootId));
     expect(behind.sort()).toEqual(line.entries.map((e) => e.lootId).sort());
-    expect(foldRuns(line.entries, "character").reduce((sum, f) => sum + f.yours, 0)).toBe(
-      line.yours,
-    );
+    expect(foldRuns(line.entries).reduce((sum, f) => sum + f.yours, 0)).toBe(line.yours);
   });
 
   it("sums the money over the rows that sold, and says nothing when none did", () => {
-    const sold = foldRuns(fold(["char-m1", "char-m2", "char-m3"]).entries, "character")[0]!;
+    const sold = foldRuns(fold(["char-m1", "char-m2", "char-m3"]).entries)[0]!;
     // Two sales of 10b listed, the seller's fee off each. Whatever splitOf makes of one, the pair
     // is twice it: this file never re-derives a split.
     expect(sold.pooled).toBe((sold.entries[0]!.pooled ?? 0) * 2);
@@ -642,71 +671,9 @@ describe("foldRuns", () => {
       [pool("pa", [pending({ id: "l1" }), pending({ id: "l2", droppedOn: "2026-07-22" })])],
       {},
     );
-    const unsold = foldRuns(consolidate(log.entries, ["char-m1"])[0]!.entries, "character")[0]!;
+    const unsold = foldRuns(consolidate(log.entries, ["char-m1"])[0]!.entries)[0]!;
     expect(unsold.pooled).toBeNull();
     expect(unsold.yourTake).toBeNull();
-  });
-
-  const couponOff = (id: string, bossKey: string, quantity: number, droppedOn: string) =>
-    pending({
-      id,
-      dropKey: "vestige-of-erion",
-      name: "Vestige of Erion Coupon",
-      bossKey,
-      quantity,
-      droppedOn,
-    });
-
-  /** One character clearing three bosses, so the boss axis has something to split and the other does not. */
-  const bosses = () => {
-    const log = buildDropLog(
-      [party("pa", [mine("m1", "Huskyxkenshi")])],
-      [
-        pool("pa", [
-          couponOff("l1", "limbo", 30, "2026-08-05"),
-          couponOff("l2", "kalos-the-guardian", 90, "2026-08-04"),
-          couponOff("l3", "limbo", 30, "2026-08-03"),
-        ]),
-      ],
-      {},
-    );
-    return consolidate(log.entries, ["char-m1"])[0]!;
-  };
-
-  it("splits a fold by boss and subtotals what each of them paid", () => {
-    const folds = foldRuns(
-      bosses().entries,
-      "boss",
-      new Map([
-        ["kalos-the-guardian", 0],
-        ["limbo", 1],
-      ]),
-    );
-    expect(folds.map((f) => f.key)).toEqual(["kalos-the-guardian", "limbo"]);
-    expect(folds.map((f) => f.yours)).toEqual([90, 60]);
-  });
-
-  it("orders the bosses by the catalog, not by the night they last fell on", () => {
-    // The entries arrive newest first, which is Limbo. Catalog order is what heads them.
-    const folds = foldRuns(bosses().entries, "boss", new Map([["limbo", 7]]));
-    // Kalos is off the end of this catalog, so it sorts last rather than first.
-    expect(folds.map((f) => f.key)).toEqual(["limbo", "kalos-the-guardian"]);
-  });
-
-  it("keeps a boss's runs newest first underneath it, so the sort is stable", () => {
-    const folds = foldRuns(bosses().entries, "boss", new Map([["limbo", 0]]));
-    expect(folds[0]!.entries.map((e) => e.lootId)).toEqual(["l1", "l3"]);
-  });
-
-  it("loses no run down either axis, and both come to the line's own total", () => {
-    const line = bosses();
-    for (const axis of ["character", "boss"] as const) {
-      const folds = foldRuns(line.entries, axis, new Map([["limbo", 0]]));
-      expect(folds.flatMap((f) => f.entries.map((e) => e.lootId)).sort()).toEqual(
-        line.entries.map((e) => e.lootId).sort(),
-      );
-      expect(folds.reduce((sum, f) => sum + f.yours, 0)).toBe(line.yours);
-    }
   });
 });
 
