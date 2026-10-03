@@ -6222,12 +6222,13 @@ button.link:disabled {
   /* Run Order's chip is not a flex box, and an inline span ignores a transform. */
   display: inline-block;
   vertical-align: middle;
-  width: 0;
-  height: 0;
-  /* A triangle from borders, so there is no glyph to go missing on a font that lacks it. */
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 5px solid currentColor;
+  width: 8px;
+  height: 8px;
+  /* A stroked chevron with round ends, to match Maplestory's strokes; a sharp filled triangle read
+     as a different typeface. A mask rather than a glyph, so no font can lack it. */
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M2.5 1 5.5 4 2.5 7' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / contain no-repeat;
   transition: transform 120ms ease;
 }
 
