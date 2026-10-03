@@ -6219,6 +6219,9 @@ button.link:disabled {
 }
 
 .party-row-chevron {
+  /* Run Order's chip is not a flex box, and an inline span ignores a transform. */
+  display: inline-block;
+  vertical-align: middle;
   width: 0;
   height: 0;
   /* A triangle from borders, so there is no glyph to go missing on a font that lacks it. */
@@ -6235,9 +6238,9 @@ button.link:disabled {
    three toggles were simply not in it: `Owed` opened with its arrow still pointing at a closed
    panel. A list is a thing to be left out of, and this was left out of it.
 
-   Scoped to the toggle, not to an ancestor: the Drop Log nests one fold inside another, and a
+   A child selector, not a descendant one: the Drop Log nests one fold inside another, and a
    descendant selector on the outer ROW turned every closed character arrow with it. */
-.party-row-toggle[aria-expanded="true"] .party-row-chevron {
+[aria-expanded="true"] > .party-row-chevron {
   transform: rotate(90deg);
 }
 

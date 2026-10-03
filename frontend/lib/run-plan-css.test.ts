@@ -84,7 +84,7 @@ describe("answering for a run", () => {
   // sets like every other, so there is no list left to be left out of. See party-fold-css.
   it("turns the chevron on an open run", () => {
     expect(runPlan).toMatch(/className="party-row-toggle"\s*\n\s*aria-expanded=\{open\}/);
-    expect(css).toMatch(/\.party-row-toggle\[aria-expanded="true"\] \.party-row-chevron/);
+    expect(css).toMatch(/\[aria-expanded="true"\] > \.party-row-chevron/);
   });
 
   it("recedes a done run without greying who ran it", () => {

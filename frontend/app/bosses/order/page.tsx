@@ -729,7 +729,7 @@ export default function RunOrderPage() {
                       setOpened((current) => (current === person.id ? null : person.id))
                     }
                   >
-                    <span aria-hidden="true">&#9662;</span>
+                    <span className="party-row-chevron" aria-hidden="true" />
                   </button>
                 </li>
               );

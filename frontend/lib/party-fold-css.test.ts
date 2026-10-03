@@ -15,7 +15,7 @@ describe("a folding control turns its chevron", () => {
   it("rotates it off the state the button already publishes", () => {
     const at = css.indexOf(".party-row-chevron {");
     expect(at, ".party-row-chevron is missing").toBeGreaterThan(-1);
-    expect(css.slice(at)).toMatch(/\.party-row-toggle\[aria-expanded="true"\] \.party-row-chevron/);
+    expect(css.slice(at)).toMatch(/^\[aria-expanded="true"\] > \.party-row-chevron \{/m);
   });
 
   it("is the only rule that turns one, so no fold can be left out", () => {
@@ -27,8 +27,8 @@ describe("a folding control turns its chevron", () => {
   });
 
   // The Drop Log nests one fold inside another, so a descendant selector on the outer row reached
-  // the inner rows' chevrons: opening a drop turned every closed character arrow with it. Scoped to
-  // the toggle, that cannot happen again, an inner chevron sitting in no outer button.
+  // the inner rows' chevrons: opening a drop turned every closed character arrow with it. A child
+  // selector off the button cannot reach an inner chevron, which sits in no outer button.
   it("turns only its own, where one fold sits inside another", () => {
     const at = css.indexOf(".party-row-chevron {");
     expect(css.slice(at)).not.toMatch(/\.droplog-row\.is-open \.party-row-chevron/);
