@@ -22,11 +22,15 @@ describe("the rows under `owed` take two clicks to remove", () => {
     expect(ledger).toContain("if (!armed) { setArmed(true); return; }");
   });
 
-  it("draws both rows under `owed` through it", () => {
+  it("draws both rows under `owed`, and every offset, through it", () => {
     // The typed debt, and the receipt a closure has already spoken for.
     expect(ledger).toContain("label={`Remove ${formatMesos(entry.amount, true)} against ${name}`}");
     expect(ledger).toContain("label={`Remove the ${formatMesos(got.amount, true)} payment`}");
-    expect(ledger.match(/<ArmedRemove/g)).toHaveLength(2);
+    // An offset is deleted outright, with nothing that keeps its amount, so it takes two clicks too.
+    expect(ledger).toContain(
+      "label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}",
+    );
+    expect(ledger.match(/<ArmedRemove/g)).toHaveLength(3);
   });
 
   it("disarms on blur, so a click elsewhere leaves nothing armed", () => {

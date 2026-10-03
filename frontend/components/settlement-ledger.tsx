@@ -1443,15 +1443,11 @@ function DischargeRow({
         )}
 
         <span className="ledger-amount">{signed(-act.amount)}</span>
-        <button
-          type="button"
-          className="link ledger-drop-sale"
-          disabled={busy}
-          onClick={onRemove}
-          aria-label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}
-        >
-          ×
-        </button>
+        <ArmedRemove
+          busy={busy}
+          label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}
+          onRemove={onRemove}
+        />
       </div>
 
       {open && folds && (
@@ -1560,7 +1556,9 @@ function PieceNights({
  * A discard that takes two clicks.
  *
  * What it removes under `owed` is the one thing on this card nothing else recorded: a debt and a
- * receipt are typed, with a note and a day, and neither can be derived back. The card's other
+ * receipt are typed, with a note and a day, and neither can be derived back. An offset is the same
+ * once it is gone: the row is deleted outright and its amount and moment are not kept anywhere the
+ * app can read, so one stray click is a figure to reconstruct from a backup. The card's other
  * discards undo an act whose own drop or sale still holds it, so those stay one click.
  *
  * Armed in place rather than behind a dialog, because the row is one line and a modal over a list
