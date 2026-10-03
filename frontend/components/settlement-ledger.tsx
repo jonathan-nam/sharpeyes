@@ -288,6 +288,8 @@ function SettlementCard({
   // The week the offsets are narrowed to, by the week the drop FELL in, never the week it sold or
   // was offset. "" is every week.
   const [week, setWeek] = useState("");
+  // The same filter over the coupon nights, kept apart: the two lists are different acts.
+  const [nightWeek, setNightWeek] = useState("");
 
   // What they are paying to keep the coupons of yours they hold. Above zero, matching the server: a
   // stack handed over for nothing is not a purchase at a price of nought, it is a handover.
@@ -541,6 +543,14 @@ function SettlementCard({
    * Zero net is not drawn: the coupon relationship is a running balance and a balance at zero is
    * nothing to close. See the step for the rest.
    */
+  const nightWeeks = [...new Set([...theirNights, ...myNights].map((d) => d.weekStart))]
+    .sort()
+    .reverse();
+  const nightWeekShown = nightWeeks.includes(nightWeek) ? nightWeek : "";
+  const inNightWeek = (drops: HeldOfYours[]) =>
+    nightWeekShown ? drops.filter((d) => d.weekStart === nightWeekShown) : drops;
+  const theirShown = inNightWeek(theirNights);
+  const myShown = inNightWeek(myNights);
   const couponsOpen = row.piecesNet !== 0 && (theirNights.length > 0 || myNights.length > 0);
   // Whether the coupon lists need telling apart. See the note where they are drawn.
   const bothWays = theirNights.length > 0 && myNights.length > 0;
@@ -1126,7 +1136,27 @@ function SettlementCard({
                 </span>
               </div>
               {showNights && (
-                <div id={`nights-${row.key}`}>
+                <div className="ledger-offsets-panel" id={`nights-${row.key}`}>
+                  {nightWeeks.length > 1 && (
+                    <div className="ledger-filter">
+                      <label className="ledger-step" htmlFor={`nights-week-${row.key}`}>
+                        Filter by
+                      </label>
+                      <select
+                        id={`nights-week-${row.key}`}
+                        className="ledger-week"
+                        value={nightWeekShown}
+                        onChange={(e) => setNightWeek(e.target.value)}
+                      >
+                        <option value="">All weeks</option>
+                        {nightWeeks.map((w) => (
+                          <option key={w} value={w}>
+                            Week of {formatWeekStart(w)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {/* Whose inventory, and ONLY where that is a question.
 
                       With nights on one side the step above has already said it: a pile of theirs
@@ -1137,20 +1167,26 @@ function SettlementCard({
                       With both, it is the whole question. Nothing on a night's own row says which
                       inventory it sits in, so two unlabelled lists would run together into one
                       list that reads as all pointing the same way. */}
-                  {theirNights.length > 0 && (
+                  {theirShown.length > 0 && (
                     <>
                       {bothWays && <span className="ledger-step">{`${row.name} is holding`}</span>}
                       <PieceNights
-                        drops={theirNights}
+                        drops={theirShown}
                         bossByKey={bossByKey}
                         partyById={partyById}
+                        iconUrl={iconUrl}
                       />
                     </>
                   )}
-                  {myNights.length > 0 && (
+                  {myShown.length > 0 && (
                     <>
                       {bothWays && <span className="ledger-step">I am holding</span>}
-                      <PieceNights drops={myNights} bossByKey={bossByKey} partyById={partyById} />
+                      <PieceNights
+                        drops={myShown}
+                        bossByKey={bossByKey}
+                        partyById={partyById}
+                        iconUrl={iconUrl}
+                      />
                     </>
                   )}
 
@@ -1520,14 +1556,17 @@ function PieceNights({
   drops,
   bossByKey,
   partyById,
+  iconUrl,
 }: {
   drops: HeldOfYours[];
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
+  /** The coupon's own sprite: every piece on a night is one. */
+  iconUrl: string | null;
 }) {
   return (
     <ul className="ledger-queue">
-      {/* A night a sale answered for, or one the other side cancelled, is at zero, and it is still one
+      {/* A night a sale answered, or one the other side cancelled, is at zero, and it is still one
           of the nights closing the pair would close: it is kept in the list for that and drawn in
           none. See spendOldestFirst. */}
       {drops
@@ -1537,20 +1576,28 @@ function PieceNights({
           const party = partyById.get(drop.partyId);
           return (
             <li key={`${drop.lootId}:${drop.pieces}`} className="ledger-drop">
-              {/* One line. The parts are a boss, a looter, a week and a count, and wrapped they
-                  came out two rows tall each, so a pile of nights stopped being scannable. Same
-                  treatment, same reason, as the history entries. */}
-              <div className="ledger-drop-head is-oneline">
-                <Link href={partyHrefById(drop.partyId, partyById)} className="loot-name">
-                  {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
-                </Link>
-                <span className="loot-meta">
-                  {drop.looterName} · week of {formatWeekStart(drop.weekStart)}
-                  {/* Why this one is not in the count above. Said on the row it belongs to, rather
-                      than as a second sentence under the button. */}
-                  {drop.shared && " · owes somebody else too"}
-                </span>
-                <span className="ledger-amount">{drop.pieces}</span>
+              {/* The offset row's shape: the boss over the count, the looter and week beside it.
+                  The boss wraps rather than being cut, since it is what places the night. */}
+              <div className="ledger-drop-head is-stacked">
+                {iconUrl ? (
+                  <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+                ) : (
+                  <span className="loot-icon" aria-hidden="true" />
+                )}
+                <div className="ledger-offset-text">
+                  <Link href={partyHrefById(drop.partyId, partyById)} className="loot-name">
+                    {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
+                  </Link>
+                  <span className="ledger-offset-sub">
+                    <span className="ledger-amount">{drop.pieces}</span>
+                    <span className="loot-meta">
+                      {drop.looterName} · week of {formatWeekStart(drop.weekStart)}
+                      {/* Why this one is not in the count above. Said on the row it belongs to,
+                          rather than as a second sentence under the button. */}
+                      {drop.shared && " · owes somebody else too"}
+                    </span>
+                  </span>
+                </div>
               </div>
             </li>
           );
