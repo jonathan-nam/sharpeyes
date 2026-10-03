@@ -254,10 +254,11 @@ describe("what the card says a person owes", () => {
   });
 
   it("dates every act in the history, and means the same thing by it on each", () => {
-    // A history read from the top, in which nothing said which day an act was. The day the ACT was
-    // recorded, not the day the drop fell: one column down one list cannot mean two facts, so the
-    // drop's own day stays on hover.
-    expect(source).toContain('<span className="loot-meta ledger-when">{dayOf(act.at)}</span>');
+    // The day the DROP fell, never the day the act was recorded: the week filter and its total answer
+    // to the drop, and an offset made on Oct 3 for a Sep 24 drop must not read as an October one. The
+    // recorded day is only the fallback for an act with no drop behind it.
+    expect(source).toContain('<span className="loot-meta ledger-when">{when}</span>');
+    expect(source).toContain(": dayOf(act.at);");
     expect(source).toContain("const dayOf = (at: string) => formatDropped(at.slice(0, 10));");
     // Never shrunk: a date is unreadable clipped, so the name stays the only part that gives.
     expect(css).toContain(".ledger-drop-head.is-oneline .ledger-when");
