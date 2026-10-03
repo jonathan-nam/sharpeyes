@@ -417,9 +417,9 @@ function SettlementCard({
   // priced and no spent receipt it is an empty box, and an empty box in the pair is still 12px of
   // padding and a rule under it: the card read as a gap between its header and the next section.
   const anyOwed = owedParts > 0 || payments.spent.length > 0;
-  // An OFFSET here is anything that came off the debt, which is the account's word for the step and
-  // covers a payment: it is a count of acts, and each row inside names which act it was.
-  const offsets = plural(discharges.length, "offset");
+  // Anything that came off the debt, a payment included, under the step headed Drops: a count of
+  // rows, each naming which act it was.
+  const offsets = plural(discharges.length, "drop");
   // Money you SENT them, which took nothing off what they owe you and so is not in `discharges`.
   const paidOut = row.disposals.filter((d) => d.kind === "PAID");
 
@@ -850,7 +850,7 @@ function SettlementCard({
                   label, which is where a screen reader needs it and the only place it was doing
                   work: how many acts is what opening it says. */}
               <div className="ledger-step-line">
-                <span className="ledger-heading">Offsets</span>
+                <span className="ledger-heading">Drops</span>
                 <button
                   type="button"
                   className="party-row-toggle"

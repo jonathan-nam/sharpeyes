@@ -429,11 +429,10 @@ describe("a receipt on the card", () => {
   });
 
   it("goes under the step this account already calls what came off the debt", () => {
-    // OFFSETS is the word, and it means anything that came off: a payment is one, so the fold
-    // counts acts and each row inside names which act it was. The step was renamed for a turn and
-    // the rename was the wrong half of the change to make.
-    expect(source).toContain('<span className="ledger-heading">Offsets</span>');
-    expect(source).toContain('plural(discharges.length, "offset")');
+    // DROPS, at Jonathan's call (2026-10-03): the list is read by the drop each row names. It holds
+    // anything that came off, a payment included, so the fold counts rows and each names its act.
+    expect(source).toContain('<span className="ledger-heading">Drops</span>');
+    expect(source).toContain('plural(discharges.length, "drop")');
   });
 
   it("is removable where it is drawn, since this is the only screen that records one", () => {

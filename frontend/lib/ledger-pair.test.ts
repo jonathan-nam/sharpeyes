@@ -29,7 +29,7 @@ describe("`owed` and `offsets` are half a card each", () => {
     const at = ledger.indexOf('<div className="ledger-pair">');
     expect(at, "the pair is gone").toBeGreaterThan(-1);
     const owed = ledger.indexOf('<span className="ledger-heading">Owed</span>');
-    const offsets = ledger.indexOf('<span className="ledger-heading">Offsets</span>');
+    const offsets = ledger.indexOf('<span className="ledger-heading">Drops</span>');
     const shares = ledger.indexOf('<span className="ledger-step">shares</span>');
     expect(at).toBeLessThan(owed);
     expect(owed).toBeLessThan(offsets);
@@ -99,7 +99,7 @@ describe("folding `owed`", () => {
   it("wears one shape in all three sections: heading, chevron, figure", () => {
     // They grew up separately and read as three kinds of thing. Offsets carried its total and its
     // chevron on a ROW inside the list, and the chevron belongs to the heading, not to a row of it.
-    for (const heading of ["Owed", "Offsets", "Unsettled Amounts"]) {
+    for (const heading of ["Owed", "Drops", "Unsettled Amounts"]) {
       const at = ledger.indexOf(`<span className="ledger-heading">${heading}</span>`);
       expect(at, heading).toBeGreaterThan(-1);
       // The heading opens a `.ledger-step-line`, and the chevron and the figure are on it.
