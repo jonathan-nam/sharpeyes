@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  placeSales,
   type LedgerSeat,
   balances,
   entitlements,
@@ -318,5 +319,54 @@ describe("a sale only reaching the nights that were on the books", () => {
     expect(spendSales([night("a", "2026-08-13", 10, "2026-08-13T00:00:00Z")], [])[0]!.pieces).toBe(
       10,
     );
+  });
+});
+
+describe("placeSales", () => {
+  const night = (lootId: string, weekStart: string, droppedOn: string, pieces: number) => ({
+    lootId,
+    weekStart,
+    droppedOn,
+    pieces,
+    recordedAt: `${droppedOn}T01:00:00Z`,
+  });
+  const nights = [
+    night("a", "2026-08-06", "2026-08-07", 60),
+    night("b", "2026-08-13", "2026-08-14", 60),
+    night("c", "2026-08-20", "2026-08-21", 60),
+  ];
+  const sales = [
+    { pieces: 90, recordedAt: "2026-08-30T00:00:00Z" },
+    { pieces: 50, recordedAt: "2026-08-31T00:00:00Z" },
+  ];
+
+  it("places each sale by the weeks of the nights it came off, oldest first", () => {
+    const placed = placeSales(nights, sales);
+    expect([...placed.get(sales[0]!)!]).toEqual([
+      ["2026-08-06", 60],
+      ["2026-08-13", 30],
+    ]);
+    expect([...placed.get(sales[1]!)!]).toEqual([
+      ["2026-08-13", 30],
+      ["2026-08-20", 20],
+    ]);
+  });
+
+  it("leaves what each night still owes exactly as spendSales does", () => {
+    const placed = placeSales(nights, sales);
+    const spent = spendSales(nights, sales);
+    const taken = (lootId: string) =>
+      [...placed.values()].reduce((sum, weeks) => {
+        const week = nights.find((n) => n.lootId === lootId)!.weekStart;
+        return sum + (weeks?.get(week) ?? 0);
+      }, 0);
+    for (const n of nights) {
+      expect(n.pieces - spent.find((s) => s.lootId === n.lootId)!.pieces).toBe(taken(n.lootId));
+    }
+  });
+
+  it("refuses a sale the nights cannot cover, rather than placing part of it", () => {
+    const big = { pieces: 500, recordedAt: "2026-09-01T00:00:00Z" };
+    expect(placeSales(nights, [big]).get(big)).toBeNull();
   });
 });

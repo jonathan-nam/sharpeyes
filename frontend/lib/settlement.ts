@@ -19,7 +19,7 @@
 // No total is computed here. The shares are lib/wallet.ts's, the pieces and the sale splits are
 // lib/vestige-ledger.ts's, and a second copy of any of them would be a second answer.
 
-import { spendOldestFirst, spendSales } from "./piece-ledger";
+import { placeSales, spendOldestFirst, spendSales } from "./piece-ledger";
 import type { AnsweredSale } from "./piece-ledger";
 import { SELF_KEY, answeredKey, holderFromKey, holderKey } from "./vestige-ledger";
 import type { CouponSale, Holder, HolderLedger, SaleCredit } from "./vestige-ledger";
@@ -231,6 +231,11 @@ export type Settlement = {
    * settleThePair.
    */
   owedDrops: HeldOfYours[];
+  /**
+   * `owedDrops` before any sale spent them, which is what says which week a sale of theirs came off.
+   * See weekSplit.
+   */
+  owedNights: HeldOfYours[];
   lines: WalletLine[];
 };
 
@@ -258,6 +263,7 @@ const blank = (key: string, name: string): Settlement => ({
   entries: [],
   drops: [],
   owedDrops: [],
+  owedNights: [],
   lines: [],
 });
 
@@ -354,6 +360,7 @@ export function buildSettlement(
     // headline off what they actually absorbed. That way round because the two must agree: taking
     // the tranche total for the headline and letting the nights absorb less is a panel listing six
     // nights and 180 coupons under a headline of 50. See spendSales.
+    row.owedNights = row.owedDrops;
     const spent = spendSales(row.owedDrops, answered.get(answeredKey(SELF_KEY, key)) ?? []);
     row.piecesAnswered.theirs = row.piecesYouOwe - spent.reduce((sum, d) => sum + d.pieces, 0);
     row.piecesYouOwe -= row.piecesAnswered.theirs;
@@ -1097,4 +1104,52 @@ export function isEmpty(row: Settlement): boolean {
  */
 export function yourPiles<T extends { holder: Holder }>(ledgers: T[]): T[] {
   return ledgers.filter((ledger) => ledger.holder.kind === "SELF");
+}
+
+/**
+ * What one act discharged, by the bossing week the drops behind it fell in. Null where no week can be
+ * told, which is a typed credit, a payment, a sale the nights cannot cover, or a night since deleted.
+ *
+ * NEVER the week it was sold or offset. A share names its drop, so its week is fact. A sale of
+ * coupons names none, and is placed by the same oldest-first spend that draws the nights it answered
+ * (see placeSales), its money divided over the weeks by pieces with the odd meso on the last, so a
+ * sale's weeks always add up to the sale.
+ */
+export function weekSplit(
+  row: Pick<Settlement, "sales" | "owedNights">,
+  act: Pick<Discharge, "amount" | "payouts" | "sales">,
+  shares: { weekStart: string; share: number }[],
+): Map<string, number> | null {
+  if (act.payouts.length > 0) {
+    if (shares.some((n) => n.weekStart === "")) return null;
+    const weeks = new Set(shares.map((n) => n.weekStart));
+    if (weeks.size === 1) return new Map([[[...weeks][0]!, act.amount]]);
+    if (shares.reduce((sum, n) => sum + n.share, 0) !== act.amount) return null;
+    const out = new Map<string, number>();
+    for (const n of shares) out.set(n.weekStart, (out.get(n.weekStart) ?? 0) + n.share);
+    return out;
+  }
+  if (act.sales.length === 0) return null;
+
+  const wrapped = row.sales.map((sale) => ({
+    sale,
+    pieces: sale.pieces,
+    recordedAt: sale.soldAt ?? "",
+  }));
+  const placed = placeSales(row.owedNights, wrapped);
+  const out = new Map<string, number>();
+  for (const sale of act.sales) {
+    const w = wrapped.find((x) => x.sale === sale);
+    const weeks = w ? placed.get(w) : null;
+    if (!weeks) return null;
+    const ordered = [...weeks].sort(([a], [b]) => a.localeCompare(b));
+    let left = sale.mesos;
+    ordered.forEach(([week, pieces], i) => {
+      const part =
+        i === ordered.length - 1 ? left : Math.floor((sale.mesos * pieces) / sale.pieces);
+      left -= part;
+      out.set(week, (out.get(week) ?? 0) + part);
+    });
+  }
+  return out;
 }
