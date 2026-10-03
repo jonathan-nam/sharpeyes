@@ -991,21 +991,25 @@ function SettlementCard({
             {held.length > 0 && (
               <ul className="loot-shares">
                 {held.map((sale, i) => (
-                  <li key={`held-${i}`}>
+                  <li key={`held-${i}`} className="loot-sale-row">
                     {iconUrl ? (
                       <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
                     ) : (
                       <span className="loot-icon" aria-hidden="true" />
                     )}
-                    <span className="loot-share-name">
-                      {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
-                    </span>
-                    <span className="loot-share-nets">
-                      {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                    <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                    <div className="ledger-offset-text">
+                      <span className="loot-share-name">
+                        {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
+                      </span>
+                      <span className="ledger-offset-sub">
+                        <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                        <span className="loot-meta">
+                          {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -1543,12 +1547,23 @@ function DischargeRow({
           {/* Keyed by position: a tranche's id is not carried this far, and it has nothing to say
               here that its pieces and its day do not. */}
           {act.sales.map((sale, i) => (
-            <li key={`sale-${i}`}>
-              <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
-              <span className="loot-share-nets">
-                {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)].filter(Boolean).join(" · ")}
-              </span>
-              <span className="ledger-amount">{signed(-sale.mesos)}</span>
+            <li key={`sale-${i}`} className="loot-sale-row">
+              {iconUrl ? (
+                <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+              ) : (
+                <span className="loot-icon" aria-hidden="true" />
+              )}
+              <div className="ledger-offset-text">
+                <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
+                <span className="ledger-offset-sub">
+                  <span className="ledger-amount">{signed(-sale.mesos)}</span>
+                  <span className="loot-meta">
+                    {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </span>
+              </div>
             </li>
           ))}
         </ul>

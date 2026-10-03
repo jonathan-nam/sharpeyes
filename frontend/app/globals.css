@@ -4710,6 +4710,25 @@ button.link:disabled {
   color: var(--muted);
 }
 
+/* A coupon sale is drawn as an offset row is: the art, then the name over the figure, with the day
+   and bosses beside the figure and wrapping under themselves. */
+.loot-shares > li.loot-sale-row {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.loot-sale-row .loot-share-name {
+  min-width: 0;
+}
+
+.loot-sale-row .ledger-offset-sub {
+  flex-wrap: wrap;
+}
+
+.loot-sale-row .ledger-offset-sub .loot-meta {
+  min-width: 0;
+}
+
 .loot-share-nets {
   color: var(--muted);
   font-size: var(--text-base);
