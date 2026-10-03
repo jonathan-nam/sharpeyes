@@ -1107,6 +1107,22 @@ export function yourPiles<T extends { holder: Holder }>(ledgers: T[]): T[] {
 }
 
 /**
+ * A sale's money divided over the weeks its pieces came from, by pieces, the odd meso on the last
+ * (latest) week so the parts always add up to the sale.
+ */
+function mesosByWeek(sale: CouponSale, pieces: Map<string, number>): Map<string, number> {
+  const ordered = [...pieces].sort(([a], [b]) => a.localeCompare(b));
+  const out = new Map<string, number>();
+  let left = sale.mesos;
+  ordered.forEach(([week, p], i) => {
+    const part = i === ordered.length - 1 ? left : Math.floor((sale.mesos * p) / sale.pieces);
+    left -= part;
+    out.set(week, part);
+  });
+  return out;
+}
+
+/**
  * What one act discharged, by the bossing week the drops behind it fell in. Null where no week can be
  * told, which is a typed credit, a payment, a sale the nights cannot cover, or a night since deleted.
  *
@@ -1142,14 +1158,9 @@ export function weekSplit(
     const w = wrapped.find((x) => x.sale === sale);
     const weeks = w ? placed.get(w) : null;
     if (!weeks) return null;
-    const ordered = [...weeks].sort(([a], [b]) => a.localeCompare(b));
-    let left = sale.mesos;
-    ordered.forEach(([week, pieces], i) => {
-      const part =
-        i === ordered.length - 1 ? left : Math.floor((sale.mesos * pieces) / sale.pieces);
-      left -= part;
+    for (const [week, part] of mesosByWeek(sale, weeks)) {
       out.set(week, (out.get(week) ?? 0) + part);
-    });
+    }
   }
   return out;
 }
@@ -1189,4 +1200,75 @@ export function bossesOfSales(
     );
   }
   return out;
+}
+
+type BossShare = { bossKey: string | null; partyId: string; pieces: number };
+
+/**
+ * One act as it reads under a single bossing week: only the sales and nights from that week, with
+ * the amount, pieces and bosses of that week's part.
+ *
+ * Without it an act spanning two weeks was drawn whole under each, so the same sale showed twice.
+ * The sales' money is divided exactly as weekSplit divides it, so the parts shown under every week
+ * add up to the act. Null where the act has no week to slice by (a typed credit, a payment, a sale
+ * the nights cannot cover), and the caller then draws it as it is.
+ */
+export function sliceActToWeek<N extends { weekStart: string; share: number }>(
+  row: Pick<Settlement, "sales" | "owedNights">,
+  act: Discharge,
+  held: N[],
+  week: string,
+): {
+  act: Discharge;
+  shares: N[];
+  bosses: Map<CouponSale, BossShare[]>;
+} | null {
+  const split = weekSplit(row, act, held);
+  const amount = split?.get(week);
+  if (!split || amount === undefined) return null;
+
+  if (act.payouts.length > 0) {
+    const inWeek = held.filter((n) => n.weekStart === week);
+    return {
+      act: { ...act, amount, payouts: act.payouts.filter((_, i) => held[i]?.weekStart === week) },
+      shares: inWeek,
+      bosses: new Map(),
+    };
+  }
+
+  const wrapped = row.sales.map((sale) => ({
+    sale,
+    pieces: sale.pieces,
+    recordedAt: sale.soldAt ?? "",
+  }));
+  const placed = new Map<CouponSale, { night: HeldOfYours; pieces: number }[] | null>();
+  for (const [w, taken] of placeSalesOnNights(row.owedNights, wrapped)) placed.set(w.sale, taken);
+
+  const sales: CouponSale[] = [];
+  const bosses = new Map<CouponSale, BossShare[]>();
+  for (const sale of act.sales) {
+    const taken = placed.get(sale);
+    if (!taken) return null;
+    const weekPieces = new Map<string, number>();
+    for (const { night, pieces } of taken) {
+      weekPieces.set(night.weekStart, (weekPieces.get(night.weekStart) ?? 0) + pieces);
+    }
+    const pieces = weekPieces.get(week);
+    if (!pieces) continue;
+    const slice: CouponSale = { ...sale, pieces, mesos: mesosByWeek(sale, weekPieces).get(week)! };
+    const by = new Map<string, BossShare>();
+    for (const { night, pieces: p } of taken) {
+      if (night.weekStart !== week) continue;
+      const key = `${night.bossKey}:${night.partyId}`;
+      const seen = by.get(key) ?? { bossKey: night.bossKey, partyId: night.partyId, pieces: 0 };
+      seen.pieces += p;
+      by.set(key, seen);
+    }
+    sales.push(slice);
+    bosses.set(
+      slice,
+      [...by.values()].sort((a, b) => b.pieces - a.pieces),
+    );
+  }
+  return { act: { ...act, amount, sales }, shares: held, bosses };
 }

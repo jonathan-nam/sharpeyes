@@ -14,6 +14,7 @@ import {
   offsetOf,
   weekSplit,
   bossesOfSales,
+  sliceActToWeek,
   owedByYouShares,
   undecidedSales,
   settleThePair,
@@ -607,8 +608,9 @@ function SettlementCard({
   // The bosses a sale of theirs came off, for the rows that list sales. Empty where the nights
   // cannot cover it, so the row says nothing rather than a guess.
   const saleBosses = bossesOfSales(row);
-  const bossesOf = (sale: CouponSale): string => {
-    const taken = saleBosses.get(sale);
+  const labelBosses = (
+    taken: { bossKey: string | null; partyId: string; pieces: number }[] | null | undefined,
+  ): string => {
     if (!taken) return "";
     // Pieces per boss label, so one boss on two parties reads as one. A single boss is not counted:
     // the row's own "210 coupons" already is.
@@ -627,6 +629,7 @@ function SettlementCard({
   };
   // Each act with the nights behind it, resolved once, so the week picker and the rows read the same.
   // `split` is what it came to in each bossing week, or null where no week can be told.
+  const bossesOf = (sale: CouponSale): string => labelBosses(saleBosses.get(sale));
   const acts = discharges.map((act) => {
     const nights = nightsBehind(act.payouts);
     return { act, nights, split: weekSplit(row, act, nights) };
@@ -643,8 +646,16 @@ function SettlementCard({
   const actsShown = weekShown
     ? acts.filter(({ act, split }) => (split ? split.has(weekShown) : act.sales.length > 0))
     : acts;
+  // Under a week, each act is cut down to that week's part, so an offset spanning two weeks is not
+  // drawn whole under both. An act with no week to cut by is drawn as it is.
+  const rowsShown = actsShown.map((entry) => {
+    const cut = weekShown ? sliceActToWeek(row, entry.act, entry.nights, weekShown) : null;
+    return cut
+      ? { ...entry, act: cut.act, nights: cut.shares, bosses: cut.bosses, cut: true }
+      : { ...entry, bosses: null, cut: false };
+  });
   const shownTotal = weekShown
-    ? actsShown.reduce((sum, { split }) => sum + (split?.get(weekShown) ?? 0), 0)
+    ? rowsShown.reduce((sum, r) => sum + (r.cut ? r.act.amount : 0), 0)
     : discharged;
 
   return (
@@ -882,14 +893,16 @@ function SettlementCard({
                     </div>
                   )}
                   <ul className="ledger-queue">
-                    {actsShown.map(({ act, nights, split }) => (
+                    {rowsShown.map(({ act, nights, split, bosses, cut }) => (
                       <DischargeRow
                         key={act.id}
                         act={act}
                         name={row.name}
                         shares={nights}
-                        weeks={split ? [...split.keys()].sort() : []}
-                        bossesOf={bossesOf}
+                        weeks={cut ? [weekShown] : split ? [...split.keys()].sort() : []}
+                        bossesOf={(sale) =>
+                          bosses?.has(sale) ? labelBosses(bosses.get(sale)) : bossesOf(sale)
+                        }
                         iconUrl={iconUrl}
                         busy={busy}
                         signed={signed}
