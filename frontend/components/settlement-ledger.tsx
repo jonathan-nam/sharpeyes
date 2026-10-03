@@ -997,19 +997,19 @@ function SettlementCard({
                     ) : (
                       <span className="loot-icon" aria-hidden="true" />
                     )}
-                    {/* Name and the rest in one flowing block, so the day and bosses start on the
-                        name's own line and wrap under it, with the figure kept at the edge. */}
-                    <span className="loot-share-text">
+                    <div className="ledger-offset-text">
                       <span className="loot-share-name">
                         {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
-                      </span>{" "}
-                      <span className="loot-share-nets">
-                        {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
-                          .filter(Boolean)
-                          .join(" · ")}
                       </span>
-                    </span>
-                    <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                      <span className="ledger-offset-sub">
+                        <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                        <span className="loot-meta">
+                          {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -1548,13 +1548,22 @@ function DischargeRow({
               here that its pieces and its day do not. */}
           {act.sales.map((sale, i) => (
             <li key={`sale-${i}`} className="loot-sale-row">
-              <span className="loot-share-text">
-                <span className="loot-share-name">{`${sale.pieces} coupons`}</span>{" "}
-                <span className="loot-share-nets">
-                  {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)].filter(Boolean).join(" · ")}
+              {iconUrl ? (
+                <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+              ) : (
+                <span className="loot-icon" aria-hidden="true" />
+              )}
+              <div className="ledger-offset-text">
+                <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
+                <span className="ledger-offset-sub">
+                  <span className="ledger-amount">{signed(-sale.mesos)}</span>
+                  <span className="loot-meta">
+                    {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
                 </span>
-              </span>
-              <span className="ledger-amount">{signed(-sale.mesos)}</span>
+              </div>
             </li>
           ))}
         </ul>
