@@ -1003,13 +1003,10 @@ function SettlementCard({
                       </span>
                       <span className="ledger-offset-sub">
                         <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
-                        <span className="loot-meta">
-                          {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
+                        <span className="loot-meta">{bossesOf(sale)}</span>
                       </span>
                     </div>
+                    <span className="ledger-when">{sale.soldAt && dayOf(sale.soldAt)}</span>
                   </li>
                 ))}
               </ul>
@@ -1483,13 +1480,14 @@ function DischargeRow({
 
           <span className="ledger-offset-sub">
             <span className="ledger-amount">{signed(-act.amount)}</span>
-            {/* When the DROP fell, because that is what the week filter and the week total answer
-                to: the day for one night, the first and last reset week for a sale spread over
-                several. Only an act with no drop behind it (a typed credit, a payment) falls back to
-                the day it was recorded. */}
-            <span className="loot-meta ledger-when">{when}</span>
           </span>
         </div>
+
+        {/* When the DROP fell, because that is what the week filter and the week total answer to:
+            the day for one night, the first and last reset week for a sale spread over several.
+            Only an act with no drop behind it (a typed credit, a payment) falls back to the day it
+            was recorded. Its own column between the text and the controls, so it reads before them. */}
+        <span className="ledger-when">{when}</span>
 
         {folds && (
           <button
@@ -1557,13 +1555,10 @@ function DischargeRow({
                 <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
                 <span className="ledger-offset-sub">
                   <span className="ledger-amount">{signed(-sale.mesos)}</span>
-                  <span className="loot-meta">
-                    {[sale.soldAt && dayOf(sale.soldAt), bossesOf(sale)]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </span>
+                  <span className="loot-meta">{bossesOf(sale)}</span>
                 </span>
               </div>
+              <span className="ledger-when">{sale.soldAt && dayOf(sale.soldAt)}</span>
             </li>
           ))}
         </ul>
