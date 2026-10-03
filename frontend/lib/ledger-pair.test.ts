@@ -146,7 +146,7 @@ describe("one section for what is unsettled", () => {
     expect(line.indexOf("party-row-toggle")).toBeLessThan(line.indexOf("ledger-amount"));
     // And both lists are inside the fold the chevron names, or it would open onto half of them.
     expect(ledger).toContain("aria-controls={`nights-${row.key}`}");
-    expect(ledger).toContain("<div id={`nights-${row.key}`}>");
+    expect(ledger).toContain('<div className="ledger-offsets-panel" id={`nights-${row.key}`}>');
   });
 
   it("names whose inventory only where both sides have nights", () => {
@@ -343,12 +343,15 @@ describe("what a column draws and how wide it lets itself get", () => {
     // as a length, that put "Bro is holding" over nothing at all.
     expect(ledger).toContain("const theirNights = row.drops.filter((drop) => drop.pieces > 0);");
     expect(ledger).toContain("const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);");
-    expect(ledger).toContain("{theirNights.length > 0 && (");
-    expect(ledger).toContain("{myNights.length > 0 && (");
+    // Headed off the week-filtered arrays, which are the same nights narrowed, so a filter that
+    // empties one side takes its heading with it.
+    expect(ledger).toContain("const theirShown = inNightWeek(theirNights);");
+    expect(ledger).toContain("{theirShown.length > 0 && (");
+    expect(ledger).toContain("{myShown.length > 0 && (");
     // The filtered arrays are what gets drawn, which is the claim. Not pinned to the whole tag:
     // one of these wraps and one does not, so the tag prefix was really pinning prettier.
-    expect(ledger).toContain("drops={theirNights}");
-    expect(ledger).toContain("drops={myNights}");
+    expect(ledger).toContain("drops={theirShown}");
+    expect(ledger).toContain("drops={myShown}");
     // And nothing is drawn off the raw arrays, which is the question that was being asked wrong.
     expect(ledger).not.toContain("row.drops.length > 0");
     expect(ledger).not.toContain("row.owedDrops.length > 0");
@@ -359,7 +362,7 @@ describe("what a column draws and how wide it lets itself get", () => {
   it("keeps the price a pill records beside the lists, not inside one", () => {
     // A tranche against their pile has a pill nowhere else on any screen, so it must not go with a
     // heading when that heading goes.
-    const at = ledger.indexOf("{theirNights.length > 0 && (");
+    const at = ledger.indexOf("{theirShown.length > 0 && (");
     const pills = ledger.indexOf("{keptRows.length > 0 && (");
     expect(pills).toBeGreaterThan(at);
     // Outside the fragment the heading owns, which ends before it.
