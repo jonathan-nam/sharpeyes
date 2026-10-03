@@ -257,11 +257,11 @@ describe("what the card says a person owes", () => {
     // The day the DROP fell, never the day the act was recorded: the week filter and its total answer
     // to the drop, and an offset made on Oct 3 for a Sep 24 drop must not read as an October one. The
     // recorded day is only the fallback for an act with no drop behind it.
-    expect(source).toContain('<span className="loot-meta ledger-when">{when}</span>');
+    expect(source).toContain('<span className="ledger-when">{when}</span>');
     expect(source).toContain(": dayOf(act.at);");
     expect(source).toContain("const dayOf = (at: string) => formatDropped(at.slice(0, 10));");
     // Never shrunk: a date is unreadable clipped, so the name stays the only part that gives.
-    expect(css).toContain(".ledger-offset-sub .ledger-when");
+    expect(css).toContain(".ledger-when {");
     // And below 560px the line runs out. Measured at 390px: a 15-digit figure and the date leave the
     // name at nothing and still spill 6px past the card, so the row wraps rather than lose the
     // figure off the end. One line is worth having where there is width for it, and no further.

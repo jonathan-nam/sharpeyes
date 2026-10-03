@@ -7319,8 +7319,16 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   font-size: var(--text-base);
 }
 
-.ledger-offset-sub .ledger-when {
+/* The day, in a column of its own between the text and the controls. Ink rather than the muted
+   register, since it is what a week filter is read against; it wraps (right-aligned) before it can
+   push the figure or the controls off the card. */
+.ledger-when {
+  flex: 0 1 auto;
+  align-self: center;
+  color: var(--ink);
+  font-size: var(--text-base);
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .ledger-drop-head.is-stacked .party-row-toggle,
