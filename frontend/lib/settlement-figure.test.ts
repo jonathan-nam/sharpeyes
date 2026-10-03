@@ -261,7 +261,7 @@ describe("what the card says a person owes", () => {
     expect(source).toContain(": dayOf(act.at);");
     expect(source).toContain("const dayOf = (at: string) => formatDropped(at.slice(0, 10));");
     // Never shrunk: a date is unreadable clipped, so the name stays the only part that gives.
-    expect(css).toContain(".ledger-drop-head.is-oneline .ledger-when");
+    expect(css).toContain(".ledger-offset-sub .ledger-when");
     // And below 560px the line runs out. Measured at 390px: a 15-digit figure and the date leave the
     // name at nothing and still spill 6px past the card, so the row wraps rather than lose the
     // figure off the end. One line is worth having where there is width for it, and no further.
@@ -272,19 +272,19 @@ describe("what the card says a person owes", () => {
     );
   });
 
-  it("holds an offset to ONE line, whatever is behind it", () => {
+  it("draws an offset as a name over its figure, whatever is behind it", () => {
     // Two folds in there is no width for an icon, a name, a boss, three member names, a date and two
     // mesos figures: they came out three lines tall and the list stopped being scannable. The figure,
     // the art and what fell stay; the rest is the title, which is what the shares row above already
     // does. The name is the only part allowed to give, being the one a reader recognises from half.
+    // An offset is two lines: the name over the figure. The name wraps rather than being cut, because
+    // which drop an offset was for is what it is read for.
     expect(source).toContain(
-      '<div className="ledger-drop-head is-oneline" title={behind || undefined}>',
+      '<div className="ledger-drop-head is-stacked" title={behind || undefined}>',
     );
-    expect(css).toContain(".ledger-drop-head.is-oneline");
-    expect(css).toContain("flex-wrap: nowrap");
-    expect(css).toContain("text-overflow: ellipsis");
-    // The figure is pushed right and never shrunk: it is the one number nobody can infer.
-    expect(css).toContain(".ledger-drop-head.is-oneline .ledger-amount");
+    expect(css).toContain(".ledger-drop-head.is-stacked");
+    expect(css).toContain("overflow-wrap: anywhere");
+    expect(css).toContain(".ledger-offset-sub .ledger-amount");
     // The art is smaller than its 46px frame, which is now every settlement row's rule rather than
     // this one's: an offset's row and a share's are the same kind of row.
     expect(css).toContain(".ledger-drop-head .loot-icon");

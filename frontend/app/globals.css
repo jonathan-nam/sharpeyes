@@ -7260,6 +7260,46 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   font-variant-numeric: tabular-nums;
 }
 
+/* An offset: the art, then the name over the figure, then the controls. The name wraps instead of
+   being cut, and breaks anywhere so one long unbroken word cannot push the controls off the card. */
+.ledger-drop-head.is-stacked {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.ledger-offset-text {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ledger-offset-text .loot-name {
+  overflow-wrap: anywhere;
+}
+
+.ledger-offset-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ledger-offset-sub .ledger-amount {
+  font-size: var(--text-base);
+}
+
+.ledger-offset-sub .ledger-when {
+  font-variant-numeric: tabular-nums;
+}
+
+.ledger-drop-head.is-stacked .party-row-toggle,
+.ledger-drop-head.is-stacked button.ledger-drop-sale {
+  flex: none;
+  align-self: center;
+}
+
 /* Below this the line runs out. Measured: two folds in, at 390px, a 15-digit figure and the date
    leave the name at nothing and still spill 6px past the card, so the row wraps instead. One line is
    worth having where there is width for it, and never worth the figure sliding off the end.

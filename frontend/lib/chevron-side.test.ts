@@ -84,14 +84,12 @@ describe("a chevron hangs off the name in every list that leads with art", () =>
     expect(css.slice(at, css.indexOf("}", at))).toMatch(/width:\s*max-content/);
   });
 
-  // The ledger's date is drawn tight against its name on purpose (a -4px pull), so the chevron goes
-  // after the pair rather than between them.
-  it("keeps the Settlement Ledger's date against its name", () => {
+  // The ledger's date sits beside the figure under the name, so the chevron goes after the text
+  // block rather than between them.
+  it("keeps the Settlement Ledger's date with its figure, ahead of the chevron", () => {
     const discharge = body(ledger, "DischargeRow");
     expect(discharge.indexOf("ledger-when")).toBeLessThan(discharge.indexOf("party-row-toggle"));
-    const at = css.indexOf(".ledger-drop-head.is-oneline .ledger-when {");
-    expect(at, "the -4px pull is gone").toBeGreaterThan(-1);
-    expect(css.slice(at, css.indexOf("}", at))).toMatch(/margin-left:\s*-4px/);
+    expect(discharge.indexOf("ledger-amount")).toBeLessThan(discharge.indexOf("ledger-when"));
   });
 
   // The heading over the acts, which is the last chevron on this card that stood in front of its

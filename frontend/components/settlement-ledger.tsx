@@ -1391,38 +1391,39 @@ function DischargeRow({
 
   return (
     <li className="ledger-drop">
-      {/* ONE LINE. The row is a history entry and a history is scanned, so what it must hold is the
-          figure, the art, what fell and the day it came off. Everything else is the title above. */}
-      <div className="ledger-drop-head is-oneline" title={behind || undefined}>
+      {/* Two lines: what fell, then what it took off. The name is allowed to wrap rather than be
+          cut, since which drop an offset was for is the one thing the row is read for. The figure is
+          the subheader, with the day it fell beside it. */}
+      <div className="ledger-drop-head is-stacked" title={behind || undefined}>
         {art ? (
           <img className="loot-icon" src={apiAssetUrl(art)} alt="" />
         ) : (
           <span className="loot-icon" aria-hidden="true" />
         )}
 
-        {one && one.lootId ? (
-          // The drop's own history, not its party's. What came off here is one night's share, and
-          // the party is every night that boss ever gave you.
-          <Link href={`/bosses/drops/${one.lootId}`} className="loot-name has-detail">
-            {one.item}
-          </Link>
-        ) : (
-          <span className="loot-name has-detail">
-            {one ? one.item : pieces > 0 ? `${pieces} coupons sold` : act.label}
+        <div className="ledger-offset-text">
+          {one && one.lootId ? (
+            // The drop's own history, not its party's. What came off here is one night's share, and
+            // the party is every night that boss ever gave you.
+            <Link href={`/bosses/drops/${one.lootId}`} className="loot-name has-detail">
+              {one.item}
+            </Link>
+          ) : (
+            <span className="loot-name has-detail">
+              {one ? one.item : pieces > 0 ? `${pieces} coupons sold` : act.label}
+            </span>
+          )}
+
+          <span className="ledger-offset-sub">
+            <span className="ledger-amount">{signed(-act.amount)}</span>
+            {/* When the DROP fell, because that is what the week filter and the week total answer
+                to: the day for one night, the first and last reset week for a sale spread over
+                several. Only an act with no drop behind it (a typed credit, a payment) falls back to
+                the day it was recorded. */}
+            <span className="loot-meta ledger-when">{when}</span>
           </span>
-        )}
+        </div>
 
-        {/* When the DROP fell, because that is what the week filter and the week total answer to: the
-            day for one night, the first and last reset week for a sale spread over several. Only an
-            act with no drop behind it (a typed credit, a payment) falls back to the day it was
-            recorded. The recorded day is not shown for the rest, so an offset made on Oct 3 for a
-            Sep 24 drop no longer reads as an October one. */}
-        <span className="loot-meta ledger-when">{when}</span>
-
-        {/* After what it is and when, not in front of the art. Given a column of its own at the
-            row's edge it held 28px open on every row in the list, and only some of them fold. It
-            goes after the date rather than between it and the name, which are drawn tight together
-            on purpose. */}
         {folds && (
           <button
             type="button"
@@ -1442,7 +1443,6 @@ function DischargeRow({
           </button>
         )}
 
-        <span className="ledger-amount">{signed(-act.amount)}</span>
         <ArmedRemove
           busy={busy}
           label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}
