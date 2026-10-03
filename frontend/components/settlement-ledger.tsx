@@ -604,11 +604,12 @@ function SettlementCard({
     .reverse();
   // A week with no act left behind it falls back to all rather than an empty list.
   const weekShown = weeks.includes(week) ? week : "";
-  // An act whose week cannot be told (a typed credit, a payment) stays under every week rather than
-  // vanishing, and is left out of the week's total: hiding it would hide money that came off the
-  // debt, and placing it would be a guess.
+  // A typed credit or a payment has no drop behind it, so no week, and leaves under any filter. A
+  // coupon sale the nights could not cover stays: it is money that came off the debt and has no week
+  // to be shown under, so hiding it would be the one place this list lost something. Left out of the
+  // week's total either way.
   const actsShown = weekShown
-    ? acts.filter(({ split }) => split === null || split.has(weekShown))
+    ? acts.filter(({ act, split }) => (split ? split.has(weekShown) : act.sales.length > 0))
     : acts;
   const shownTotal = weekShown
     ? actsShown.reduce((sum, { split }) => sum + (split?.get(weekShown) ?? 0), 0)
@@ -843,12 +844,13 @@ function SettlementCard({
                   indents fighting. Drop rows go in a drop queue. */}
               {showOff && (
                 <ul className="ledger-queue" id={`off-${row.key}`}>
-                  {actsShown.map(({ act, nights }) => (
+                  {actsShown.map(({ act, nights, split }) => (
                     <DischargeRow
                       key={act.id}
                       act={act}
                       name={row.name}
                       shares={nights}
+                      weeks={split ? [...split.keys()].sort() : []}
                       iconUrl={iconUrl}
                       busy={busy}
                       signed={signed}
@@ -1316,6 +1318,7 @@ function DischargeRow({
   act,
   name,
   shares,
+  weeks,
   iconUrl,
   busy,
   signed,
@@ -1324,6 +1327,8 @@ function DischargeRow({
   act: Discharge;
   name: string;
   shares: OffsetShare[];
+  /** The reset weeks its drops fell in, oldest first. Empty where none can be told. */
+  weeks: string[];
   /** The coupon's own sprite, for the rows whose every piece is one. See CouponSale. */
   iconUrl: string | null;
   busy: boolean;
@@ -1341,6 +1346,13 @@ function DischargeRow({
   // The drop's own art where there is one drop, and the coupon's where the act is coupons: every
   // piece of a sale is one, so there is no other sprite it could be.
   const art = one?.iconUrl ?? (pieces > 0 ? iconUrl : null);
+  const when = one?.on
+    ? formatDropped(one.on)
+    : weeks.length > 0
+      ? weeks.length === 1
+        ? formatDropped(weeks[0]!)
+        : `${formatDropped(weeks[0]!)} to ${formatDropped(weeks[weeks.length - 1]!)}`
+      : dayOf(act.at);
 
   /**
    * What the row cannot hold, on hover rather than on it.
@@ -1400,11 +1412,12 @@ function DischargeRow({
           </span>
         )}
 
-        {/* The day the act was recorded, on every row and meaning the same thing on every row. It is
-            what tells two offsets against one person apart, and it was in the title where nothing
-            said there was a title. NOT the day the drop fell, which is a different fact and stays
-            on hover: one column cannot mean two things down one list. */}
-        <span className="loot-meta ledger-when">{dayOf(act.at)}</span>
+        {/* When the DROP fell, because that is what the week filter and the week total answer to: the
+            day for one night, the first and last reset week for a sale spread over several. Only an
+            act with no drop behind it (a typed credit, a payment) falls back to the day it was
+            recorded. The recorded day is not shown for the rest, so an offset made on Oct 3 for a
+            Sep 24 drop no longer reads as an October one. */}
+        <span className="loot-meta ledger-when">{when}</span>
 
         {/* After what it is and when, not in front of the art. Given a column of its own at the
             row's edge it held 28px open on every row in the list, and only some of them fold. It
