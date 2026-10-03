@@ -604,22 +604,29 @@ function SettlementCard({
         },
     );
 
-  // Each act with the nights behind it, resolved once, so the week picker and the rows read the same.
-  // `split` is what it came to in each bossing week, or null where no week can be told.
   // The bosses a sale of theirs came off, for the rows that list sales. Empty where the nights
   // cannot cover it, so the row says nothing rather than a guess.
   const saleBosses = bossesOfSales(row);
   const bossesOf = (sale: CouponSale): string => {
     const taken = saleBosses.get(sale);
     if (!taken) return "";
-    const labels = taken.map(({ bossKey, partyId }) => {
+    // Pieces per boss label, so one boss on two parties reads as one. A single boss is not counted:
+    // the row's own "210 coupons" already is.
+    const counts = new Map<string, number>();
+    for (const { bossKey, partyId, pieces } of taken) {
       const boss = bossByKey.get(bossKey ?? "");
-      return boss
+      const label = boss
         ? bossLabel(boss.name, partyById.get(partyId)?.difficulty ?? null)
         : "Unknown boss";
-    });
-    return [...new Set(labels)].join(", ");
+      counts.set(label, (counts.get(label) ?? 0) + pieces);
+    }
+    const ranked = [...counts].sort((a, b) => b[1] - a[1]);
+    return ranked.length === 1
+      ? ranked[0]![0]
+      : ranked.map(([label, pieces]) => `${label} (${pieces})`).join(", ");
   };
+  // Each act with the nights behind it, resolved once, so the week picker and the rows read the same.
+  // `split` is what it came to in each bossing week, or null where no week can be told.
   const acts = discharges.map((act) => {
     const nights = nightsBehind(act.payouts);
     return { act, nights, split: weekSplit(row, act, nights) };
