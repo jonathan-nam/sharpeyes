@@ -604,11 +604,12 @@ function SettlementCard({
     .reverse();
   // A week with no act left behind it falls back to all rather than an empty list.
   const weekShown = weeks.includes(week) ? week : "";
-  // An act whose week cannot be told (a typed credit, a payment) stays under every week rather than
-  // vanishing, and is left out of the week's total: hiding it would hide money that came off the
-  // debt, and placing it would be a guess.
+  // A typed credit or a payment has no drop behind it, so no week, and leaves under any filter. A
+  // coupon sale the nights could not cover stays: it is money that came off the debt and has no week
+  // to be shown under, so hiding it would be the one place this list lost something. Left out of the
+  // week's total either way.
   const actsShown = weekShown
-    ? acts.filter(({ split }) => split === null || split.has(weekShown))
+    ? acts.filter(({ act, split }) => (split ? split.has(weekShown) : act.sales.length > 0))
     : acts;
   const shownTotal = weekShown
     ? actsShown.reduce((sum, { split }) => sum + (split?.get(weekShown) ?? 0), 0)
