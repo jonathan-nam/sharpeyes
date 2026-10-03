@@ -3,6 +3,7 @@ import {
   buildSettlement,
   weekSplit,
   bossesOfSales,
+  sliceActToWeek,
   decidedSales,
   settlementTotals,
   isEmpty,
@@ -2036,5 +2037,47 @@ describe("bossesOfSales", () => {
     expect(
       bossesOfSales({ sales: [s], owedNights: [n("a", "lotus", "2026-08-06", 30)] }).get(s),
     ).toBeNull();
+  });
+});
+
+describe("sliceActToWeek", () => {
+  const n = (lootId: string, bossKey: string, weekStart: string, pieces: number) => ({
+    lootId,
+    partyId: "p",
+    bossKey,
+    weekStart,
+    droppedOn: weekStart,
+    recordedAt: `${weekStart}T01:00:00Z`,
+    pieces,
+    looterName: "x",
+    shared: false,
+  });
+  const s = {
+    trancheId: "t",
+    pieces: 90,
+    mesos: 1_000_000_001,
+    lot: { pieces: 90, amount: 1_000_000_001 },
+    soldAt: "2026-10-05T00:00:00Z",
+  };
+  const row = {
+    sales: [s],
+    owedNights: [n("a", "lotus", "2026-09-24", 60), n("b", "lucid", "2026-10-01", 60)],
+  };
+  const act = { id: "d", amount: s.mesos, payouts: [], sales: [s] } as never;
+
+  it("cuts a sale spanning two weeks into one part per week that add up to the sale", () => {
+    const early = sliceActToWeek(row, act, [], "2026-09-24")!;
+    const late = sliceActToWeek(row, act, [], "2026-10-01")!;
+    expect(early.act.sales.map((x) => x.pieces)).toEqual([60]);
+    expect(late.act.sales.map((x) => x.pieces)).toEqual([30]);
+    expect(early.act.amount + late.act.amount).toBe(s.mesos);
+    expect(early.act.sales[0]!.mesos + late.act.sales[0]!.mesos).toBe(s.mesos);
+    // And the bosses are the ones of that week alone.
+    expect([...early.bosses.values()][0]).toEqual([{ bossKey: "lotus", partyId: "p", pieces: 60 }]);
+    expect([...late.bosses.values()][0]).toEqual([{ bossKey: "lucid", partyId: "p", pieces: 30 }]);
+  });
+
+  it("has no part for a week the sale did not come from", () => {
+    expect(sliceActToWeek(row, act, [], "2026-09-17")).toBeNull();
   });
 });
