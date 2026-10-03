@@ -4710,6 +4710,27 @@ button.link:disabled {
   color: var(--muted);
 }
 
+/* A coupon sale: the name and its day and bosses are one block that wraps under itself, and the
+   figure stays at the edge instead of the text being pushed onto a row of its own. */
+.loot-shares > li.loot-sale-row {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.loot-sale-row .loot-share-text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.loot-sale-row .loot-share-name {
+  min-width: 0;
+}
+
+.loot-sale-row .ledger-amount {
+  flex: none;
+  margin-left: auto;
+}
+
 .loot-share-nets {
   color: var(--muted);
   font-size: var(--text-base);
