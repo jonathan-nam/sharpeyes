@@ -821,21 +821,6 @@ function SettlementCard({
                   </span>
                 </button>
                 <span className="ledger-amount">{signed(-shownTotal)}</span>
-                {showOff && weeks.length > 1 && (
-                  <select
-                    className="ledger-week"
-                    value={weekShown}
-                    onChange={(e) => setWeek(e.target.value)}
-                    aria-label={`Filter the offsets with ${row.name} by the week the drop fell in`}
-                  >
-                    <option value="">All weeks</option>
-                    {weeks.map((w) => (
-                      <option key={w} value={w}>
-                        Week of {formatWeekStart(w)}
-                      </option>
-                    ))}
-                  </select>
-                )}
               </div>
 
               {/* A queue, not a share list. `.loot-shares > li` is a wrapping ROW with a rule above
@@ -843,30 +828,52 @@ function SettlementCard({
                   other gave every act both, so the rows came out with a stray top border and two
                   indents fighting. Drop rows go in a drop queue. */}
               {showOff && (
-                <ul className="ledger-queue" id={`off-${row.key}`}>
-                  {actsShown.map(({ act, nights, split }) => (
-                    <DischargeRow
-                      key={act.id}
-                      act={act}
-                      name={row.name}
-                      shares={nights}
-                      weeks={split ? [...split.keys()].sort() : []}
-                      iconUrl={iconUrl}
-                      busy={busy}
-                      signed={signed}
-                      onRemove={() =>
-                        void write(
-                          act.source === "DEBT"
-                            ? onRemoveDebt(act.id)
-                            : act.source === "PAYMENT"
-                              ? onRemovePayment(act.id)
-                              : onRemoveDisposal(act.id),
-                          null,
-                        )
-                      }
-                    />
-                  ))}
-                </ul>
+                <div className="ledger-offsets-panel" id={`off-${row.key}`}>
+                  {weeks.length > 1 && (
+                    <div className="ledger-filter">
+                      <label className="ledger-step" htmlFor={`off-week-${row.key}`}>
+                        Filter by
+                      </label>
+                      <select
+                        id={`off-week-${row.key}`}
+                        className="ledger-week"
+                        value={weekShown}
+                        onChange={(e) => setWeek(e.target.value)}
+                      >
+                        <option value="">All weeks</option>
+                        {weeks.map((w) => (
+                          <option key={w} value={w}>
+                            Week of {formatWeekStart(w)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <ul className="ledger-queue">
+                    {actsShown.map(({ act, nights, split }) => (
+                      <DischargeRow
+                        key={act.id}
+                        act={act}
+                        name={row.name}
+                        shares={nights}
+                        weeks={split ? [...split.keys()].sort() : []}
+                        iconUrl={iconUrl}
+                        busy={busy}
+                        signed={signed}
+                        onRemove={() =>
+                          void write(
+                            act.source === "DEBT"
+                              ? onRemoveDebt(act.id)
+                              : act.source === "PAYMENT"
+                                ? onRemovePayment(act.id)
+                                : onRemoveDisposal(act.id),
+                            null,
+                          )
+                        }
+                      />
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           )}

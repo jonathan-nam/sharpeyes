@@ -294,7 +294,9 @@ describe("what the card says a person owes", () => {
     // `.loot-shares > li` is a wrapping ROW with a rule above it and a `.ledger-drop` is a COLUMN
     // with a rule down its left. One inside the other gave every act both, and the section came out
     // with stray borders and two indents fighting.
-    expect(source).toContain('<ul className="ledger-queue" id={`off-${row.key}`}>');
+    // The panel the chevron controls holds the week filter and then the queue.
+    expect(source).toContain('<div className="ledger-offsets-panel" id={`off-${row.key}`}>');
+    expect(source).toContain('<ul className="ledger-queue">');
     // The queue hangs off the step now rather than off a row of it, so `.ledger-drop .ledger-queue`
     // is gone with the row: nothing on this card nests one queue in another. What a drop row still
     // holds is a list of NIGHTS, and that keeps its indent.
