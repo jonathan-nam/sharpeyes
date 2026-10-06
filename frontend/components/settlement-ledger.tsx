@@ -530,12 +530,9 @@ function SettlementCard({
   /** The sum of its own rows and nothing else, the way `owedTotal` is. */
   const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);
 
-  // The nights each side will actually DRAW. A night a sale answered for, or one the other side
-  // cancelled, sits in the array at zero: settleThePair still closes it, so it is kept, and
-  // PieceNights draws it in neither list. A length is not the same question as whether there is a
-  // list, and asking the wrong one put "Bro is holding" over nothing at all.
-  const theirNights = row.drops.filter((drop) => drop.pieces > 0);
-  const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);
+  // Every night that owed anything, sold or not, so a week reads as what it owed. See PieceNights.
+  const theirNights = row.drops.filter((drop) => drop.pieces + drop.sold > 0);
+  const myNights = row.owedDrops.filter((drop) => drop.pieces + drop.sold > 0);
 
   /**
    * Whether there is a coupon debt to draw, which the section's gate and its step both ask.
@@ -551,7 +548,7 @@ function SettlementCard({
     nightWeekShown ? drops.filter((d) => d.weekStart === nightWeekShown) : drops;
   const theirShown = inNightWeek(theirNights);
   const myShown = inNightWeek(myNights);
-  const couponsOpen = row.piecesNet !== 0 && (theirNights.length > 0 || myNights.length > 0);
+  const couponsOpen = theirNights.length > 0 || myNights.length > 0;
   // Whether the coupon lists need telling apart. See the note where they are drawn.
   const bothWays = theirNights.length > 0 && myNights.length > 0;
 
@@ -1125,19 +1122,10 @@ function SettlementCard({
               hands, and which way it runs is in the words because "pieces" alone said nothing
               about direction.
 
-              Each list is one side of that count and already subtracted from it, so under a bare
-              "PIECES" they read as a claim on top: a card netting to 130 listed a 20 under it, and
-              20 was not 20 more. The two sides cancel before either is drawn, so together they come
-              to exactly the step.
-
-              Drawn whenever there is a night, even where none of them can be closed. The button is
-              what the refusal takes away, never the list: a card that went quiet about what is
-              outstanding would be hiding exactly what it is for.
-
-              NOT drawn when the two sides cancel. Nothing is outstanding in coupons, so there is
-              nothing to hand over and nothing to read: the coupon relationship is a running
-              balance, and a balance at zero is not a thing anybody has to close. It comes straight
-              back the moment a night tips it either way, with every night still on it. */}
+              The lists are GROSS: each night says what it owed and what a sale took off it, and
+              the two sides are not cancelled against each other, so a week filter shows what that
+              week owed. Only the step is netted. Drawn whenever there is a night, even at "even",
+              because hiding the nights at a zero net hid every sale behind it. */}
           {couponsOpen && (
             <>
               <div className="ledger-step-line">
@@ -1161,7 +1149,11 @@ function SettlementCard({
                   </span>
                 </button>
                 <span className="ledger-amount">
-                  {row.piecesNet > 0 ? `${row.piecesNet} to hand over` : `${-row.piecesNet} owed`}
+                  {row.piecesNet > 0
+                    ? `${row.piecesNet} to hand over`
+                    : row.piecesNet < 0
+                      ? `${-row.piecesNet} owed`
+                      : "even"}
                 </span>
               </div>
               {showNights && (
@@ -1597,44 +1589,51 @@ function PieceNights({
   /** The coupon's own sprite: every piece on a night is one. */
   iconUrl: string | null;
 }) {
+  const shown = drops.filter((drop) => drop.pieces + drop.sold > 0);
+  const owed = shown.reduce((sum, drop) => sum + drop.pieces + drop.sold, 0);
+  const sold = shown.reduce((sum, drop) => sum + drop.sold, 0);
   return (
     <ul className="ledger-queue">
-      {/* A night a sale answered, or one the other side cancelled, is at zero, and it is still one
-          of the nights closing the pair would close: it is kept in the list for that and drawn in
-          none. See spendOldestFirst. */}
-      {drops
-        .filter((drop) => drop.pieces > 0)
-        .map((drop) => {
-          const boss = bossByKey.get(drop.bossKey ?? "");
-          const party = partyById.get(drop.partyId);
-          return (
-            <li key={`${drop.lootId}:${drop.pieces}`} className="ledger-drop">
-              {/* The offset row's shape: the boss over the count, the looter and week beside it.
+      {shown.map((drop, i) => {
+        const boss = bossByKey.get(drop.bossKey ?? "");
+        const party = partyById.get(drop.partyId);
+        return (
+          <li key={`${drop.lootId}:${i}`} className="ledger-drop">
+            {/* The offset row's shape: the boss over the count, the looter and week beside it.
                   The boss wraps rather than being cut, since it is what places the night. */}
-              <div className="ledger-drop-head is-stacked">
-                {iconUrl ? (
-                  <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
-                ) : (
-                  <span className="loot-icon" aria-hidden="true" />
-                )}
-                <div className="ledger-offset-text">
-                  <Link href={partyHrefById(drop.partyId, partyById)} className="loot-name">
-                    {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
-                  </Link>
-                  <span className="ledger-offset-sub">
-                    <span className="ledger-amount">{drop.pieces}</span>
-                    <span className="loot-meta">
-                      {drop.looterName} · week of {formatWeekStart(drop.weekStart)}
-                      {/* Why this one is not in the count above. Said on the row it belongs to,
+            <div className="ledger-drop-head is-stacked">
+              {iconUrl ? (
+                <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+              ) : (
+                <span className="loot-icon" aria-hidden="true" />
+              )}
+              <div className="ledger-offset-text">
+                <Link href={partyHrefById(drop.partyId, partyById)} className="loot-name">
+                  {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
+                </Link>
+                <span className="ledger-offset-sub">
+                  <span className="ledger-amount">{drop.pieces + drop.sold}</span>
+                  <span className="loot-meta">
+                    {drop.sold > 0 && `${drop.sold} sold · `}
+                    {drop.looterName} · week of {formatWeekStart(drop.weekStart)}
+                    {/* Why this one is not in the count above. Said on the row it belongs to,
                           rather than as a second sentence under the button. */}
-                      {drop.shared && " · owes somebody else too"}
-                    </span>
+                    {drop.shared && " · owes somebody else too"}
                   </span>
-                </div>
+                </span>
               </div>
-            </li>
-          );
-        })}
+            </div>
+          </li>
+        );
+      })}
+      {shown.length > 1 && (
+        <li className="ledger-drop">
+          <div className="ledger-drop-head is-oneline">
+            <span className="loot-name">Total</span>
+            <span className="ledger-amount">{sold > 0 ? `${owed}, ${sold} sold` : owed}</span>
+          </div>
+        </li>
+      )}
     </ul>
   );
 }

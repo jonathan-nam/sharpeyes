@@ -189,24 +189,24 @@ describe("the two ledgers agree on one night", () => {
     expect(heldOfYoursBy(ledgers).get(BRO_KEY)).toBe(15);
   });
 
-  it("says the same thing where a sale part-answered the night", () => {
-    // 30 owed, 10 priced by the sale and 15 cancelled by Bro's own coupons, so 5 are outstanding. The
-    // Sale Ledger drew 30 here and the Settlement Ledger drew 5.
+  // The card lists a night before the pair cancels, so it says what the sale left. The Sale Ledger
+  // still nets each night against what Bro holds of yours, so the two differ by exactly that 15.
+  it("says what the sale left where a sale part-answered the night", () => {
     const { ledgers, rows } = bothPiles(10);
     expect(saleLedgerSays(ledgers, "l1", BRO_KEY)).toBe(5);
-    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(5);
+    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(20);
   });
 
-  it("says the same thing with nothing sold, where only their own coupons cancel", () => {
+  it("says the whole night with nothing sold", () => {
     const { ledgers, rows } = bothPiles(0);
     expect(saleLedgerSays(ledgers, "l1", BRO_KEY)).toBe(15);
-    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(15);
+    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(30);
   });
 
-  it("both drop the night once the answers cover it", () => {
+  it("the Sale Ledger drops the night once the answers cover it, and the card still lists it", () => {
     const { ledgers, rows } = bothPiles(15);
     expect(saleLedgerSays(ledgers, "l1", BRO_KEY)).toBe(0);
-    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(0);
+    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(15);
   });
 
   it("the Sale Ledger's header is what its own rows come to", () => {
