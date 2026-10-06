@@ -59,7 +59,6 @@ const party: Party = {
   bossKey: "baldrix",
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: null,
   members: [mine, theirs],
   seats: [mine, theirs],
   usualRoster: true,
@@ -109,8 +108,8 @@ describe("a coupon night can be answered from the run it is logged on", () => {
 
     // Three stacks, 1.5 each: both floor to one and the third rotates rather than always landing
     // on the same person.
-    expect(draftBoxes(behindThem, party)).toEqual({ m1: "1", m2: "2" });
-    expect(draftBoxes(behindMe, party)).toEqual({ m1: "2", m2: "1" });
+    expect(draftBoxes(behindThem)).toEqual({ m1: "1", m2: "2" });
+    expect(draftBoxes(behindMe)).toEqual({ m1: "2", m2: "1" });
   });
 
   it("sends what was typed, and holds the drop back when it does not add up", () => {

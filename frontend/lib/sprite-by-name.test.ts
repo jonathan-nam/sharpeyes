@@ -27,7 +27,6 @@ const config = (id: string, members: PartyMember[]): Party => ({
   minutes: null,
   members,
   seats: members,
-  looterMemberId: null,
   usualRoster: true,
   skippedThisPeriod: false,
   oneOff: false,

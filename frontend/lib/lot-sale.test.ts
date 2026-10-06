@@ -51,7 +51,6 @@ const party = (
   bossKey,
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: null,
   members,
   seats: members,
   usualRoster: true,

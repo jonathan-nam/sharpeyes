@@ -92,7 +92,7 @@ export function PartyConfigEditor({
           drops={dropTables[party.bossKey] ?? []}
           spriteFor={spriteFor}
           busy={isSaving(party.id)}
-          onSave={(members, difficulty, minutes, looterName, shares) =>
+          onSave={(members, difficulty, minutes, shares) =>
             onSave(
               {
                 characterId,
@@ -100,7 +100,6 @@ export function PartyConfigEditor({
                 members,
                 difficulty,
                 minutes,
-                looterName,
                 shares,
               },
               party.id,
@@ -261,7 +260,6 @@ function ConfigRow({
     members: string[],
     difficulty: string | null,
     minutes: number | null,
-    looterName: string | null,
     shares: Record<string, number>,
   ) => void;
   onDelete: () => void;
@@ -273,17 +271,11 @@ function ConfigRow({
   const savedMinutes = party.minutes === null ? "" : String(party.minutes);
   // Your own character's seat, which the roster inputs leave out because it IS the config.
   const ownName = party.seats.find((s) => s.characterId === party.characterId)?.name ?? "";
-  // The seat that loots, held as a NAME: it is what the save sends, and it survives the seat being
-  // renamed in the same edit.
-  const savedLooter = party.seats.find((s) => s.id === party.looterMemberId)?.name ?? "";
   const [members, setMembers] = useState<string[]>(saved.length > 0 ? saved : [""]);
   const [difficulty, setDifficulty] = useState(savedDifficulty);
   const [minutes, setMinutes] = useState(savedMinutes);
-  const [looter, setLooter] = useState(savedLooter);
-  // What each seat takes, by name, as typed. Keyed by name for the same reason the looter is: it
-  // is what the save sends, and it survives a seat being renamed in this same edit.
-  // What each seat is entitled to, in STACKS, as typed. Keyed by name for the same reason the looter
-  // is: it is what the save sends, and it survives a seat being renamed in this same edit.
+  // What each seat is entitled to, in STACKS, as typed. Keyed by name: it is what the save sends,
+  // and it survives a seat being renamed in this same edit.
   //
   // A ratio is what gets STORED, and it cannot say "four stacks and two" on its own: those stacks
   // depend on how many fell. So the boxes are filled from the ratio and the boss's stack count
@@ -328,7 +320,6 @@ function ConfigRow({
     members.join(" ") !== saved.join(" ") ||
     difficulty !== savedDifficulty ||
     minutes !== savedMinutes ||
-    looter !== savedLooter ||
     stacksDirty;
   // The roster as it is being edited, not as it was saved, so somebody added in this same edit can
   // be picked and a renamed seat keeps whatever it was designated for.
@@ -511,7 +502,6 @@ function ConfigRow({
                 namedSeats(members),
                 difficulty === "" ? null : difficulty,
                 parsed.minutes,
-                looter === "" ? null : looter,
                 // ALWAYS sent, never omitted. writeMembers reads a missing name as one share, so a
                 // save that left this out would quietly reset every seat the party had agreed
                 // otherwise for. Whole roster every time, the way the members list is.
@@ -543,7 +533,6 @@ function ConfigRow({
             disabled={busy}
             onClick={() => {
               setMembers(saved.length > 0 ? saved : [""]);
-              setLooter(savedLooter);
               setEntitled(savedStacks(savedBundles));
               setDifficulty(savedDifficulty);
               setMinutes(savedMinutes);

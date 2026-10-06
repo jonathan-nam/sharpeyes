@@ -111,20 +111,14 @@ export function assignableDrops(party: Party, loot: Loot[], drop: PickupDrop): S
  * fresh guess laid over the top of it:
  *
  *  - the arrangement recorded, so a wrong one is corrected rather than only added to.
- *  - the party's agreed looter holding the lot, which is what naming one means.
  *  - the balanced split, odd stack to whoever is furthest behind.
  *
- * A suggestion in the last two cases and never a stored one: the balance moves when an earlier week
+ * A suggestion in the second case and never a stored one: the balance moves when an earlier week
  * is edited, and a guess written down would rewrite nights already settled. Nothing is saved until
  * somebody presses the button.
  */
-export function openingCounts(drop: StackDrop, party: Party): Record<string, number> {
+export function openingCounts(drop: StackDrop): Record<string, number> {
   if (drop.recorded) return { ...drop.counts };
-
-  // Only when that seat actually ran. A looter who sat the week out cannot have picked anything up,
-  // and opening on them would suggest a night that did not happen.
-  const looter = drop.seats.find((s) => s.id === party.looterMemberId);
-  if (looter) return { [looter.id]: drop.bundles };
 
   const suggested = suggestArrangement(drop.bundles, drop.seats, drop.behind);
   return Object.fromEntries(drop.seats.map((s) => [s.id, suggested.get(s.id) ?? 0]));
@@ -251,8 +245,6 @@ export function draftStacks(
 }
 
 /** The boxes a draft opens on: the same suggestion the recorded boxes open on. See openingCounts. */
-export function draftBoxes(drop: StackDrop, party: Party): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(openingCounts(drop, party)).map(([id, n]) => [id, String(n)]),
-  );
+export function draftBoxes(drop: StackDrop): Record<string, string> {
+  return Object.fromEntries(Object.entries(openingCounts(drop)).map(([id, n]) => [id, String(n)]));
 }

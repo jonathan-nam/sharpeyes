@@ -59,12 +59,7 @@ const seat = (
   shares: 1,
 });
 
-const party = (
-  id: string,
-  bossKey: string,
-  members: PartyMember[],
-  looter: string | null,
-): Party => ({
+const party = (id: string, bossKey: string, members: PartyMember[]): Party => ({
   id,
   slug: id,
   characterId: members[0]!.characterId ?? `char-${members[0]!.id}`,
@@ -75,7 +70,6 @@ const party = (
   bossKey,
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: looter,
   members,
   seats: members,
   usualRoster: true,
@@ -154,10 +148,8 @@ describe("who a seat belongs to", () => {
 });
 
 describe("which drops are outstanding", () => {
-  it("lets a recorded arrangement correct a party that names a looter", () => {
-    // #289. The looter is a standing agreement, the arrangement is what happened, and the
-    // arrangement used to lose silently: you entered the stacks and the card did not move.
-    const p = party("pa", "limbo", trio(), "m1");
+  it("takes the recorded arrangement", () => {
+    const p = party("pa", "limbo", trio());
     const split = coupon("l1", "limbo", 60, "2026-07-30", {
       bundles: 3,
       bundlesBy: [
@@ -167,25 +159,29 @@ describe("which drops are outstanding", () => {
       ],
     });
 
-    // A stack each is exactly everybody's share, so nothing is owed and it leaves the queue. Read
-    // through the looter instead, this was one seat holding all 60 and owing the other two 20 each.
+    // A stack each is exactly everybody's share, so nothing is owed and it leaves the queue.
     expect(outstanding([p], [pool("pa", [split])], VESTIGE, ORDER)).toEqual([]);
   });
 
-  it("still falls back to the looter when no arrangement was recorded", () => {
-    const p = party("pa", "limbo", trio(), "m1");
+  it("assumes nobody looted the lot when nothing was recorded", () => {
+    // The party looter decided this once, unseen after its picker went (#393). Retired in V78.
+    const p = party("pa", "limbo", trio());
     const uncounted = coupon("l1", "limbo", 60, "2026-07-30", { bundles: 3, bundlesBy: [] });
-    const drops = outstanding([p], [pool("pa", [uncounted])], VESTIGE, ORDER);
-    expect(drops).toHaveLength(1);
-    expect(drops[0]!.looterName).toBe("Husky");
-    expect(drops[0]!.drop.seats.map((s) => s.looted)).toEqual([60, 0, 0]);
+    expect(outstanding([p], [pool("pa", [uncounted])], VESTIGE, ORDER)).toEqual([]);
   });
 
-  it("takes a drop whose party names a looter", () => {
-    const p = party("pa", "limbo", trio(), "m1");
+  it("takes a drop one seat looted whole", () => {
+    const p = party("pa", "limbo", trio());
     const drops = outstanding(
       [p],
-      [pool("pa", [coupon("l1", "limbo", 60, "2026-07-30")])],
+      [
+        pool("pa", [
+          coupon("l1", "limbo", 60, "2026-07-30", {
+            bundles: 3,
+            bundlesBy: [{ memberId: "m1", bundles: 3 }],
+          }),
+        ]),
+      ],
       VESTIGE,
       ORDER,
     );
@@ -198,7 +194,7 @@ describe("which drops are outstanding", () => {
 
   it("leaves out a party where everybody loots their own", () => {
     // The clear recorded this character's SHARE, nothing is owed, and the even night never appears.
-    const p = party("pa", "limbo", trio(), null);
+    const p = party("pa", "limbo", trio());
     expect(
       outstanding([p], [pool("pa", [coupon("l1", "limbo", 20, "2026-08-06")])], VESTIGE, ORDER),
     ).toEqual([]);
@@ -207,45 +203,37 @@ describe("which drops are outstanding", () => {
   it("leaves out a night that is all one person, however many characters they brought", () => {
     // Two of your own characters. Somebody looted the lot, and it is already where it belongs:
     // you cannot owe yourself, and a debt on this row would be a figure nobody should act on.
-    const mine = party(
-      "pa",
-      "limbo",
-      [seat("m1", "Husky", { mine: true }), seat("m2", "morebuff12", { mine: true })],
-      "m1",
-    );
-    expect(
-      outstanding([mine], [pool("pa", [coupon("l1", "limbo", 60, "2026-07-30")])], VESTIGE, ORDER),
-    ).toEqual([]);
+    const mine = party("pa", "limbo", [
+      seat("m1", "Husky", { mine: true }),
+      seat("m2", "morebuff12", { mine: true }),
+    ]);
+    const minesLot = coupon("l1", "limbo", 60, "2026-07-30", {
+      bundles: 3,
+      bundlesBy: [{ memberId: "m1", bundles: 3 }],
+    });
+    expect(outstanding([mine], [pool("pa", [minesLot])], VESTIGE, ORDER)).toEqual([]);
 
     // Same for a duo that is one other person's two characters.
-    const theirs = party(
-      "pb",
-      "limbo",
-      [
-        seat("m3", "CreedBratton", { person: ["p-bro", "Bro"] }),
-        seat("m4", "Freeballynn", { person: ["p-bro", "Bro"] }),
-      ],
-      "m3",
-    );
-    expect(
-      outstanding(
-        [theirs],
-        [pool("pb", [coupon("l2", "limbo", 60, "2026-07-30")])],
-        VESTIGE,
-        ORDER,
-      ),
-    ).toEqual([]);
+    const theirs = party("pb", "limbo", [
+      seat("m3", "CreedBratton", { person: ["p-bro", "Bro"] }),
+      seat("m4", "Freeballynn", { person: ["p-bro", "Bro"] }),
+    ]);
+    const theirLot = coupon("l2", "limbo", 60, "2026-07-30", {
+      bundles: 3,
+      bundlesBy: [{ memberId: "m3", bundles: 3 }],
+    });
+    expect(outstanding([theirs], [pool("pb", [theirLot])], VESTIGE, ORDER)).toEqual([]);
   });
 
   it("leaves out other drops, and a party of one", () => {
-    const p = party("pa", "limbo", trio(), "m1");
+    const p = party("pa", "limbo", trio());
     const other: Loot = {
       ...coupon("l2", "limbo", 1, "2026-07-30"),
       dropKey: "grindstone-of-faith",
     };
     expect(outstanding([p], [pool("pa", [other])], VESTIGE, ORDER)).toEqual([]);
 
-    const alone = party("pb", "limbo", [seat("m9", "Husky", { mine: true })], "m9");
+    const alone = party("pb", "limbo", [seat("m9", "Husky", { mine: true })]);
     expect(
       outstanding([alone], [pool("pb", [coupon("l3", "limbo", 60, "2026-07-30")])], VESTIGE, ORDER),
     ).toEqual([]);
@@ -260,14 +248,18 @@ describe("a drop is measured against the week it fell in", () => {
   const [husky, rune] = roster;
 
   /** The party as this week sees it, which is the duo. Every seat is still on it. */
-  const thisWeekIsADuo = (looter: string | null): Party => ({
-    ...party("pa", "limbo", roster, looter),
+  const thisWeekIsADuo = (): Party => ({
+    ...party("pa", "limbo", roster),
     members: [husky!, rune!],
   });
 
   it("divides July's trio three ways while this week is a duo", () => {
-    const july = coupon("l1", "limbo", 60, "2026-07-30", { ranThatWeek: ["m1", "m2", "m3"] });
-    const rows = outstanding([thisWeekIsADuo("m1")], [pool("pa", [july])], VESTIGE, ORDER);
+    const july = coupon("l1", "limbo", 60, "2026-07-30", {
+      ranThatWeek: ["m1", "m2", "m3"],
+      bundles: 3,
+      bundlesBy: [{ memberId: "m1", bundles: 3 }],
+    });
+    const rows = outstanding([thisWeekIsADuo()], [pool("pa", [july])], VESTIGE, ORDER);
 
     // Husky looted the lot for three people. Read against this week it would owe Rune 30, which is
     // the whole of Bob's share handed to somebody else.
@@ -283,7 +275,7 @@ describe("a drop is measured against the week it fell in", () => {
       coupon("l1", "limbo", 60, "2026-07-30", { bundles: 3, ranThatWeek: ["m1", "m2", "m3"] }),
       coupon("l2", "limbo", 60, "2026-08-06", { bundles: 3, ranThatWeek: ["m1", "m2"] }),
     ];
-    const open = unanswered([thisWeekIsADuo(null)], [pool("pa", drops)], VESTIGE);
+    const open = unanswered([thisWeekIsADuo()], [pool("pa", drops)], VESTIGE);
 
     expect(open.map((d) => d.lootId)).toEqual(["l2"]);
     expect(open[0]!.imbalance).toBe(10);
@@ -295,7 +287,7 @@ describe("a drop is measured against the week it fell in", () => {
     // Bob is out this week. July's odd stack is his, and a card drawing this week's seats could
     // neither say so nor correct it.
     const july = coupon("l1", "limbo", 60, "2026-07-30", { bundles: 3, ranThatWeek: ["m1", "m3"] });
-    const open = unanswered([thisWeekIsADuo(null)], [pool("pa", [july])], VESTIGE);
+    const open = unanswered([thisWeekIsADuo()], [pool("pa", [july])], VESTIGE);
 
     expect(open[0]!.seats.map((s) => s.name)).toEqual(["Husky", "Bob"]);
   });
@@ -303,10 +295,17 @@ describe("a drop is measured against the week it fell in", () => {
   it("falls back to the party when the week names nobody, rather than reading it as empty", () => {
     // Every seat retired and no week spelled out. There is no answer for that week, and an empty
     // roster would say none of the 60 is yours.
-    const p = thisWeekIsADuo("m1");
+    const p = thisWeekIsADuo();
     const rows = outstanding(
       [p],
-      [pool("pa", [coupon("l1", "limbo", 60, "2026-07-30")])],
+      [
+        pool("pa", [
+          coupon("l1", "limbo", 60, "2026-07-30", {
+            bundles: 3,
+            bundlesBy: [{ memberId: "m1", bundles: 3 }],
+          }),
+        ]),
+      ],
       VESTIGE,
       ORDER,
     );
@@ -318,18 +317,25 @@ describe("a drop is measured against the week it fell in", () => {
 describe("a debt is between people, not between characters", () => {
   it("nets two of your characters into one seat, so you are owed once", () => {
     // Husky loots 60 for a trio of you, your alt, and Jared. Two thirds of it is already yours.
-    const p = party(
-      "pa",
-      "limbo",
-      [
-        seat("m1", "Husky", { mine: true }),
-        seat("m2", "morebuff12", { mine: true }),
-        seat("m3", "CourseLair", { person: ["p-jared", "Jared"] }),
-      ],
-      "m1",
-    );
+    const p = party("pa", "limbo", [
+      seat("m1", "Husky", { mine: true }),
+      seat("m2", "morebuff12", { mine: true }),
+      seat("m3", "CourseLair", { person: ["p-jared", "Jared"] }),
+    ]);
     const ledgers = holderLedgers(
-      outstanding([p], [pool("pa", [coupon("l1", "limbo", 60, "2026-07-30")])], VESTIGE, ORDER),
+      outstanding(
+        [p],
+        [
+          pool("pa", [
+            coupon("l1", "limbo", 60, "2026-07-30", {
+              bundles: 3,
+              bundlesBy: [{ memberId: "m1", bundles: 3 }],
+            }),
+          ]),
+        ],
+        VESTIGE,
+        ORDER,
+      ),
       salesByHolder([{ holder: SELF, pieces: 60, amount: 600 * M }]),
     );
 
@@ -341,18 +347,25 @@ describe("a debt is between people, not between characters", () => {
 
   it("counts one person's two seats as two shares, and pays them once", () => {
     // Bro brought two characters, so he is entitled to two thirds of the drop, in one transfer.
-    const p = party(
-      "pa",
-      "limbo",
-      [
-        seat("m1", "Husky", { mine: true }),
-        seat("m2", "CreedBratton", { person: ["p-bro", "Bro"] }),
-        seat("m3", "Freeballynn", { person: ["p-bro", "Bro"] }),
-      ],
-      "m1",
-    );
+    const p = party("pa", "limbo", [
+      seat("m1", "Husky", { mine: true }),
+      seat("m2", "CreedBratton", { person: ["p-bro", "Bro"] }),
+      seat("m3", "Freeballynn", { person: ["p-bro", "Bro"] }),
+    ]);
     const ledgers = holderLedgers(
-      outstanding([p], [pool("pa", [coupon("l1", "limbo", 60, "2026-07-30")])], VESTIGE, ORDER),
+      outstanding(
+        [p],
+        [
+          pool("pa", [
+            coupon("l1", "limbo", 60, "2026-07-30", {
+              bundles: 3,
+              bundlesBy: [{ memberId: "m1", bundles: 3 }],
+            }),
+          ]),
+        ],
+        VESTIGE,
+        ORDER,
+      ),
       new Map(),
     );
     expect(ledgers[0]!.drops[0]!.transfers.map((t) => [t.to, t.pieces])).toEqual([["Bro", 40]]);
@@ -363,7 +376,7 @@ describe("uneven self-looting", () => {
   const me = seat("m1", "Husky", { mine: true });
   const them = seat("m2", "Nova", { person: ["p-nova", "Nova"] });
   const NOVA: Holder = { kind: "PERSON", personId: "p-nova", characterName: null };
-  const duo = [party("pt", "baldrix", [me, them], null)];
+  const duo = [party("pt", "baldrix", [me, them])];
   const split = [
     { memberId: "m1", bundles: 2 },
     { memberId: "m2", bundles: 1 },
@@ -432,7 +445,7 @@ describe("uneven self-looting", () => {
     // 3 stacks, 3 characters, but two of them are one person: 2 shares against 1, so 2 stacks
     // against 1, and it divides. Reading this per SEAT would invent a debt that does not exist.
     const pair = seat("m3", "Nova2", { person: ["p-nova", "Nova"] });
-    const trio = [party("pt", "baldrix", [me, them, pair], null)];
+    const trio = [party("pt", "baldrix", [me, them, pair])];
     const drop = [pool("pt", [coupon("l3", "baldrix", 120, "2026-08-06", { bundles: 3 })])];
     expect(unanswered(trio, drop, VESTIGE)).toEqual([]);
     expect(outstanding(trio, drop, VESTIGE, ORDER)).toEqual([]);
@@ -477,7 +490,7 @@ describe("the arrangement put in front of somebody", () => {
   });
 
   it("counts a drop once when working out who is behind, not once per pile", () => {
-    const duo = [party("pt", "baldrix", [me, them], null)];
+    const duo = [party("pt", "baldrix", [me, them])];
     const said = [
       pool("pt", [
         coupon("l1", "baldrix", 120, "2026-08-06", {
@@ -514,7 +527,7 @@ describe("a party that has agreed an uneven split", () => {
   it("takes the stacks in the ratio it agreed, and leaves nobody owing", () => {
     // Extreme Kalos, 180 in 6 stacks of 30. 6 x 4/6 and 6 x 2/6 is four stacks and two.
     const seats = [mine("mechyfechy", 4), theirs("Freeballynn", 2)];
-    const kalos = [party("pk", "kalos-the-guardian", seats, null)];
+    const kalos = [party("pk", "kalos-the-guardian", seats)];
     const drop = [
       pool("pk", [coupon("l1", "kalos-the-guardian", 180, "2026-08-06", { bundles: 6 })]),
     ];
@@ -534,7 +547,7 @@ describe("a party that has agreed an uneven split", () => {
     // nothing to divide: Husky is entitled to all three, holds all three, and owes nobody. The
     // party leaves the Drop Log rather than sitting there as a night that will not come out.
     const seats = [mine("Huskyxkenshi", 1), theirs("CourseLair", 0)];
-    const limbo = [party("pl", "limbo", seats, null)];
+    const limbo = [party("pl", "limbo", seats)];
     const drop = [pool("pl", [coupon("l3", "limbo", 60, "2026-08-06", { bundles: 3 })])];
 
     expect(suggestArrangement(3, seats, new Map())).toEqual(new Map([["m1", 3]]));
@@ -546,7 +559,7 @@ describe("a party that has agreed an uneven split", () => {
     // 3 and 1 is a weight of 4, so Husky is entitled to 2.25 stacks. Nobody can pick that up, so
     // it is a night that does not divide however it is looted. This is what 1 and 0 replaces.
     const seats = [mine("Huskyxkenshi", 3), theirs("CourseLair", 1)];
-    const limbo = [party("pl", "limbo", seats, null)];
+    const limbo = [party("pl", "limbo", seats)];
     const drop = [pool("pl", [coupon("l4", "limbo", 60, "2026-08-06", { bundles: 3 })])];
 
     expect(unanswered(limbo, drop, VESTIGE)).toHaveLength(1);
@@ -572,7 +585,7 @@ describe("a party that has agreed an uneven split", () => {
     // 3 stacks between two. Even, it will not divide and somebody holds 15 that are not theirs.
     // Agreed 2 to 1, it divides exactly and there is nothing to answer.
     const seats = [mine("acornacorn", 1), theirs("CreedBratton", 2)];
-    const star = [party("ps", "malefic-star", seats, null)];
+    const star = [party("ps", "malefic-star", seats)];
     const drop = [pool("ps", [coupon("l2", "malefic-star", 90, "2026-08-06", { bundles: 3 })])];
 
     expect(suggestArrangement(3, seats, new Map())).toEqual(
@@ -598,8 +611,15 @@ describe("what the card is still waiting to be told", () => {
   ) =>
     holderLedgers(
       outstanding(
-        [party("pa", "limbo", duo(), "m2")],
-        [pool("pa", [coupon("l1", "limbo", 390, "2026-08-03")])],
+        [party("pa", "limbo", duo())],
+        [
+          pool("pa", [
+            coupon("l1", "limbo", 390, "2026-08-03", {
+              bundles: 3,
+              bundlesBy: [{ memberId: "m2", bundles: 3 }],
+            }),
+          ]),
+        ],
         VESTIGE,
         ORDER,
       ),
@@ -826,10 +846,20 @@ describe("closing the books, which no arithmetic is entitled to do", () => {
     seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
   ];
   const week = () => ({
-    parties: [party("pa", "kalos-the-guardian", duo(), "m2"), party("pb", "baldrix", duo(), "m2")],
+    parties: [party("pa", "kalos-the-guardian", duo()), party("pb", "baldrix", duo())],
     pools: [
-      pool("pa", [coupon("l1", "kalos-the-guardian", 180, "2026-08-06")]),
-      pool("pb", [coupon("l2", "baldrix", 120, "2026-08-06")]),
+      pool("pa", [
+        coupon("l1", "kalos-the-guardian", 180, "2026-08-06", {
+          bundles: 6,
+          bundlesBy: [{ memberId: "m2", bundles: 6 }],
+        }),
+      ]),
+      pool("pb", [
+        coupon("l2", "baldrix", 120, "2026-08-06", {
+          bundles: 3,
+          bundlesBy: [{ memberId: "m2", bundles: 3 }],
+        }),
+      ]),
     ],
   });
 
@@ -926,12 +956,7 @@ describe("the coupons you hold that owe nobody anything", () => {
   it("adds a night that divided exactly, which the debt queue leaves out", () => {
     // Three seats, one stack each, all on one share: everybody landed on their entitlement.
     const parties = [
-      party(
-        "pj",
-        "limbo",
-        [mine("m1", "mechyfechy"), seat("m2", "Zaddy"), seat("m3", "Premial")],
-        null,
-      ),
+      party("pj", "limbo", [mine("m1", "mechyfechy"), seat("m2", "Zaddy"), seat("m3", "Premial")]),
     ];
     const pools = [
       pool("pj", [
@@ -953,7 +978,7 @@ describe("the coupons you hold that owe nobody anything", () => {
   });
 
   it("adds a boss you ran alone, where there is no arrangement to read", () => {
-    const parties = [party("ps", "limbo", [mine("m1", "mechyfechy")], null)];
+    const parties = [party("ps", "limbo", [mine("m1", "mechyfechy")])];
     const pools = [pool("ps", [coupon("ls", "limbo", 180, "2026-08-06", { bundles: 3 })])];
     const queued = outstanding(parties, pools, VESTIGE, ORDER);
     expect(queued).toEqual([]);
@@ -964,7 +989,7 @@ describe("the coupons you hold that owe nobody anything", () => {
 
   it("does not count a pile the queue already has, which would double it", () => {
     // The uneven night: you took 1 stack of 3 and were due 2, so the queue already holds your pile.
-    const parties = [party("pa", "baldrix", [mine("m1", "mechyfechy"), seat("m2", "Creed")], null)];
+    const parties = [party("pa", "baldrix", [mine("m1", "mechyfechy"), seat("m2", "Creed")])];
     const pools = [
       pool("pa", [
         coupon("la", "baldrix", 240, "2026-08-06", {
@@ -984,7 +1009,7 @@ describe("the coupons you hold that owe nobody anything", () => {
   });
 
   it("leaves somebody else's balanced pile alone, since you cannot sell out of it", () => {
-    const parties = [party("pb", "limbo", [seat("m1", "Creed"), seat("m2", "Zaddy")], null)];
+    const parties = [party("pb", "limbo", [seat("m1", "Creed"), seat("m2", "Zaddy")])];
     const pools = [
       pool("pb", [
         coupon("lb", "limbo", 60, "2026-08-06", {
@@ -1001,13 +1026,8 @@ describe("the coupons you hold that owe nobody anything", () => {
 
   it("comes to the whole pile once the card adds them up", () => {
     const parties = [
-      party("pa", "baldrix", [mine("m1", "mechyfechy"), seat("m2", "Creed")], null),
-      party(
-        "pj",
-        "limbo",
-        [mine("m3", "mechyfechy"), seat("m4", "Zaddy"), seat("m5", "Premial")],
-        null,
-      ),
+      party("pa", "baldrix", [mine("m1", "mechyfechy"), seat("m2", "Creed")]),
+      party("pj", "limbo", [mine("m3", "mechyfechy"), seat("m4", "Zaddy"), seat("m5", "Premial")]),
     ];
     const pools = [
       pool("pa", [
@@ -1128,7 +1148,7 @@ describe("a night one person looted whole", () => {
     });
 
   it("says what you are holding of theirs when you took every stack", () => {
-    const p = party("pa", "kalos-the-guardian", duo(), null);
+    const p = party("pa", "kalos-the-guardian", duo());
     const loot = night({ bundlesBy: [{ memberId: "m1", bundles: 6 }] });
 
     expect(couponGapOf(loot, p)).toEqual({
@@ -1140,28 +1160,15 @@ describe("a night one person looted whole", () => {
     });
   });
 
-  it("says the same where a named looter holds the lot", () => {
-    const p = party("pa", "kalos-the-guardian", duo(), "m1");
-    const loot = night({ bundlesBy: [] });
-
-    expect(couponGapOf(loot, p)).toEqual({
-      pieces: 60,
-      yours: true,
-      by: "Rune",
-      byKey: "character:rune",
-      holder: SELF_KEY,
-    });
-  });
-
   it("reads the other way round, where they took the lot", () => {
-    const p = party("pa", "kalos-the-guardian", duo(), null);
+    const p = party("pa", "kalos-the-guardian", duo());
     const loot = night({ bundlesBy: [{ memberId: "m2", bundles: 6 }] });
 
     expect(couponGapOf(loot, p)).toMatchObject({ pieces: 120, yours: false, by: "Rune" });
   });
 
   it("is silent on the night that came out even", () => {
-    const p = party("pa", "kalos-the-guardian", duo(), null);
+    const p = party("pa", "kalos-the-guardian", duo());
     const loot = night({
       bundlesBy: [
         { memberId: "m1", bundles: 4 },
@@ -1180,7 +1187,7 @@ describe("a night one person looted whole", () => {
       { ...seat("m2", "Rune"), shares: 2 },
       seat("m3", "Bob"),
     ];
-    const p = party("pa", "kalos-the-guardian", members, null);
+    const p = party("pa", "kalos-the-guardian", members);
     const loot = night({
       ranThatWeek: ["m1", "m2", "m3"],
       bundlesBy: [{ memberId: "m1", bundles: 6 }],

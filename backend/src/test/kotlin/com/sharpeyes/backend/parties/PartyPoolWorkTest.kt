@@ -4,14 +4,12 @@ import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
-import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.Screenshots
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import kotlinx.datetime.LocalDate
 import org.flywaydb.core.Flyway
-import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -98,24 +96,9 @@ class PartyPoolWorkTest {
             )
 
             val pending = { lootCountsFor(listOf(partyId), week = null)[partyId]!!.pending }
-            val seat = { name: String ->
-                PartyMember
-                    .selectAll()
-                    .where { (PartyMember.partyId eq partyId) and (PartyMember.name eq name) }
-                    .first()[PartyMember.id]
-            }
 
             // Nobody looted the lot, so the coupons went into the right inventories on the night.
             // This counted for ever before: a piece row never sells, so PENDING never stops.
-            assertEquals(0, pending())
-
-            // And it stays out however it was looted. What is left to do about a coupon drop is
-            // said in COUPONS, on the party row, so counting the row as well is one fact twice:
-            // a single drop read as "1 in the pool - 30 coupons owed".
-            Party.update({ Party.id eq partyId }) { it[looterMemberId] = seat("Steve") }
-            assertEquals(0, pending())
-
-            Party.update({ Party.id eq partyId }) { it[looterMemberId] = seat("Rune") }
             assertEquals(0, pending())
 
             // And none of this touches an ordinary drop, which is work until it sells.

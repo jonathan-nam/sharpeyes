@@ -215,15 +215,8 @@ object Party : Table("party") {
     // boss.
     val minutes = integer("minutes").nullable()
 
-    // The seat that picks up the pieces for this party, when one member loots the lot. Not always
-    // one of yours: a duo where the partner loots and sells is the easier arrangement on a boss run
-    // with a character that is not on your account. Null is everybody looting their own.
-    // See V36__party_looter.sql.
-    //
-    // A plain column and NOT optReference(PartyMember.id), which would be a circular initialisation:
-    // PartyMember references Party.id, so each object would need the other finished first. Exposed
-    // does not fail on it, it half-builds one of the two and queries against Party then quietly stop
-    // matching. The foreign key is real, declared in the migration; only this mirror leaves it out.
+    // RETIRED, always null since V78: the picker went in #393 and the value lived on unseen. Mapped
+    // only so a replica still on the old code survives a rolling deploy; drop it in a later migration.
     val looterMemberId = uuid("looter_member_id").nullable()
 
     // One seat, because nobody else was there. It owns a pool like any other config and is listed

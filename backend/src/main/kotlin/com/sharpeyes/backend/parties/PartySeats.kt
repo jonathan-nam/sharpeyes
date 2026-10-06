@@ -121,29 +121,6 @@ internal fun retireOrDelete(
 }
 
 /**
- * Why this looter cannot be written, or null.
- *
- * Refused rather than dropped when the name is not in the party: a party believing one member loots
- * everything, with nothing recorded, is a pool that will quietly attribute the pieces to nobody.
- */
-internal fun validateLooter(
-    looterName: String?,
-    ownCharacterId: Uuid?,
-    members: List<String>,
-): String? {
-    if (looterName == null) return null
-    val named =
-        (listOfNotNull(ownCharacterId?.let(::ownSeatName)) + members)
-            .map { it.trim().lowercase() }
-            .toSet()
-    return if (looterName.trim().lowercase() in named) {
-        null
-    } else {
-        "whoever loots the pieces has to be somebody in this party"
-    }
-}
-
-/**
  * Why these standing share counts cannot be written, or null.
  *
  * A name the party does not have is refused rather than ignored: silently dropping it would leave

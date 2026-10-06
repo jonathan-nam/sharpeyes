@@ -12,7 +12,6 @@ import {
   pieceTallies,
   stacksToSave,
 } from "@/lib/vestige-pickup";
-import type { Party } from "@/types/party";
 
 // Who actually picked up which stacks of THIS night's coupons, under the row that says what fell.
 //
@@ -23,27 +22,25 @@ import type { Party } from "@/types/party";
 // bends down for half a stack on the night.
 //
 // Read-only until the panel's own Edit, and read-only it shows what was RECORDED and nothing else.
-// The boxes open on a looter or a balanced guess when nobody has said, and drawing that as a resting
+// The boxes open on a balanced guess when nobody has said, and drawing that as a resting
 // state would put a pickup nobody entered on screen as though it had happened.
 //
 // A screen that only STATES the night passes no onSave, and read-only is all it can ever be.
 
 export function StackPickup({
   drop,
-  party,
   editing,
   busy,
   onSave,
 }: {
   drop: StackDrop;
-  party: Party;
   editing: boolean;
   busy: boolean;
   /** The night's arrangement, by seat id. Absent is read-only. */
   onSave?: (lootId: string, bundles: Record<string, number>) => Promise<void>;
 }) {
   if (!editing || !onSave) return <PickupSummary drop={drop} />;
-  return <PickupBoxes drop={drop} party={party} busy={busy} onSave={onSave} />;
+  return <PickupBoxes drop={drop} busy={busy} onSave={onSave} />;
 }
 
 /** What one seat's stacks come to, in pieces. */
@@ -77,21 +74,17 @@ function PickupSummary({ drop }: { drop: StackDrop }) {
 
 function PickupBoxes({
   drop,
-  party,
   busy,
   onSave,
 }: {
   drop: StackDrop;
-  party: Party;
   busy: boolean;
   onSave: (lootId: string, bundles: Record<string, number>) => Promise<void>;
 }) {
   // Text rather than numbers, so a half-typed box is refused at Save instead of snapping to
   // something nobody meant.
   const [boxes, setBoxes] = useState<Record<string, string>>(() =>
-    Object.fromEntries(
-      Object.entries(openingCounts(drop, party)).map(([id, n]) => [id, String(n)]),
-    ),
+    Object.fromEntries(Object.entries(openingCounts(drop)).map(([id, n]) => [id, String(n)])),
   );
   const [refusal, setRefusal] = useState<string | null>(null);
 

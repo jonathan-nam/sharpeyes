@@ -60,7 +60,6 @@ function party(
     minutes,
     members,
     seats: members,
-    looterMemberId: null,
     usualRoster: true,
     skippedThisPeriod: false,
     oneOff: false,

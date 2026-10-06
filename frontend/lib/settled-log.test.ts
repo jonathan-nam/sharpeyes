@@ -68,7 +68,6 @@ const party = (over: Partial<Party> = {}): Party => ({
   minutes: null,
   members: [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")],
   seats: [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")],
-  looterMemberId: null,
   usualRoster: true,
   skippedThisPeriod: false,
   oneOff: false,

@@ -4,12 +4,11 @@
 // drops are outstanding, whose pile they are in, and what each HOLDER was entitled to, so the one
 // input ("sold N pieces for X") can be distributed without anybody naming a boss.
 //
-// A row's quantity is WHAT FELL (see V40). Who ended up holding it comes from three places, and
-// this file's job is knowing which one applies, in this order: a recorded arrangement splits it
-// stack by stack (V41), a named looter holds the lot, or the stacks divide and everybody took their
-// share. The arrangement first because it is what happened, where the looter is only what was agreed.
+// A row's quantity is WHAT FELL (see V40). Who ended up holding it comes from two places, in this
+// order: a recorded arrangement splits it stack by stack (V41), or the stacks divide and everybody
+// took their share.
 //
-// A fourth case exists and is deliberately NOT answered: the drop did not divide and nobody has
+// A third case exists and is deliberately NOT answered: the drop did not divide and nobody has
 // said who took the odd stack. It used to be called rare and skipped, which was wrong twice over.
 // Seven of the eleven vestige rows fall in 3 stacks, so no duo can divide them and it is the
 // ordinary night; and skipping it recorded no debt at all rather than an unknown one. It is
@@ -336,20 +335,16 @@ function holdersOf(loot: Loot, party: Party): FoldedSeat[] {
 /**
  * What each holder walked away with, or null when nobody has said and it matters.
  *
- * Three ways a night can be known, and one way it cannot, in this order:
+ * Two ways a night can be known, and one way it cannot, in this order:
  *
  *  - a recorded arrangement, stack by stack, folded to holders.
- *  - a named looter, who holds the lot. What a party running one seller means.
- *  - neither, but the stacks divide, so everybody took exactly their share.
+ *  - none, but the stacks divide, so everybody took exactly their share.
  *
  * Otherwise null. The drop did not divide, nobody has said who took the odd stack, and there is no
  * honest default: a guess is right half the time and names the wrong person the rest.
  *
- * The ARRANGEMENT comes first, and it used to come second. `looterMemberId` is a standing agreement
- * about the party ("one of us loots the lot"); `bundlesBy` is what happened on one night. A specific
- * observation has to beat a general default, and losing to it meant a mis-looted night could not be
- * corrected at all while the party had a looter: you entered the stacks, the card did not move, and
- * nothing said why. See #289.
+ * There was a third, a party's standing looter holding the lot. Its picker went in #393 and the
+ * value lived on unseen, so it was retired (V78) rather than left to decide nights nobody could see.
  */
 function heldByHolder(loot: Loot, party: Party, holders: FoldedSeat[]): Map<string, Pile> | null {
   const held = pilesFrom(loot, party, holders);
@@ -390,14 +385,6 @@ function pilesFrom(loot: Loot, party: Party, holders: FoldedSeat[]): Map<string,
       }
     }
     return held;
-  }
-
-  if (party.looterMemberId !== null) {
-    const looter = party.seats.find((s) => s.id === party.looterMemberId);
-    if (looter) {
-      const key = holderKey(holderOf(looter));
-      return new Map([[key, { pieces: loot.quantity, by: looter.name }]]);
-    }
   }
 
   if (bundles !== null && dividesEvenly(bundles, holders)) {
@@ -442,7 +429,7 @@ export type CouponGap = {
  * screen along.
  *
  * Through heldByHolder, so the order of authority is that function's: the night's own arrangement,
- * then a named looter, then an even division. Null where it returns null, because nobody has said
+ * then an even division. Null where it returns null, because nobody has said
  * who took the odd stack and a guess names the wrong person half the time. That night is not silent
  * on screen: it is what unanswered() lists and what the stack boxes ask for.
  *

@@ -52,7 +52,7 @@ const seat = (
   shares: 1,
 });
 
-const party = (members: PartyMember[], looter: string | null): Party => ({
+const party = (members: PartyMember[]): Party => ({
   id: "pa",
   slug: "pa",
   characterId: "char-m1",
@@ -63,7 +63,6 @@ const party = (members: PartyMember[], looter: string | null): Party => ({
   bossKey: "limbo",
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: looter,
   members,
   seats: members,
   usualRoster: true,
@@ -151,15 +150,12 @@ const yourPile = (
   return holderLedgers(
     outstanding(
       [
-        party(
-          [
-            seat("m1", "Husky", { mine: true }),
-            seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
-          ],
-          "m1",
-        ),
+        party([
+          seat("m1", "Husky", { mine: true }),
+          seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+        ]),
       ],
-      [pool([coupon(60)])],
+      [pool([{ ...coupon(60), bundles: 2, bundlesBy: [{ memberId: "m1", bundles: 2 }] }])],
       VESTIGE,
       ORDER,
     ),
@@ -184,10 +180,10 @@ const yourPile = (
  */
 const squarePile = () => {
   const parties = [
-    party(
-      [seat("m1", "Husky", { mine: true }), seat("m2", "BroChar", { person: ["p-bro", "Bro"] })],
-      null,
-    ),
+    party([
+      seat("m1", "Husky", { mine: true }),
+      seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+    ]),
   ];
   const pools = [pool([{ ...coupon(60), bundles: 2 }])];
   const queued = outstanding(parties, pools, VESTIGE, ORDER);
@@ -250,15 +246,12 @@ describe("whether the answers can account for the whole pile", () => {
     const theirs = holderLedgers(
       outstanding(
         [
-          party(
-            [
-              seat("m1", "Husky", { mine: true }),
-              seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
-            ],
-            "m2",
-          ),
+          party([
+            seat("m1", "Husky", { mine: true }),
+            seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+          ]),
         ],
-        [pool([coupon(60)])],
+        [pool([{ ...coupon(60), bundles: 2, bundlesBy: [{ memberId: "m2", bundles: 2 }] }])],
         VESTIGE,
         ORDER,
       ),
@@ -367,13 +360,10 @@ describe("whether the card has anything to ask", () => {
     const over = holderLedgers(
       alsoHeldByYou(
         [
-          party(
-            [
-              seat("m1", "Husky", { mine: true }),
-              seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
-            ],
-            null,
-          ),
+          party([
+            seat("m1", "Husky", { mine: true }),
+            seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+          ]),
         ],
         [pool([{ ...coupon(60), bundles: 2 }])],
         VESTIGE,
@@ -638,13 +628,10 @@ describe("which of your own piles the ledger draws", () => {
     const over = holderLedgers(
       alsoHeldByYou(
         [
-          party(
-            [
-              seat("m1", "Husky", { mine: true }),
-              seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
-            ],
-            null,
-          ),
+          party([
+            seat("m1", "Husky", { mine: true }),
+            seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+          ]),
         ],
         [pool([{ ...coupon(60), bundles: 2 }])],
         VESTIGE,

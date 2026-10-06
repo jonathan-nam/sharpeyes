@@ -76,9 +76,6 @@ data class PartyResponse(
     // to tell it from a live party: it holds real drops, but it is not a boss this character runs.
     // See V33__party_standing.sql.
     val retired: Boolean = false,
-    // The seat that picks up the pieces, when the party agreed one member loots the lot. Null is
-    // everybody looting their own, which is most parties. Not always one of yours.
-    val looterMemberId: String? = null,
     // Who ran in the week being shown, which is not always who usually does. See rostersFor.
     val members: List<PartyMemberResponse>,
     // EVERY seat this party has ever had, guests and departed members included. What a payout is
@@ -192,14 +189,6 @@ data class SavePartyRequest(
     // it is decides how every later period reads, so turning a standing party into a one-off after
     // the fact would rewrite weeks it has already answered for.
     val oneOff: Boolean = false,
-    /**
-     * Who picks up the pieces, by character NAME rather than seat id.
-     *
-     * A name because that is what the rest of this request is: seats are matched by name, and a party
-     * being created has no seat ids yet for the client to send. Null clears it, which is the party
-     * going back to everybody looting their own.
-     */
-    val looterName: String? = null,
 )
 
 /**

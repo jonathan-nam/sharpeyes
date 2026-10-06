@@ -60,7 +60,6 @@ const party = (id: string, members: PartyMember[], over: Partial<Party> = {}): P
   minutes: null,
   members,
   seats: members,
-  looterMemberId: null,
   usualRoster: true,
   skippedThisPeriod: false,
   oneOff: false,
@@ -723,6 +722,11 @@ describe("a piece drop counts YOUR share, not what fell", () => {
 
   const coupons = (over: Partial<Loot> = {}): Loot =>
     pending({ dropKey: VESTIGE, name: "Vestige of Erion Coupon", quantity: 60, ...over });
+  /** One seat picked up all three stacks. */
+  const lootedBy = (memberId: string): Partial<Loot> => ({
+    bundles: 3,
+    bundlesBy: [{ memberId, bundles: 3 }],
+  });
 
   const trio = (over: Partial<Party> = {}) =>
     party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton"), theirs("m3", "Free")], {
@@ -786,7 +790,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   });
 
   it("says a coupon somebody else holds in coupons, and never also as a row", () => {
-    const log = buildDropLog([trio({ looterMemberId: "m2" })], [pool("pa", [coupons()])], tables);
+    const log = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m2"))])], tables);
 
     // One drop, one fact. Counting it both ways read as two things to do: a single coupon drop
     // showed as "1 in the pool · 30 coupons owed" on the party row.
@@ -802,8 +806,8 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     // deliberately does not count it: the same drop said two ways on one line.
     const hammer = drop({ id: "l2", status: "PENDING", soldAt: null, saleAmount: null });
     const log = buildDropLog(
-      [trio({ looterMemberId: "m2" })],
-      [pool("pa", [coupons({ id: "l1" }), hammer])],
+      [trio()],
+      [pool("pa", [coupons({ id: "l1", ...lootedBy("m2") }), hammer])],
       tables,
     );
     const forParty = pieceStatusByParty(log.entries).get("pa")!;
@@ -821,12 +825,10 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     expect(pieceStatusByParty(log.entries).has("pa")).toBe(false);
   });
 
-  // The night's own arrangement, against a party that also names a looter. Two seats on 60 in 3
-  // stacks: 30 each, 20 to a stack. The same shape as an Extreme Kalos duo, in this table's numbers.
+  // The night's own arrangement. Two seats on 60 in 3 stacks: 30 each, 20 to a stack. The same shape as an Extreme Kalos duo, in this table's numbers.
   const pair = (over: Partial<Party> = {}) =>
     party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton")], {
       difficulty: "HARD",
-      looterMemberId: "m2",
       ...over,
     });
   const arranged = (mineStacks: number, theirStacks: number, over: Partial<Loot> = {}): Loot =>
@@ -1135,7 +1137,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   it("gives each party its own coupons-owed figure for the row badge", () => {
     // Off the same entries the Drop Log counts, so a party row and the log cannot disagree about
     // what is owed. A party holding its own coupons is absent rather than zero.
-    const owed = buildDropLog([trio({ looterMemberId: "m2" })], [pool("pa", [coupons()])], tables);
+    const owed = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m2"))])], tables);
     expect(couponsOutstandingByParty(owed.entries).get("pa")).toEqual({ toYou: 20 });
 
     const even = buildDropLog([trio()], [pool("pa", [coupons()])], tables);
@@ -1146,8 +1148,8 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     // The fourth place this blind spot turned up. `owedBy` is a fact about the party's ARRANGEMENT,
     // `entitled - looted`, fixed when the drop was logged, so the badge said "20 coupons owed" and
     // the row said "Owed" for ever, however completely the tranche ledger had been filled in.
-    const parties = [trio({ looterMemberId: "m2" })];
-    const pools = [pool("pa", [coupons()])];
+    const parties = [trio()];
+    const pools = [pool("pa", [coupons(lootedBy("m2"))])];
 
     const open = buildDropLog(parties, pools, tables);
     expect(couponsOutstandingByParty(open.entries).get("pa")).toEqual({ toYou: 20 });
@@ -1167,8 +1169,8 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   it("closes it for the holder who owes it, not for anybody else", () => {
     // A settlement is one person's decision, so somebody else's must change nothing here: otherwise
     // closing your books with one partner would retire a debt owed by another.
-    const parties = [trio({ looterMemberId: "m2" })];
-    const pools = [pool("pa", [coupons()])];
+    const parties = [trio()];
+    const pools = [pool("pa", [coupons(lootedBy("m2"))])];
     const stranger = closedByHolder([
       {
         holder: { kind: "PERSON" as const, personId: "p-nobody", characterName: null },
@@ -1185,8 +1187,8 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   it("closes it through the PERSON, whichever of their characters looted it", () => {
     // The fold, one layer out. Chris brought two characters, so his pile is one and closing it
     // against either of them closes the drop. Keyed by character this would have taken two.
-    const parties = [trio({ looterMemberId: "m2" })];
-    const pools = [pool("pa", [coupons()])];
+    const parties = [trio()];
+    const pools = [pool("pa", [coupons(lootedBy("m2"))])];
 
     for (const seat of [trio().members[1]!, trio().members[2]!]) {
       const closed = closedByHolder([
@@ -1203,18 +1205,13 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     const own = buildDropLog([trio()], [pool("pa", [coupons()])], tables);
     expect(dropStatusLabel(own.entries[0]!)).toBe("Yours");
 
-    const owed = buildDropLog([trio({ looterMemberId: "m2" })], [pool("pa", [coupons()])], tables);
+    const owed = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m2"))])], tables);
     expect(dropStatusLabel(owed.entries[0]!)).toBe("Owed");
 
     const closed = closedByHolder([
       { holder: holderOf(trio().members[1]!), lootIds: [coupons().id], unpaid: 0 },
     ]).closed;
-    const done = buildDropLog(
-      [trio({ looterMemberId: "m2" })],
-      [pool("pa", [coupons()])],
-      tables,
-      closed,
-    );
+    const done = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m2"))])], tables, closed);
     expect(dropStatusLabel(done.entries[0]!)).toBe("Settled");
     // And the raw status has not moved under any of them, which is why it could never be the answer.
     for (const log of [own, owed, done]) expect(log.entries[0]!.status).toBe("PENDING");
@@ -1224,7 +1221,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     // "Vestige of Erion Coupon x180 · Settled" read as 180 of mine being settled, when 90 ever were:
     // the count beside the name is what FELL, which is right for a pool, and the status beside it is
     // about my share. The Drop Log counts the same drop as x90 on purpose, so each screen has to say.
-    const log = buildDropLog([trio({ looterMemberId: "m2" })], [pool("pa", [coupons()])], tables);
+    const log = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m2"))])], tables);
     const entry = log.entries[0]!;
 
     expect(entry.quantity).toBe(60);
@@ -1242,13 +1239,13 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   });
 
   it("names who is holding your share when one seat looted the lot", () => {
-    const log = buildDropLog([trio({ looterMemberId: "m2" })], [pool("pa", [coupons()])], tables);
+    const log = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m2"))])], tables);
     expect(log.entries[0]!.yours).toBe(20);
     expect(log.entries[0]!.owedBy).toBe("CreedBratton");
   });
 
   it("does not name your own character, because that is you having it already", () => {
-    const log = buildDropLog([trio({ looterMemberId: "m1" })], [pool("pa", [coupons()])], tables);
+    const log = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m1"))])], tables);
     expect(log.entries[0]!.owedBy).toBeNull();
   });
 
@@ -1348,15 +1345,15 @@ describe("a piece drop divides at the mode it fell at", () => {
   const tokens = (over: Partial<Loot> = {}): Loot =>
     pending({ dropKey: TOKEN, name: "Distorted Ambition", quantity: 6, ...over });
 
-  /** m2 looted the lot, which is what makes a coupon row owe you your share. */
   const trio = () =>
     party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton"), theirs("m3", "Free")], {
       difficulty: "HARD",
-      looterMemberId: "m2",
     });
 
   it("says what your share of it was, and who holds it", () => {
-    const log = buildDropLog([trio()], [pool("pa", [tokens()])], table);
+    // m2 picked up all six, which is what makes the row owe you your share.
+    const lot = tokens({ bundles: 6, bundlesBy: [{ memberId: "m2", bundles: 6 }] });
+    const log = buildDropLog([trio()], [pool("pa", [lot])], table);
     const entry = log.entries[0]!;
 
     expect(entry.pieces).toBe(true);
@@ -1404,7 +1401,7 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
   // Reboot trades nothing, and every piece drop there is INSTANCED, one count into each inventory
   // that ran. Ordinary drops (a grindstone, a rare equip) still pool, which is why this stays a
   // per-drop question rather than a blanket "Heroic has no pools".
-  const HEROIC_PARTY = { worldType: "HEROIC" as const, difficulty: "CHAOS", looterMemberId: "m2" };
+  const HEROIC_PARTY = { worldType: "HEROIC" as const, difficulty: "CHAOS" };
 
   const trio = (over = {}) =>
     party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton"), theirs("m3", "Free")], {
@@ -1454,12 +1451,15 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
       bossKey: "kalos-the-guardian",
       quantity: 2,
     });
+  /** m2 picked up all six, so on Interactive it owes you your share. */
   const coupon = () =>
     pending({
       dropKey: "vestige-of-erion",
       name: "Vestige of Erion Coupon",
       bossKey: "kalos-the-guardian",
       quantity: 6,
+      bundles: 6,
+      bundlesBy: [{ memberId: "m2", bundles: 6 }],
     });
 
   it("does not divide an instanced drop, in the world it is instanced in", () => {
