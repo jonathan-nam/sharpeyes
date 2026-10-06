@@ -401,6 +401,7 @@ describe("the nights the card's queue lists", () => {
       pieces = 60,
       owed = 30,
       droppedOn = "2026-08-06",
+      recordedAt = undefined as string | undefined,
     } = {},
   ) => ({
     lootId,
@@ -408,6 +409,7 @@ describe("the nights the card's queue lists", () => {
     bossKey: "limbo",
     weekStart: "2026-08-06",
     droppedOn,
+    recordedAt,
     looterName: "Husky",
     pieces,
     closed,
@@ -488,7 +490,7 @@ describe("the nights the card's queue lists", () => {
       answeredByCreditor: new Map([["person:p-bro", sold(30)]]),
     };
     const { owing, answered } = queueOf(pile);
-    expect([owing.map((d) => d.lootId), answered]).toEqual([["l2"], 1]);
+    expect([owing.map((d) => d.lootId), answered]).toEqual([["l1"], 1]);
   });
 
   it("does not put a night back up because a LATER one was logged", () => {
@@ -509,16 +511,25 @@ describe("the nights the card's queue lists", () => {
 
     const after = {
       ...before,
-      drops: [...before.drops, night("l4", { to: "Bro", owed: 30, droppedOn: "2026-08-14" })],
+      drops: [
+        ...before.drops,
+        // Logged after both sales, so neither can have come off it however new it is.
+        night("l4", {
+          to: "Bro",
+          owed: 30,
+          droppedOn: "2026-08-14",
+          recordedAt: "2030-02-01T00:00:00Z",
+        }),
+      ],
     };
     expect(queueOf(after).owing.map((d) => d.lootId)).toEqual(["l4"]);
     expect(queueOf(after).answered).toBe(3);
   });
 
-  it("answers the oldest night first, whatever order the rows are drawn in", () => {
+  it("answers the newest night first, whatever order the rows are drawn in", () => {
     // The queue is drawn in the catalog's order so two bosses in one week never swap places, which is
-    // not the order the nights happened in. A sale on Thursday cannot have come off a night that fell
-    // on Friday, so the fold reads the day it FELL and the newest night is the one left owing.
+    // not the order the nights happened in. A sale is the evening's loot going to market, so the fold
+    // reads the day it FELL and the oldest night is the one left owing. See spendSales.
     const pile = {
       ...pileOf([
         night("newest", { to: "Bro", owed: 30, droppedOn: "2026-08-14" }),
@@ -527,7 +538,7 @@ describe("the nights the card's queue lists", () => {
       answered: 30,
       answeredByCreditor: new Map([["person:p-bro", sold(30)]]),
     };
-    expect(queueOf(pile).owing.map((d) => d.lootId)).toEqual(["newest"]);
+    expect(queueOf(pile).owing.map((d) => d.lootId)).toEqual(["oldest"]);
   });
 
   it("never spends one creditor's answered coupons on a night owed to another", () => {

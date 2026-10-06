@@ -252,15 +252,15 @@ export function oldestNightFirst(
 /**
  * A credit spent over nights, oldest first, leaving what each still owes.
  *
- * A pair's debt is one running count and the nights behind it are a queue, so a sale that answered
- * for 130 coupons answered the oldest 130 of them. That is not a claim about which physical coupons
- * went to market: it is the same statement the total already makes, distributed over the rows the
- * reader is looking at, so the list adds up to the figure above it. A list that sums to 180 under a
- * headline of 50 is a wrong number wherever the reader happens to add it up.
+ * A pair's debt is one running count and the nights behind it are a queue, so a credit of 130
+ * coupons comes off the oldest 130 of them. Sales are not spent here: see spendSales. That is not
+ * a claim about which physical coupons are where: it is the same statement the total already
+ * makes, distributed over the rows the reader is looking at, so the list adds up to the figure
+ * above it. A list that sums to 180 under a headline of 50 is a wrong number wherever the reader
+ * happens to add it up.
  *
- * By the day the night FELL, never the order the rows are drawn in. A sale cannot have come off a
- * night that had not happened yet, and the queue is drawn in the catalog's order so that two bosses
- * in one week never swap places.
+ * By the day the night FELL, never the order the rows are drawn in. The queue is drawn in the
+ * catalog's order so that two bosses in one week never swap places.
  *
  * Every night is RETURNED, a covered one at zero rather than dropped. What a night still owes and
  * whether it is one of the nights an act would close are different questions: a night answered in
@@ -305,17 +305,20 @@ export type AnsweredSale = {
  * A night with no recordedAt is a row cached from before the field, and stays eligible for
  * everything, which is what it meant when it was cached.
  *
- * Oldest sale first, so an older sale takes the older nights and the leftovers land where they would
- * have anyway. Every night is RETURNED at what it still owes, for the reason spendOldestFirst says.
+ * Each sale takes the NEWEST nights it could have answered, because a sale is the evening's loot
+ * going to market. Oldest first credited a Jupiter sale as "Jupiter (100), Malefic Star (20)" and
+ * landed 1 of Bro's 41 sales on whole nights; newest first lands 29, every October one included.
+ * Sales are taken in the order they were recorded. Every night is RETURNED at what it still owes,
+ * for the reason spendOldestFirst says.
  */
 export function spendSales<
   T extends { pieces: number; droppedOn: string; recordedAt?: string | null; lootId?: string },
 >(nights: T[], sales: AnsweredSale[]): T[] {
   const owed = new Map<T, number>(nights.map((night) => [night, night.pieces]));
-  const oldest = [...nights].sort(oldestNightFirst);
+  const newest = [...nights].sort(oldestNightFirst).reverse();
   for (const sale of [...sales].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))) {
     let left = Math.max(0, sale.pieces);
-    for (const night of oldest) {
+    for (const night of newest) {
       if (left <= 0) break;
       // A row cached from before the field has no recordedAt, and stays eligible for everything:
       // that is what it meant when it was cached, and the next fetch corrects it.
@@ -349,12 +352,12 @@ export function placeSalesOnNights<T extends PlaceableNight, S extends AnsweredS
   sales: S[],
 ): Map<S, { night: T; pieces: number }[] | null> {
   const owed = new Map<T, number>(nights.map((night) => [night, night.pieces]));
-  const oldest = [...nights].sort(oldestNightFirst);
+  const newest = [...nights].sort(oldestNightFirst).reverse();
   const out = new Map<S, { night: T; pieces: number }[] | null>();
   for (const sale of [...sales].sort((a, b) => a.recordedAt.localeCompare(b.recordedAt))) {
     let left = Math.max(0, sale.pieces);
     const taken: { night: T; pieces: number }[] = [];
-    for (const night of oldest) {
+    for (const night of newest) {
       if (left <= 0) break;
       if (night.recordedAt && night.recordedAt > sale.recordedAt) continue;
       const spent = Math.min(left, owed.get(night)!);

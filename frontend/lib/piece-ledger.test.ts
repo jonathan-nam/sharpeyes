@@ -340,15 +340,15 @@ describe("placeSales", () => {
     { pieces: 50, recordedAt: "2026-08-31T00:00:00Z" },
   ];
 
-  it("places each sale by the weeks of the nights it came off, oldest first", () => {
+  it("places each sale by the weeks of the nights it came off, newest first", () => {
     const placed = placeSales(nights, sales);
     expect([...placed.get(sales[0]!)!]).toEqual([
-      ["2026-08-06", 60],
+      ["2026-08-20", 60],
       ["2026-08-13", 30],
     ]);
     expect([...placed.get(sales[1]!)!]).toEqual([
       ["2026-08-13", 30],
-      ["2026-08-20", 20],
+      ["2026-08-06", 20],
     ]);
   });
 
