@@ -182,10 +182,10 @@ describe("what one person owes you", () => {
     expect([rows[0]!.name, rows[0]!.pieces, rows[0]!.piecesYouOwe]).toEqual(["Bro", 0, 30]);
   });
 
-  it("cancels the two directions against each other before either is listed", () => {
+  it("nets the counts but lists each night whole", () => {
     // Husky's week: 30 of Bro's off Kalos and 15 off Seren in your inventory, 20 of yours off
-    // Baldrix in his. One handover settles the pair, so the 20 on each side is a night neither of you
-    // has to do anything about, and it comes off BOTH lists rather than standing on each.
+    // Baldrix in his. One handover settles the pair, so the COUNT nets to 25. The nights do not:
+    // a week filter over them has to say what that week owed.
     const rows = buildSettlement(
       [
         ledger(SELF, "you", {
@@ -197,16 +197,13 @@ describe("what one person owes you", () => {
     );
     expect(rows).toHaveLength(1);
     expect([rows[0]!.pieces, rows[0]!.piecesYouOwe, rows[0]!.piecesNet]).toEqual([0, 25, 25]);
-    // And the nights say the same, oldest first: Kalos gives up the 20, Seren is untouched.
-    expect(rows[0]!.owedDrops.map((d) => d.pieces)).toEqual([10, 15]);
-    expect(rows[0]!.drops.map((d) => d.pieces)).toEqual([0]);
+    expect(rows[0]!.owedDrops.map((d) => d.pieces)).toEqual([30, 15]);
+    expect(rows[0]!.drops.map((d) => d.pieces)).toEqual([20]);
   });
 
-  it("cancels the nights a sale left, oldest first", () => {
-    // The card as Jonathan read it: 60 of Bro's in your pile over two nights, 10 of them already sold
-    // and offset, and 20 of yours in his. Kalos was down to 20 and Baldrix to 20, and both were
-    // listed as outstanding when between them they were nothing. What is left is the later night
-    // whole, which is the one figure that changes hands.
+  it("marks what a sale took off each night, oldest first, and cancels nothing", () => {
+    // 60 of Bro's in your pile over two nights, 10 of them sold, and 20 of yours in his. Each night
+    // keeps what it owed, the sale is said on the night it came off, and only the step nets.
     const [row] = buildSettlement(
       [
         ledger(SELF, "you", {
@@ -226,8 +223,11 @@ describe("what one person owes you", () => {
       new Map([[answeredKey("self", "person:p-bro"), sold(10)]]),
     );
     expect(row!.piecesNet).toBe(30);
-    expect(row!.owedDrops.map((d) => d.pieces)).toEqual([0, 30]);
-    expect(row!.drops.map((d) => d.pieces)).toEqual([0]);
+    expect(row!.owedDrops.map((d) => [d.pieces, d.sold])).toEqual([
+      [20, 10],
+      [30, 0],
+    ]);
+    expect(row!.drops.map((d) => [d.pieces, d.sold])).toEqual([[20, 0]]);
   });
 
   it("keeps a cancelled night in the list at zero, so closing the pair still closes it", () => {
@@ -1711,15 +1711,13 @@ describe("pieces a sale has already answered for", () => {
     expect(row!.drops.map((d) => d.pieces)).toEqual([20]);
   });
 
-  it("leaves the listed nights adding up to the count above them", () => {
-    // The invariant the card draws. The list used to be GROSS, on the reasoning that a tranche names
-    // a person and never a boss so there is no night to take the answered pieces off; what that cost
-    // is six nights and 150 coupons listed under a headline of 20. The answer comes off the nights
-    // oldest first now, so the list and the count cannot disagree.
+  it("leaves the unsold part of both lists netting to the step", () => {
+    // The lists are gross, so what makes them agree with the step is the unsold part: a gross list
+    // with nothing marked once read as 150 coupons under a headline of 20.
     const { ledgers, answered } = theNight();
     const [row] = cardFor(ledgers, answered);
-    const listed = row!.owedDrops.reduce((sum, d) => sum + d.pieces, 0);
-    expect(listed).toBe(row!.piecesYouOwe);
+    const unsold = (drops: { pieces: number }[]) => drops.reduce((sum, d) => sum + d.pieces, 0);
+    expect(unsold(row!.owedDrops) - unsold(row!.drops)).toBe(row!.piecesNet);
   });
 
   it("keeps an answered night in the list at zero, so closing the pair still closes it", () => {
@@ -1965,6 +1963,7 @@ describe("weekSplit", () => {
     droppedOn: weekStart,
     recordedAt: `${weekStart}T01:00:00Z`,
     pieces,
+    sold: 0,
     looterName: "x",
     shared: false,
   });
@@ -2009,6 +2008,7 @@ describe("bossesOfSales", () => {
     droppedOn,
     recordedAt: `${droppedOn}T01:00:00Z`,
     pieces,
+    sold: 0,
     looterName: "x",
     shared: false,
   });
@@ -2049,6 +2049,7 @@ describe("sliceActToWeek", () => {
     droppedOn: weekStart,
     recordedAt: `${weekStart}T01:00:00Z`,
     pieces,
+    sold: 0,
     looterName: "x",
     shared: false,
   });

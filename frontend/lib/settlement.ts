@@ -19,7 +19,7 @@
 // No total is computed here. The shares are lib/wallet.ts's, the pieces and the sale splits are
 // lib/vestige-ledger.ts's, and a second copy of any of them would be a second answer.
 
-import { placeSales, placeSalesOnNights, spendOldestFirst, spendSales } from "./piece-ledger";
+import { placeSales, placeSalesOnNights, spendSales } from "./piece-ledger";
 import type { AnsweredSale } from "./piece-ledger";
 import { SELF_KEY, answeredKey, holderFromKey, holderKey } from "./vestige-ledger";
 import type { CouponSale, Holder, HolderLedger, SaleCredit } from "./vestige-ledger";
@@ -38,13 +38,13 @@ export type HeldOfYours = {
   /** When it was LOGGED, which is what says a sale could have answered it. See spendSales. */
   recordedAt?: string;
   /**
-   * Pieces this person is owed off this night, never the size of the pile holding them.
-   *
-   * What is STILL owed, not what the night owed to begin with: a sale that answered for 130 coupons
-   * has already come off the oldest nights by the time this is read. So these add up to the figure
-   * on the card, which the gross ones did not.
+   * Pieces this person is still owed off this night, never the size of the pile holding them: a
+   * sale that answered for 130 coupons has already come off the oldest nights. `pieces + sold` is
+   * what the night owed to begin with.
    */
   pieces: number;
+  /** Pieces of this night a recorded sale already answered for. See spendSales. */
+  sold: number;
   /** Which character bent down for them. */
   looterName: string;
   /**
@@ -239,6 +239,11 @@ export type Settlement = {
   lines: WalletLine[];
 };
 
+/** Each spent night with what the spend took off it. Same order in and out, see spendSales. */
+function withSold(before: HeldOfYours[], after: HeldOfYours[]): HeldOfYours[] {
+  return after.map((night, i) => ({ ...night, sold: before[i]!.pieces - night.pieces }));
+}
+
 const blank = (key: string, name: string): Settlement => ({
   key,
   name,
@@ -341,6 +346,7 @@ export function buildSettlement(
           droppedOn: drop.droppedOn,
           recordedAt: drop.recordedAt,
           pieces: transfer.pieces,
+          sold: 0,
           looterName: drop.looterName,
           // A different PERSON, not merely a second transfer: one night can owe one person twice,
           // and that is still one drop, one closure and nobody else's coupons at stake.
@@ -361,7 +367,10 @@ export function buildSettlement(
     // the tranche total for the headline and letting the nights absorb less is a panel listing six
     // nights and 180 coupons under a headline of 50. See spendSales.
     row.owedNights = row.owedDrops;
-    const spent = spendSales(row.owedDrops, answered.get(answeredKey(SELF_KEY, key)) ?? []);
+    const spent = withSold(
+      row.owedDrops,
+      spendSales(row.owedDrops, answered.get(answeredKey(SELF_KEY, key)) ?? []),
+    );
     row.piecesAnswered.theirs = row.piecesYouOwe - spent.reduce((sum, d) => sum + d.pieces, 0);
     row.piecesYouOwe -= row.piecesAnswered.theirs;
     row.owedDrops = spent;
@@ -384,6 +393,7 @@ export function buildSettlement(
         pieces: d.transfers
           .filter((t) => t.toId === SELF_KEY)
           .reduce((sum, t) => sum + t.pieces, 0),
+        sold: 0,
         looterName: d.looterName,
         // Their pile owing a third person off the same night. Closing it would call that debt
         // finished as well, and this card has no business saying anything about it.
@@ -395,9 +405,9 @@ export function buildSettlement(
     const row = rowFor(holderKey(ledger.holder), ledger.holderName);
     // The mirror of the subtraction above: coupons of yours THEY sold out of their own pile and said
     // were yours. `soldOfYours` carries what those fetched, so the count stops here too.
-    const spent = spendSales(
+    const spent = withSold(
       drops,
-      answered.get(answeredKey(holderKey(ledger.holder), SELF_KEY)) ?? [],
+      spendSales(drops, answered.get(answeredKey(holderKey(ledger.holder), SELF_KEY)) ?? []),
     );
     // The same subtraction as the other direction, and read the same way round, so neither list can
     // state a total the card contradicts.
@@ -503,20 +513,12 @@ export function buildSettlement(
 
   // Both directions are in by now, so the pair becomes the one figure that changes hands.
   for (const row of out.values()) {
-    // The sides cancel BEFORE either is listed. The header was already the net, one handover settling
-    // the pair, and leaving the lists gross made them contradict it: 50 coupons of Bro's in your pile
-    // over 20 of yours in his read as 70 outstanding under a headline of 30, and the 20 on each side
-    // was a night nobody has to do anything about.
-    //
-    // Netting a COUNT is safe where netting a price would not be: same coupon, same person, nothing
-    // valued. It is the rule the header already runs on, applied one level down.
+    // The COUNTS cancel, because one handover settles the pair: 50 of Bro's in your pile over 20 of
+    // yours in his is 30 changing hands. The nights do NOT: each list says what that night owed and
+    // what a sale took off it, so a week filter shows the gross and not whatever the netting left.
     const wash = Math.min(row.pieces, row.piecesYouOwe);
     row.pieces -= wash;
     row.piecesYouOwe -= wash;
-    // Oldest first, the way a sale is spent, and the cancelled nights stay in the array at zero:
-    // settleThePair closes them, and a wash finishes both sides of one. PieceNights draws none.
-    row.drops = spendOldestFirst(row.drops, wash);
-    row.owedDrops = spendOldestFirst(row.owedDrops, wash);
     row.piecesNet = row.piecesYouOwe - row.pieces;
   }
 

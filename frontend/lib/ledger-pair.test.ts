@@ -338,11 +338,14 @@ describe("the two entry forms", () => {
 // Two ways a half-width column went wrong, both found on screen rather than by a test.
 describe("what a column draws and how wide it lets itself get", () => {
   it("heads a list of nights only where a night will be drawn", () => {
-    // A night a sale answered for, or one the other side cancelled, sits in `drops` at zero:
-    // settleThePair still closes it, so it is kept, and PieceNights draws it in neither list. Read
-    // as a length, that put "Bro is holding" over nothing at all.
-    expect(ledger).toContain("const theirNights = row.drops.filter((drop) => drop.pieces > 0);");
-    expect(ledger).toContain("const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);");
+    // A night that never owed anything sits in `drops` at zero. Read as a length, that put "Bro is
+    // holding" over nothing at all. A SOLD night is drawn, with its sale marked.
+    expect(ledger).toContain(
+      "const theirNights = row.drops.filter((drop) => drop.pieces + drop.sold > 0);",
+    );
+    expect(ledger).toContain(
+      "const myNights = row.owedDrops.filter((drop) => drop.pieces + drop.sold > 0);",
+    );
     // Headed off the week-filtered arrays, which are the same nights narrowed, so a filter that
     // empties one side takes its heading with it.
     expect(ledger).toContain("const theirShown = inNightWeek(theirNights);");
