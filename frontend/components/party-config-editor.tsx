@@ -6,7 +6,6 @@ import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-charact
 import { RosterInputs } from "@/components/roster-inputs";
 import { apiAssetUrl } from "@/lib/api";
 import { MAX_MINUTES, parseMinutes } from "@/lib/boss-minutes";
-import { rotatingDropsAt } from "@/lib/loot-rotation";
 import { bossesWithoutConfig, namedSeats, standingMembers, standingParties } from "@/lib/parties";
 import { splitTitle } from "@/lib/split-title";
 import {
@@ -295,20 +294,11 @@ function ConfigRow({
   // stale cached shape reads as nothing to divide rather than as the wrong world's pile.
   const world = party.worldType;
 
-  /**
-   * The drop this party's split is measured in, at a given mode, or none.
-   *
-   * The coupon where the boss drops one, because that is what the boxes have always counted and the
-   * one ratio governs everything the party divides. Otherwise the Eternal piece, which is the whole
-   * reason this is a function: Chaos Kalos and every fragment mode drop something that divides and
-   * no coupon at all, so those parties had no way to set a split, while the rotation went on
-   * dividing by a ratio nobody could reach.
-   */
+  /** The coupon this party's split is measured in, at a given mode, or none. */
   const dividingAt = (mode: string): BossDrop | undefined => {
     if (mode === "") return undefined;
     const coupon = drops.find((d) => d.dropKey === VESTIGE);
-    if ((coupon?.pieces?.[world]?.[mode] ?? 0) > 0) return coupon;
-    return rotatingDropsAt(drops, mode, world)[0];
+    return (coupon?.pieces?.[world]?.[mode] ?? 0) > 0 ? coupon : undefined;
   };
 
   const savedMode = party.difficulty ?? "";
@@ -331,8 +321,7 @@ function ConfigRow({
    * What decides whether the save DERIVES the ratio or passes the stored one through. A ratio that
    * does not land on whole half-stacks cannot be shown in these boxes at all, so they open on the
    * even split instead: 2:1 over 14 pieces opens at 7 and 7. Deriving from that on every save meant
-   * editing a party's MINUTES quietly rewrote its 2:1 into 1:1. Rare on coupons, where six stacks
-   * absorb most ratios; the ordinary case on pieces.
+   * editing a party's MINUTES quietly rewrote its 2:1 into 1:1.
    */
   const stacksDirty = stacksKey(entitled) !== stacksKey(savedStacks(savedBundles));
   const dirty =
@@ -375,10 +364,8 @@ function ConfigRow({
    */
   const addsUp =
     bundlesForEdit === undefined || (!badStacks && stacksAddUp(halves as number[], bundlesForEdit));
-  /** Coupons per stack, which is 1 for every piece but Hard Star's. */
+  /** Coupons per stack. */
   const stackSize = showBoxes ? total! / bundlesForEdit! : 1;
-  /** What the boxes are counting. A piece cannot change hands; a coupon can. */
-  const unit = dividing?.untradeable ? "pieces" : "coupons";
 
   return (
     <article className="config-row">
@@ -455,9 +442,7 @@ function ConfigRow({
           already answer. */}
       {showBoxes && (
         <div className="config-section config-panel">
-          {/* Built from the drop's own name, not a fixed one: Chaos Kalos and every fragment mode
-              divide an Eternal piece here and no coupon at all. See splitTitle for the suffix the
-              catalog name carries and this title does not want.
+          {/* See splitTitle for the suffix the catalog name carries and this title does not want.
 
               The art beside it for the same reason the pool rows carry it: a coupon is recognised
               by its sprite before its name is read. Nothing is drawn where the catalog has no art
@@ -472,12 +457,11 @@ function ConfigRow({
           </div>
           <div className="config-vestige">
             <span className="config-share-drop">
-              {/* The stack size only where it is a fact worth carrying. Most pieces fall one to a
-                stack, and "5 in 5 stacks of 1" says the same thing three times; Hard Star's 18 in 6
-                stacks of 3 is the number the boxes are actually measured in. */}
+              {/* The stack size only where it is more than one: "5 in 5 stacks of 1" says the same
+                thing three times. */}
               {stackSize > 1
                 ? `${total} in ${bundlesForEdit} stacks of ${stackSize}`
-                : `${total} ${unit}`}
+                : `${total} coupons`}
             </span>
             <div className="config-shares">
               {rosterNames.map((name, i) => (
@@ -496,7 +480,7 @@ function ConfigRow({
                     in. Only where the box reads: half a typed answer is not a count. */}
                   {halves[i] !== null && stackSize > 1 && (
                     <span className="config-share-stacks">
-                      {`${couponsOf(halves[i]!, total!, bundlesForEdit!)} ${unit}`}
+                      {`${couponsOf(halves[i]!, total!, bundlesForEdit!)} coupons`}
                     </span>
                   )}
                 </label>

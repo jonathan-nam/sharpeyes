@@ -33,27 +33,14 @@ data class BossDropResponse(
      */
     val fungible: Boolean = false,
     /**
-     * The item cannot change hands, so it never sells and no settlement can move it.
-     *
-     * Divisibility is untouched: a stack of these still divides by count, and entitled against
-     * looted is what says whose turn it is next. What it removes is the DEBT, since a member short
-     * of their share cannot be handed the difference.
-     */
-    val untradeable: Boolean = false,
-    /**
      * How many pieces this boss drops of it, keyed by WORLD and then by difficulty.
-     *
-     * Two keys because the count is genuinely per world, not a restatement of `perMember`: Chaos
-     * Kalos gives 5 pieces to the whole party on Interactive and 2 to each member on Heroic. World
-     * outermost because a caller knows which world it is asking about before it knows the mode.
      *
      * Only the difficulties that drop any are in here. An absent one means nothing to fill, which is
      * not the same as none: a pre-filled zero would be a claim the drop table does not make.
      *
-     * A HEROIC figure is always a count PER PERSON. Reboot instances every piece it drops, so a drop
-     * carrying one is `per_member` there and build.py refuses it otherwise. An Interactive figure is
-     * the size of a POOL, and writing one to both worlds is what had a Heroic party dividing 180
-     * coupons all six of them already held.
+     * Only INTERACTIVE is seeded. Its figure is the size of a POOL, and Reboot instances every piece
+     * it drops: writing one to both worlds had a Heroic party dividing 180 coupons all six of them
+     * already held.
      */
     val pieces: Map<String, Map<String, Int>> = emptyMap(),
     /**
@@ -127,7 +114,6 @@ private fun readDropTables(): Map<String, List<BossDropResponse>> {
                 worlds = row[DropCatalog.worlds],
                 quantity = row[DropCatalog.quantity],
                 fungible = row[DropCatalog.fungible],
-                untradeable = row[DropCatalog.untradeable],
                 pieces = piecesFor[row[BossCatalog.bossKey] to row[DropCatalog.dropKey]].orEmpty(),
                 bundles = bundlesFor[row[BossCatalog.bossKey] to row[DropCatalog.dropKey]].orEmpty(),
             )

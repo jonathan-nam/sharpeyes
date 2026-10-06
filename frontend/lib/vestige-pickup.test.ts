@@ -81,15 +81,9 @@ const coupon = (over: Partial<Loot> = {}): Loot => ({
   ...over,
 });
 
-/**
- * The coupon, as the boxes now ask for a drop.
- *
- * `behind` rides on the night rather than beside it, so a panel listing coupon nights and piece
- * nights together cannot open one against the other's balance. See StackDrop.behind.
- */
+/** The coupon, as the boxes ask for a drop. See StackDrop.behind. */
 const asCoupon = (behind: Map<string, number> = new Map()) => ({
   dropKey: VESTIGE,
-  tradeable: true,
   behind,
 });
 

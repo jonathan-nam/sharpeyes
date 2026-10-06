@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { StackDraft } from "@/components/drop-picker";
-import { CopyPlan, type RunLog, type RunRotation, RunPlan } from "@/components/run-plan";
-import { pieceNote, rotatingDrops, rotationFor, takesByOwner } from "@/lib/loot-rotation";
+import { CopyPlan, type RunLog, RunPlan } from "@/components/run-plan";
 import type { PartyLootPool } from "@/types/loot";
 import { apiFetch, readBack } from "@/lib/api";
 import { useAuth } from "@/lib/use-auth";
@@ -42,7 +41,6 @@ import { useDropIcons } from "@/lib/drop-icons";
 import { useSeatSprites } from "@/lib/seat-sprites";
 import { useRowWrites } from "@/lib/use-row-writes";
 import { useEveryoneOn } from "@/lib/everyone-on";
-import { useShowPieces } from "@/lib/show-pieces";
 import { useShowTimes } from "@/lib/show-times";
 import { useWhoIsOn } from "@/lib/who-is-on";
 import type { Boss } from "@/types/boss";
@@ -130,8 +128,7 @@ export default function RunOrderPage() {
   const [parties, setParties] = useState<Party[]>(seededParties ?? []);
   const [bosses, setBosses] = useState<Boss[]>(seededBosses ?? []);
   const [dropTables, setDropTables] = useState<DropTables>(peek<DropTables>(DROPS_KEY) ?? {});
-  // Only for the loot rotation, which is read off what each week's pickups were. Nothing else on
-  // this page needs the pools, so losing them costs a line on some rows and nothing else.
+  // Only for the coupon balance behind the stack boxes, which is read off each week's pickups.
   const [pools, setPools] = useState<PartyLootPool[]>(peek<PartyLootPool[]>(POOLS_KEY) ?? []);
   // Both only for the coupon balance behind the stack boxes. Empty is a balanced first guess rather
   // than a wrong one: see `behind`.
@@ -163,9 +160,6 @@ export default function RunOrderPage() {
     setAnswered((current) => (current.has(partyId) ? current : new Set(current).add(partyId)));
   }
 
-  /** Each party's own rows, for the rotation to read its answered weeks off. */
-  const lootByParty = new Map(pools.map((pool) => [pool.partyId, pool.loot]));
-
   const [duration, setDuration] = useState(120);
   const [openOnly, setOpenOnly] = useState(true);
   // Whether a run has to seat everyone who is on, kept across visits: how you plan, not something
@@ -183,10 +177,6 @@ export default function RunOrderPage() {
   // The windows are kept while it is off, so ticking it back on gets the same night back. Kept
   // across visits too: the choice is how you plan, not something about tonight.
   const [timed, setTimed] = useShowTimes();
-
-  // Whether the rows say how many pieces to pick up. Presentational only, so it is NOT in
-  // controlsKey: hiding a number does not make the plan below it a plan of a different night.
-  const [showPieces, setShowPieces] = useShowPieces();
 
   // The night on the reset clock: when it starts, when it has to be over, and who is only here for
   // part of it. Every one is a time against reset, signed, which is what the party already says.
@@ -221,7 +211,7 @@ export default function RunOrderPage() {
           // Optional, as it is on Party View: losing it costs a row's drop picker, and a night you
           // cannot log a drop from still tells you what to run and in what order.
           apiFetch<DropTables>(DROPS_KEY, { method: "GET" }, withToken).catch(() => null),
-          // Optional for the same reason: it feeds the rotation and the stack boxes, and a night
+          // Optional for the same reason: it feeds the stack boxes, and a night
           // still tells you what to run without it.
           apiFetch<PartyLootPool[]>(POOLS_KEY, { method: "GET" }, withToken).catch(() => null),
           // Optional, both, and only for the coupon balance the stack boxes open on. Losing either
@@ -280,8 +270,8 @@ export default function RunOrderPage() {
   }
 
   /**
-   * Both lists a logged drop moves: the counts on each config, and the pools the rotation and the
-   * stack boxes are read off.
+   * Both lists a logged drop moves: the counts on each config, and the pools the stack boxes are
+   * read off.
    *
    * The pools matter on this page in particular, because it is where a whole night is logged one
    * run after another: without this, the second run's boxes would open on a balance taken before
@@ -592,44 +582,8 @@ export default function RunOrderPage() {
     };
   };
 
-  /**
-   * Whose turn it is on this run's pieces, or null where the row should say nothing.
-   *
-   * Null in every case but the one worth drawing: a boss with no pooled piece at this mode, a world
-   * where everyone gets their own, and a split that comes out EVEN. An even one needs no telling,
-   * since everybody takes the same number every week and a column of identical figures on every run
-   * is noise the plan does not need.
-   */
-  const rotationOnRun = (party: Party | undefined): RunRotation | null => {
-    if (!party) return null;
-    const drop = rotatingDrops(party, dropTables)[0];
-    if (!drop) return null;
-    const mode = party.difficulty ?? "";
-    const quantity = drop.pieces?.[party.worldType]?.[mode] ?? 0;
-    const bundles = drop.bundles?.[party.worldType]?.[mode] ?? 0;
-    const rotation = rotationFor(party, lootByParty.get(party.id) ?? [], drop, quantity, bundles);
-    if (!rotation || rotation.even) return null;
-    return { drop: rotation.name, takes: takesByOwner(rotation, party) };
-  };
-
-  // Worked out once for the night rather than per reader: the grid draws them, the paste carries
-  // them, and the box that hides them only exists where there is one. Three answers off one pass.
-  const rotations = new Map<string, RunRotation>();
-  for (const planned of plan.runs) {
-    const rotation = rotationOnRun(partyById.get(planned.run.id));
-    if (rotation) rotations.set(planned.run.id, rotation);
-  }
-
-  /** What this run's pieces say, for the paste's Notes column. See pieceNote. */
-  const noteOf = (runId: string): string | null => {
-    const rotation = showPieces ? rotations.get(runId) : undefined;
-    if (!rotation) return null;
-    return pieceNote(rotation.drop, rotation.takes.values());
-  };
-
   const log: RunLog = {
     partyOf: (runId) => partyById.get(runId),
-    rotationOf: (runId) => (showPieces ? (rotations.get(runId) ?? null) : null),
     dropTable: (bossKey) => dropTables[bossKey],
     busy: isSaving,
     onToggleClear: toggleClear,
@@ -878,25 +832,13 @@ export default function RunOrderPage() {
               the button keeps its place however many tabs there are. */}
           <div className="night-plan-copy">
             <div className="night-plan-line">
-              <CopyPlan plan={plan} roster={onTonight} noteOf={noteOf} />
+              <CopyPlan plan={plan} roster={onTonight} />
               {/* How far through the night is, in the words Party View already counts clears in.
                   The rows say which ones; this says how many are left without counting them. */}
               {log && (
                 <span className="night-progress">
                   {progressLabel({ cleared, total: plan.runs.length })}
                 </span>
-              )}
-              {/* Only where a run of this night actually divides pieces. A box that hides nothing
-                  is a control for a feature this party does not have. */}
-              {rotations.size > 0 && (
-                <label className="night-toggle">
-                  <input
-                    type="checkbox"
-                    checked={showPieces}
-                    onChange={(e) => setShowPieces(e.target.checked)}
-                  />
-                  <span>Show Piece Configuration</span>
-                </label>
               )}
             </div>
             {options.length > 1 && (
@@ -925,7 +867,6 @@ export default function RunOrderPage() {
             startAt={shown.startAt}
             timed={shown.timed}
             log={log}
-            noteOf={noteOf}
           />
 
           {/* What was guessed stays on screen. It is what the finishing time is built from, and a

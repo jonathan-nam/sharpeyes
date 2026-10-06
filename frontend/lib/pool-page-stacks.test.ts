@@ -103,8 +103,8 @@ const night = (id: string, droppedOn: string, by: Record<string, number>): Loot 
   bundlesBy: Object.entries(by).map(([memberId, bundles]) => ({ memberId, bundles })),
 });
 
-/** The coupon, as the boxes now ask for a drop: which one, and how a shortfall in it reads. */
-const COUPON = { dropKey: "vestige-of-erion", tradeable: true, behind: new Map<string, number>() };
+/** The coupon, as the boxes ask for a drop. */
+const COUPON = { dropKey: "vestige-of-erion", behind: new Map<string, number>() };
 
 describe("the pool page can show the nights behind a coupon debt", () => {
   it("states both halves of the night that made the debt", () => {
@@ -147,7 +147,7 @@ describe("the pool page can show the nights behind a coupon debt", () => {
 
     const built = page.slice(
       page.indexOf("const stacks = (() =>"),
-      page.indexOf("const piecePickup"),
+      page.indexOf("const summary = summarize(loot);"),
     );
     expect(built.length).toBeGreaterThan(0);
     // Who bent down is a fact about this pool's night, so it is answered here.
@@ -162,7 +162,7 @@ describe("the pool page can show the nights behind a coupon debt", () => {
     // A settled drop has been paid against. Rewriting who picked up which stack would move a figure
     // somebody has already been shown, which is the silent wrong number this repo exists to stop.
     expect(page).toContain("locked: new Set(mine.filter((entry) => entry.closed)");
-    expect(list).toContain("!found.pickup.locked?.has(item.id)");
+    expect(list).toContain("!pickup.locked?.has(item.id)");
     // And the way in is not offered at all when every night is settled.
     expect(pool).toContain("pickup.drops.some((drop) => !pickup.locked?.has(drop.lootId))");
   });

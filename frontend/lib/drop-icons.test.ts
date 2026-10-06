@@ -12,7 +12,6 @@ const drop = (dropKey: string, iconUrl: string | null): BossDrop => ({
   worlds: null,
   quantity: 1,
   fungible: true,
-  untradeable: false,
   pieces: {},
   bundles: {},
 });

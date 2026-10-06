@@ -34,7 +34,7 @@ describe("the stack blocks sit inside the coupon row", () => {
 
   it("draws the night's pickup in it", () => {
     expect(inside).toContain("<StackPickup");
-    expect(inside).toContain("found.pickup.title");
+    expect(inside).toContain("pickup.title");
   });
 
   it("draws the standing split in it, on the last row only", () => {

@@ -40,10 +40,10 @@ CUT_BOX_2 = "eternal-twisted-armor-box"
 DONOR = "eternal-armor-of-oaths-box"
 
 GLOW_CUT = "blissful-nightmare"
-# A third cut, and the one the glow rule alone is wrong for: it is a token, so its file here is
-# catalog/build.py's copy of the inventory icon, and the inventory slot is light. Its shading is
-# solid sprite, not halo, so only outside the silhouette was the black divided back out.
-CORE_CUT = "lingering-twisted-desire"
+# A third cut, and the one the glow rule alone is wrong for: it is a token icon, drawn in the
+# inventory's light slot. Its shading is solid sprite, not halo, so only outside the silhouette was
+# the black divided back out.
+CORE_CUT = DROP_ICONS.parent / "tokens" / "lingering-twisted-desire.png"
 # Cut off a capture with a framed panel behind it. The panel's tan header and its two bevel
 # shades, which the sprite uses nowhere. Its fringe browns are deliberately absent: the sprite has
 # an enclosed #776644 pixel of its own, so those are shared and would prove nothing.
@@ -62,18 +62,19 @@ CONTENT_CAP = int(
 OVERSIZE = {"eternal-armor-of-radiance-box"}
 
 
-def _icon(key: str) -> np.ndarray:
-    icon = cv2.imread(str(DROP_ICONS / f"{key}.png"), cv2.IMREAD_UNCHANGED)
+def _icon(key: str | pathlib.Path) -> np.ndarray:
+    path = key if isinstance(key, pathlib.Path) else DROP_ICONS / f"{key}.png"
+    icon = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
     assert icon is not None, key
     assert icon.shape == (46, 46, 4), f"{key} is {icon.shape}"
     return icon
 
 
-def _alpha(key: str) -> np.ndarray:
+def _alpha(key: str | pathlib.Path) -> np.ndarray:
     return _icon(key)[:, :, 3]
 
 
-def _rgb(key: str) -> np.ndarray:
+def _rgb(key: str | pathlib.Path) -> np.ndarray:
     return _icon(key)[:, :, :3]
 
 

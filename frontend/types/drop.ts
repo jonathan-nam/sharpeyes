@@ -15,13 +15,9 @@ export type BossDrop = {
   // Log can price a queue of rows from one box. False for anything with its own potential lines and
   // its own price, where a queue could only guess which copy went. See lib/lot-sale.ts.
   fungible: boolean;
-  // The item cannot change hands, so it never sells and no settlement can move it. It still divides
-  // by count: entitled against looted is what says whose turn it is next. See isCouponDrop.
-  untradeable: boolean;
   // How many pieces this boss drops of it, keyed by WORLD and then by difficulty. Two keys because
-  // the count really is per world and is not a restatement of perMember: Chaos Kalos gives 5 to the
-  // whole party on Interactive and 2 to EACH member on Heroic. Only the difficulties that drop any
-  // are here: absent means nothing to fill, not none.
+  // the count really is per world and is not a restatement of perMember. Only the difficulties that
+  // drop any are here: absent means nothing to fill, not none.
   //
   // A HEROIC figure is always a count PER PERSON, because Reboot instances every piece it drops, so
   // a drop carrying one is per_member there. build.py refuses the pair any other way. That is what

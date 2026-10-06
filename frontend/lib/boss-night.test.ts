@@ -555,44 +555,14 @@ describe("planAsText", () => {
     expect(table[0]).toBe("       Dave Jr");
   });
 
-  /** The same night with a note on the runs named, keyed by run id. */
-  const notedTextFor = (drafts: DraftRun[], minutes: number, notes: Record<string, string>) => {
-    const roster = rosterFromDrafts(drafts);
-    const { eligible } = screenRuns(
-      runsFromDrafts(drafts),
-      roster.map((p) => p.id),
-    );
-    return planAsText(
-      planNight(eligible, { minutes }).best,
-      roster,
-      (runId) => notes[runId] ?? null,
-    );
-  };
-
-  it("carries a run's note in a last column of its own", () => {
-    const table = fenced(notedTextFor(SPLIT_NIGHT, 180, { "1": "3/2" }));
-    expect(table[0]).toBe("        Dave       Erin      You     Notes");
-    expect(table[1]).toBe("Lotus   Nightlord  Shadower  Bishop  3/2");
-  });
-
   /** The same night, copied down to the runs named. See planAsText's `only`. */
-  const partTextFor = (
-    drafts: DraftRun[],
-    minutes: number,
-    only: string[],
-    notes: Record<string, string> = {},
-  ) => {
+  const partTextFor = (drafts: DraftRun[], minutes: number, only: string[]) => {
     const roster = rosterFromDrafts(drafts);
     const { eligible } = screenRuns(
       runsFromDrafts(drafts),
       roster.map((p) => p.id),
     );
-    return planAsText(
-      planNight(eligible, { minutes }).best,
-      roster,
-      (runId) => notes[runId] ?? null,
-      new Set(only),
-    );
+    return planAsText(planNight(eligible, { minutes }).best, roster, new Set(only));
   };
 
   it("copies part of the night as the same table with fewer rows", () => {
@@ -622,44 +592,6 @@ describe("planAsText", () => {
     // that kept the full night's widths would be a table indented for a row that is not there.
     const table = fenced(partTextFor(SPLIT_NIGHT, 180, ["3"]));
     expect(table).toEqual(["       Dave", "Lucid  Nightlord"]);
-  });
-
-  it("drops the Notes column when the run that had a note is not copied", () => {
-    expect(partTextFor(SPLIT_NIGHT, 180, ["2"], { "1": "3/2" })).not.toContain("Notes");
-    const table = fenced(partTextFor(SPLIT_NIGHT, 180, ["1"], { "1": "3/2" }));
-    expect(table[1]).toBe("Lotus  Nightlord  Shadower  Bishop  3/2");
-  });
-
-  it("draws no Notes column when no run has one", () => {
-    // The column and its head both go, rather than a head over a column of blanks. A paste that
-    // says Notes and then says nothing under it is a heading talking about itself.
-    expect(notedTextFor(SPLIT_NIGHT, 180, {})).not.toContain("Notes");
-    expect(textFor(SPLIT_NIGHT, 180)).not.toContain("Notes");
-  });
-
-  it("leaves the notes column empty on a run that has nothing to say", () => {
-    // Empty, not dropped: the field is still there, so the note on the row below it lands under
-    // the head rather than under You.
-    const table = fenced(notedTextFor(SPLIT_NIGHT, 180, { "3": "2/1" }));
-    expect(table[2]).toBe("Damien  X          Shadower  Bishop");
-    expect(table[3]).toBe("Lucid   Nightlord  X         X       2/1");
-  });
-
-  it("starts the notes column at the same character on every row that fills it", () => {
-    const table = fenced(notedTextFor(SPLIT_NIGHT, 180, { "1": "6/3", "3": "2/1" }));
-    const at = (line: string) => line.indexOf("/") - 1;
-    expect(at(table[1] as string)).toBe(at(table[3] as string));
-    expect((table[0] as string).indexOf("Notes")).toBe(at(table[1] as string));
-  });
-
-  it("never pads a noted row out past its last cell", () => {
-    const table = fenced(notedTextFor(SPLIT_NIGHT, 180, { "1": "3/2" }));
-    expect(table.every((line) => line === line.trimEnd())).toBe(true);
-  });
-
-  it("keeps a note with a tab in it from knocking the column crooked", () => {
-    const table = fenced(notedTextFor(SPLIT_NIGHT, 180, { "1": "3\t2" }));
-    expect(table[1]).toBe("Lotus   Nightlord  Shadower  Bishop  3 2");
   });
 });
 

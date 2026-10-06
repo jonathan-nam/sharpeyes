@@ -11,7 +11,7 @@ import { bossLabel } from "@/lib/boss-difficulty";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { buildDropAudit } from "@/lib/drop-audit";
-import { buildDropLog, isUntradeablePiece } from "@/lib/drop-log";
+import { buildDropLog } from "@/lib/drop-log";
 import { closedByHolder, foldSeats } from "@/lib/vestige-ledger";
 import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
@@ -102,14 +102,7 @@ export default function DropAuditPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lootId, isLoaded]);
 
-  // The Drop Log's own reading, filter and all: an Eternal piece is off that log entirely, so
-  // leaving it in here would spend the coupon sales differently and report a gap the Settled tab
-  // does not. See buildDropLog and isUntradeablePiece.
-  const sellable = pools.map((pool) => ({
-    ...pool,
-    loot: pool.loot.filter((row) => !isUntradeablePiece(row, dropTables)),
-  }));
-  const log = buildDropLog(parties, sellable, dropTables, closedByHolder(settlements).closed);
+  const log = buildDropLog(parties, pools, dropTables, closedByHolder(settlements).closed);
   // The people list first, so somebody is named even after their seat has left every party. Seats
   // then win, because a seat carries the name as this account spells it. Same order as the Drop Log.
   const holderNames = new Map<string, string>();
@@ -120,7 +113,7 @@ export default function DropAuditPage() {
   const audit = buildDropAudit(
     lootId,
     log.entries,
-    sellable,
+    pools,
     parties,
     new Map(bosses.map((b) => [b.bossKey, b])),
     settlements,

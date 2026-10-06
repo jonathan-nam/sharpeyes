@@ -15,9 +15,6 @@
 // recorded and five of them were never even asked about, which is what that assumption costs.
 //
 // What is written is party_loot_bundle (V41). Every figure anybody is owed follows from it on read.
-//
-// Not only coupons any more. An Eternal piece is picked up stack by stack the same way, and the
-// same boxes record it, but the gap it leaves is a TURN rather than a debt: see StackDrop.tradeable.
 
 import { foldSeats, holderKey, holderOf, ranSeats, suggestArrangement } from "./vestige-ledger";
 import type { ShareConfig } from "./vestige-stacks";
@@ -48,28 +45,13 @@ export type StackDrop = {
   /**
    * Each holder's running position on THIS drop, so the odd stack rotates instead of landing on the
    * same seat every week. See openingCounts.
-   *
-   * Carried by the night rather than passed beside it, because one panel now lists nights of two
-   * kinds and each keeps its own balance: a coupon's runs across every party and is settled, a
-   * piece's runs within this one and never is. Paired here so concatenating the two lists cannot
-   * open a night against the other one's map.
    */
   behind: Map<string, number>;
-  /**
-   * Whether what is short here can be handed over afterwards.
-   *
-   * False for an Eternal piece, whose shortfall is a turn to loot next week: see isCouponDrop. It
-   * changes what the boxes may say, since "3.5 due" is a claim nobody can act on when the pieces
-   * cannot move.
-   */
-  tradeable: boolean;
 };
 
-/** Which drop a night is being handed out for, and how a shortfall in it reads. */
+/** Which drop a night is being handed out for. */
 export type PickupDrop = {
   dropKey: string;
-  /** See StackDrop.tradeable. */
-  tradeable: boolean;
   /** See StackDrop.behind. */
   behind: Map<string, number>;
 };
@@ -85,9 +67,7 @@ export type PickupDrop = {
  *
  *  - a drop that is not the one asked for.
  *  - one already sold or taken, whose payouts were pinned from the roster that ran it.
- *  - a night of one COUPON stack, which cannot be shared however anybody agreed. A night of one
- *    PIECE is kept: Easy Kaling drops a single fragment, and whose it was this week is the only
- *    thing that stops it being theirs again next week.
+ *  - a night of one stack, which cannot be shared however anybody agreed.
  *  - a night that folds to ONE holder. One person's three characters took three stacks and all
  *    three are still theirs, so there is nothing to hand out and no debt to get wrong.
  */
@@ -98,7 +78,7 @@ export function assignableDrops(party: Party, loot: Loot[], drop: PickupDrop): S
     if (row.dropKey !== drop.dropKey || row.quantity < 1) continue;
     if (row.soldAt !== null || row.takenByMemberId !== null) continue;
     const bundles = row.bundles ?? 0;
-    if (bundles < (drop.tradeable ? 2 : 1)) continue;
+    if (bundles < 2) continue;
 
     const seats = ranSeats(row, party);
     if (foldSeats(seats).length < 2) continue;
@@ -119,21 +99,9 @@ export function assignableDrops(party: Party, loot: Loot[], drop: PickupDrop): S
       recorded,
       counts: recorded ? counts : {},
       behind: drop.behind,
-      tradeable: drop.tradeable,
     });
   }
   return drops;
-}
-
-/**
- * Whether this night says anything at rest, with nobody typing into it.
- *
- * An unanswered PIECE night does not. Its share is fractional and cannot be handed over, so the only
- * true thing left is whose turn it is, and the rotation block states that already. A coupon night
- * always does, because "60 due" stands whether or not anybody has said who took it.
- */
-export function pickupStated(drop: StackDrop): boolean {
-  return drop.recorded || drop.tradeable;
 }
 
 /**
@@ -251,9 +219,6 @@ export function draftDrop(
     recorded: false,
     counts: {},
     behind,
-    // A ShareConfig is the coupon's deal and nothing else builds one, so a draft is always the
-    // coupon. A piece night is answered on the row it lands in, which is where its balance is.
-    tradeable: true,
   };
 }
 

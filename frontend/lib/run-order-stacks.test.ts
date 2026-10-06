@@ -83,7 +83,6 @@ const table: BossDrop[] = [
     worlds: "INTERACTIVE",
     quantity: 1,
     fungible: true,
-    untradeable: false,
     pieces: { INTERACTIVE: { HARD: 120 } },
     bundles: { INTERACTIVE: { HARD: 3 } },
   },
@@ -138,7 +137,7 @@ describe("the run's picker carries both blocks", () => {
   it("answers the night with the drop and the split on its own save", () => {
     const built = page.slice(
       page.indexOf("const stacksFor ="),
-      page.indexOf("const rotationOnRun"),
+      page.indexOf("const log: RunLog = {"),
     );
     expect(built.length).toBeGreaterThan(0);
     // The pickup rides along with the POST, so the pair cannot half-land. The split is the party's

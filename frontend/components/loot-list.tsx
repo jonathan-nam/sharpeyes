@@ -3,12 +3,10 @@
 import Link from "next/link";
 
 import { LootRow } from "@/components/loot-row";
-import { LootRotation } from "@/components/loot-rotation";
 import { StackAssign } from "@/components/stack-assign";
 import { StackPickup } from "@/components/stack-pickup";
 import { isPieceDrop, type PieceStatus } from "@/lib/drop-log";
-import { pickupStated, type StackDrop } from "@/lib/vestige-pickup";
-import type { Rotation } from "@/lib/loot-rotation";
+import type { StackDrop } from "@/lib/vestige-pickup";
 import type { ShareConfig } from "@/lib/vestige-stacks";
 import type { Loot, SellLootBody } from "@/types/loot";
 import type { Boss } from "@/types/boss";
@@ -32,8 +30,8 @@ export type StackAssignment = {
   /**
    * Each holder's coupon position, for a night that has NO ROW yet.
    *
-   * Only the Add Drop form's draft wants it: every night that exists carries its own, so the two
-   * kinds of night in one panel cannot be opened against each other's. See StackDrop.behind.
+   * Only the Add Drop form's draft wants it: every night that exists carries its own. See
+   * StackDrop.behind.
    */
   behind: Map<string, number>;
   /** The new ratio, by seat id. Absent where the screen states the split rather than answering it. */
@@ -80,8 +78,6 @@ export function LootList({
   bossByKey,
   pieceStatus,
   stacks,
-  rotation,
-  piecePickup,
   splitElsewhere,
   couponRemovable,
   editing,
@@ -108,23 +104,6 @@ export function LootList({
    * can explain is the one somebody argues with, and "40 took, 60 due" is the whole explanation.
    */
   stacks?: StackAssignment;
-  /**
-   * Whose turn it is to bend down, for a piece that cannot change hands.
-   *
-   * Absent where there is nothing to rotate, which is most of the catalog: see rotatingDrops. It is
-   * NOT the coupon split above. That one is a deal about how to divide a pile that can be handed
-   * over afterwards; this is a schedule, because these cannot.
-   */
-  rotation?: Rotation | null;
-  /**
-   * Who picked up which stacks of the rotating piece, drawn under the night it is about.
-   *
-   * Its own prop rather than a second drop inside `stacks`, because a piece rotates on modes that
-   * drop no coupon at all: Chaos Kalos, Normal Kaling and half the others. Hung off the coupon's
-   * block it would be unanswerable on every one of them, and an unanswerable night is what leaves
-   * the rotation with nothing to turn on.
-   */
-  piecePickup?: NightPickup;
   /**
    * The standing split is being drawn somewhere else on this screen, so it is not drawn here.
    *
@@ -206,7 +185,6 @@ export function LootList({
         pieces
         couponRemovable={couponRemovable}
         stacks={stacks}
-        piecePickup={piecePickup}
         splitElsewhere={splitElsewhere}
         editing={editing}
         busy={busy}
@@ -232,39 +210,8 @@ export function LootList({
           />
         </div>
       )}
-      {/* Whose turn it is, which is a fact about the boss and the weeks already answered for, so it
-          stands whether or not this week's piece has fallen yet. Unconditional on the rows above it
-          for that reason, unlike the split, which hangs under its own night when there is one.
-          It frames itself, because the DROP heads it rather than a title of ours. */}
-      {rotation && (
-        <LootRotation
-          rotation={rotation}
-          // Off the same nights the boxes above are drawn from, so the block and the row it sits
-          // under cannot disagree about whether the week has been answered. A week with no piece
-          // logged at all is unanswered, which is what the empty list says.
-          answered={
-            (piecePickup?.drops.length ?? 0) > 0 &&
-            (piecePickup?.drops.every((d) => d.recorded) ?? false)
-          }
-        />
-      )}
     </>
   );
-}
-
-/**
- * The night this row is, and which block carries it.
- *
- * The two are returned together because they have to stay paired: the coupon's list and the piece's
- * carry their own title, their own write and their own balance, and a night opened against the other
- * one's would suggest an arrangement off a debt it has nothing to do with.
- */
-function nightIn(
-  lootId: string,
-  pickup: NightPickup | undefined,
-): { night: StackDrop; pickup: NightPickup } | null {
-  const night = pickup?.drops.find((d) => d.lootId === lootId);
-  return night && pickup ? { night, pickup } : null;
 }
 
 /**
@@ -280,7 +227,6 @@ function LootGroup({
   bossByKey,
   statusOf,
   stacks,
-  piecePickup,
   splitElsewhere,
   couponRemovable,
   editing,
@@ -303,8 +249,6 @@ function LootGroup({
   statusOf?: PieceStatus;
   /** Who picked up which stacks, drawn under the row it is about. */
   stacks?: StackAssignment;
-  /** The same, for the piece that rotates. See LootList. */
-  piecePickup?: NightPickup;
   /** The split is being drawn by the Add Drop form instead. See LootList. */
   splitElsewhere?: boolean;
   /** Whether a coupon row offers Remove. See LootRow's couponRemovable. */
@@ -338,17 +282,13 @@ function LootGroup({
       )}
       <div className="loot-list">
         {rows.map((item) => {
-          // The night this row is and the block it belongs to, when it can still be said who took
-          // what. A row is one drop, so at most one of the two lists holds it.
-          const found = nightIn(item.id, stacks?.pickup) ?? nightIn(item.id, piecePickup);
-          const night = found?.night;
+          // This row's night, when it can still be said who took what.
+          const pickup = stacks?.pickup;
+          const night = pickup?.drops.find((d) => d.lootId === item.id);
           // Boxes only where there is a write to take them and the night is not history. A settled
           // night is history whatever the pool is doing: see NightPickup.locked.
           const answerable = Boolean(
-            found &&
-            (editing ?? false) &&
-            found.pickup.onSave &&
-            !found.pickup.locked?.has(item.id),
+            night && (editing ?? false) && pickup?.onSave && !pickup.locked?.has(item.id),
           );
           return (
             <LootRow
@@ -368,11 +308,11 @@ function LootGroup({
               onSetPaid={(memberId, paid) => onSetPaid(item.id, memberId, paid)}
               onDelete={() => onDelete(item.id)}
             >
-              {night && found && (answerable || pickupStated(night)) && (
+              {night && pickup && (
                 <>
                   {/* Named, because it is a different fact from the row it is in and from the deal
                       below: this is what the night actually went like. */}
-                  <h4 className="loot-group-title is-config">{found.pickup.title}</h4>
+                  <h4 className="loot-group-title is-config">{pickup.title}</h4>
                   <div className="config-vestige">
                     <StackPickup
                       drop={night}
@@ -381,7 +321,7 @@ function LootGroup({
                       // The panel hands down its row's flag. A pool that is the page has one write
                       // per drop instead, so the night being saved is the night that dims.
                       busy={busy ?? isSaving(item.id)}
-                      onSave={found.pickup.onSave}
+                      onSave={pickup.onSave}
                     />
                   </div>
                 </>
