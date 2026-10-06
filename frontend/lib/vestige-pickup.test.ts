@@ -39,7 +39,6 @@ const party = (seats: PartyMember[], over: Partial<Party> = {}): Party => ({
   bossKey: "limbo",
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: null,
   members: seats,
   seats,
   usualRoster: true,
@@ -155,27 +154,18 @@ describe("where the boxes open", () => {
       ],
     });
 
-    expect(openingCounts(saved, party(trio()))).toEqual({ m1: 2, m2: 1 });
+    expect(openingCounts(saved)).toEqual({ m1: 2, m2: 1 });
   });
 
-  it("opens on the agreed looter holding the lot when nothing is recorded", () => {
-    const p = party(trio(), { looterMemberId: "m2" });
-    expect(openingCounts(drop(), p)).toEqual({ m2: 3 });
-  });
-
-  it("ignores a looter who sat the week out", () => {
-    // Bob loots for this party as a rule, and was not there. Opening on him would suggest three
-    // stacks in the hands of somebody who was not in the game. So it falls to the balance instead,
-    // which for a duo on three stacks is two and one: there is no even answer, and that is the
-    // point of the night being answerable at all.
-    const p = party(trio(), { looterMemberId: "m3" });
+  it("opens balanced on the seats that ran", () => {
+    // A duo on three stacks is two and one: there is no even answer, which is why the night asks.
     const night = drop({ ranThatWeek: ["m1", "m2"] });
 
-    expect(openingCounts(night, p)).toEqual({ m1: 2, m2: 1 });
+    expect(openingCounts(night)).toEqual({ m1: 2, m2: 1 });
   });
 
   it("otherwise opens balanced, a stack each", () => {
-    expect(openingCounts(drop(), party(trio()))).toEqual({ m1: 1, m2: 1, m3: 1 });
+    expect(openingCounts(drop())).toEqual({ m1: 1, m2: 1, m3: 1 });
   });
 });
 

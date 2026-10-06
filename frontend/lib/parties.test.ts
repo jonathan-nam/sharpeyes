@@ -55,7 +55,6 @@ const config = (id: string, characterId: string, bossKey: string, others: string
   minutes: null,
   members: [seat("mine", characterId), ...others.map((o) => seat(o))],
   seats: [seat("mine", characterId), ...others.map((o) => seat(o))],
-  looterMemberId: null,
   usualRoster: true,
   skippedThisPeriod: false,
   oneOff: false,

@@ -66,8 +66,8 @@ export function LootPool({
   /**
    * Whether the night's stack boxes take typing. Party View's own model, and for its own reason.
    *
-   * Not always-on. An unanswered night's boxes OPEN on a guess (a named looter, or the balanced
-   * split), so leaving them out would draw a pickup nobody entered as though it had happened. At
+   * Not always-on. An unanswered night's boxes OPEN on a guess (the balanced split), so leaving
+   * them out would draw a pickup nobody entered as though it had happened. At
    * rest the night states what was recorded and nothing else. See StackPickup.
    */
   const [editing, setEditing] = useState(false);

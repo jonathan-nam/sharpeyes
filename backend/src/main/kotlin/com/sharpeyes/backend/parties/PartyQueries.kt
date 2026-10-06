@@ -406,7 +406,6 @@ private fun ResultRow.toPartyResponse(
     solo = this[Party.solo],
     oneOff = this[Party.oneOff],
     retired = !this[Party.standing],
-    looterMemberId = this[Party.looterMemberId]?.toString(),
     members = members,
     seats = seats,
     usualRoster = week.usualRoster,

@@ -189,7 +189,7 @@ export function DropPicker({
               draft && picked === draft.dropKey
                 ? draftDrop(draft.config, Number(count) || 0, draft.behind)
                 : null;
-            setBoxes(opening ? draftBoxes(opening, draft!.party) : {});
+            setBoxes(opening ? draftBoxes(opening) : {});
           }}
         />
       </Field>

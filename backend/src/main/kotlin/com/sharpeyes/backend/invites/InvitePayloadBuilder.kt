@@ -25,7 +25,6 @@ private data class SourceConfig(
     val bossKey: String,
     val difficulty: String?,
     val minutes: Int?,
-    val looterMemberId: Uuid?,
     // The world the sender's own character plays in, which is the world the party is in.
     val worldType: String,
 )
@@ -155,7 +154,6 @@ private fun standingConfigsOf(userId: String): List<SourceConfig> =
                 bossKey = it[BossCatalog.bossKey],
                 difficulty = it[Party.difficulty],
                 minutes = it[Party.minutes],
-                looterMemberId = it[Party.looterMemberId],
                 worldType = it[Characters.worldType],
             )
         }
@@ -214,7 +212,6 @@ private fun mirroredParties(
             continue
         }
 
-        val looterName = roster.firstOrNull { it.id == config.looterMemberId }?.name
         parties +=
             InviteParty(
                 sourcePartyId = config.partyId.toString(),
@@ -224,7 +221,6 @@ private fun mirroredParties(
                 ownName = own.name,
                 members = roster.filterNot { it.id == own.id }.map { it.name },
                 shares = roster.associate { it.name to it.shares },
-                looterName = looterName,
             )
     }
     return parties to omitted

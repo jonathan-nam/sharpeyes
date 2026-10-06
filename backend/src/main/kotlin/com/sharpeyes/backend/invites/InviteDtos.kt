@@ -92,9 +92,6 @@ data class InviteParty(
     val members: List<String>,
     // What each seat takes of a split, by name. A name left out takes one.
     val shares: Map<String, Int> = emptyMap(),
-    // The seat that picks up the pieces, when the party agreed one member loots the lot. Carried
-    // because it is the arrangement, not a fact about whose account recorded it.
-    val looterName: String? = null,
 )
 
 /** A config the link could not carry, named so the drop is visible rather than inferred. */

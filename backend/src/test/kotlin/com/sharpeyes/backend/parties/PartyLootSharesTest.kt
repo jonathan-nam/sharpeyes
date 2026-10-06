@@ -100,42 +100,6 @@ class PartyLootSharesTest {
     private fun sale(sellerId: String) = SellLootRequest(9_500_000_000, "LISTED", "FAIR", sellerId)
 
     @Test
-    fun `a party can name who picks up the pieces, and refuses anybody else`() {
-        transaction {
-            val party = trio()
-            val partyId = Uuid.parse(party.id)
-            val steve = party.members.first { it.name == "Steve" }
-
-            // A duo where the partner loots and sells is the arrangement this is for, so the looter
-            // is not required to be one of your own characters.
-            saveParty(
-                userId,
-                partyId,
-                SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Bob"), looterName = "Steve"),
-                Clock.System.now(),
-            )
-            assertEquals(steve.id, findParty(partyId, userId)!!.looterMemberId)
-
-            // Somebody the party does not have is refused rather than dropped: a party believing one
-            // member loots everything, with nothing recorded, attributes its pieces to nobody.
-            assertTrue(
-                validateLooter("Nobody", Uuid.parse(party.characterId), listOf("Steve", "Bob"))!!
-                    .contains("somebody in this party"),
-            )
-            assertNull(validateLooter(null, Uuid.parse(party.characterId), listOf("Steve")))
-
-            // Cleared by naming nobody, which is the party going back to looting their own.
-            saveParty(
-                userId,
-                partyId,
-                SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Bob")),
-                Clock.System.now(),
-            )
-            assertNull(findParty(partyId, userId)!!.looterMemberId)
-        }
-    }
-
-    @Test
     fun `a drop that stacks is one row with a count on it`() {
         transaction {
             val party = trio()

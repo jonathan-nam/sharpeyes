@@ -58,11 +58,6 @@ export type Party = {
   // How long this party takes on this boss, door to door. Null is nobody having timed it, which
   // Run Order fills with a flat estimate and says so. See lib/boss-minutes.ts.
   minutes: number | null;
-  // The seat that picks up the pieces, when the party agreed one member loots the lot. Null is
-  // everybody looting their own, which is most parties. Not always one of yours: a duo where the
-  // partner loots and sells is the easier arrangement on a boss run with a character that is not on
-  // your account.
-  looterMemberId: string | null;
   // Who ran in the week being shown, your character first. Not always who usually does.
   members: PartyMember[];
   // Every seat this party has ever had, guests and departed members included. What a payout is
@@ -134,9 +129,6 @@ export type SavePartyBody = {
   // decides how every later period reads, so flipping it afterwards would rewrite weeks it has
   // already answered for.
   oneOff?: boolean;
-  // Who picks up the pieces, by character name rather than seat id: seats are matched by name, and a
-  // party being created has no seat ids yet. Null clears it.
-  looterName?: string | null;
 };
 
 /**

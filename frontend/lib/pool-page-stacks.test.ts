@@ -62,7 +62,6 @@ const party: Party = {
   bossKey: "baldrix",
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: null,
   members: [husky, creed],
   seats: [husky, creed],
   usualRoster: true,

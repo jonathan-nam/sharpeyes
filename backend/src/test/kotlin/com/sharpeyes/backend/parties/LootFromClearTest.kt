@@ -106,7 +106,6 @@ class LootFromClearTest {
         difficulty: String? = "EXTREME",
         boss: String = "kalos-the-guardian",
         others: List<String> = listOf("Steve"),
-        looterName: String? = null,
     ): Pair<Uuid, Uuid> {
         val mine = character()
         val now = Clock.System.now()
@@ -117,7 +116,6 @@ class LootFromClearTest {
                 boss,
                 others,
                 difficulty = difficulty,
-                looterName = looterName,
             )
         return mine to createParty(userId, mine, bossId, request, now)
     }
@@ -156,23 +154,6 @@ class LootFromClearTest {
 
             lootFromClear(characterId, bossIdForKey("limbo")!!, "WEEKLY", today, Clock.System.now())
 
-            assertTrue(pool(partyId).isEmpty())
-        }
-    }
-
-    @Test
-    fun `a designated looter does not make the coupons the app's to file either`() {
-        transaction {
-            // The Husky arrangement: the partner loots and sells everything. Naming a looter says who
-            // will be holding the pieces, not that anybody has been.
-            val (characterId, partyId) =
-                party(
-                    difficulty = "HARD",
-                    boss = "limbo",
-                    others = listOf("Steve", "Bob"),
-                    looterName = "Steve",
-                )
-            lootFromClear(characterId, bossIdForKey("limbo")!!, "WEEKLY", today, Clock.System.now())
             assertTrue(pool(partyId).isEmpty())
         }
     }

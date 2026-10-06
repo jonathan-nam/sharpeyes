@@ -147,10 +147,6 @@ class AccountInviteTest {
                     shares = mapOf("CreedBratton" to 2),
                     difficulty = "CHAOS",
                     minutes = 12,
-                    // The looter is the point of the whole feature: an Interactive party settles
-                    // on one person picking everything up, and the arrangement is a fact about
-                    // the party rather than about whose account recorded it.
-                    looterName = "CreedBratton",
                 )
             val source = createParty(senderId, mine, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
 
@@ -163,10 +159,9 @@ class AccountInviteTest {
             assertEquals("CHAOS", party.difficulty)
             assertEquals(12, party.minutes)
             assertEquals(source.toString(), party.id)
-            // The looter and the shares stay on the one row, where they always were. Nothing was
-            // copied, so there is nothing that could come to disagree with them.
+            // The shares stay on the one row, where they always were. Nothing was copied, so there is
+            // nothing that could come to disagree with them.
             assertEquals(2, seatFor(source, "CreedBratton")[PartyMember.shares])
-            assertEquals("CreedBratton", nameOf(partyRow(source)[Party.looterMemberId]!!, seat = true))
         }
     }
 
@@ -722,8 +717,6 @@ class AccountInviteTest {
             .where { Party.userId eq userId }
             .toList()
 
-    private fun partyRow(partyId: Uuid) = Party.selectAll().where { Party.id eq partyId }.single()
-
     private fun seatNamesOf(partyId: Uuid): List<String> =
         PartyMember
             .selectAll()
@@ -738,16 +731,6 @@ class AccountInviteTest {
         .selectAll()
         .where { (PartyMember.partyId eq partyId) and (PartyMember.name eq name) }
         .single()
-
-    private fun nameOf(
-        id: Uuid,
-        seat: Boolean = false,
-    ): String =
-        if (seat) {
-            PartyMember.selectAll().where { PartyMember.id eq id }.single()[PartyMember.name]
-        } else {
-            Characters.selectAll().where { Characters.id eq id }.single()[Characters.name]
-        }
 
     @Test
     fun `a character the recipient did not confirm is not taken, and seats no one`() {

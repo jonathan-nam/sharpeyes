@@ -316,7 +316,6 @@ function LootGroup({
                   <div className="config-vestige">
                     <StackPickup
                       drop={night}
-                      party={party}
                       editing={answerable}
                       // The panel hands down its row's flag. A pool that is the page has one write
                       // per drop instead, so the night being saved is the night that dims.

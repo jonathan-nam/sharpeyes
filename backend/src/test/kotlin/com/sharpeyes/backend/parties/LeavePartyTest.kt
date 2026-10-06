@@ -271,26 +271,6 @@ class LeavePartyTest {
     }
 
     @Test
-    fun `the looter designation lapses with the seat`() {
-        transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
-            character(owner, "Baldrix", position = 1)
-            link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
-            val partyId = Uuid.parse(party.id)
-            val mine = seat(party, "CreedBratton")!![PartyMember.id]
-            Party.update({ Party.id eq partyId }) { it[looterMemberId] = mine }
-
-            assertTrue(leave(member, party))
-
-            // "If the seat leaves the party the designation lapses", V36's own words. Left standing
-            // it would keep filing the party's pieces to somebody who is not in it.
-            assertNull(Party.selectAll().where { Party.id eq partyId }.single()[Party.looterMemberId])
-        }
-    }
-
-    @Test
     fun `a party I have no seat in is not mine to leave`() {
         transaction {
             val theirs = character(owner, "mechyfechy")

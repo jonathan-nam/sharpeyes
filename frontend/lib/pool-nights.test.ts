@@ -35,7 +35,6 @@ const party = (members: PartyMember[], difficulty: string | null): Party => ({
   bossKey: "kalos-the-guardian",
   difficulty,
   minutes: null,
-  looterMemberId: null,
   members,
   seats: members,
   usualRoster: true,

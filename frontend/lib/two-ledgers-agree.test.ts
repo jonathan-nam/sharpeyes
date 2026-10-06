@@ -60,7 +60,7 @@ const seat = (id: string, name: string, mine: boolean): PartyMember => ({
 
 const SEATS = [seat("m1", "Husky", true), seat("m2", "BroChar", false)];
 
-const party = (id: string, looter: string): Party => ({
+const party = (id: string): Party => ({
   id,
   slug: id,
   characterId: "char-m1",
@@ -71,7 +71,6 @@ const party = (id: string, looter: string): Party => ({
   bossKey: "limbo",
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: looter,
   members: SEATS,
   seats: SEATS,
   usualRoster: true,
@@ -85,7 +84,7 @@ const party = (id: string, looter: string): Party => ({
   updatedAt: "2026-07-01T00:00:00Z",
 });
 
-const coupon = (id: string, quantity: number, droppedOn: string): Loot => ({
+const coupon = (id: string, quantity: number, droppedOn: string, looter: string): Loot => ({
   id,
   dropKey: VESTIGE,
   customName: null,
@@ -107,8 +106,8 @@ const coupon = (id: string, quantity: number, droppedOn: string): Loot => ({
   soldAt: null,
   payouts: [],
   ranThatWeek: [],
-  bundles: null,
-  bundlesBy: [],
+  bundles: 3,
+  bundlesBy: [{ memberId: looter, bundles: 3 }],
 });
 
 /**
@@ -119,10 +118,10 @@ const coupon = (id: string, quantity: number, droppedOn: string): Loot => ({
  * which is what makes it worth asking both cards the same question.
  */
 const bothPiles = (theirs: number) => {
-  const parties = [party("pa", "m1"), party("pb", "m2")];
+  const parties = [party("pa"), party("pb")];
   const pools: PartyLootPool[] = [
-    { partyId: "pa", loot: [coupon("l1", 60, "2026-08-06")] },
-    { partyId: "pb", loot: [coupon("l2", 30, "2026-08-07")] },
+    { partyId: "pa", loot: [coupon("l1", 60, "2026-08-06", "m1")] },
+    { partyId: "pb", loot: [coupon("l2", 30, "2026-08-07", "m2")] },
   ];
   const rows =
     theirs > 0

@@ -85,13 +85,7 @@ internal fun leaveParty(
     // by hand. Leaving it bound would leave the party readable by the person who just left it,
     // which is the same failure unlinkPerson exists to avoid from the other end.
     PartyMember.update({ PartyMember.id inList seatIds }) { it[linkedCharacterId] = null }
-    // "If the seat leaves the party the designation lapses", which is V36's own reading of its ON
-    // DELETE SET NULL. A retired seat is not deleted, so nothing in SQL fires and it is said here.
-    val lapses = seatIds.any { it == party[Party.looterMemberId] }
-    Party.update({ Party.id eq partyId }) {
-        if (lapses) it[looterMemberId] = null
-        it[updatedAt] = now
-    }
+    Party.update({ Party.id eq partyId }) { it[updatedAt] = now }
     return true
 }
 

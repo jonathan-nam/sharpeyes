@@ -361,7 +361,6 @@ export default function RunOrderPage() {
               .map((member) => member.name),
             difficulty: party.difficulty,
             minutes: party.minutes,
-            looterName: party.seats.find((seat) => seat.id === party.looterMemberId)?.name ?? null,
             shares: named,
           } satisfies SavePartyBody),
         },

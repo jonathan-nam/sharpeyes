@@ -373,7 +373,6 @@ export default function PartiesPage() {
               .map((m) => m.name),
             difficulty: party.difficulty,
             minutes: party.minutes,
-            looterName: party.seats.find((s) => s.id === party.looterMemberId)?.name ?? null,
             shares: named,
           } satisfies SavePartyBody),
         },

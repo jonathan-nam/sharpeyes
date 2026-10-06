@@ -77,7 +77,6 @@ const party = (): Party => ({
   bossKey: "limbo",
   difficulty: "HARD",
   minutes: null,
-  looterMemberId: "m1",
   members: SEATS,
   seats: SEATS,
   usualRoster: true,
@@ -114,8 +113,8 @@ const coupon = (): Loot => ({
   soldAt: null,
   payouts: [],
   ranThatWeek: [],
-  bundles: null,
-  bundlesBy: [],
+  bundles: 3,
+  bundlesBy: [{ memberId: "m1", bundles: 3 }],
 });
 
 /** One sale out of your pile, naming what of it was Bro's. */
