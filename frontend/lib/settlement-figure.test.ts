@@ -165,18 +165,22 @@ describe("what the card says a person owes", () => {
     expect(source).toContain(
       "takes ${moved(offset.offered ? offset.amount : 0)} off what ${row.name} owes you",
     );
-    // POT BY POT in the CAPTION, which is a sentence about what a press will record: one Offset
-    // covers the shares you owe and their own money you are holding, and naming them separately is
-    // what says which row each lands on. The section heading above it carries their sum, that being
-    // the figure the press comes to: see unsettledParts for why adding these two is safe.
+    // ONE figure, the Unsettled Amounts one: the shares you owe and their money you are holding,
+    // added. Naming the two pots in the caption repeated the list under that heading.
     expect(source).toContain(
-      "? `${formatMesos(shares, true)} of shares and ${formatMesos(row.holding, true)} you are holding`",
+      "const moved = (shares: number) => formatMesos(shares + row.holding, true);",
     );
-    expect(source).toContain(": formatMesos(shares > 0 ? shares : row.holding, true);");
     // And the share figure it promises is the one the act writes: `parts` is what the request carries.
     expect(settlement).toContain(
       "const amount = parts.reduce((sum, part) => sum + part.amount, 0);",
     );
+  });
+
+  it("counts the held coupons off the sales the held figure is made of", () => {
+    // `piecesAnswered.theirs` counts decided sales too: Bro's card read 4735 coupons beside the
+    // money of 330.
+    expect(source).toContain("held.reduce((sum, sale) => sum + sale.pieces, 0),");
+    expect(source).not.toContain("countedLabel(row.piecesAnswered.theirs");
   });
 
   it("splits an old offset with NO control, since it is not a decision anybody is making", () => {

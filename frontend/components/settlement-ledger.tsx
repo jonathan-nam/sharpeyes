@@ -471,15 +471,10 @@ function SettlementCard({
   const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;
 
   /**
-   * What an act moves, pot by pot.
-   *
-   * Never one sum of the two: this card keeps them apart everywhere, and the act writes them apart.
-   * With one pot in play it reads as the single figure it always did.
+   * The mesos an act moves: the shares and the money you are holding, added, which is the
+   * Unsettled Amounts figure. The list under that figure is where the two are told apart.
    */
-  const moved = (shares: number) =>
-    shares > 0 && row.holding > 0
-      ? `${formatMesos(shares, true)} of shares and ${formatMesos(row.holding, true)} you are holding`
-      : formatMesos(shares > 0 ? shares : row.holding, true);
+  const moved = (shares: number) => formatMesos(shares + row.holding, true);
 
   /**
    * The same, with the dollar half beside it, for the acts that move both.
@@ -522,9 +517,12 @@ function SettlementCard({
     },
     {
       key: "holding",
-      // Their coupons, sold by you. The pieces the money answered for lead the row, the way they do
-      // on the mirror of this under `Owed`.
-      label: countedLabel(row.piecesAnswered.theirs, `coupons of ${row.name}'s I sold`),
+      // Their coupons, sold by you, counted off the same undecided sales the figure is. Not
+      // `piecesAnswered.theirs`: that counts decided sales too, and read 4735 over 330 coupons' money.
+      label: countedLabel(
+        held.reduce((sum, sale) => sum + sale.pieces, 0),
+        `coupons of ${row.name}'s I sold`,
+      ),
       mesos: row.holding,
       detail: "",
     },
