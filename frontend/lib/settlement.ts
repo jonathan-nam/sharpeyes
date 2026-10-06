@@ -39,7 +39,7 @@ export type HeldOfYours = {
   recordedAt?: string;
   /**
    * Pieces this person is still owed off this night, never the size of the pile holding them: a
-   * sale that answered for 130 coupons has already come off the oldest nights. `pieces + sold` is
+   * sale that answered for 130 coupons has already come off the nights before it. `pieces + sold` is
    * what the night owed to begin with.
    */
   pieces: number;
@@ -1129,7 +1129,7 @@ function mesosByWeek(sale: CouponSale, pieces: Map<string, number>): Map<string,
  * told, which is a typed credit, a payment, a sale the nights cannot cover, or a night since deleted.
  *
  * NEVER the week it was sold or offset. A share names its drop, so its week is fact. A sale of
- * coupons names none, and is placed by the same oldest-first spend that draws the nights it answered
+ * coupons names none, and is placed by the same newest-first spend that draws the nights it answered
  * (see placeSales), its money divided over the weeks by pieces with the odd meso on the last, so a
  * sale's weeks always add up to the sale.
  */
@@ -1169,7 +1169,7 @@ export function weekSplit(
 
 /**
  * The bosses each coupon sale of theirs came off, biggest first, or null where the nights cannot
- * cover it. The same oldest-first placement as weekSplit, so the bosses named are the nights the card
+ * cover it. The same newest-first placement as weekSplit, so the bosses named are the nights the card
  * already draws as answered.
  */
 export function bossesOfSales(

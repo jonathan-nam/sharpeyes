@@ -232,8 +232,8 @@ type Night = HolderLedger["drops"][number];
  * for them. That is the same pair the Settlement Ledger cancels and V56 prices, and it is why a night
  * can go quiet without anybody being paid: 20 of theirs against 20 of yours is nothing changing hands.
  *
- * Spent OLDEST NIGHT FIRST, partially, through the primitive the Settlement Ledger spends with. A
- * sale cannot have come off a night that had not happened yet, the reckoning receivedSinceClosing
+ * Sales first, NEWEST night first through the primitive the Settlement Ledger spends with, then
+ * their own coupons, oldest night first. A sale cannot have come off a night logged after it, the reckoning receivedSinceClosing
  * applies to money (#350), and two surfaces reducing one night by different rules are two answers.
  * Not the order the rows are DRAWN in: that is the catalog's, so two bosses in one week never swap
  * places, and it is not the order the nights happened in.
@@ -303,7 +303,7 @@ export function spendAnswered(
  * drawn they WERE the queue: the handful of rows with a debt under them were lost among them.
  * `clean` and `answered` are kept because they are how the tests pin which fate a night took.
  *
- * Answered NIGHT BY NIGHT, oldest first. See foldAnswered for why, and for the order.
+ * Answered NIGHT BY NIGHT. See foldAnswered for why, and for the order.
  *
  * A CLOSED night is none of the three. It is the Settled View's, which names the act that closed it,
  * who with, and what it wrote off. See lib/settled-log.ts.
