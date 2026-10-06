@@ -179,6 +179,13 @@ describe("what the card says a person owes", () => {
     );
   });
 
+  it("counts the held coupons off the sales the held figure is made of", () => {
+    // `piecesAnswered.theirs` counts decided sales too: Bro's card read 4735 coupons beside the
+    // money of 330.
+    expect(source).toContain("held.reduce((sum, sale) => sum + sale.pieces, 0),");
+    expect(source).not.toContain("countedLabel(row.piecesAnswered.theirs");
+  });
+
   it("splits an old offset with NO control, since it is not a decision anybody is making", () => {
     // Asking somebody to click through their own history one entry at a time is asking them to do
     // the migration by hand. The guard refuses on an unresolved share, which is what makes running

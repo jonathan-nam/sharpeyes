@@ -522,9 +522,12 @@ function SettlementCard({
     },
     {
       key: "holding",
-      // Their coupons, sold by you. The pieces the money answered for lead the row, the way they do
-      // on the mirror of this under `Owed`.
-      label: countedLabel(row.piecesAnswered.theirs, `coupons of ${row.name}'s I sold`),
+      // Their coupons, sold by you, counted off the same undecided sales the figure is. Not
+      // `piecesAnswered.theirs`: that counts decided sales too, and read 4735 over 330 coupons' money.
+      label: countedLabel(
+        held.reduce((sum, sale) => sum + sale.pieces, 0),
+        `coupons of ${row.name}'s I sold`,
+      ),
       mesos: row.holding,
       detail: "",
     },
