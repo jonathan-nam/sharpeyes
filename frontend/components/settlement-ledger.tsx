@@ -471,15 +471,10 @@ function SettlementCard({
   const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;
 
   /**
-   * What an act moves, pot by pot.
-   *
-   * Never one sum of the two: this card keeps them apart everywhere, and the act writes them apart.
-   * With one pot in play it reads as the single figure it always did.
+   * The mesos an act moves: the shares and the money you are holding, added, which is the
+   * Unsettled Amounts figure. The list under that figure is where the two are told apart.
    */
-  const moved = (shares: number) =>
-    shares > 0 && row.holding > 0
-      ? `${formatMesos(shares, true)} of shares and ${formatMesos(row.holding, true)} you are holding`
-      : formatMesos(shares > 0 ? shares : row.holding, true);
+  const moved = (shares: number) => formatMesos(shares + row.holding, true);
 
   /**
    * The same, with the dollar half beside it, for the acts that move both.
