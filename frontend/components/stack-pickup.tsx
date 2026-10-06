@@ -46,15 +46,8 @@ export function StackPickup({
   return <PickupBoxes drop={drop} party={party} busy={busy} onSave={onSave} />;
 }
 
-/**
- * What one seat's stacks come to, in pieces.
- *
- * "took, due" only where the gap between them is a DEBT. Seven Eternal pieces across two people is
- * 3.5 each, which nobody can be handed and nobody can be short of: what is true of a piece night is
- * how many somebody picked up, and the turn that moves is the rotation block's to state.
- */
-function tallyLabel(drop: StackDrop, tally: Tally): string {
-  if (!drop.tradeable) return String(tally.took);
+/** What one seat's stacks come to, in pieces. */
+function tallyLabel(tally: Tally): string {
   return `${tally.took} took, ${tally.due} due`;
 }
 
@@ -71,11 +64,9 @@ function PickupSummary({ drop }: { drop: StackDrop }) {
           <span className="config-share" key={seat.id}>
             {seat.name}
             {/* Only what is known. With nothing recorded, what anybody took is exactly what this
-                screen cannot say, and what they are due is true either way. On a PIECE night it is
-                not: 3.5 of a ring is a share nobody can hold. pickupStated keeps that night off
-                screen, and this says nothing rather than trusting it to. */}
+                screen cannot say, and what they are due is true either way. */}
             <span className="config-share-stacks">
-              {drop.recorded ? tallyLabel(drop, tally) : drop.tradeable ? `${tally.due} due` : ""}
+              {drop.recorded ? tallyLabel(tally) : `${tally.due} due`}
             </span>
           </span>
         );
@@ -139,7 +130,7 @@ function PickupBoxes({
                 aria-label={`Stacks ${seat.name} picked up`}
                 disabled={busy}
               />
-              <span className="config-share-stacks">{tally ? tallyLabel(drop, tally) : ""}</span>
+              <span className="config-share-stacks">{tally ? tallyLabel(tally) : ""}</span>
             </label>
           );
         })}
@@ -217,7 +208,7 @@ export function StackPickupDraft({
                 aria-label={`Stacks ${seat.name} picked up`}
                 disabled={busy}
               />
-              <span className="config-share-stacks">{tally ? tallyLabel(drop, tally) : ""}</span>
+              <span className="config-share-stacks">{tally ? tallyLabel(tally) : ""}</span>
             </label>
           );
         })}

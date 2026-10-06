@@ -28,7 +28,6 @@ import { buildDropLog, couponsOutstandingByParty, pieceStatusByParty } from "@/l
 import { dropsInWeek, NOTHING_OUTSTANDING } from "@/lib/loot";
 import { closedByHolder, outstanding, runningBalance, stillOpen } from "@/lib/vestige-ledger";
 import { assignableDrops } from "@/lib/vestige-pickup";
-import { behindByHolder, rotatingDrops, rotationFor } from "@/lib/loot-rotation";
 import { shareConfig } from "@/lib/vestige-stacks";
 import {
   byBoss,
@@ -590,28 +589,6 @@ export default function PartiesPage() {
    * The live view only, the same rule the pool and the roster follow. A past week is shown and not
    * edited, and its share is now pinned anyway: see pinWeeksAlreadyWritten.
    */
-  /**
-   * Whose turn it is to loot the boss's Eternal pieces, or null where nothing rotates.
-   *
-   * Read, never written: the balance comes off the arrangements already recorded on this party's own
-   * rows. Not shown on a past week, the same rule the split and the roster follow, because "this
-   * week" says nothing when the week being looked at is over.
-   *
-   * One rotation, because a boss's token modes and its fragment modes do not overlap, so a party
-   * running one mode sees one of them. rotatingDrops returns a list rather than picking, which is
-   * what would hide the second the day that stops being true.
-   */
-  const rotationOf = (party: Party) => {
-    if (history) return null;
-    const drop = rotatingDrops(party, dropTables)[0];
-    if (!drop) return null;
-    const quantity = drop.pieces?.[party.worldType]?.[party.difficulty ?? ""] ?? 0;
-    // The stacks it falls in, which is what a party can actually hand over. Absent is uncounted, and
-    // rotationFor refuses it rather than assuming the drop divides down to the single piece.
-    const bundles = drop.bundles?.[party.worldType]?.[party.difficulty ?? ""] ?? 0;
-    return rotationFor(party, lootByParty.get(party.id) ?? [], drop, quantity, bundles);
-  };
-
   const stacksFor = (party: Party) => {
     if (history) return undefined;
     const config = shareConfig(
@@ -640,7 +617,7 @@ export default function PartiesPage() {
         drops: assignableDrops(
           party,
           dropsInWeek(lootByParty.get(party.id) ?? [], view?.currentWeekStart ?? null),
-          { dropKey: VESTIGE, tradeable: true, behind },
+          { dropKey: VESTIGE, behind },
         ),
         // A settled night is history. The server refuses to rewrite one either way (see
         // settledAlready), so without this the boxes would open on a save that cannot land.
@@ -651,36 +628,6 @@ export default function PartiesPage() {
             body: JSON.stringify({ bundles }),
           }),
       },
-    };
-  };
-
-  /**
-   * Who picked up which stacks of the rotating piece, on this week's night of it.
-   *
-   * The write the rotation reads. Nothing else produces one: the Drop Ledger leaves pieces out
-   * entirely, and the coupon's boxes only ever covered the coupon, so every rotation on the account
-   * was drawn off zero answered weeks and broke its tie by seat order instead.
-   *
-   * Its own block rather than a second drop in `stacksFor`, which needs a coupon config and so has
-   * none on Chaos Kalos or Normal Kaling, both of which rotate a piece.
-   *
-   * No `locked`: a settlement is a coupon's, and a piece has none to close.
-   */
-  const piecePickupFor = (party: Party) => {
-    const rotation = rotationOf(party);
-    if (!rotation) return undefined;
-    return {
-      title: "Looted this week",
-      drops: assignableDrops(
-        party,
-        dropsInWeek(lootByParty.get(party.id) ?? [], view?.currentWeekStart ?? null),
-        { dropKey: rotation.dropKey, tradeable: false, behind: behindByHolder(rotation) },
-      ),
-      onSave: (lootId: string, bundles: Record<string, number>) =>
-        writeDrop(party, lootId, "/bundles", {
-          method: "PUT",
-          body: JSON.stringify({ bundles }),
-        }),
     };
   };
 
@@ -828,8 +775,6 @@ export default function PartiesPage() {
         onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
         pool={poolFor(party)}
         stacks={stacksFor(party)}
-        rotation={rotationOf(party)}
-        piecePickup={piecePickupFor(party)}
         onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
         onTakeOff={history ? undefined : () => takeOff(party)}
         heading={
@@ -1080,8 +1025,6 @@ export default function PartiesPage() {
                         onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
                         pool={poolFor(party)}
                         stacks={stacksFor(party)}
-                        rotation={rotationOf(party)}
-                        piecePickup={piecePickupFor(party)}
                         onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
                         onTakeOff={history ? undefined : () => takeOff(party)}
                         heading={

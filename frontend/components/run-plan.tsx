@@ -49,25 +49,9 @@ function waitLine(time: RunTime): string {
  * in the same pool. Absent for a hand-typed night: there is no config behind those rows, so there
  * is nothing to write to and no controls are drawn.
  */
-/**
- * Whose turn it is on a run's pieces, keyed by the person columns.
- *
- * Only ever built for a run whose pieces do NOT divide evenly: an even one has everybody on the
- * same number every week, and a column of identical figures on every row is noise. See rotationOnRun.
- */
-export type RunRotation = {
-  /** The piece being divided, for the cell's tooltip. The grid has no room to name it outright. */
-  drop: string;
-  /** Pieces to pick up, by person id. A person with no entry takes none this week, which is a real
-   *  answer on a night that will not divide. */
-  takes: Map<string, number>;
-};
-
 export type RunLog = {
   /** The config a planned run came from, by run id. */
   partyOf: (runId: string) => Party | undefined;
-  /** Whose turn it is on this run's pieces, or null where the row has nothing to say. */
-  rotationOf: (runId: string) => RunRotation | null;
   /** That boss's drop table, for the picker. Undefined leaves it offering "something else". */
   dropTable: (bossKey: string) => BossDrop[] | undefined;
   /** THIS config's write, not the page's: one row saving must not dim the rest of the night. */
@@ -131,12 +115,7 @@ function sameRuns(a: Set<string>, b: Set<string>): boolean {
  * all of them run together. Rebuilt through the same planAsText the button uses, so the two cannot
  * disagree about what a row says.
  */
-function useCopyPicked(
-  grid: RefObject<HTMLDivElement | null>,
-  plan: Plan,
-  roster: NightPerson[],
-  noteOf?: (runId: string) => string | null,
-) {
+function useCopyPicked(grid: RefObject<HTMLDivElement | null>, plan: Plan, roster: NightPerson[]) {
   // Drawn as well as copied. A drag that highlights three cells and copies three rows is the
   // screen and the clipboard saying different things, which is the one thing this app does not do.
   const [picked, setPicked] = useState<Set<string>>(new Set());
@@ -161,12 +140,12 @@ function useCopyPicked(
       // ended in the same frame.
       const rows = pickedRuns(el, document.getSelection());
       if (rows.size === 0 || !e.clipboardData) return;
-      e.clipboardData.setData("text/plain", planAsText(plan, roster, noteOf, rows));
+      e.clipboardData.setData("text/plain", planAsText(plan, roster, rows));
       e.preventDefault();
     };
     document.addEventListener("copy", onCopy);
     return () => document.removeEventListener("copy", onCopy);
-  }, [grid, plan, roster, noteOf]);
+  }, [grid, plan, roster]);
 
   return picked;
 }
@@ -193,7 +172,6 @@ export function RunPlan({
   startAt,
   timed = true,
   log,
-  noteOf,
 }: {
   plan: Plan;
   roster: NightPerson[];
@@ -202,8 +180,6 @@ export function RunPlan({
   timed?: boolean;
   /** Absent for a hand-typed night, which has no config to answer for. See RunLog. */
   log?: RunLog;
-  /** What a run says about its loot, for a copy's last column. The same one CopyPlan takes. */
-  noteOf?: (runId: string) => string | null;
 }) {
   const { people, rows } = planGrid(plan, roster);
   const times = timed ? runTimes(plan, roster, startAt) : [];
@@ -220,7 +196,7 @@ export function RunPlan({
 
   // Ctrl+C over a drag through the rows, as a table of just those rows. See useCopyPicked.
   const gridRef = useRef<HTMLDivElement>(null);
-  const picked = useCopyPicked(gridRef, plan, roster, noteOf);
+  const picked = useCopyPicked(gridRef, plan, roster);
 
   // The rule and the wait rows span the table, so they have to count the clear column too.
   const width = people.length + 1 + (log ? 1 : 0);
@@ -260,9 +236,6 @@ export function RunPlan({
             const time = times[row];
             const tick = ticks[row];
             const party = log?.partyOf(planned.run.id);
-            // Only where the pieces will not divide, which is the night somebody has to be told
-            // about. See RunRotation.
-            const rotation = log?.rotationOf(planned.run.id) ?? null;
             const pool = party ? poolSize(party) : 0;
             // Every drop, not just the outstanding ones, but quietly once there is nothing left to
             // do with them. Same two states the party row's summary has.
@@ -402,20 +375,6 @@ export function RunPlan({
                               </span>
                             )}
                             {cell.character}
-                            {/* How many pieces to pick up, on the night it matters. Drawn on the
-                                person's own cell because the grid already means "this person, this
-                                run", so the number needs no label to say whose it is.
-
-                                A zero is DRAWN, not left out: somebody's turn is to take none, and
-                                an empty cell there reads as the rotation having forgotten them. */}
-                            {rotation && (
-                              <span
-                                className="run-take"
-                                title={`${rotation.takes.get(person.id) ?? 0} ${rotation.drop} for ${person.name}`}
-                              >
-                                {rotation.takes.get(person.id) ?? 0}
-                              </span>
-                            )}
                           </>
                         )}
                       </td>
@@ -492,16 +451,7 @@ export function RunPlan({
 }
 
 /** The plan as text on the clipboard, which is where a party actually reads it. */
-export function CopyPlan({
-  plan,
-  roster,
-  noteOf,
-}: {
-  plan: Plan;
-  roster: NightPerson[];
-  /** What each run has to say about its loot, for the paste's last column. See planAsText. */
-  noteOf?: (runId: string) => string | null;
-}) {
+export function CopyPlan({ plan, roster }: { plan: Plan; roster: NightPerson[] }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -516,7 +466,7 @@ export function CopyPlan({
       className={copied ? "copy-amount copied" : "copy-amount"}
       onClick={() => {
         navigator.clipboard
-          ?.writeText(planAsText(plan, roster, noteOf))
+          ?.writeText(planAsText(plan, roster))
           .then(() => setCopied(true))
           .catch(() => setCopied(false));
       }}

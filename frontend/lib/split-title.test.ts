@@ -7,10 +7,6 @@ describe("splitTitle", () => {
     expect(splitTitle("Vestige of Erion Coupon")).toBe("Vestige of Erion Config");
   });
 
-  it("leaves a piece's name whole", () => {
-    expect(splitTitle("Distorted Ambition")).toBe("Distorted Ambition Config");
-  });
-
   it("only takes the word off the END", () => {
     // Nothing is named this today. It is here so the rule cannot quietly become "delete the word
     // coupon wherever it appears", which would maul a drop named for one.

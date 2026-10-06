@@ -23,7 +23,6 @@ import {
 import { useDropIcons } from "@/lib/drop-icons";
 import { NOTHING_OUTSTANDING, poolLabel, summarize } from "@/lib/loot";
 import { assignableDrops } from "@/lib/vestige-pickup";
-import { behindByHolder, rotatingDrops, rotationFor } from "@/lib/loot-rotation";
 import { shareConfig } from "@/lib/vestige-stacks";
 import { closedByHolder } from "@/lib/vestige-ledger";
 import { ownMember, partySizeLabel } from "@/lib/parties";
@@ -272,7 +271,6 @@ export default function PartyPage() {
         // nothing is written until the button is pressed.
         drops: assignableDrops(party, loot, {
           dropKey: VESTIGE,
-          tradeable: true,
           behind: new Map<string, number>(),
         }),
         // Off the ledger's own notion of finished, which is the settlements and not this party's
@@ -284,41 +282,6 @@ export default function PartyPage() {
     };
   })();
 
-  /**
-   * Who picked up which stacks of the rotating piece, over this party's whole pool.
-   *
-   * The write the rotation reads, and nothing else on the account produces one: the Drop Ledger
-   * leaves pieces out, and the coupon's boxes only ever covered the coupon.
-   *
-   * Its own block for the reason Party View's is: `stacks` needs a coupon config, and Chaos Kalos
-   * and Normal Kaling rotate a piece while dropping no coupon at all.
-   *
-   * The whole pool, unlike Party View's week, so a night older than tonight can still be answered.
-   * That is what seeds a rotation nobody has ever recorded a week of.
-   */
-  const piecePickup = (() => {
-    if (!party) return undefined;
-    const drop = rotatingDrops(party, dropTables)[0];
-    if (!drop) return undefined;
-    const mode = party.difficulty ?? "";
-    const rotation = rotationFor(
-      party,
-      loot,
-      drop,
-      drop.pieces?.[party.worldType]?.[mode] ?? 0,
-      drop.bundles?.[party.worldType]?.[mode] ?? 0,
-    );
-    if (!rotation) return undefined;
-    return {
-      title: "Looted",
-      drops: assignableDrops(party, loot, {
-        dropKey: drop.dropKey,
-        tradeable: false,
-        behind: behindByHolder(rotation),
-      }),
-      onSave: setBundles,
-    };
-  })();
   const summary = summarize(loot);
   const poolLine = poolLabel(
     {
@@ -410,7 +373,6 @@ export default function PartyPage() {
               party={party}
               pieceStatus={pieceStatus}
               stacks={stacks}
-              piecePickup={piecePickup}
               loot={loot}
               dropTables={dropTables}
               bossByKey={bossByKey}

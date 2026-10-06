@@ -56,12 +56,6 @@ describe("the week's coupons are drops, not configuration", () => {
     // Once only: the group of rows must not frame itself as config again, which is the arrangement
     // that had a stack of 180 reading as a setting.
     expect(list.match(/loot-config-card/g)).toHaveLength(1);
-    // The rotation is a config card too, and frames ITSELF: the drop heads it, with its own art, so
-    // a title of ours above the drop would put the instruction over the thing it is about.
-    expect(list).toContain("{rotation && ( <LootRotation rotation={rotation}");
-    expect(source("components", "loot-rotation.tsx")).toContain(
-      '<div className="loot-config-card"> <header className="loot-head">',
-    );
     expect(source("app", "globals.css")).toContain(".loot-config-card {");
     // And the group of rows still draws nothing when empty, which is what leaves that case to
     // LootList rather than to a heading over an empty list.

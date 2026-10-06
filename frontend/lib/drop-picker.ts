@@ -2,7 +2,7 @@
 //
 // Held apart from the component because four screens carry the picker now, and the two filters here
 // are the rules that can produce a wrong pool: offering an Interactive-only drop in a Heroic world,
-// or a Kalos fragment on Extreme, is offering to log one that cannot happen.
+// or a vestige coupon on Chaos Kalos, is offering to log one that cannot happen.
 
 import { dropExistsIn, isPerMember } from "./world";
 import type { BossDrop } from "@/types/drop";
@@ -21,7 +21,7 @@ export const OTHER = "__other__";
  *
  * The counted rows are the exception, and they are the ones people get wrong. `pieces` carries a
  * figure for exactly the (world, difficulty) pairs the drop falls at, since build.py drops a zero
- * rather than seeding it, so Kalos's fragment is on Normal and not on Extreme. Only that world's
+ * rather than seeding it, so Kalos's coupons are on Extreme and not on Chaos. Only that world's
  * own map is read: a world with no figures at all is the catalog saying nothing about the pair,
  * which is not a claim that nothing drops.
  */

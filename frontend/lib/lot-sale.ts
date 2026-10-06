@@ -19,7 +19,7 @@
 // it covers, and that is piece-ledger's largestRemainder, so the slices add up to exactly what was
 // entered.
 
-import { isPieceDrop, isUntradeablePiece } from "./drop-log";
+import { isPieceDrop } from "./drop-log";
 import { largestRemainder } from "./piece-ledger";
 import { holderKey, holderOf } from "./vestige-ledger";
 import { canTrade } from "./world";
@@ -368,10 +368,6 @@ export function lotDrops(
  * Piece drops are out. They divide by COUNT and are settled in tranches, so pricing one here would
  * be a second settlement for a drop the piece ledger is already counting.
  *
- * Untradeable drops are out on the item alone, not on being divisible. Every one of them divides
- * somewhere, but a mode nobody has counted has no amount, and `isPieceDrop` reads a missing amount
- * as "not pieces": an Easy Kalos token would have arrived here as a thing to sell.
- *
  * Free text is in. A drop typed by hand has no catalog row to call it interchangeable, and it is
  * still something you sold.
  */
@@ -386,9 +382,6 @@ export function rowSales(
     parties,
     pools,
     holder,
-    (loot, party) =>
-      !fungible.has(loot.dropKey ?? "") &&
-      !isUntradeablePiece(loot, dropTables) &&
-      !isPieceDrop(loot, party, dropTables),
+    (loot, party) => !fungible.has(loot.dropKey ?? "") && !isPieceDrop(loot, party, dropTables),
   );
 }

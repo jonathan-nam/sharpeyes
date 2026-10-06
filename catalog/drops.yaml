@@ -31,13 +31,6 @@
 # confirm them. Absent means the drop is sold one at a time, which is the only honest input for a
 # thing with its own potential lines and its own price.
 #
-# `untradeable` marks a drop that cannot change hands at all. Eternal armour pieces are the case:
-# what a member ends the night holding is whatever they bent down for, and no arrangement afterwards
-# can move one. So it never sells, appears in no sale and no settlement, and a member short of their
-# share is not owed anything, they are owed a LOOT next week. A divisible drop is still divisible
-# with this set: entitled against looted is exactly as meaningful, it is only the debt that is not.
-# Absent is tradeable, which is every drop in the file today.
-#
 # Flags sit on the item rather than on the (boss, item) pair because nothing in these tables
 # behaves differently per boss. Move one down to `tables` the day that stops being true.
 #
@@ -55,8 +48,7 @@
 # `pieces` is a POOLED count, so it is an INTERACTIVE one. Reboot instances every piece it drops:
 # each member is handed their own, and however many that is, it is not the size of a pile nobody
 # there receives. Writing this number to both worlds is what had a Heroic party dividing 180 coupons
-# six ways. A Heroic count is written with the per-world `count` form below, on a drop that says
-# `per_member: HEROIC`, and build.py refuses a Heroic count anywhere else.
+# six ways.
 #
 # `bundles` is how many separate stacks that total falls in. Stacks are indivisible, so it is what
 # decides whether a party can split a drop by looting alone: three of them between two people
@@ -65,36 +57,6 @@
 #
 # A bare count is still accepted, for a drop whose bundling nobody has counted. That is not the
 # same as saying it falls in one stack.
-#
-# An entry may also name an ITEM instead of a drop. The Eternal pieces are already in
-# catalog/items.yaml, with a name, an icon and a vision template, so writing any of those here a
-# second time is the drift that file exists to end:
-#
-#     - item: kalos-token
-#       per_member: HEROIC
-#       untradeable: true
-#       count:
-#         EASY: 0
-#         CHAOS:   { interactive: 5,  heroic: 2 }
-#         EXTREME: { interactive: 14, heroic: 3 }
-#
-# `count` is `pieces` for a drop that usually falls one token to a stack, so the bundling is derived
-# from the count instead of written twice. Where it does NOT, write both:
-#
-#         HARD: { interactive: { total: 18, bundles: 6 }, heroic: 2 }
-#
-# which is Hard Malefic Star's shard, which falls in stacks of three. The
-# bundle count is what a party can actually divide by, so it is not decoration: 18 in 6 stacks
-# between four people is stacks that cannot be cut, not four and a half pieces each.
-#
-# It is also per WORLD, because the two are
-# genuinely independent. Chaos Kalos gives 5 to the whole party on Interactive and 2 to EACH member
-# on Heroic, and Extreme 14 against 3, so neither world can be worked out from the other. A bare
-# count says they agree, which is a claim; a 0 says the boss drops none at that mode, which is not
-# the same as leaving the mode out (nobody has counted it).
-#
-# `per_member` and `untradeable` sit on the table entry for an item reference, since there is no
-# `drops:` row to carry them, and they describe the drop rather than the thing in an inventory.
 
 drops:
   # --- Brilliant Boss Set, one accessory per boss -------------------------------------

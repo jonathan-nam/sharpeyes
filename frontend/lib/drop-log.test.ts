@@ -14,7 +14,6 @@ import {
   groupDrops,
   isCouponDrop,
   isPieceDrop,
-  isUntradeablePiece,
   monthLabel,
   pieceStatusByParty,
   weekLabel,
@@ -716,7 +715,6 @@ describe("a piece drop counts YOUR share, not what fell", () => {
         quantity: 1,
         // A piece drop settles through the tranche ledger, not by being sold as a lot.
         fungible: false,
-        untradeable: false,
         pieces: { INTERACTIVE: { HARD: 60 } },
         bundles: { INTERACTIVE: { HARD: 3 } },
       },
@@ -1328,64 +1326,10 @@ describe("who a drop was run with", () => {
   });
 });
 
-describe("an untradeable piece is not a line in the money log", () => {
-  // The Drop Log is a history of what drops were WORTH and who was paid. A piece has no price, no
-  // sale and no settlement, so it has nothing to say there. It is settled by whose turn it was to
-  // bend down, which the run says.
-  const tables = {
-    limbo: [
-      {
-        dropKey: "distorted-ambition",
-        name: "Distorted Ambition",
-        iconUrl: null,
-        perMember: "ALWAYS",
-        worlds: null,
-        quantity: 1,
-        fungible: false,
-        untradeable: true,
-        pieces: { INTERACTIVE: { HARD: 2 } },
-        bundles: { INTERACTIVE: { HARD: 2 } },
-      },
-      {
-        dropKey: "vestige-of-erion",
-        name: "Vestige of Erion Coupon",
-        iconUrl: null,
-        perMember: null,
-        worlds: null,
-        quantity: 1,
-        fungible: false,
-        untradeable: false,
-        pieces: { INTERACTIVE: { HARD: 60 } },
-        bundles: { INTERACTIVE: { HARD: 3 } },
-      },
-    ],
-  };
-
-  it("knows a piece from a coupon by the item alone, with no mode to read", () => {
-    // Deliberately not isPieceDrop's question. That one asks whether the row DIVIDES and needs the
-    // party's mode for it; this is a fact about the item, for a screen that wants none of them.
-    const piece = pending({ dropKey: "distorted-ambition", bossKey: "limbo" });
-    const coupon = pending({ dropKey: "vestige-of-erion", bossKey: "limbo" });
-
-    expect(isUntradeablePiece(piece, tables)).toBe(true);
-    expect(isUntradeablePiece(coupon, tables)).toBe(false);
-    // Free text, and a boss with no table, are not pieces either.
-    expect(isUntradeablePiece(pending({ dropKey: null }), tables)).toBe(false);
-    expect(isUntradeablePiece(piece, {})).toBe(false);
-  });
-});
-
-describe("an untradeable piece divides, but is owed to nobody", () => {
-  // Eternal armour pieces. They divide by count exactly as coupons do, so a member still has a
-  // share they were entitled to and a number they actually bent down for. What they do not have is
-  // a way to close the gap: the item cannot change hands, so a shortfall is not a debt anybody
-  // settles, it is a turn to loot next week.
-  //
-  // Reporting one as a debt is what this guards. `owedBy` reads as a person holding pieces of
-  // yours, and the Drop Log offers to settle it, on an item that cannot be handed over at all.
+describe("a piece drop divides at the mode it fell at", () => {
   const TOKEN = "distorted-ambition";
 
-  const tableWith = (untradeable: boolean) => ({
+  const table = {
     limbo: [
       {
         dropKey: TOKEN,
@@ -1395,12 +1339,11 @@ describe("an untradeable piece divides, but is owed to nobody", () => {
         worlds: null,
         quantity: 1,
         fungible: false,
-        untradeable,
         pieces: { INTERACTIVE: { HARD: 6 } },
         bundles: { INTERACTIVE: { HARD: 6 } },
       },
     ],
-  });
+  };
 
   const tokens = (over: Partial<Loot> = {}): Loot =>
     pending({ dropKey: TOKEN, name: "Distorted Ambition", quantity: 6, ...over });
@@ -1412,36 +1355,15 @@ describe("an untradeable piece divides, but is owed to nobody", () => {
       looterMemberId: "m2",
     });
 
-  it("still says what your share of it was", () => {
-    const log = buildDropLog([trio()], [pool("pa", [tokens()])], tableWith(true));
+  it("says what your share of it was, and who holds it", () => {
+    const log = buildDropLog([trio()], [pool("pa", [tokens()])], table);
     const entry = log.entries[0]!;
 
     expect(entry.pieces).toBe(true);
     expect(entry.quantity).toBe(6);
     expect(entry.yours).toBe(2);
-  });
-
-  it("names no creditor and no debt, where a tradeable one names both", () => {
-    const untradeable = buildDropLog([trio()], [pool("pa", [tokens()])], tableWith(true));
-    const tradeable = buildDropLog([trio()], [pool("pa", [tokens()])], tableWith(false));
-
-    // The control. Same drop, same party, same arrangement, so only the flag differs and this fails
-    // the moment it stops being read.
-    expect(tradeable.entries[0]!.owedBy).toBe("CreedBratton");
-    expect(tradeable.entries[0]!.owedToYou).toBe(2);
-
-    expect(untradeable.entries[0]!.owedBy).toBeNull();
-    expect(untradeable.entries[0]!.owedToYou).toBe(0);
-    expect(untradeable.entries[0]!.owedByYou).toBe(0);
-  });
-
-  it("divides by count without being a coupon", () => {
-    const loot = tokens();
-    const at = trio();
-
-    expect(isPieceDrop(loot, at, tableWith(true))).toBe(true);
-    expect(isCouponDrop(loot, at, tableWith(true))).toBe(false);
-    expect(isCouponDrop(loot, at, tableWith(false))).toBe(true);
+    expect(entry.owedBy).toBe("CreedBratton");
+    expect(entry.owedToYou).toBe(2);
   });
 
   it("is neither, on a difficulty the table gives no amount for", () => {
@@ -1451,8 +1373,8 @@ describe("an untradeable piece divides, but is owed to nobody", () => {
       difficulty: "NORMAL",
     });
 
-    expect(isPieceDrop(tokens(), at, tableWith(true))).toBe(false);
-    expect(isCouponDrop(tokens(), at, tableWith(false))).toBe(false);
+    expect(isPieceDrop(tokens(), at, table)).toBe(false);
+    expect(isCouponDrop(tokens(), at, table)).toBe(false);
   });
 
   it("reads the mode the drop FELL at, not the one the party runs now", () => {
@@ -1466,7 +1388,7 @@ describe("an untradeable piece divides, but is owed to nobody", () => {
       difficulty: "NORMAL",
     });
 
-    expect(isPieceDrop(tokens({ difficulty: "HARD" }), movedOn, tableWith(true))).toBe(true);
+    expect(isPieceDrop(tokens({ difficulty: "HARD" }), movedOn, table)).toBe(true);
 
     // And the row's own mode is what is read, not merely a truthy override: a stack that really did
     // fall on Normal still does not divide, whatever the party says now.
@@ -1474,7 +1396,7 @@ describe("an untradeable piece divides, but is owed to nobody", () => {
       difficulty: "HARD",
     });
 
-    expect(isPieceDrop(tokens({ difficulty: "NORMAL" }), stillHard, tableWith(true))).toBe(false);
+    expect(isPieceDrop(tokens({ difficulty: "NORMAL" }), stillHard, table)).toBe(false);
   });
 });
 
@@ -1491,7 +1413,7 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
       ...over,
     });
 
-  /** kalos-token as catalog/drops.yaml has it: 5 to the party on Interactive, 2 to EACH on Heroic. */
+  /** A piece instanced on Heroic: 5 to the party on Interactive, 2 to EACH on Heroic. */
   const kalos = {
     "kalos-the-guardian": [
       {
@@ -1502,14 +1424,13 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
         worlds: null,
         quantity: 1,
         fungible: false,
-        untradeable: true,
         pieces: { INTERACTIVE: { CHAOS: 5 }, HEROIC: { CHAOS: 2 } },
         bundles: { INTERACTIVE: { CHAOS: 5 }, HEROIC: { CHAOS: 2 } },
       },
     ],
   };
 
-  /** A tradeable coupon, so the world rule is what refuses it and not the untradeable flag. */
+  /** A pooled coupon, so the world rule is what refuses it. */
   const coupons = {
     "kalos-the-guardian": [
       {
@@ -1520,7 +1441,6 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
         worlds: null,
         quantity: 1,
         fungible: false,
-        untradeable: false,
         pieces: { INTERACTIVE: { CHAOS: 6 }, HEROIC: { CHAOS: 6 } },
         bundles: { INTERACTIVE: { CHAOS: 6 }, HEROIC: { CHAOS: 6 } },
       },
@@ -1558,7 +1478,7 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
     expect(isPieceDrop(pending({ ...token(), quantity: 5 }), at, kalos)).toBe(true);
   });
 
-  it("names no creditor for a tradeable coupon, because the WORLD does not trade", () => {
+  it("names no creditor for a coupon, because the WORLD does not trade", () => {
     expect(isCouponDrop(coupon(), trio(), coupons)).toBe(false);
 
     const log = buildDropLog([trio()], [pool("pa", [coupon()])], coupons);

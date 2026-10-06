@@ -70,7 +70,6 @@ describe("the share boxes read the world before the difficulty", () => {
       ["lib", "vestige-stacks.ts"],
       ["lib", "parties.ts"],
       ["lib", "drop-log.ts"],
-      ["lib", "loot-rotation.ts"],
     ];
     for (const file of readers) {
       expect(

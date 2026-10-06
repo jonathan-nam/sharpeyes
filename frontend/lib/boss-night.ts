@@ -367,9 +367,6 @@ export function runTicks(times: RunTime[]): (string | null)[] {
 const SITTING_OUT = "X";
 const SWITCH_MARK = "*";
 
-/** The last column's head, where a run has anything to say beyond who is in it. See planAsText. */
-const NOTES_HEAD = "Notes";
-
 /** One person's place in one run. */
 export type GridCell = {
   /** The character they bring, or null when they sit this one out. */
@@ -473,11 +470,6 @@ function paddedTable(rows: string[][]): string[] {
  * does not: a single boss name crossing a stop moves every column below it, which is how a table
  * that lined up in the widest-name case arrived crooked in every other.
  *
- * ONE TRAILING COLUMN, and only where a run fills it: what the row has to say about its loot. The
- * head is Notes and not Pieces because what it carries today (the split, and which piece is being
- * split) is one fact about the run rather than the only fact a run could have. A night where
- * nothing fills it gets no column and no head, not a head over blanks.
- *
  * PART OF A NIGHT is the same table with fewer rows, for the group that is told the next two runs
  * rather than all seven. A person in none of the rows drawn loses their column, which is the point:
  * a truncated paste that still carries a column of Xs is a longer table, not a shorter one.
@@ -488,8 +480,6 @@ function paddedTable(rows: string[][]): string[] {
 export function planAsText(
   plan: Plan,
   roster: NightPerson[],
-  /** A run's note, or null where it has none. Omitted leaves the paste as the grid alone. */
-  noteOf?: (runId: string) => string | null,
   /** The runs to draw, for a copy of part of the night. Omitted draws all of them. */
   only?: ReadonlySet<string>,
 ): string {
@@ -497,16 +487,12 @@ export function planAsText(
   if (runs.length === 0) return "No bosses fit in the time.";
 
   const { people, rows } = planGrid({ runs }, roster);
-  const notes = rows.map(({ planned }) => cell(noteOf?.(planned.run.id) ?? ""));
-  const noted = notes.some((note) => note !== "");
-
-  const header = ["", ...people.map((person) => cell(person.name)), ...(noted ? [NOTES_HEAD] : [])];
-  const body = rows.map(({ planned, cells }, row) => [
+  const header = ["", ...people.map((person) => cell(person.name))];
+  const body = rows.map(({ planned, cells }) => [
     cell(bossHeading(planned)),
     ...cells.map((c) =>
       c.character === null ? SITTING_OUT : cell(c.character + (c.switched ? SWITCH_MARK : "")),
     ),
-    ...(noted ? [notes[row] ?? ""] : []),
   ]);
 
   return ["```", ...paddedTable([header, ...body]), "```"].join("\n");

@@ -371,9 +371,6 @@ object DropCatalog : Table("drop_catalog") {
     // rows rather than on the row where it sits. See V45__drop_fungible.sql.
     val fungible = bool("fungible")
 
-    // The item cannot change hands, so it never sells and settles only by who looted it. Not the
-    // same fact as a world that cannot trade. See V62__drop_untradeable.sql.
-    val untradeable = bool("untradeable")
     val sortOrder = integer("sort_order")
 
     override val primaryKey = PrimaryKey(id)

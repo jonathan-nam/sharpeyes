@@ -67,35 +67,13 @@ export function isPieceDrop(loot: Loot, party: Party, dropTables: DropTables): b
 }
 
 /**
- * True when this row is a piece that cannot change hands, whatever its boss or mode.
+ * True when a piece drop's shortfall is a DEBT: divisible, in a world where it can change hands.
  *
- * Not the same question as isPieceDrop, which is about DIVIDING and so needs the party's mode. This
- * one is a fact about the item alone, for the screens that want nothing to do with it.
- */
-export function isUntradeablePiece(loot: Loot, dropTables: DropTables): boolean {
-  return catalogDrop(loot, dropTables)?.untradeable === true;
-}
-
-/**
- * True when a piece drop's shortfall is a DEBT: divisible, and made of pieces that can change hands.
- *
- * The two are not the same test, and conflating them is how an Eternal armour piece would end up in
- * the tranche ledger. Both divide by count, so both have an entitled share and a looted share. Only
- * a coupon can be handed over afterwards, which is what makes a gap between the two a debt somebody
- * settles. An untradeable piece leaves a gap nothing can close, so it is owed as a LOOT next week
- * and never as pieces or mesos, and reporting it as a debt would invent a transfer that cannot
- * happen.
- *
- * A Heroic world is the same case reached from the other side: the item is tradeable, the WORLD is
- * not, so nothing there can change hands either. The flag alone let a Heroic night name a creditor
- * for 2 coupons and offer to settle it.
+ * Nothing in a Heroic world can be handed over afterwards, so naming a creditor there would put a
+ * transfer on screen that cannot be made.
  */
 export function isCouponDrop(loot: Loot, party: Party, dropTables: DropTables): boolean {
-  return (
-    canTrade(party.worldType) &&
-    isPieceDrop(loot, party, dropTables) &&
-    !catalogDrop(loot, dropTables)?.untradeable
-  );
+  return canTrade(party.worldType) && isPieceDrop(loot, party, dropTables);
 }
 
 export type DropEntry = {
@@ -400,9 +378,8 @@ export function buildDropLog(
       // Only a PIECE drop divides by count. Everything else is one thing that sells for one price
       // and divides as money, and a third of an item is not a number to put on a row.
       const pieces = isPieceDrop(loot, party, dropTables);
-      // Whose coupons ended the night in the wrong hands, off the night's own arrangement. Only for
-      // pieces that can be handed over: an untradeable one leaves a gap nothing can close, so
-      // naming a creditor for it would put a transfer on screen that cannot be made.
+      // Whose coupons ended the night in the wrong hands, off the night's own arrangement. Only where
+      // they can be handed over: see isCouponDrop.
       const gap = isCouponDrop(loot, party, dropTables) ? couponGapOf(loot, party) : null;
 
       const entry: DropEntry = {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DropPicker } from "@/components/drop-picker";
-import { LootList, type NightPickup, type StackAssignment } from "@/components/loot-list";
+import { LootList, type StackAssignment } from "@/components/loot-list";
 import { StackAssign } from "@/components/stack-assign";
 import { nightLabel, poolNights, ranAtThisMode } from "@/lib/pool-nights";
 import type { PieceStatus } from "@/lib/drop-log";
@@ -23,7 +23,6 @@ export function LootPool({
   bossByKey,
   pieceStatus,
   stacks,
-  piecePickup,
   adding,
   readOnly = false,
   isSaving,
@@ -48,11 +47,6 @@ export function LootPool({
    * split is not, because it is the party's rather than this pool's and arrives with no onSave.
    */
   stacks?: StackAssignment;
-  /**
-   * Who picked up which stacks of the rotating piece. The same boxes, for a drop that cannot be
-   * handed over afterwards, so the gap they leave is a turn to loot and never a debt. See LootList.
-   */
-  piecePickup?: NightPickup;
   /** The picker's own add. Not the rows': one drop being logged does not lock the pool. */
   adding: boolean;
   /**
@@ -92,10 +86,10 @@ export function LootPool({
   const others = nights.filter((night) => !ranAtThisMode(night, party));
   const hidden = others.reduce((count, night) => count + night.loot.length, 0);
   // Offered only where something can actually be answered. A pool whose coupon nights have all
-  // settled is history, and an Edit over it is a button that opens nothing. Either kind of night
-  // earns the button: a piece pool with no coupon in it is the whole of Chaos Kalos.
-  const correctable = [stacks?.pickup, piecePickup].some((pickup) =>
-    Boolean(pickup?.onSave && pickup.drops.some((drop) => !pickup.locked?.has(drop.lootId))),
+  // settled is history, and an Edit over it is a button that opens nothing.
+  const pickup = stacks?.pickup;
+  const correctable = Boolean(
+    pickup?.onSave && pickup.drops.some((drop) => !pickup.locked?.has(drop.lootId)),
   );
 
   return (
@@ -161,7 +155,6 @@ export function LootPool({
             bossByKey={bossByKey}
             pieceStatus={pieceStatus}
             stacks={stacks}
-            piecePickup={piecePickup}
             // The deal is the PARTY's, not a night's, so it is drawn once below rather than restated
             // under every night that happens to hold coupons. Same reason LootGroup draws it on the
             // last row only.
@@ -213,7 +206,6 @@ export function LootPool({
                   bossByKey={bossByKey}
                   pieceStatus={pieceStatus}
                   stacks={stacks}
-                  piecePickup={piecePickup}
                   splitElsewhere
                   editing={editing}
                   isSaving={isSaving}

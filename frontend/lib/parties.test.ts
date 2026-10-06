@@ -378,7 +378,6 @@ describe("guaranteedDrop", () => {
     worlds: null,
     quantity: 1,
     fungible: false,
-    untradeable: false,
     pieces: { INTERACTIVE: { EXTREME: 180 } },
     bundles: { INTERACTIVE: { EXTREME: 6 } },
   };
@@ -387,7 +386,6 @@ describe("guaranteedDrop", () => {
     dropKey: "grindstone-of-faith",
     name: "Grindstone",
     fungible: true,
-    untradeable: false,
     pieces: {},
     bundles: {},
   };

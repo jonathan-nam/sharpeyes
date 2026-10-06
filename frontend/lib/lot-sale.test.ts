@@ -22,7 +22,6 @@ const STONE = "grindstone-of-faith";
 const BOX = "eternal-armor-of-desire-box";
 const RING = "ring-of-restraint-4";
 const COUPON = "vestige-of-erion";
-const TOKEN = "kalos-token";
 
 const seat = (id: string, name: string, { mine = false, shares = 1 } = {}): PartyMember => ({
   id,
@@ -114,7 +113,6 @@ const catalogDrop = (
   worlds: null,
   quantity: 1,
   fungible,
-  untradeable: false,
   pieces: {},
   bundles: {},
   ...over,
@@ -219,7 +217,6 @@ describe("the drops that price alone", () => {
       catalogDrop(STONE, true),
       catalogDrop(RING, false),
       catalogDrop(COUPON, false, { pieces: { INTERACTIVE: { HARD: 60 } } }),
-      catalogDrop(TOKEN, false, { untradeable: true, pieces: { INTERACTIVE: { CHAOS: 5 } } }),
     ],
   };
   const fungible = fungibleDropKeys(tables);
@@ -239,12 +236,6 @@ describe("the drops that price alone", () => {
 
   it("leaves out a coupon stack, which divides by count and is settled in tranches", () => {
     expect(rows([drop("l1", COUPON, "2026-07-30", ["m1", "m2"], { quantity: 60 })])).toEqual([]);
-  });
-
-  it("leaves out an untradeable piece at a difficulty nobody has counted", () => {
-    // The catalog has no Hard amount for the token, so isPieceDrop says "not pieces" and the only
-    // thing keeping it off this list is the item being untradeable. It cannot be sold at all.
-    expect(rows([drop("l1", TOKEN, "2026-07-30", ["m1", "m2"], { quantity: 2 })])).toEqual([]);
   });
 
   it("holds a drop typed by hand, which no catalog row calls interchangeable", () => {

@@ -11,7 +11,6 @@ const drop = (over: Partial<BossDrop> = {}): BossDrop => ({
   worlds: null,
   quantity: 1,
   fungible: true,
-  untradeable: false,
   pieces: {},
   bundles: {},
   ...over,

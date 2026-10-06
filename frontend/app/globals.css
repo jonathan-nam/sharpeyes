@@ -6480,12 +6480,6 @@ button.link:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-/* A box on this line acts on the plan below it, the way the copy button beside it does. The 10px
-   the toggles carry between each other in a column would drop it off the baseline here. */
-.night-plan-line .night-toggle {
-  margin-top: 0;
-}
-
 /* The order itself: bosses down the rows, people across the columns, the same way round as the
    boss matrix. A list of each run's seats could only show who is IN a run, and a group is usually
    bigger than the six seats a party has, so the gaps in a person's column are half of the plan. */
@@ -6656,22 +6650,6 @@ button.link:disabled {
   color: var(--ink);
   text-align: center;
   white-space: nowrap;
-}
-
-/* Pieces to pick up on this run, beside the character who picks them up. Only ever drawn where the
-   drop will not divide evenly, so it is a handful of rows rather than the whole grid.
-
-   A badge rather than more text in the cell: the cell already holds a name, and a bare number after
-   one reads as part of it. Dim like every other derived figure here, since it is worked out from
-   the weeks already answered for rather than typed by anybody. */
-.run-take {
-  display: inline-block;
-  margin-left: 6px;
-  padding: 0 5px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
-  color: var(--muted);
 }
 
 /* Sitting this one out. Quiet, because a column of X's is the ground the characters read against
