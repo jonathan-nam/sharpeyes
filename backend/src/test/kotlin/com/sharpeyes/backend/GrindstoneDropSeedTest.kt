@@ -36,7 +36,7 @@ class GrindstoneDropSeedTest {
             "first-adversary",
             "jupiter",
         )
-    private val faith = setOf("kaling", "limbo", "baldrix", "malefic-star")
+    private val faith = setOf("kaling", "limbo", "baldrix", "malefic-star", "jupiter")
 
     @BeforeTest
     fun migrate() {
