@@ -83,7 +83,7 @@
 #
 #         HARD: { interactive: { total: 18, bundles: 6 }, heroic: 2 }
 #
-# which is Hard Malefic Star, the one piece in the file that falls in stacks of more than one. The
+# which is Hard Malefic Star's shard, which falls in stacks of three. The
 # bundle count is what a party can actually divide by, so it is not decoration: 18 in 6 stacks
 # between four people is stacks that cannot be cut, not four and a half pieces each.
 #
@@ -249,9 +249,9 @@ drops:
   # 16% over. Scale a replacement PREMULTIPLIED: 42% of these pixels are semi-transparent and the
   # transparent ones carry black and magenta, which a straight RGBA resample bleeds into the glow.
   # Multiplying by alpha first zeroes them, so they contribute nothing.
-  # Instanced in Heroic, like every other piece in this file: Reboot hands each member their own
-  # count and there is no pile to share out. It was the one piece drop here not saying so, which had
-  # a Heroic night dividing coupons everybody already held and naming a creditor for the shortfall.
+  # Instanced in Heroic: Reboot hands each member their own count and there is no pile to share
+  # out. Pooled there, it had a Heroic night dividing coupons everybody already held and naming a
+  # creditor for the shortfall.
   # The Heroic COUNT is a separate fact and not yet one we hold: see `pieces` below.
   - key: vestige-of-erion
     name: Vestige of Erion Coupon
@@ -278,14 +278,6 @@ tables:
     - key: vestige-of-erion
       pieces:
         HARD: { total: 60, bundles: 3 }
-    # Instanced in BOTH worlds, and the same count in both, which is why it takes a bare number
-    # where Kalos and Kaling need one per world. Limbo has no fragment: Normal drops the piece.
-    - item: distorted-ambition
-      per_member: ALWAYS
-      untradeable: true
-      count:
-        NORMAL: 1
-        HARD: 2
 
   chosen-seren:
     - exceptional-hammer-face
@@ -305,21 +297,6 @@ tables:
     - key: vestige-of-erion
       pieces:
         EXTREME: { total: 180, bundles: 6 }
-    # Pooled on Interactive, one each on Heroic, which is what per_member HEROIC means. Easy drops
-    # none at all since the KMS change that also made these party-shared.
-    - item: kalos-token
-      per_member: HEROIC
-      untradeable: true
-      count:
-        EASY: 0
-        CHAOS: { interactive: 5, heroic: 2 }
-        EXTREME: { interactive: 14, heroic: 3 }
-    - item: kalos-residual-determination-fragment
-      per_member: HEROIC
-      untradeable: true
-      count:
-        EASY: 0
-        NORMAL: { interactive: 3, heroic: 2 }
 
   kaling:
     - exceptional-hammer-earrings
@@ -332,19 +309,6 @@ tables:
       pieces:
         HARD: { total: 60, bundles: 6 }
         EXTREME: { total: 480, bundles: 6 }
-    # Easy still drops a fragment here, unlike Kalos, so the two ladders are not one rule.
-    - item: ferocious-beast-ring
-      per_member: HEROIC
-      untradeable: true
-      count:
-        HARD: { interactive: 7, heroic: 2 }
-        EXTREME: { interactive: 18, heroic: 3 }
-    - item: ferocious-entanglement-ring-fragment
-      per_member: HEROIC
-      untradeable: true
-      count:
-        EASY: 1
-        NORMAL: { interactive: 5, heroic: 2 }
 
   first-adversary:
     - immortal-legacy
@@ -357,19 +321,6 @@ tables:
       pieces:
         HARD: { total: 30, bundles: 3 }
         EXTREME: { total: 240, bundles: 3 }
-    - item: echo-ancient-resolve
-      per_member: HEROIC
-      untradeable: true
-      count:
-        EASY: 0
-        HARD: { interactive: 6, heroic: 2 }
-        EXTREME: { interactive: 16, heroic: 3 }
-    - item: whisper-ancient-resolve
-      per_member: HEROIC
-      untradeable: true
-      count:
-        EASY: 0
-        NORMAL: { interactive: 4, heroic: 2 }
 
   malefic-star:
     - blissful-nightmare
@@ -381,22 +332,11 @@ tables:
     - key: vestige-of-erion
       pieces:
         HARD: { total: 90, bundles: 3 }
-    # The one piece that does NOT fall one to a stack. Hard Star gives 18 in 6 stacks of 3, so a
-    # party divides it three at a time and 18 between four people is not four and a half each.
-    - item: blissful-fantasy-shard
-      per_member: HEROIC
-      untradeable: true
-      count:
-        HARD: { interactive: { total: 18, bundles: 6 }, heroic: 2 }
-    - item: blissful-fantasy-fragment
-      per_member: HEROIC
-      untradeable: true
-      count:
-        NORMAL: { interactive: 6, heroic: 2 }
 
   jupiter:
     - original-sin-of-pride
     - grindstone-of-life
+    - grindstone-of-faith
     - eternal-twisted-armor-box
     - ring-of-restraint-4
     - continuous-ring-4
@@ -404,12 +344,6 @@ tables:
       pieces:
         NORMAL: { total: 45, bundles: 3 }
         HARD: { total: 360, bundles: 3 }
-    - item: lingering-twisted-desire
-      per_member: ALWAYS
-      untradeable: true
-      count:
-        NORMAL: 1
-        HARD: 2
 
   baldrix:
     - oath-of-death
@@ -421,12 +355,6 @@ tables:
     - key: vestige-of-erion
       pieces:
         HARD: { total: 120, bundles: 3 }
-    - item: trace-eternal-loyalty
-      per_member: ALWAYS
-      untradeable: true
-      count:
-        NORMAL: 1
-        HARD: 2
 
   # The belt hammer is Extreme only, which a table cannot say, so by the rule above it is listed
   # rather than left out. The other three drop on Hard as well.

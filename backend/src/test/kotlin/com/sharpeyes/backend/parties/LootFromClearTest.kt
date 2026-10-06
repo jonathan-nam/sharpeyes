@@ -124,13 +124,7 @@ class LootFromClearTest {
 
     private fun pool(partyId: Uuid) = lootFor(partyId)
 
-    /**
-     * The coupon row, which is what these tests are about.
-     *
-     * Extreme Kalos guarantees two things now, the vestige coupons and 14 Eternal pieces, so the
-     * pool no longer holds exactly one row. `single()` here still says what it used to: one coupon
-     * row, and a second of them would still fail.
-     */
+    /** The coupon row, which is what these tests are about. */
     private fun coupon(partyId: Uuid) = pool(partyId).single { it.dropKey == "vestige-of-erion" }
 
     @Test
@@ -218,11 +212,8 @@ class LootFromClearTest {
             // Two days later in the same week, which is the same period and so the same 180.
             lootFromClear(characterId, bossId, "WEEKLY", LocalDate.parse("2026-08-10"), now)
 
-            // Two rows, because Extreme Kalos guarantees two things: the coupons and 14 Eternal
-            // pieces. Three ticks and still one of each is the claim, not the total.
-            assertEquals(2, pool(partyId).size)
+            assertEquals(1, pool(partyId).size)
             assertEquals(1, pool(partyId).count { it.dropKey == "vestige-of-erion" })
-            assertEquals(1, pool(partyId).count { it.dropKey == "kalos-token" })
         }
     }
 
@@ -230,8 +221,7 @@ class LootFromClearTest {
     fun `says nothing where the amount is unknown`() {
         transaction {
             // Easy Kalos drops none of anything, and the catalog carries no row for it rather than
-            // a zero. catalog/drops.yaml states that as `EASY: 0`, which build.py keeps out of the
-            // seed on purpose: nothing to fill is what an empty box already says.
+            // a zero: nothing to fill is what an empty box already says.
             val (easyCharacter, easyParty) = alone(difficulty = "EASY")
             lootFromClear(
                 easyCharacter,
@@ -369,7 +359,7 @@ class LootFromClearTest {
 
             // Rows filed into a pool before it was retired stay removable by the tick that put
             // them there, which is the only thing that may take them.
-            assertEquals(2, pool(partyId).size)
+            assertEquals(1, pool(partyId).size)
             unlootFromClear(characterId, bossId, "WEEKLY", backThen)
             assertTrue(pool(partyId).isEmpty())
         }

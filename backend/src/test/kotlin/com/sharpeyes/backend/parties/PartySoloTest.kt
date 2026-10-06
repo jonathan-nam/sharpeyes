@@ -213,7 +213,6 @@ class PartySoloTest {
         }
     }
 
-    /** The coupon row. A clear files the boss's Eternal pieces alongside it, so the pool holds both. */
     private fun couponIn(partyId: Uuid) = lootFor(partyId).single { it.dropKey == "vestige-of-erion" }
 
     @Test
@@ -227,7 +226,6 @@ class PartySoloTest {
 
             val partyId = setSoloDifficulty(userId, characterId, bossIdForKey("limbo")!!, "WEEKLY", "HARD", now)!!
 
-            // The coupon row. Hard Limbo guarantees an Eternal piece as well, so the pool holds two.
             assertEquals(60, couponIn(partyId).quantity)
         }
     }
@@ -249,11 +247,9 @@ class PartySoloTest {
             setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "EXTREME", now)
             assertEquals(480, couponIn(partyId).quantity)
 
-            // And a mode that drops no COUPONS leaves none. Easy Kaling is not empty: it still gives
-            // one Eternal fragment, which is a different drop and stands on its own.
+            // And a mode that drops no coupons leaves none.
             setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "EASY", now)
-            assertTrue(lootFor(partyId).none { it.dropKey == "vestige-of-erion" })
-            assertEquals(1, lootFor(partyId).single().quantity)
+            assertTrue(lootFor(partyId).isEmpty())
         }
     }
 
