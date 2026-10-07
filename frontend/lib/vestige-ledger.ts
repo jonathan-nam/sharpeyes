@@ -61,6 +61,8 @@ export type OutstandingDrop = {
   holderName: string;
   /** The character that actually looted it. Shown on the row, never what anything is keyed by. */
   looterName: string;
+  /** Every character who ran that night, as the party named them. */
+  ran: string[];
 };
 
 /**
@@ -157,6 +159,8 @@ export type HolderLedger = {
     recordedAt?: string;
     /** Which of this holder's characters looted it. */
     looterName: string;
+    /** Every character who ran that night. */
+    ran: string[];
     pieces: number;
     /** Its books are closed, so it is history rather than something anybody is waiting on. See V52. */
     closed: boolean;
@@ -693,6 +697,7 @@ export function outstanding(
           holder: holder.holder,
           holderName: holder.name,
           looterName: pile.by,
+          ran: ranSeats(loot, party).map((s) => s.name),
           drop: {
             id: loot.id,
             weekStart: loot.weekStart,
@@ -769,6 +774,7 @@ export function alsoHeldByYou(
         holder: mine.holder,
         holderName: mine.name,
         looterName: pile.by,
+        ran: ran.map((s) => s.name),
         drop: {
           id: loot.id,
           weekStart: loot.weekStart,
@@ -858,6 +864,7 @@ export function holderLedgers(
       droppedOn: d.droppedOn,
       recordedAt: d.recordedAt,
       looterName: d.looterName,
+      ran: d.ran,
       // What is in THIS pile. The whole drop would count somebody else's stacks as theirs.
       pieces: heldOf(d.drop),
       closed: closures.closed.has(closureKey(d.holder, d.lootId)),

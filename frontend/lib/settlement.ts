@@ -47,6 +47,8 @@ export type HeldOfYours = {
   sold: number;
   /** Which character bent down for them. */
   looterName: string;
+  /** Every character who ran that night. */
+  ran: string[];
   /**
    * True when the pile holding them owes somebody ELSE off the same night.
    *
@@ -348,6 +350,7 @@ export function buildSettlement(
           pieces: transfer.pieces,
           sold: 0,
           looterName: drop.looterName,
+          ran: drop.ran,
           // A different PERSON, not merely a second transfer: one night can owe one person twice,
           // and that is still one drop, one closure and nobody else's coupons at stake.
           shared: owing.some((t) => t.toId !== transfer.toId),
@@ -395,6 +398,7 @@ export function buildSettlement(
           .reduce((sum, t) => sum + t.pieces, 0),
         sold: 0,
         looterName: d.looterName,
+        ran: d.ran,
         // Their pile owing a third person off the same night. Closing it would call that debt
         // finished as well, and this card has no business saying anything about it.
         shared: d.transfers.some((t) => t.toId !== SELF_KEY),
@@ -1206,6 +1210,26 @@ export function bossesOfSales(
 
 type BossShare = { bossKey: string | null; partyId: string; pieces: number };
 
+/** One night a coupon sale came off, and how many of its coupons. */
+export type SaleNight = { night: HeldOfYours; pieces: number };
+
+/**
+ * The nights each coupon sale of theirs came off, or null where the nights cannot cover it. The same
+ * placement weekSplit and the drawn nights use, so a row cannot name a night the card did not spend.
+ */
+export function nightsOfSales(
+  row: Pick<Settlement, "sales" | "owedNights">,
+): Map<CouponSale, SaleNight[] | null> {
+  const wrapped = row.sales.map((sale) => ({
+    sale,
+    pieces: sale.pieces,
+    recordedAt: sale.soldAt ?? "",
+  }));
+  const out = new Map<CouponSale, SaleNight[] | null>();
+  for (const [w, taken] of placeSalesOnNights(row.owedNights, wrapped)) out.set(w.sale, taken);
+  return out;
+}
+
 /**
  * One act as it reads under a single bossing week: only the sales and nights from that week, with
  * the amount, pieces and bosses of that week's part.
@@ -1224,6 +1248,8 @@ export function sliceActToWeek<N extends { weekStart: string; share: number }>(
   act: Discharge;
   shares: N[];
   bosses: Map<CouponSale, BossShare[]>;
+  /** Each slice's nights in this week alone. */
+  saleNights: Map<CouponSale, SaleNight[]>;
 } | null {
   const split = weekSplit(row, act, held);
   const amount = split?.get(week);
@@ -1235,6 +1261,7 @@ export function sliceActToWeek<N extends { weekStart: string; share: number }>(
       act: { ...act, amount, payouts: act.payouts.filter((_, i) => held[i]?.weekStart === week) },
       shares: inWeek,
       bosses: new Map(),
+      saleNights: new Map(),
     };
   }
 
@@ -1248,6 +1275,7 @@ export function sliceActToWeek<N extends { weekStart: string; share: number }>(
 
   const sales: CouponSale[] = [];
   const bosses = new Map<CouponSale, BossShare[]>();
+  const saleNights = new Map<CouponSale, SaleNight[]>();
   for (const sale of act.sales) {
     const taken = placed.get(sale);
     if (!taken) return null;
@@ -1267,10 +1295,14 @@ export function sliceActToWeek<N extends { weekStart: string; share: number }>(
       by.set(key, seen);
     }
     sales.push(slice);
+    saleNights.set(
+      slice,
+      taken.filter(({ night }) => night.weekStart === week),
+    );
     bosses.set(
       slice,
       [...by.values()].sort((a, b) => b.pieces - a.pieces),
     );
   }
-  return { act: { ...act, amount, sales }, shares: held, bosses };
+  return { act: { ...act, amount, sales }, shares: held, bosses, saleNights };
 }
