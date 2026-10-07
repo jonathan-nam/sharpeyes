@@ -3,6 +3,7 @@ import {
   buildSettlement,
   weekSplit,
   bossesOfSales,
+  nightsOfSales,
   sliceActToWeek,
   decidedSales,
   settlementTotals,
@@ -77,6 +78,7 @@ const owing = (lootId: string, bossKey: string, pieces: number, closed = false) 
   weekStart: "2026-08-06",
   droppedOn: "2026-08-06",
   looterName: "CreedBratton",
+  ran: [],
   pieces: pieces * 2,
   closed,
   transfers: [{ fromId: "person:p-bro", toId: "self", from: "Bro", to: "you", pieces }],
@@ -90,6 +92,7 @@ const holdingOf = (lootId: string, bossKey: string, pieces: number, closed = fal
   weekStart: "2026-08-13",
   droppedOn: "2026-08-13",
   looterName: "HuskyxKenshi",
+  ran: [],
   pieces: pieces * 4,
   closed,
   transfers: [{ fromId: "self", toId: "person:p-bro", from: "you", to: "Bro", pieces }],
@@ -1553,6 +1556,7 @@ describe("closing the coupon books with one person", () => {
     weekStart: "2026-08-13",
     droppedOn: "2026-08-13",
     looterName: "HuskyxKenshi",
+    ran: [],
     pieces: 180,
     closed: false,
     transfers: [
@@ -1801,6 +1805,7 @@ describe("pieces a sale has already answered for", () => {
               weekStart: "2026-08-13",
               droppedOn: "2026-08-13",
               looterName: "HuskyxKenshi",
+              ran: [],
               pieces: 120,
               closed: false,
               transfers: [
@@ -1965,6 +1970,7 @@ describe("weekSplit", () => {
     pieces,
     sold: 0,
     looterName: "x",
+    ran: [],
     shared: false,
   });
   const sale = (pieces: number, mesos: number, soldAt: string) => ({
@@ -2010,6 +2016,7 @@ describe("bossesOfSales", () => {
     pieces,
     sold: 0,
     looterName: "x",
+    ran: [],
     shared: false,
   });
   const sale = (pieces: number) => ({
@@ -2051,6 +2058,7 @@ describe("sliceActToWeek", () => {
     pieces,
     sold: 0,
     looterName: "x",
+    ran: [],
     shared: false,
   });
   const s = {
@@ -2080,5 +2088,21 @@ describe("sliceActToWeek", () => {
 
   it("has no part for a week the sale did not come from", () => {
     expect(sliceActToWeek(row, act, [], "2026-09-17")).toBeNull();
+  });
+
+  it("keeps each slice's own nights, one per boss night, for the rows under the sale", () => {
+    const late = sliceActToWeek(row, act, [], "2026-10-01")!;
+    const [slice] = late.act.sales;
+    expect(late.saleNights.get(slice!)!.map((n) => [n.night.lootId, n.pieces])).toEqual([
+      ["b", 60],
+    ]);
+  });
+
+  it("places every sale on its nights, unfiltered, the same way", () => {
+    const placed = nightsOfSales(row).get(s)!;
+    expect(placed.map((n) => [n.night.lootId, n.pieces])).toEqual([
+      ["b", 60],
+      ["a", 30],
+    ]);
   });
 });

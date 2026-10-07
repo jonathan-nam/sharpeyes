@@ -4725,6 +4725,13 @@ button.link:disabled {
   min-width: 0;
 }
 
+/* A night a sale came off, under the sale: no art, indented past it, and no rule between them. */
+.loot-shares > li.loot-sale-row.is-night {
+  padding-top: 0;
+  padding-left: 33px;
+  border-top: none;
+}
+
 .loot-share-nets {
   color: var(--muted);
   font-size: var(--text-base);

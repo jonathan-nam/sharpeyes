@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import {
@@ -14,6 +14,8 @@ import {
   offsetOf,
   weekSplit,
   bossesOfSales,
+  nightsOfSales,
+  type SaleNight,
   sliceActToWeek,
   owedByYouShares,
   undecidedSales,
@@ -625,6 +627,7 @@ function SettlementCard({
   // Each act with the nights behind it, resolved once, so the week picker and the rows read the same.
   // `split` is what it came to in each bossing week, or null where no week can be told.
   const bossesOf = (sale: CouponSale): string => labelBosses(saleBosses.get(sale));
+  const saleNights = nightsOfSales(row);
   const acts = discharges.map((act) => {
     const nights = nightsBehind(act.payouts);
     return { act, nights, split: weekSplit(row, act, nights) };
@@ -646,8 +649,8 @@ function SettlementCard({
   const rowsShown = actsShown.map((entry) => {
     const cut = weekShown ? sliceActToWeek(row, entry.act, entry.nights, weekShown) : null;
     return cut
-      ? { ...entry, act: cut.act, nights: cut.shares, bosses: cut.bosses, cut: true }
-      : { ...entry, bosses: null, cut: false };
+      ? { ...entry, act: cut.act, nights: cut.shares, saleCut: cut.saleNights, cut: true }
+      : { ...entry, saleCut: null, cut: false };
   });
   const shownTotal = weekShown
     ? rowsShown.reduce((sum, r) => sum + (r.cut ? r.act.amount : 0), 0)
@@ -888,16 +891,16 @@ function SettlementCard({
                     </div>
                   )}
                   <ul className="ledger-queue">
-                    {rowsShown.map(({ act, nights, split, bosses, cut }) => (
+                    {rowsShown.map(({ act, nights, split, saleCut, cut }) => (
                       <DischargeRow
                         key={act.id}
                         act={act}
                         name={row.name}
                         shares={nights}
                         weeks={cut ? [weekShown] : split ? [...split.keys()].sort() : []}
-                        bossesOf={(sale) =>
-                          bosses?.has(sale) ? labelBosses(bosses.get(sale)) : bossesOf(sale)
-                        }
+                        nightsOf={(sale) => saleCut?.get(sale) ?? saleNights.get(sale) ?? []}
+                        bossByKey={bossByKey}
+                        partyById={partyById}
                         iconUrl={iconUrl}
                         busy={busy}
                         signed={signed}
@@ -1383,7 +1386,9 @@ function DischargeRow({
   name,
   shares,
   weeks,
-  bossesOf,
+  nightsOf,
+  bossByKey,
+  partyById,
   iconUrl,
   busy,
   signed,
@@ -1394,8 +1399,10 @@ function DischargeRow({
   shares: OffsetShare[];
   /** The reset weeks its drops fell in, oldest first. Empty where none can be told. */
   weeks: string[];
-  /** The bosses a sale's coupons came off, said once. Empty where they cannot be told. */
-  bossesOf: (sale: CouponSale) => string;
+  /** The nights a sale's coupons came off. Empty where they cannot be told. */
+  nightsOf: (sale: CouponSale) => SaleNight[];
+  bossByKey: Map<string, Boss>;
+  partyById: Map<string, Party>;
   /** The coupon's own sprite, for the rows whose every piece is one. See CouponSale. */
   iconUrl: string | null;
   busy: boolean;
@@ -1548,21 +1555,44 @@ function DischargeRow({
           {/* Keyed by position: a tranche's id is not carried this far, and it has nothing to say
               here that its pieces and its day do not. */}
           {act.sales.map((sale, i) => (
-            <li key={`sale-${i}`} className="loot-sale-row">
-              {iconUrl ? (
-                <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
-              ) : (
-                <span className="loot-icon" aria-hidden="true" />
-              )}
-              <div className="ledger-offset-text">
-                <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
-                <span className="ledger-offset-sub">
-                  <span className="ledger-amount">{signed(-sale.mesos)}</span>
-                  <span className="loot-meta">{bossesOf(sale)}</span>
-                </span>
-              </div>
-              <span className="ledger-when">{sale.soldAt && dayOf(sale.soldAt)}</span>
-            </li>
+            <Fragment key={`sale-${i}`}>
+              <li className="loot-sale-row">
+                {iconUrl ? (
+                  <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+                ) : (
+                  <span className="loot-icon" aria-hidden="true" />
+                )}
+                <div className="ledger-offset-text">
+                  <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
+                  <span className="ledger-offset-sub">
+                    <span className="ledger-amount">{signed(-sale.mesos)}</span>
+                  </span>
+                </div>
+                <span className="ledger-when">{sale.soldAt && dayOf(sale.soldAt)}</span>
+              </li>
+              {/* One row per night the sale came off: the boss, its coupons, who ran it. */}
+              {nightsOf(sale).map(({ night, pieces }) => {
+                const boss = bossByKey.get(night.bossKey ?? "");
+                const party = partyById.get(night.partyId);
+                return (
+                  <li key={`sale-${i}-${night.lootId}`} className="loot-sale-row is-night">
+                    <div className="ledger-offset-text">
+                      <Link
+                        href={partyHrefById(night.partyId, partyById)}
+                        className="loot-share-name loot-name"
+                      >
+                        {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
+                      </Link>
+                      <span className="ledger-offset-sub">
+                        <span className="ledger-amount">{pieces}</span>
+                        <span className="loot-meta">{night.ran.join(", ")}</span>
+                      </span>
+                    </div>
+                    <span className="ledger-when">{formatDropped(night.droppedOn)}</span>
+                  </li>
+                );
+              })}
+            </Fragment>
           ))}
         </ul>
       )}

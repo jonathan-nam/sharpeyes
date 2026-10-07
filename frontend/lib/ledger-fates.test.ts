@@ -401,6 +401,7 @@ describe("the nights the card's queue lists", () => {
     droppedOn,
     recordedAt,
     looterName: "Husky",
+    ran: [],
     pieces,
     closed,
     transfers: to ? [{ fromId: "self", toId: "person:p-bro", from: "you", to, pieces: owed }] : [],
