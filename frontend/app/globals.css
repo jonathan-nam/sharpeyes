@@ -4732,6 +4732,15 @@ button.link:disabled {
   border-top: none;
 }
 
+.loot-sale-row.is-night .loot-name {
+  font-size: var(--text-base);
+  text-decoration: none;
+}
+
+.loot-sale-row.is-night .loot-name:hover {
+  color: var(--accent);
+}
+
 .loot-share-nets {
   color: var(--muted);
   font-size: var(--text-base);
