@@ -886,7 +886,7 @@ export default function RunOrderPage() {
       {planning && plannedRuns.length > 0 && plan.runs.length === 0 && (
         <p className="finder-empty">
           {eligible.length === 0 && shown.everyoneOn
-            ? "No run seats everyone who is on."
+            ? "No parties available"
             : eligible.length === 0 || !shown.timed
               ? "No run can go ahead with the people who are on."
               : `Nothing fits in ${formatDuration(shown.budget)}. The shortest run needs longer than that.`}
