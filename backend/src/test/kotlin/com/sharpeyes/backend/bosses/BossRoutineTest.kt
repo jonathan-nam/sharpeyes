@@ -286,6 +286,31 @@ class BossRoutineTest {
         }
 
     @Test
+    fun `a skip already standing beside a re-armed one-off does not block other edits`() =
+        transaction {
+            // Unticked once the one-off was spent, then the one-off armed again for a new week.
+            // Every save resends that skip, so refusing it would lock the whole routine.
+            val character = addCharacter(userOneId, "Rearmed")
+            val party = Uuid.random()
+            Party.insert {
+                it[id] = party
+                it[userId] = userOneId
+                it[characterId] = character
+                it[bossCatalogId] = bossId("jupiter")
+                it[createdAt] = midWeek
+                it[updatedAt] = midWeek
+            }
+            CharacterBossSkip.insert {
+                it[characterId] = character
+                it[bossCatalogId] = bossId("jupiter")
+                it[createdAt] = midWeek
+            }
+
+            assertNull(setBossRoutine(userOneId, character, listOf("jupiter", "limbo"), nextWeek))
+            assertEquals(listOf("jupiter", "limbo"), skipsOf(userOneId, character).sorted())
+        }
+
+    @Test
     fun `a solo pool is not a party and does not lock the box`() =
         transaction {
             // The pool a drop on a boss run alone lands in. Nobody set it up, and deleting it to
