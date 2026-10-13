@@ -91,11 +91,22 @@ internal fun setBossRoutine(
         routineTargets(userId, characterId, skippedBossKeys.distinct())
             ?: return RoutineRefusal.Unknown
 
-    val partied = partiedNames(characterId, bosses, now)
+    // Only the bosses this save newly unticks. A skip already standing beside a live config (a
+    // one-off armed again after it was unticked) would otherwise refuse every save, and the editor
+    // locks that box, so nothing on screen could clear it.
+    val standing = skippedBossIds(characterId)
+    val partied = partiedNames(characterId, bosses.filterNot { it.id in standing }, now)
     val refusal = if (partied.isEmpty()) null else RoutineRefusal.HasParty(partied)
     if (refusal == null) replaceSkips(characterId, bosses.map { it.id }, now)
     return refusal
 }
+
+private fun skippedBossIds(characterId: Uuid): Set<Uuid> =
+    CharacterBossSkip
+        .selectAll()
+        .where { CharacterBossSkip.characterId eq characterId }
+        .map { it[CharacterBossSkip.bossCatalogId] }
+        .toSet()
 
 private data class RoutineBoss(
     val id: Uuid,
