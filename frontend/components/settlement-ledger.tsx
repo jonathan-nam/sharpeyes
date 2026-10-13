@@ -550,7 +550,7 @@ function SettlementCard({
     nightWeekShown ? drops.filter((d) => d.weekStart === nightWeekShown) : drops;
   const theirShown = inNightWeek(theirNights);
   const myShown = inNightWeek(myNights);
-  const couponsOpen = theirNights.length > 0 || myNights.length > 0;
+  const couponsOpen = row.piecesNet !== 0 && (theirNights.length > 0 || myNights.length > 0);
   // Whether the coupon lists need telling apart. See the note where they are drawn.
   const bothWays = theirNights.length > 0 && myNights.length > 0;
 
@@ -1127,8 +1127,7 @@ function SettlementCard({
 
               The lists are GROSS: each night says what it owed and what a sale took off it, and
               the two sides are not cancelled against each other, so a week filter shows what that
-              week owed. Only the step is netted. Drawn whenever there is a night, even at "even",
-              because hiding the nights at a zero net hid every sale behind it. */}
+              week owed. Only the step is netted, and a net of zero is settled, so it is not drawn. */}
           {couponsOpen && (
             <>
               <div className="ledger-step-line">
@@ -1152,11 +1151,7 @@ function SettlementCard({
                   </span>
                 </button>
                 <span className="ledger-amount">
-                  {row.piecesNet > 0
-                    ? `${row.piecesNet} to hand over`
-                    : row.piecesNet < 0
-                      ? `${-row.piecesNet} owed`
-                      : "even"}
+                  {row.piecesNet > 0 ? `${row.piecesNet} to hand over` : `${-row.piecesNet} owed`}
                 </span>
               </div>
               {showNights && (
