@@ -839,7 +839,9 @@ export default function RunOrderPage() {
               {log && (
                 <span className="night-progress">
                   {progressLabel({ cleared, total: plan.runs.length })}
-                  {shown.timed && minutesLeft > 0 && ` · ${formatDuration(minutesLeft)} left`}
+                  {shown.timed &&
+                    minutesLeft > 0 &&
+                    ` · Remaining Time: ${formatDuration(minutesLeft).replace(/m$/, "min")}`}
                 </span>
               )}
             </div>
