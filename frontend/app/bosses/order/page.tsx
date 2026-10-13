@@ -590,9 +590,11 @@ export default function RunOrderPage() {
     stacksOf: haveDropTables ? stacksFor : undefined,
   };
 
-  const cleared = plan.runs.filter(
-    (planned) => partyById.get(planned.run.id)?.cleared === true,
-  ).length;
+  const left = plan.runs.filter((planned) => partyById.get(planned.run.id)?.cleared !== true);
+  const cleared = plan.runs.length - left.length;
+  // The runs' own minutes, so a wait for somebody late or a gap before the night starts is not
+  // counted as time a clear takes.
+  const minutesLeft = left.reduce((sum, planned) => sum + planned.run.minutes, 0);
 
   return (
     <main className="page">
@@ -837,6 +839,9 @@ export default function RunOrderPage() {
               {log && (
                 <span className="night-progress">
                   {progressLabel({ cleared, total: plan.runs.length })}
+                  {shown.timed &&
+                    minutesLeft > 0 &&
+                    ` · Remaining Time: ${formatDuration(minutesLeft).replace(/m$/, "min")}`}
                 </span>
               )}
             </div>
