@@ -8,6 +8,8 @@ import {
   planNight,
   screenRuns,
   tradeOffs,
+  withoutRuns,
+  withoutRunsByCount,
 } from "./boss-run-plan";
 
 function run(
@@ -166,6 +168,16 @@ describe("screenRuns", () => {
     });
     expect(kept).toEqual([]);
     expect(rejected[0]?.reason).toBe("person-unavailable");
+  });
+
+  it("can be told who everyone is, apart from who is available", () => {
+    // Run Order screens cleared runs as well, and somebody only in those is not on tonight.
+    const duo = run("duo", "lucid", 10, [
+      ["Mechy", "me"],
+      ["Creed", "chris"],
+    ]);
+    const options = { everyoneOn: true, everyone: ["me", "chris"] };
+    expect(screenRuns([duo], ["me", "chris", "mel"], options).eligible).toHaveLength(1);
   });
 
   it("reports the double-booking ahead of the absence, because it is broken either way", () => {
@@ -724,5 +736,81 @@ describe("availability", () => {
     const { best } = planNight(runs, { minutes: 60, available: { me: { from: 0, until: 60 } } });
     expect(best.runs[0]?.waitingFor).toEqual([]);
     expect(best.runs[0]?.startsAt).toBe(0);
+  });
+});
+
+describe("withoutRuns", () => {
+  // The night that was reported: two duos, each person on three characters.
+  const night = [
+    eligible("a-kalos", "kalos-x", 30, [
+      ["mechyfechy", "jon"],
+      ["Freeballynn", "ben"],
+    ]),
+    eligible("b-adversary", "adversary", 30, [
+      ["mechyfechy", "jon"],
+      ["CreedBratton", "ben"],
+    ]),
+    eligible("c-star", "star", 30, [
+      ["acornacorn", "jon"],
+      ["CreedBratton", "ben"],
+    ]),
+    eligible("d-kaling", "kaling", 30, [
+      ["acornacorn", "jon"],
+      ["iPhone69C", "ben"],
+    ]),
+    eligible("e-seren", "seren", 30, [
+      ["acornacorn", "jon"],
+      ["iPhone69C", "ben"],
+    ]),
+    eligible("0-kalos-c", "kalos-c", 30, [
+      ["warrior2020", "jon"],
+      ["iPhone69C", "ben"],
+    ]),
+  ];
+
+  it("keeps what is left of a night in the order the whole night had it", () => {
+    const full = planNight(night, { minutes: Infinity });
+    const cleared = new Set(order(full.best).slice(0, 2));
+    const rest = order(full.best).slice(2);
+
+    // What the page used to do, and why it moved: the four left tie, and the tie-break differs.
+    const alone = night.filter((r) => !cleared.has(r.id));
+    expect(order(planNight(alone, { minutes: Infinity }).best)).not.toEqual(rest);
+
+    const hidden = withoutRuns(full.best, cleared, { minutes: Infinity });
+    expect(order(hidden)).toEqual(rest);
+  });
+
+  it("starts what is left at the start of the night", () => {
+    const plan = planNight(night.slice(0, 3), { minutes: 90 }).best;
+    const hidden = withoutRuns(plan, new Set([order(plan)[0] as string]), { minutes: 90 });
+    expect(hidden.runs.map((r) => r.startsAt)).toEqual([0, 30]);
+    expect(hidden.minutes).toBe(60);
+  });
+
+  it("still waits for somebody who is not here yet", () => {
+    const available = { ben: { from: 45 } };
+    const plan = planNight(night.slice(0, 2), { minutes: 200, available }).best;
+    const hidden = withoutRuns(plan, new Set([order(plan)[0] as string]), {
+      minutes: 200,
+      available,
+    });
+    expect(hidden.runs[0]?.startsAt).toBe(45);
+    expect(hidden.runs[0]?.waitingFor).toEqual(["ben"]);
+  });
+
+  it("drops a run that does not fit the clock it is given", () => {
+    const plan = planNight(night.slice(0, 3), { minutes: 90 }).best;
+    expect(withoutRuns(plan, new Set(), { minutes: 60 }).runs).toHaveLength(2);
+  });
+
+  it("keeps one plan per length, from the longest search", () => {
+    const { byCount } = planNight(night, { minutes: Infinity });
+    const cleared = new Set(order(byCount[5] as Plan).slice(0, 2));
+    const lengths = withoutRunsByCount(byCount, cleared, { minutes: Infinity }).map(
+      (p) => p.runs.length,
+    );
+    expect(lengths).toEqual([...new Set(lengths)].sort((a, b) => a - b));
+    expect(lengths.at(-1)).toBe(4);
   });
 });

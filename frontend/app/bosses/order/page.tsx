@@ -25,10 +25,12 @@ import {
 } from "@/lib/boss-night";
 import {
   type Availability,
+  EMPTY_PLAN,
   type EligibleRun,
   planNight,
   screenRuns,
   tradeOffs,
+  withoutRunsByCount,
 } from "@/lib/boss-run-plan";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
@@ -463,23 +465,42 @@ export default function RunOrderPage() {
     [plannedParties, bosses],
   );
 
+  // The search plans every config on the period, cleared or not, and the cleared ones are hidden
+  // from what it returns. See withoutRuns for why.
+  const hidden = useMemo(() => {
+    const shownIds = new Set(plannedParties.map((party) => party.id));
+    return new Set(running.filter((party) => !shownIds.has(party.id)).map((party) => party.id));
+  }, [running, plannedParties]);
+  const allRuns = useMemo(() => runsFromParties(running, bosses), [running, bosses]);
+
   // Who is on, as people and as ids. The grid puts a column per person, so it needs the names and
   // the order, not just the set the screening asks for.
   const onTonight = useMemo(() => {
     return rosterFrom(plannedParties).filter((person) => !shown.away.includes(person.id));
   }, [plannedParties, shown.away]);
   const here = useMemo(() => onTonight.map((person) => person.id), [onTonight]);
+  // Everyone in a hidden run too, or their runs would be refused and drop out of the search.
+  const hereAll = useMemo(
+    () =>
+      rosterFrom(running)
+        .filter((person) => !shown.away.includes(person.id))
+        .map((person) => person.id),
+    [running, shown.away],
+  );
 
   // Only the eligible half is read. screenRuns still reports what it rejected, and the page no
   // longer shows it: a run nobody can staff now just does not appear.
   //
   // Nothing until the night has been asked for, which is what keeps the search, the plan and
   // "Left out" all empty rather than each needing its own gate.
-  const eligible = useMemo(
+  const searched = useMemo(
     () =>
-      planning ? screenRuns(plannedRuns, here, { everyoneOn: shown.everyoneOn }).eligible : NO_RUNS,
-    [planning, plannedRuns, here, shown.everyoneOn],
+      planning
+        ? screenRuns(allRuns, hereAll, { everyoneOn: shown.everyoneOn, everyone: here }).eligible
+        : NO_RUNS,
+    [planning, allRuns, hereAll, here, shown.everyoneOn],
   );
+  const eligible = useMemo(() => searched.filter((run) => !hidden.has(run.id)), [searched, hidden]);
 
   // Nothing on screen marks the wait. Fading the old plan through it was tried and removed: at the
   // ~64ms a normal account takes, the fade began and reversed before it finished, and a flicker
@@ -512,10 +533,14 @@ export default function RunOrderPage() {
   // and none is dropped for a reason the page is no longer showing.
   const night = shown.timed ? shown.budget : Infinity;
 
-  const { best, byCount } = useMemo(
-    () => planNight(eligible, { minutes: night, available }),
-    [eligible, night, available],
-  );
+  const byCount = useMemo(() => {
+    // The hidden runs take no time tonight, so the search gets their minutes back on top.
+    let hiddenMinutes = 0;
+    for (const run of searched) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
+    const full = planNight(searched, { minutes: night + hiddenMinutes, available });
+    return withoutRunsByCount(full.byCount, hidden, { minutes: night, available });
+  }, [searched, hidden, night, available]);
+  const best = byCount[byCount.length - 1] ?? EMPTY_PLAN;
 
   const options = useMemo(() => tradeOffs(byCount), [byCount]);
   // Clamps by itself: a stale index from a previous set of inputs falls back to the full plan

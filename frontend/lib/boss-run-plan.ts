@@ -115,6 +115,11 @@ export type ScreenOptions = {
    * who turned up is a run like any other.
    */
   everyoneOn?: boolean;
+  /**
+   * Who "everyone" is for `everyoneOn`, when it is not everybody available. Run Order screens its
+   * cleared runs too (see withoutRuns), and somebody whose every run is cleared is not on tonight.
+   */
+  everyone?: Iterable<string>;
 };
 
 /**
@@ -129,6 +134,7 @@ export function screenRuns(
   options: ScreenOptions = {},
 ): Screening {
   const available = new Set(availablePersonIds);
+  const everyone = options.everyone === undefined ? available : new Set(options.everyone);
   const eligible: EligibleRun[] = [];
   const rejected: Rejection[] = [];
 
@@ -173,17 +179,13 @@ export function screenRuns(
       continue;
     }
 
-    // Everybody who is on is already accounted for by the checks above: no seat is empty, no
-    // person is seated twice, and nobody seated is away. So a count short of the people on is a
-    // party somebody would be sitting out.
-    if (options.everyoneOn === true && run.seats.length < available.size) {
+    if (options.everyoneOn === true) {
       const seated = new Set(run.seats.map((seat) => seat.personId as string));
-      rejected.push({
-        run,
-        reason: "leaves-somebody-out",
-        detail: [...available].filter((id) => !seated.has(id)),
-      });
-      continue;
+      const out = [...everyone].filter((id) => !seated.has(id));
+      if (out.length > 0) {
+        rejected.push({ run, reason: "leaves-somebody-out", detail: out });
+        continue;
+      }
     }
 
     eligible.push({ ...run, seats: run.seats as AttributedSeat[] });
@@ -684,6 +686,57 @@ export function planNight(
   }
 
   return { best: byCount[byCount.length - 1] ?? EMPTY_PLAN, byCount };
+}
+
+/**
+ * A plan with some of its runs taken out, the rest kept in the same order and re-timed.
+ *
+ * This is how Run Order hides what is already cleared. Planning only what is left re-ran the
+ * search on a smaller set, and the best order of a subset is not the superset's order with gaps:
+ * two cleared bosses put the last run of the night first. Planning everything and hiding the
+ * cleared runs keeps every remaining row where it was.
+ *
+ * Switch marks are kept as planned, since whoever ran a hidden run is still parked on it. A run
+ * that no longer fits once re-timed is dropped, which can only happen when the search was given
+ * more clock than `options.minutes` to account for the hidden runs.
+ */
+export function withoutRuns(plan: Plan, hidden: ReadonlySet<string>, options: PlanOptions): Plan {
+  const available = options.available ?? {};
+  const runs: PlannedRun[] = [];
+  let clock = 0;
+  let switches = 0;
+  for (const planned of plan.runs) {
+    if (hidden.has(planned.run.id)) continue;
+    const { readyAt, dueBy, waitsFor } = windowOf(planned.run, available);
+    const startsAt = readyAt > clock ? readyAt : clock;
+    const ends = startsAt + planned.run.minutes;
+    if (ends > options.minutes || ends > dueBy) continue;
+    runs.push({ ...planned, startsAt, waitingFor: startsAt > clock ? waitsFor : [] });
+    clock = ends;
+    switches += planned.switched.length;
+  }
+  return { runs, switches, minutes: clock };
+}
+
+/**
+ * `byCount` with the hidden runs taken out of every plan, still one plan per length, shortest first.
+ *
+ * Two plans can come out the same length once hidden runs are gone. The one from the longer search
+ * is kept, so the plan on screen is the restriction of the full night's best.
+ */
+export function withoutRunsByCount(
+  byCount: Plan[],
+  hidden: ReadonlySet<string>,
+  options: PlanOptions,
+): Plan[] {
+  const byLength = new Map<number, Plan>();
+  for (let i = byCount.length - 1; i >= 0; i--) {
+    const plan = withoutRuns(byCount[i] as Plan, hidden, options);
+    if (plan.runs.length > 0 && !byLength.has(plan.runs.length)) {
+      byLength.set(plan.runs.length, plan);
+    }
+  }
+  return [...byLength.values()].sort((a, b) => a.runs.length - b.runs.length);
 }
 
 /**

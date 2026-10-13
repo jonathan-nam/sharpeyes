@@ -99,10 +99,9 @@ export function runsFromParties(parties: Party[], bosses: Boss[]): CandidateRun[
 /**
  * The configs still to run, keeping the ones ticked off from this page.
  *
- * A boss already cleared when the page opened is not part of tonight. One ticked WHILE the plan is
- * on screen has to stay in the candidate set: planNight is a beam search, so dropping a run
- * re-orders everything after it, and the party is following the order that was pasted to them.
- * It stays where it was, drawn as done.
+ * A boss already cleared when the page opened is not drawn. One ticked WHILE the plan is on screen
+ * stays where it was, drawn as done, so the row and its drop picker do not vanish under the click.
+ * Neither moves the order: Run Order plans the cleared ones too and only hides them (withoutRuns).
  */
 export function stillToRun(parties: Party[], tickedHere: ReadonlySet<string>): Party[] {
   return parties.filter((party) => !isCleared(party) || tickedHere.has(party.id));
