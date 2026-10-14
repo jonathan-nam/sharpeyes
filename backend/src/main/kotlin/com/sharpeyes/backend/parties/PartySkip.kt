@@ -205,6 +205,7 @@ internal fun takeOverParty(
         // they are what a past week is drawn from, and a standing config does not read them.
         Party.update({ Party.id eq partyId }) { it[oneOff] = false }
     }
+    syncPiecesForParty(partyId, now, period)
 }
 
 /**
@@ -226,29 +227,28 @@ internal fun setRunsInPeriod(
     // The exception applies when a one-off runs, or when a standing party does not. Anything else
     // is the config back at its default, and a default is the absence of a row.
     val exceptional = oneOff == runs
-    if (oneOff) {
-        if (exceptional) {
+    when {
+        oneOff && exceptional ->
             PartyPeriodRun.insertIgnore {
                 it[PartyPeriodRun.partyId] = partyId
                 it[periodStart] = period
                 it[createdAt] = now
             }
-        } else {
+        oneOff ->
             PartyPeriodRun.deleteWhere {
                 (PartyPeriodRun.partyId eq partyId) and (PartyPeriodRun.periodStart eq period)
             }
-        }
-        return
+        exceptional ->
+            PartyPeriodSkip.insertIgnore {
+                it[PartyPeriodSkip.partyId] = partyId
+                it[periodStart] = period
+                it[createdAt] = now
+            }
+        else ->
+            PartyPeriodSkip.deleteWhere {
+                (PartyPeriodSkip.partyId eq partyId) and (PartyPeriodSkip.periodStart eq period)
+            }
     }
-    if (exceptional) {
-        PartyPeriodSkip.insertIgnore {
-            it[PartyPeriodSkip.partyId] = partyId
-            it[periodStart] = period
-            it[createdAt] = now
-        }
-    } else {
-        PartyPeriodSkip.deleteWhere {
-            (PartyPeriodSkip.partyId eq partyId) and (PartyPeriodSkip.periodStart eq period)
-        }
-    }
+    // A party that stops running a week stops dividing that week's pile.
+    syncPiecesForParty(partyId, now, period)
 }

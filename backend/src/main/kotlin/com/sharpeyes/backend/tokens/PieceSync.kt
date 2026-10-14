@@ -81,6 +81,27 @@ internal fun syncPiecesForClear(
     now: Instant,
     capture: CaptureCounts? = null,
 ) {
+    // The party pile first, whether or not the sync is on: it is what Party View shows for the week.
+    val seated = refilePile(characterId, bossCatalogId, period, now)
+    syncOne(characterId, bossCatalogId, period, now, capture)
+    syncSeated(seated - characterId, bossCatalogId, period, now)
+}
+
+/** Brings each of these characters' pieces in line with the pile that seats them. */
+internal fun syncSeated(
+    characterIds: Set<Uuid>,
+    bossCatalogId: Uuid,
+    period: LocalDate,
+    now: Instant,
+) = characterIds.forEach { syncOne(it, bossCatalogId, period, now, capture = null) }
+
+private fun syncOne(
+    characterId: Uuid,
+    bossCatalogId: Uuid,
+    period: LocalDate,
+    now: Instant,
+    capture: CaptureCounts?,
+) {
     val userId =
         Characters
             .selectAll()
@@ -143,6 +164,10 @@ private fun owedFor(
     bossCatalogId: Uuid,
     period: LocalDate,
 ): Owed {
+    // A party pile that seats this character says exactly what they took, whatever their own config.
+    pileTakeFor(characterId, bossCatalogId, period)?.let { (tokenId, quantity) ->
+        return if (quantity > 0) Owed.Pieces(tokenId, quantity) else Owed.None
+    }
     val world =
         Characters
             .selectAll()

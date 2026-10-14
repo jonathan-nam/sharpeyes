@@ -269,6 +269,7 @@ internal fun seatsFor(
                 spriteImgUrl = spriteFor(row, spritesByName, row.getOrNull(theirCharacter[Characters.spriteImgUrl])),
                 guest = !row[PartyMember.standing],
                 shares = row[PartyMember.shares],
+                pieceShares = row[PartyMember.pieceShares],
             )
         }
 }

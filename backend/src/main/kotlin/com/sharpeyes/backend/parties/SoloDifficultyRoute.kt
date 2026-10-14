@@ -19,10 +19,9 @@ import kotlin.uuid.Uuid
  * By character and boss rather than by config id, like the Drop Log's own route: the pool may not
  * exist yet, and naming the mode is what opens it.
  *
- * Solo only. A boss this character has a party ON for keeps its mode on that config, beside the
- * roster and the split it is read with, and writing one from here would edit a party through a door
- * that can see neither. A retired config and a one-off whose period has passed both claim nothing
- * about now, so each is taken back as a pool rather than refused over: see setSoloDifficulty.
+ * A boss this character has a party ON for has its mode written there too: one difficulty, last
+ * writer wins. A retired config and a one-off whose period has passed both claim nothing
+ * about now, so each is taken back as a pool: see setSoloDifficulty.
  */
 internal suspend fun RoutingContext.setSoloDifficultyRoute() {
     val (userId, email) = call.principalIdAndEmail()
@@ -41,6 +40,7 @@ internal suspend fun RoutingContext.setSoloDifficultyRoute() {
                 // through it.
                 !ownsCharacter(characterId, userId) -> "characterId must be one of your characters"
                 bossId == null -> "unknown bossKey"
+                request.difficulty == null && difficultyRequired(bossId) -> "pick a difficulty"
                 else ->
                     validateDifficulty(bossId, request.difficulty) ?: run {
                         // Non-null by the catalog row the boss id came out of.
@@ -54,11 +54,7 @@ internal suspend fun RoutingContext.setSoloDifficultyRoute() {
                                 request.difficulty,
                                 Clock.System.now(),
                             )
-                        if (partyId == null) {
-                            "that boss has a party; its difficulty is on the party"
-                        } else {
-                            findParty(partyId, userId)!!
-                        }
+                        findParty(partyId, userId)!!
                     }
             }
         }

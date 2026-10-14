@@ -202,7 +202,7 @@ class PartySoloTest {
             val characterId = character()
             val bossId = bossIdForKey("limbo")!!
 
-            val partyId = setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "HARD", Clock.System.now())!!
+            val partyId = setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "HARD", Clock.System.now())
 
             val pool = findParty(partyId, userId)!!
             assertTrue(pool.solo)
@@ -224,7 +224,7 @@ class PartySoloTest {
             // said which mode. Without this the coupons would be missing until the next reset.
             assertTrue(setBossClearByHand(userId, characterId, "limbo", true, now))
 
-            val partyId = setSoloDifficulty(userId, characterId, bossIdForKey("limbo")!!, "WEEKLY", "HARD", now)!!
+            val partyId = setSoloDifficulty(userId, characterId, bossIdForKey("limbo")!!, "WEEKLY", "HARD", now)
 
             assertEquals(60, couponIn(partyId).quantity)
         }
@@ -254,7 +254,7 @@ class PartySoloTest {
     }
 
     @Test
-    fun `a boss with a party keeps its mode on the party`() {
+    fun `a boss with a party takes the mode set from the character's own config, and stays a party`() {
         transaction {
             val characterId = character()
             val bossId = bossIdForKey("limbo")!!
@@ -263,10 +263,11 @@ class PartySoloTest {
                 SavePartyRequest(characterId.toString(), "limbo", listOf("Steve"), difficulty = "HARD")
             val partyId = createParty(userId, characterId, bossId, request, now)
 
-            // Refused, not applied. The party's mode is read beside its roster and its split, and
-            // this door sees neither.
-            assertNull(setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "NORMAL", now))
-            assertEquals("HARD", findParty(partyId, userId)!!.difficulty)
+            // One difficulty, last writer wins.
+            assertEquals(partyId, setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "NORMAL", now))
+            val party = findParty(partyId, userId)!!
+            assertEquals("NORMAL", party.difficulty)
+            assertEquals(false, party.solo)
         }
     }
 
@@ -368,7 +369,7 @@ class PartySoloTest {
     }
 
     @Test
-    fun `a one-off still on its own period keeps its mode on the party`() {
+    fun `a one-off still on its own period stays the party, at the mode written last`() {
         transaction {
             val characterId = character()
             val bossId = bossIdForKey("limbo")!!
@@ -383,10 +384,11 @@ class PartySoloTest {
                 )
             val partyId = createParty(userId, characterId, bossId, request, now)
 
-            // This period it IS who they run it with, so the mode stays where the roster and the
-            // split can be read beside it.
-            assertNull(setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "NORMAL", now))
-            assertEquals("HARD", findParty(partyId, userId)!!.difficulty)
+            // This period it IS who they run it with, so it stays a party; the mode is shared.
+            assertEquals(partyId, setSoloDifficulty(userId, characterId, bossId, "WEEKLY", "NORMAL", now))
+            val party = findParty(partyId, userId)!!
+            assertEquals("NORMAL", party.difficulty)
+            assertEquals(false, party.solo)
         }
     }
 

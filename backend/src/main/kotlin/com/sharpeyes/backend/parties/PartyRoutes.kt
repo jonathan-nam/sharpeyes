@@ -48,6 +48,8 @@ fun Route.partyRoutes(
     post("/loot/lot") { lotSaleRoute() }
     // Which mode a boss run alone is run at, by character and boss. Constant, so ahead of /{id}.
     put("/solo") { setSoloDifficultyRoute() }
+    // Every party's pile of Eternal pieces for a week, for Party View. Constant, so ahead of /{id}.
+    get("/pieces") { listPiecePilesRoute() }
     // A config by its readable name rather than its id. Constant first segment, so it is matched
     // ahead of /{id} and no character name can shadow a route. See PartySlug.kt.
     get("/by/{path...}") { getPartyBySlug() }
@@ -56,6 +58,8 @@ fun Route.partyRoutes(
     put("/{id}/roster") { saveWeekRosterRoute(nexonLookupService, spriteCache) }
     put("/{id}/clear") { setClearRoute() }
     put("/{id}/skip") { setSkipRoute() }
+    put("/{id}/pieces") { savePiecePileRoute() }
+    delete("/{id}/pieces") { resetPiecePileRoute() }
     delete("/{id}") { deletePartyRoute() }
     // The one write here that is not the owner's: a member taking their own seat out of a party
     // they are in but do not own. See LeaveParty.kt, which holds the route beside the rule.

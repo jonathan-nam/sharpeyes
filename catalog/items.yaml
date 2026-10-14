@@ -49,6 +49,9 @@
 # inventory's auto sync adds when a clear is ticked. Validated by hand against the game; web
 # sources were wrong repeatedly, so never derive one world's figure from the other's.
 #
+# A pile that falls in stacks of more than one is `{ total, bundles }` (Hard Malefic Star, 18 in 6),
+# because a stack is the smallest thing a party can hand out.
+#
 # Every difficulty of the boss is listed by exactly one of its items, and `0` is how "drops none"
 # is said. build.py refuses a gap, so a mode nobody counted cannot read as a mode that drops none.
 #
@@ -67,7 +70,7 @@ items:
     redeem_slots: [Hat, Top, Bottom, Shoulder]
     per_member: HEROIC
     per_clear:
-      HARD: { interactive: 18, heroic: 2 }
+      HARD: { interactive: { total: 18, bundles: 6 }, heroic: 2 }
     art: cut
 
   - key: distorted-ambition

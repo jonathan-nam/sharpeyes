@@ -197,7 +197,7 @@ class PieceSyncTest {
         difficulty: String,
     ) {
         val bossId = bossIdForKey(boss)!!
-        setSoloDifficulty(userId, characterId, bossId, "WEEKLY", difficulty, Clock.System.now())!!
+        setSoloDifficulty(userId, characterId, bossId, "WEEKLY", difficulty, Clock.System.now())
     }
 
     private fun party(
@@ -348,13 +348,14 @@ class PieceSyncTest {
     }
 
     @Test
-    fun `an Interactive party's pooled pile is not guessed at`() {
+    fun `an Interactive party's pooled pile adds this character's take of it`() {
         transaction {
             val me = character()
             party(me, "kalos-the-guardian", "EXTREME")
             tick(me, "kalos-the-guardian")
-            assertEquals(0, held(me, "kalos-token"))
-            assertEquals(listOf("kalos-the-guardian" to PieceSyncGap.PARTY_LOOT), gaps())
+            // 14 between two seats on the default ratio. PiecePileTest covers the split itself.
+            assertEquals(7, held(me, "kalos-token"))
+            assertEquals(emptyList(), gaps())
         }
     }
 

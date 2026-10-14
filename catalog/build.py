@@ -375,6 +375,16 @@ def load_clear_amounts(items: list[dict], bosses: list[dict]) -> list[dict]:
             if isinstance(count, int) and per_member == WORLD_HEROIC and count != 0:
                 sys.exit(f"{key} {difficulty}: pooled in Interactive, so give each world its own count")
             for world, n in worlds.items():
+                # `{ total, bundles }` says the pile falls in stacks of more than one, which decides
+                # what a party can hand out. A bare count is one piece to a stack.
+                stack = 1
+                if isinstance(n, dict):
+                    if set(n) != {"total", "bundles"}:
+                        sys.exit(f"{key} {difficulty} {world}: a stacked count is {{ total, bundles }}")
+                    total, bundles = n["total"], n["bundles"]
+                    if not isinstance(bundles, int) or bundles < 1 or not isinstance(total, int) or total % bundles:
+                        sys.exit(f"{key} {difficulty} {world}: {total!r} does not divide into {bundles!r} stacks")
+                    n, stack = total, total // bundles
                 if not isinstance(n, int) or isinstance(n, bool) or n < 0:
                     sys.exit(f"{key} {difficulty} {world}: count must be a whole number, got {n!r}")
                 rows.append(
@@ -384,6 +394,7 @@ def load_clear_amounts(items: list[dict], bosses: list[dict]) -> list[dict]:
                         "world": world,
                         "item": key,
                         "quantity": n,
+                        "stack": stack,
                         "pooled": per_member == WORLD_HEROIC and world == WORLD_INTERACTIVE,
                     }
                 )
@@ -658,7 +669,7 @@ def sql(items: list[dict], clear_rows: list[dict]) -> str:
     )
     amounts = ",\n".join(
         f"    ({q(r['boss'])}, {q(r['difficulty'])}, {q(r['world'])}, {q(r['item'])}, "
-        f"{int(r['quantity'])}, {'TRUE' if r['pooled'] else 'FALSE'})"
+        f"{int(r['quantity'])}, {int(r['stack'])}, {'TRUE' if r['pooled'] else 'FALSE'})"
         for r in clear_rows
     )
     return f"""-- GENERATED FROM catalog/items.yaml. DO NOT EDIT BY HAND.
@@ -709,11 +720,11 @@ ON CONFLICT (item_id) DO UPDATE SET
 -- count taken out of the manifest has to actually leave. A zero row is a mode that drops none.
 DELETE FROM token_clear_amount;
 
-INSERT INTO token_clear_amount (boss_catalog_id, difficulty, world, token_catalog_id, quantity, pooled)
-SELECT b.id, v.difficulty, v.world, t.id, v.quantity, v.pooled
+INSERT INTO token_clear_amount (boss_catalog_id, difficulty, world, token_catalog_id, quantity, stack_size, pooled)
+SELECT b.id, v.difficulty, v.world, t.id, v.quantity, v.stack_size, v.pooled
 FROM (VALUES
 {amounts}
-) AS v (boss_key, difficulty, world, vision_key, quantity, pooled)
+) AS v (boss_key, difficulty, world, vision_key, quantity, stack_size, pooled)
 JOIN boss_catalog b ON b.boss_key = v.boss_key
 JOIN token_catalog t ON t.vision_key = v.vision_key;
 """

@@ -327,6 +327,9 @@ object PartyMember : Table("party_member") {
     // default and pins its own, so editing this cannot rewrite a settled night.
     val shares = integer("shares")
 
+    // How this seat usually divides a pooled pile of Eternal pieces. See V79__piece_sync.sql.
+    val pieceShares = integer("piece_shares").default(1)
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -406,9 +409,33 @@ object TokenClearAmount : Table("token_clear_amount") {
     val world = text("world")
     val tokenCatalogId = reference("token_catalog_id", TokenCatalog.id)
     val quantity = integer("quantity")
+    val stackSize = integer("stack_size")
     val pooled = bool("pooled")
 
     override val primaryKey = PrimaryKey(bossCatalogId, difficulty, world)
+}
+
+// One week's pooled pile of pieces on a party, outside party_loot on purpose. See V79__piece_sync.sql.
+object PartyPiecePile : Table("party_piece_pile") {
+    val partyId = reference("party_id", Party.id)
+    val periodStart = date("period_start")
+    val tokenCatalogId = reference("token_catalog_id", TokenCatalog.id)
+    val difficulty = text("difficulty")
+    val total = integer("total")
+    val stackSize = integer("stack_size")
+    val edited = bool("edited").default(false)
+    val filedAt = timestamp("filed_at")
+
+    override val primaryKey = PrimaryKey(partyId, periodStart)
+}
+
+object PartyPieceTake : Table("party_piece_take") {
+    val partyId = uuid("party_id")
+    val periodStart = date("period_start")
+    val memberId = reference("member_id", PartyMember.id)
+    val quantity = integer("quantity")
+
+    override val primaryKey = PrimaryKey(partyId, periodStart, memberId)
 }
 
 // A clear the piece sync has accounted for. See V79__piece_sync.sql.
