@@ -2,12 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 import { SlotGrid, useSlotColumns, type SlotItem } from "@/components/slot-grid";
+import { queryParam, replaceQuery, useQueryString } from "@/lib/url-state";
 import type { TokenCatalogItem } from "@/types/token-catalog";
 
 // The client's tab row, in its order and with its spelling ("Etc." and "Set-up" carry their
 // punctuation in-game). Everything we track is a consumable, so it all lives in Use.
 const CATEGORIES = ["Equip", "Use", "Etc.", "Set-up", "Cash", "Dec."] as const;
 type Category = (typeof CATEGORIES)[number];
+
+// How each tab is spelt in the URL, which the in-game punctuation does not survive.
+const SLUGS: Record<Category, string> = {
+  Equip: "equip",
+  Use: "use",
+  "Etc.": "etc",
+  "Set-up": "setup",
+  Cash: "cash",
+  "Dec.": "dec",
+};
+const categoryOf = (slug: string | undefined) => CATEGORIES.find((c) => SLUGS[c] === slug);
 
 // The order the sections appear in. An item whose group we do not recognise falls to the end
 // under "Other" rather than vanishing: an item you cannot see is an item you will not notice is
@@ -80,7 +92,14 @@ export function InventoryPanel({
   addable?: TokenCatalogItem[];
   onAdd?: (tokenCatalogId: string) => void;
 }) {
-  const [category, setCategory] = useState<Category>("Use");
+  // Kept in the URL, so a reload stays on the tab. See lib/url-state.ts.
+  const asked = categoryOf(queryParam(useQueryString(), "tab", Object.values(SLUGS)));
+  const [chosen, setChosen] = useState<Category | null>(null);
+  const category = chosen ?? asked ?? "Use";
+  function setCategory(next: Category) {
+    setChosen(next);
+    replaceQuery({ tab: next === "Use" ? null : SLUGS[next] });
+  }
   const [focused, setFocused] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -98,17 +117,14 @@ export function InventoryPanel({
       }
       if (e.key !== "Tab") return;
       e.preventDefault();
-      setCategory((current) => {
-        const i = CATEGORIES.indexOf(current);
-        const step = e.shiftKey ? -1 : 1;
-        const next = (i + step + CATEGORIES.length) % CATEGORIES.length;
-        return CATEGORIES[next] ?? current;
-      });
+      const i = CATEGORIES.indexOf(category);
+      const step = e.shiftKey ? -1 : 1;
+      setCategory(CATEGORIES[(i + step + CATEGORIES.length) % CATEGORIES.length] ?? category);
     }
 
     panel.addEventListener("keydown", onKeyDown);
     return () => panel.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [category]);
 
   const shown = category === "Use" ? items : [];
 

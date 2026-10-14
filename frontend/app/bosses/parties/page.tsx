@@ -3,7 +3,7 @@
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AddForWeek } from "@/components/add-for-week";
 import { KnownCharacters } from "@/components/known-characters";
 import { PartyCard } from "@/components/party-card";
@@ -15,7 +15,8 @@ import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
 import { SharedParties } from "@/components/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { peek, put, storedAt } from "@/lib/cache";
-import { type Grouping, partyViewFromQuery, partyViewHref } from "@/lib/party-view";
+import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
+import { replaceQuery, useQueryString } from "@/lib/url-state";
 import { reportDataReady } from "@/lib/rum";
 import { buildDropLog, couponsOutstandingByParty, pieceStatusByParty } from "@/lib/drop-log";
 import { dropsInWeek, NOTHING_OUTSTANDING } from "@/lib/loot";
@@ -68,7 +69,6 @@ type LoadState = "loading" | "loaded" | "error";
 // Party View's two reads, in place of the nine requests this page used to make on load. Two
 // rather than one because six of those nine were allowed to fail: see types/parties-page.ts.
 const PAGE_KEY = "/api/pages/parties";
-const noSubscription = () => () => {};
 const EXTRAS_KEY = "/api/pages/parties/extras";
 
 // The resource, for the writes below. What this page READS is PARTY_LIST_KEY.
@@ -143,24 +143,19 @@ export default function PartiesPage() {
   const [state, setState] = useState<LoadState>(
     seededParties && seededBosses && seededCharacters ? "loaded" : "loading",
   );
-  // Read from the URL rather than useSearchParams, for the reason the Drop Log gives.
-  const search = useSyncExternalStore(
-    noSubscription,
-    () => window.location.search,
-    () => "",
-  );
-  const asked = partyViewFromQuery(search);
+  // Kept in the URL, so a reload lands on the same tabs. See lib/url-state.ts.
+  const asked = partyViewFromQuery(useQueryString());
   const [chosenGrouping, setChosenGrouping] = useState<Grouping | null>(null);
   const [chosenFilter, setChosenFilter] = useState<ClearFilter | null>(null);
   const grouping = chosenGrouping ?? asked.grouping;
   const clearFilter = chosenFilter ?? asked.filter;
   function setGrouping(next: Grouping) {
     setChosenGrouping(next);
-    window.history.replaceState(null, "", partyViewHref({ grouping: next, filter: clearFilter }));
+    replaceQuery(partyViewQuery({ grouping: next, filter: clearFilter }));
   }
   function setClearFilter(next: ClearFilter) {
     setChosenFilter(next);
-    window.history.replaceState(null, "", partyViewHref({ grouping, filter: next }));
+    replaceQuery(partyViewQuery({ grouping, filter: next }));
   }
   // Per row, so a tick on one boss does not grey out every other row's controls. One write at a
   // time still, because each one refetches the list. See lib/use-row-writes.ts.

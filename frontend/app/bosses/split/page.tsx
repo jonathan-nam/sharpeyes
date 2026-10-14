@@ -12,18 +12,40 @@ import {
   type SplitMethod,
   splitDrop,
 } from "@/lib/drop-split";
+import { queryParam, replaceQuery, useQueryString } from "@/lib/url-state";
 
 const MAX_PARTY = 6;
+const BASES: readonly AmountBasis[] = ["listed", "received"];
+const METHODS: readonly SplitMethod[] = ["fair", "lazy"];
 
 const percent = (fee: number) => `${(fee * 100).toFixed(0)}%`;
 
 export default function DropSplitPage() {
   const [price, setPrice] = useState("");
-  const [amountIs, setAmountIs] = useState<AmountBasis>("listed");
   const [partySize, setPartySize] = useState(6);
-  const [method, setMethod] = useState<SplitMethod>("fair");
+
+  // The three toggles are kept in the URL, so a reload keeps them. See lib/url-state.ts.
+  const search = useQueryString();
+  const [chosenBasis, setChosenBasis] = useState<AmountBasis | null>(null);
+  const [chosenMethod, setChosenMethod] = useState<SplitMethod | null>(null);
+  const [chosenGrouped, setChosenGrouped] = useState<boolean | null>(null);
+  const amountIs = chosenBasis ?? queryParam(search, "amount", BASES) ?? "listed";
+  const method = chosenMethod ?? queryParam(search, "method", METHODS) ?? "fair";
   // Raw digits by default: these get pasted into the game's price box, which takes nothing else.
-  const [grouped, setGrouped] = useState(false);
+  const grouped = chosenGrouped ?? queryParam(search, "commas", ["on"]) === "on";
+
+  function setAmountIs(next: AmountBasis) {
+    setChosenBasis(next);
+    replaceQuery({ amount: next === "listed" ? null : next });
+  }
+  function setMethod(next: SplitMethod) {
+    setChosenMethod(next);
+    replaceQuery({ method: next === "fair" ? null : next });
+  }
+  function setGrouped(next: boolean) {
+    setChosenGrouped(next);
+    replaceQuery({ commas: next ? "on" : null });
+  }
 
   const mesos = (value: number) => formatMesos(value, grouped);
 
@@ -143,7 +165,7 @@ export default function DropSplitPage() {
           <button
             type="button"
             className="group-toggle"
-            onClick={() => setGrouped((g) => !g)}
+            onClick={() => setGrouped(!grouped)}
             aria-pressed={grouped}
           >
             {grouped ? "Show Raw Numbers" : "Show Comma Separators"}
