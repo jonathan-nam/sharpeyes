@@ -50,7 +50,7 @@ export default function Home() {
           )}
           {main ? (
             <h1>
-              <span className="hero-greeting">Welcome back,</span>
+              <span className="hero-greeting">Welcome back,</span>{" "}
               <span className="hero-ign">{main}</span>
             </h1>
           ) : (
@@ -90,10 +90,10 @@ export default function Home() {
 }
 
 /**
- * One row, and the links its chevron unfolds when it has any.
+ * One row: a link, or, when it has links to unfold, a toggle for them.
  *
- * A row with a page links there and folds from its own chevron button. A row with no page (Bossing) is
- * all toggle, since a heading that navigated nowhere would lie about what it does.
+ * A folding row is all toggle even when it has a page of its own (the Drop Log), so every chevron
+ * works the same way. Its first unfolded link opens that page.
  */
 function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -109,33 +109,19 @@ function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
     );
   }
 
-  const toggle = {
-    "aria-expanded": open,
-    "aria-controls": panelId,
-    onClick: () => setOpen((o) => !o),
-  };
-
   return (
     <div className="hero-fold">
-      <div className="hero-fold-head">
-        {row.href ? (
-          <>
-            <Link href={row.href}>
-              {mark}
-              {row.label}
-            </Link>
-            <button type="button" className="hero-fold-toggle" aria-label={row.label} {...toggle}>
-              <span className="party-row-chevron" aria-hidden="true" />
-            </button>
-          </>
-        ) : (
-          <button type="button" {...toggle}>
-            {mark}
-            {row.label}
-            <span className="party-row-chevron hero-fold-caret" aria-hidden="true" />
-          </button>
-        )}
-      </div>
+      <button
+        type="button"
+        className="hero-fold-head"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {mark}
+        {row.label}
+        <span className="party-row-chevron hero-fold-caret" aria-hidden="true" />
+      </button>
       <div id={panelId} className="hero-fold-items" hidden={!open}>
         {children}
       </div>

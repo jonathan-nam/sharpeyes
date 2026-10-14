@@ -1652,16 +1652,14 @@ img.user-avatar-img {
   font-size: var(--text-xl);
 }
 
-/* The IGN is the line that matters, so the greeting steps down to make room for it. */
+/* One line, the IGN larger than the greeting so it is what the eye lands on. */
 .hero-greeting {
-  display: block;
   color: var(--ink);
   font-size: var(--text-lg);
   font-weight: 400;
 }
 
 .hero-ign {
-  display: block;
   color: var(--ink-strong);
   font-size: var(--text-display);
   line-height: 1.2;
@@ -1681,10 +1679,9 @@ img.user-avatar-img {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  container-type: inline-size;
 }
 
-/* A row is one box. A folding row's link, toggle and unfolded links all sit inside it. */
+/* A row is one box. A folding row's toggle and the links it unfolds both sit inside it. */
 .hero-actions > a,
 .hero-fold {
   border: 1px solid var(--line);
@@ -1699,7 +1696,7 @@ img.user-avatar-img {
 }
 
 .hero-actions > a,
-.hero-fold-head > * {
+.hero-fold-head {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1711,42 +1708,27 @@ img.user-avatar-img {
   cursor: pointer;
 }
 
-.hero-fold-head > * {
+/* The box is the fold's, so the button inside it draws none of its own. */
+.hero-fold-head {
+  width: 100%;
   border: 0;
   background: none;
 }
 
 .hero-actions > a:hover,
-.hero-fold-head > :hover,
+.hero-fold-head:hover,
 .hero-fold-items a:hover {
   background: var(--surface-2);
-}
-
-/* The link (or, with no page, the whole toggle) takes the row; the chevron sits at its end. */
-.hero-fold-head {
-  display: flex;
-}
-
-.hero-fold-head > :first-child {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .hero-fold-caret {
   margin-left: auto;
 }
 
-.hero-fold-head > .hero-fold-toggle {
-  flex: none;
-  justify-content: center;
-  width: 44px;
-  padding: 0;
-}
-
-/* What a row unfolds: one link per page. Equal shares, so no label sets the layout. */
+/* What a row unfolds: one link per line, indented under the row's own label. */
 .hero-fold-items {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
   padding: 4px;
   border-top: 1px solid var(--line);
 }
@@ -1756,25 +1738,14 @@ img.user-avatar-img {
 }
 
 .hero-fold-items a {
-  flex: 1 1 0;
-  min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: 10px;
+  padding: 2px 8px 2px 32px;
   border-radius: var(--radius-sm);
   color: var(--ink-strong);
   font-size: var(--text-base);
   text-decoration: none;
-}
-
-/* "Settlements" beside its mark does not fit a third of a phone. */
-@container (max-width: 460px) {
-  .hero-fold-items a {
-    flex-direction: column;
-    gap: 2px;
-  }
 }
 
 /* --- Sectioned inventory ---------------------------------------------------------------- */
