@@ -33,6 +33,9 @@ object Users : Table("users") {
     // The foreign key and its ON DELETE SET NULL are declared in V66 instead.
     val mainCharacterId = uuid("main_character_id").nullable()
 
+    // Whether a boss clear adds its Eternal pieces to the inventory. See V79__piece_sync.sql.
+    val syncPiecesFromClears = bool("sync_pieces_from_clears").default(false)
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -394,6 +397,31 @@ object BossDropAmount : Table("boss_drop_amount") {
     val bundles = integer("bundles").nullable()
 
     override val primaryKey = PrimaryKey(bossCatalogId, dropCatalogId, difficulty, world)
+}
+
+// What one clear puts in one character's inventory. See V79__piece_sync.sql.
+object TokenClearAmount : Table("token_clear_amount") {
+    val bossCatalogId = reference("boss_catalog_id", BossCatalog.id)
+    val difficulty = text("difficulty")
+    val world = text("world")
+    val tokenCatalogId = reference("token_catalog_id", TokenCatalog.id)
+    val quantity = integer("quantity")
+    val pooled = bool("pooled")
+
+    override val primaryKey = PrimaryKey(bossCatalogId, difficulty, world)
+}
+
+// A clear the piece sync has accounted for. See V79__piece_sync.sql.
+object PieceClearCredit : Table("piece_clear_credit") {
+    val characterId = reference("character_id", Characters.id)
+    val bossCatalogId = reference("boss_catalog_id", BossCatalog.id)
+    val periodStart = date("period_start")
+    val tokenCatalogId = reference("token_catalog_id", TokenCatalog.id)
+    val quantity = integer("quantity")
+    val creditedAt = timestamp("credited_at")
+    val countAfter = integer("count_after").nullable()
+
+    override val primaryKey = PrimaryKey(characterId, bossCatalogId, periodStart)
 }
 
 // A party's loot pool. Stores what was entered, never what was computed: the split arithmetic

@@ -81,3 +81,54 @@ JOIN token_catalog c ON c.vision_key = v.vision_key
 ON CONFLICT (item_id) DO UPDATE SET
     redeem_threshold = EXCLUDED.redeem_threshold,
     slot_group       = EXCLUDED.slot_group;
+
+-- What one clear puts in one character's inventory. Rebuilt outright: nothing references it, and a
+-- count taken out of the manifest has to actually leave. A zero row is a mode that drops none.
+DELETE FROM token_clear_amount;
+
+INSERT INTO token_clear_amount (boss_catalog_id, difficulty, world, token_catalog_id, quantity, pooled)
+SELECT b.id, v.difficulty, v.world, t.id, v.quantity, v.pooled
+FROM (VALUES
+    ('malefic-star', 'HARD', 'INTERACTIVE', 'blissful-fantasy-shard', 18, TRUE),
+    ('malefic-star', 'HARD', 'HEROIC', 'blissful-fantasy-shard', 2, FALSE),
+    ('limbo', 'NORMAL', 'INTERACTIVE', 'distorted-ambition', 1, FALSE),
+    ('limbo', 'NORMAL', 'HEROIC', 'distorted-ambition', 1, FALSE),
+    ('limbo', 'HARD', 'INTERACTIVE', 'distorted-ambition', 2, FALSE),
+    ('limbo', 'HARD', 'HEROIC', 'distorted-ambition', 2, FALSE),
+    ('first-adversary', 'EASY', 'INTERACTIVE', 'echo-ancient-resolve', 0, TRUE),
+    ('first-adversary', 'EASY', 'HEROIC', 'echo-ancient-resolve', 0, FALSE),
+    ('first-adversary', 'HARD', 'INTERACTIVE', 'echo-ancient-resolve', 6, TRUE),
+    ('first-adversary', 'HARD', 'HEROIC', 'echo-ancient-resolve', 2, FALSE),
+    ('first-adversary', 'EXTREME', 'INTERACTIVE', 'echo-ancient-resolve', 16, TRUE),
+    ('first-adversary', 'EXTREME', 'HEROIC', 'echo-ancient-resolve', 3, FALSE),
+    ('kaling', 'HARD', 'INTERACTIVE', 'ferocious-beast-ring', 7, TRUE),
+    ('kaling', 'HARD', 'HEROIC', 'ferocious-beast-ring', 2, FALSE),
+    ('kaling', 'EXTREME', 'INTERACTIVE', 'ferocious-beast-ring', 18, TRUE),
+    ('kaling', 'EXTREME', 'HEROIC', 'ferocious-beast-ring', 3, FALSE),
+    ('kalos-the-guardian', 'EASY', 'INTERACTIVE', 'kalos-token', 0, TRUE),
+    ('kalos-the-guardian', 'EASY', 'HEROIC', 'kalos-token', 0, FALSE),
+    ('kalos-the-guardian', 'CHAOS', 'INTERACTIVE', 'kalos-token', 5, TRUE),
+    ('kalos-the-guardian', 'CHAOS', 'HEROIC', 'kalos-token', 2, FALSE),
+    ('kalos-the-guardian', 'EXTREME', 'INTERACTIVE', 'kalos-token', 14, TRUE),
+    ('kalos-the-guardian', 'EXTREME', 'HEROIC', 'kalos-token', 3, FALSE),
+    ('baldrix', 'NORMAL', 'INTERACTIVE', 'trace-eternal-loyalty', 1, FALSE),
+    ('baldrix', 'NORMAL', 'HEROIC', 'trace-eternal-loyalty', 1, FALSE),
+    ('baldrix', 'HARD', 'INTERACTIVE', 'trace-eternal-loyalty', 2, FALSE),
+    ('baldrix', 'HARD', 'HEROIC', 'trace-eternal-loyalty', 2, FALSE),
+    ('jupiter', 'NORMAL', 'INTERACTIVE', 'lingering-twisted-desire', 1, FALSE),
+    ('jupiter', 'NORMAL', 'HEROIC', 'lingering-twisted-desire', 1, FALSE),
+    ('jupiter', 'HARD', 'INTERACTIVE', 'lingering-twisted-desire', 2, FALSE),
+    ('jupiter', 'HARD', 'HEROIC', 'lingering-twisted-desire', 2, FALSE),
+    ('kalos-the-guardian', 'NORMAL', 'INTERACTIVE', 'kalos-residual-determination-fragment', 3, TRUE),
+    ('kalos-the-guardian', 'NORMAL', 'HEROIC', 'kalos-residual-determination-fragment', 2, FALSE),
+    ('kaling', 'EASY', 'INTERACTIVE', 'ferocious-entanglement-ring-fragment', 1, TRUE),
+    ('kaling', 'EASY', 'HEROIC', 'ferocious-entanglement-ring-fragment', 1, FALSE),
+    ('kaling', 'NORMAL', 'INTERACTIVE', 'ferocious-entanglement-ring-fragment', 5, TRUE),
+    ('kaling', 'NORMAL', 'HEROIC', 'ferocious-entanglement-ring-fragment', 2, FALSE),
+    ('first-adversary', 'NORMAL', 'INTERACTIVE', 'whisper-ancient-resolve', 4, TRUE),
+    ('first-adversary', 'NORMAL', 'HEROIC', 'whisper-ancient-resolve', 2, FALSE),
+    ('malefic-star', 'NORMAL', 'INTERACTIVE', 'blissful-fantasy-fragment', 6, TRUE),
+    ('malefic-star', 'NORMAL', 'HEROIC', 'blissful-fantasy-fragment', 2, FALSE)
+) AS v (boss_key, difficulty, world, vision_key, quantity, pooled)
+JOIN boss_catalog b ON b.boss_key = v.boss_key
+JOIN token_catalog t ON t.vision_key = v.vision_key;

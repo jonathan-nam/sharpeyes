@@ -111,7 +111,13 @@ private fun insertParsedScreenshot(
             now,
             inventoryComplete = result.inventoryComplete == true,
         )
-        upsertBossClears(decision.characterId, result.bossClears.orEmpty(), screenshotId, now)
+        upsertBossClears(
+            decision.characterId,
+            result.bossClears.orEmpty(),
+            screenshotId,
+            now,
+            inventoryComplete = result.inventoryComplete == true,
+        )
     }
 
     return ScreenshotResultResponse(
@@ -326,7 +332,13 @@ suspend fun resolveScreenshot(
             capturedAt,
             inventoryComplete = parsed.inventoryComplete == true,
         )
-        upsertBossClears(newCharacterId, parsed.bossClears.orEmpty(), screenshotId, capturedAt)
+        upsertBossClears(
+            newCharacterId,
+            parsed.bossClears.orEmpty(),
+            screenshotId,
+            capturedAt,
+            inventoryComplete = parsed.inventoryComplete == true,
+        )
         Screenshots.update({ Screenshots.id eq screenshotId }) {
             it[characterId] = newCharacterId
             it[parseStatus] = "SUCCESS"

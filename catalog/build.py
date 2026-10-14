@@ -330,6 +330,71 @@ ON CONFLICT (boss_key) DO UPDATE SET
 
 
 
+def load_clear_amounts(items: list[dict], bosses: list[dict]) -> list[dict]:
+    """What one clear puts in one character's inventory, one row per (boss, difficulty, world).
+
+    Every difficulty of a boss with any `per_clear` must be listed by exactly one item, so the seed
+    can tell "drops none" (a zero row) from "nobody counted" (no row), and the sync refuses the
+    second rather than adding nothing as if it were the first.
+    """
+    by_name = {b["name"]: b for b in bosses}
+    rows: list[dict] = []
+    covered: dict[str, dict[str, str]] = {}
+    for it in items:
+        per_clear = it.get("per_clear")
+        per_member = it.get("per_member")
+        key = it["key"]
+        if per_clear is None:
+            if per_member is not None:
+                sys.exit(f"{key}: per_member only means something beside a per_clear")
+            continue
+        if it.get("category") != "REDEMPTION_TOKEN":
+            sys.exit(f"{key}: only a REDEMPTION_TOKEN drops from a clear")
+        if per_member not in DROP_PER_MEMBER:
+            sys.exit(f"{key}: per_clear needs per_member, one of {sorted(DROP_PER_MEMBER)}")
+        boss = by_name.get(it.get("boss"))
+        if boss is None:
+            sys.exit(f"{key}: boss {it.get('boss')!r} is not a name in catalog/bosses.yaml")
+        if not isinstance(per_clear, dict) or not per_clear:
+            sys.exit(f"{key}: per_clear must map a difficulty to a count")
+        seen = covered.setdefault(boss["key"], {})
+        for difficulty, count in per_clear.items():
+            if difficulty not in (boss.get("difficulties") or []):
+                sys.exit(f"{key}: {difficulty!r} is not one of {boss['key']}'s difficulties")
+            if difficulty in seen:
+                sys.exit(f"{boss['key']} {difficulty}: listed by both {seen[difficulty]} and {key}")
+            seen[difficulty] = key
+            if isinstance(count, int):
+                worlds = {WORLD_INTERACTIVE: count, WORLD_HEROIC: count}
+            elif isinstance(count, dict) and set(count) == {"interactive", "heroic"}:
+                worlds = {WORLD_INTERACTIVE: count["interactive"], WORLD_HEROIC: count["heroic"]}
+            else:
+                sys.exit(f"{key} {difficulty}: a count is N or {{ interactive: N, heroic: M }}")
+            # A pooled Interactive pile and a per-person Heroic count are different facts, so a bare
+            # number for both is only believable where nothing pools.
+            if isinstance(count, int) and per_member == WORLD_HEROIC and count != 0:
+                sys.exit(f"{key} {difficulty}: pooled in Interactive, so give each world its own count")
+            for world, n in worlds.items():
+                if not isinstance(n, int) or isinstance(n, bool) or n < 0:
+                    sys.exit(f"{key} {difficulty} {world}: count must be a whole number, got {n!r}")
+                rows.append(
+                    {
+                        "boss": boss["key"],
+                        "difficulty": difficulty,
+                        "world": world,
+                        "item": key,
+                        "quantity": n,
+                        "pooled": per_member == WORLD_HEROIC and world == WORLD_INTERACTIVE,
+                    }
+                )
+    for boss_key, seen in covered.items():
+        modes = next(b for b in bosses if b["key"] == boss_key)["difficulties"]
+        missing = [m for m in modes if m not in seen]
+        if missing:
+            sys.exit(f"{boss_key}: no item says what {missing[0]} drops; write 0 if it drops none")
+    return rows
+
+
 def load_drops(bosses: list[dict]) -> tuple[list[dict], dict[str, list[dict]]]:
     """The drop manifest, validated against the boss catalog it keys on."""
     data = load_yaml(DROP_MANIFEST)
@@ -573,7 +638,7 @@ def check_art(items: list[dict]) -> list[str]:
     return problems
 
 
-def sql(items: list[dict]) -> str:
+def sql(items: list[dict], clear_rows: list[dict]) -> str:
     def q(s: str) -> str:
         return "'" + s.replace("'", "''") + "'"
 
@@ -590,6 +655,11 @@ def sql(items: list[dict]) -> str:
     rules = ",\n".join(
         f"    ({q(it['key'])}, {int(it['redeem_threshold'])}, {arr(it['redeem_slots'])})"
         for it in redeemable
+    )
+    amounts = ",\n".join(
+        f"    ({q(r['boss'])}, {q(r['difficulty'])}, {q(r['world'])}, {q(r['item'])}, "
+        f"{int(r['quantity'])}, {'TRUE' if r['pooled'] else 'FALSE'})"
+        for r in clear_rows
     )
     return f"""-- GENERATED FROM catalog/items.yaml. DO NOT EDIT BY HAND.
 -- Regenerate with:  python catalog/build.py
@@ -634,6 +704,18 @@ JOIN token_catalog c ON c.vision_key = v.vision_key
 ON CONFLICT (item_id) DO UPDATE SET
     redeem_threshold = EXCLUDED.redeem_threshold,
     slot_group       = EXCLUDED.slot_group;
+
+-- What one clear puts in one character's inventory. Rebuilt outright: nothing references it, and a
+-- count taken out of the manifest has to actually leave. A zero row is a mode that drops none.
+DELETE FROM token_clear_amount;
+
+INSERT INTO token_clear_amount (boss_catalog_id, difficulty, world, token_catalog_id, quantity, pooled)
+SELECT b.id, v.difficulty, v.world, t.id, v.quantity, v.pooled
+FROM (VALUES
+{amounts}
+) AS v (boss_key, difficulty, world, vision_key, quantity, pooled)
+JOIN boss_catalog b ON b.boss_key = v.boss_key
+JOIN token_catalog t ON t.vision_key = v.vision_key;
 """
 
 
@@ -855,6 +937,7 @@ def main() -> None:
     items = load()
     bosses = load_bosses()
     drops, drop_tables = load_drops(bosses)
+    clear_rows = load_clear_amounts(items, bosses)
 
     if args.fetch_icons:
         fetch_icons(items)
@@ -863,7 +946,7 @@ def main() -> None:
     problems = check_art(items) + check_drop_art(drops) + check_boss_art(bosses)
 
     outputs = [
-        (SQL_OUT, sql(items)),
+        (SQL_OUT, sql(items, clear_rows)),
         (BOSS_OUT, boss_json(bosses)),
         (BOSS_SQL_OUT, boss_sql(bosses)),
         (DROP_SQL_OUT, drop_sql(drops, drop_tables)),

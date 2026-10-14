@@ -6,6 +6,8 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.parties.lootFromClear
 import com.sharpeyes.backend.parties.unlootFromClear
 import com.sharpeyes.backend.services.DetectedBossClear
+import com.sharpeyes.backend.tokens.CaptureCounts
+import com.sharpeyes.backend.tokens.syncPiecesForClear
 import com.sharpeyes.backend.users.inActiveWorld
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -209,6 +211,7 @@ internal fun setBossClearByHand(
     } else {
         unlootFromClear(characterId, boss[BossCatalog.id], boss[BossCatalog.reset], day)
     }
+    syncPiecesForClear(characterId, boss[BossCatalog.id], periodStartFor(boss[BossCatalog.reset], now), now)
     return true
 }
 
@@ -224,6 +227,7 @@ internal fun upsertBossClears(
     clears: List<DetectedBossClear>,
     screenshotId: Uuid,
     capturedAt: Instant,
+    inventoryComplete: Boolean = false,
 ) {
     if (clears.isEmpty()) return
     val catalog = BossCatalog.selectAll().associateBy { it[BossCatalog.bossKey] }
@@ -258,5 +262,14 @@ internal fun upsertBossClears(
         } else {
             unlootFromClear(characterId, row[BossCatalog.id], row[BossCatalog.reset], day)
         }
+        // After the token counts, which ingestion writes first: a count this capture also read
+        // already includes the drop, and CaptureCounts is how the sync tells.
+        syncPiecesForClear(
+            characterId,
+            row[BossCatalog.id],
+            period,
+            capturedAt,
+            CaptureCounts(screenshotId, inventoryComplete),
+        )
     }
 }

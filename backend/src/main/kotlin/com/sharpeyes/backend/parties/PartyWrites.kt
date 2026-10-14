@@ -10,6 +10,7 @@ import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.PersonCharacter
+import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -66,7 +67,18 @@ internal fun createParty(
     val context = SeatContext(userId, sprites, now)
     writeMembers(partyId, characterId, request.members, context, request.shares)
     if (request.oneOff) writeNightRoster(partyId, characterId, request.members, now, context)
+    syncPiecesForConfig(characterId, bossCatalogId, now)
     return partyId
+}
+
+/** Re-files this period's pieces at the mode the config has now, so Hard to Normal swaps them. */
+private fun syncPiecesForConfig(
+    characterId: Uuid,
+    bossCatalogId: Uuid,
+    now: Instant,
+) {
+    val reset = bossResetOf(bossCatalogId) ?: return
+    syncPiecesForClear(characterId, bossCatalogId, periodStartFor(reset, now), now)
 }
 
 /**
@@ -106,6 +118,7 @@ internal fun saveParty(
     } else {
         writeMembers(partyId, characterId, request.members, SeatContext(userId, sprites, now), request.shares)
     }
+    syncPiecesForConfig(characterId, bossIdOfParty(partyId)!!, now)
 }
 
 /**
@@ -142,6 +155,7 @@ internal fun setPartyClear(
     } else {
         unlootFromClear(own, bossCatalogId, reset, today)
     }
+    syncPiecesForClear(own, bossCatalogId, periodStartFor(reset, now), now)
 }
 
 /** Today, as the clock the periods are measured on sees it. */
@@ -189,6 +203,7 @@ internal fun clearFromDrop(
         row[capturedAt] = now
         row[sourceScreenshotId] = null
     }
+    syncPiecesForClear(characterId, bossCatalogId, period, now)
 }
 
 /** What taking a config off Party View did to it. */
