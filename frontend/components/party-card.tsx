@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import { DropPicker } from "@/components/drop-picker";
 import { LootList, type StackAssignment } from "@/components/loot-list";
+import { PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
 import { ApiError, SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl } from "@/lib/api";
@@ -15,6 +16,7 @@ import type { Boss } from "@/types/boss";
 import type { BossDrop, DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Party } from "@/types/party";
+import type { PiecePile } from "@/types/piece-pile";
 import { partyHref } from "@/lib/party-path";
 
 // One config: who ran this boss this week, and what its pool is up to.
@@ -50,7 +52,14 @@ export function PartyCard({
   onSaveRoster,
   onTakeOff,
   stacks,
+  piecePile,
 }: {
+  /** The week's pile of Eternal pieces, where this party has one. See PiecePileEditor. */
+  piecePile?: {
+    pile: PiecePile;
+    onSave: (total: number, takes: Record<string, number>) => Promise<void>;
+    onReset: () => Promise<void>;
+  };
   party: Party;
   heading: ReactNode;
   /** THIS row's write. Fed the page's, it dimmed every row at once: the page appeared to flicker. */
@@ -438,6 +447,21 @@ export function PartyCard({
               onSetTaken={pool.onSetTaken}
               onSetPaid={pool.onSetPaid}
               onDelete={pool.onDelete}
+            />
+          )}
+          {/* The week's pile of Eternal pieces. Never part of the pool above: pieces cannot be sold,
+              so they stay out of the Drop Log, sales and settlement. Keyed on what was filed, so a
+              save or a re-file opens the boxes on the new figures. */}
+          {piecePile && (
+            <PiecePileEditor
+              key={`${piecePile.pile.weekStart}:${piecePile.pile.total}:${piecePile.pile.takes
+                .map((t) => `${t.memberId}=${t.quantity}`)
+                .join(",")}`}
+              party={party}
+              pile={piecePile.pile}
+              busy={busy ?? false}
+              onSave={piecePile.onSave}
+              onReset={piecePile.onReset}
             />
           )}
           {/* One press opens the roster, the night's pickup and the split, so one press has to

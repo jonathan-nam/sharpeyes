@@ -166,10 +166,8 @@ export default function BossRoutinePage() {
   // A party config for this character and boss already says they run it, so the box is locked
   // rather than refused after the fact. See partiedBossKeys and BossRoutineEditor.
   const lockedBossKeys = partiedBossKeys(parties, selected ?? "");
-  const soloDifficulty = new Map(
-    parties
-      .filter((p) => p.characterId === selected && p.solo)
-      .map((p) => [p.bossKey, p.difficulty]),
+  const difficultyByBoss = new Map(
+    parties.filter((p) => p.characterId === selected).map((p) => [p.bossKey, p.difficulty]),
   );
 
   return (
@@ -216,7 +214,7 @@ export default function BossRoutinePage() {
                     dropTables={dropTables}
                     skipped={skipped}
                     lockedBossKeys={lockedBossKeys}
-                    soloDifficulty={soloDifficulty}
+                    difficultyByBoss={difficultyByBoss}
                     isSaving={isSaving}
                     onToggle={toggle}
                     onDifficulty={setDifficulty}

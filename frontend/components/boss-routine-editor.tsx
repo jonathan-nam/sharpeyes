@@ -31,7 +31,7 @@ export function BossRoutineEditor({
   dropTables,
   skipped,
   lockedBossKeys,
-  soloDifficulty,
+  difficultyByBoss,
   isSaving,
   onToggle,
   onDifficulty,
@@ -51,7 +51,7 @@ export function BossRoutineEditor({
    */
   lockedBossKeys: Set<string>;
   /** The mode each boss run alone is run at, by boss key. Absent is nobody having said. */
-  soloDifficulty: Map<string, string | null>;
+  difficultyByBoss: Map<string, string | null>;
   /** Whether THIS box's write is in flight. One flag for the page greyed the whole list on one tick. */
   isSaving: (bossKey: string) => boolean;
   onToggle: (bossKey: string, runs: boolean) => void;
@@ -71,9 +71,9 @@ export function BossRoutineEditor({
               .map((boss) => {
                 const runs = !skipped.has(boss.bossKey);
                 const locked = lockedBossKeys.has(boss.bossKey);
-                // Only where it decides something: a boss the character runs alone, whose table
-                // carries an amount at some mode. Everywhere else the select would change nothing.
-                const asks = runs && !locked && hasGuaranteedDrop(dropTables[boss.bossKey]);
+                // Only where it decides something: a boss whose table carries an amount at some
+                // mode. A party's boss too, since the config and the party share one difficulty.
+                const asks = runs && hasGuaranteedDrop(dropTables[boss.bossKey]);
                 return (
                   <li key={boss.bossKey} className={`routine-row${runs ? "" : " is-skipped"}`}>
                     <label className="routine-label">
@@ -99,9 +99,10 @@ export function BossRoutineEditor({
                     {asks && (
                       <DifficultySelect
                         difficulties={boss.difficulties}
-                        value={soloDifficulty.get(boss.bossKey) ?? ""}
+                        value={difficultyByBoss.get(boss.bossKey) ?? ""}
                         label={`Difficulty ${characterName} runs ${boss.name} at`}
                         disabled={isSaving(boss.bossKey)}
+                        required
                         onChange={(picked) =>
                           onDifficulty(boss.bossKey, picked === "" ? null : picked)
                         }

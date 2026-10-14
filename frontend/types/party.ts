@@ -28,6 +28,9 @@ export type PartyMember = {
   // What this seat is entitled to of the STACKS the party divides, as a ratio: see lib/stacks.ts.
   // Not a money weight. A sale opens even and pins its own counts, whatever this says.
   shares: number;
+  // How this seat usually divides a pooled pile of Eternal pieces, as a ratio. Optional for a
+  // cached party from before the field; read it `?? 1`.
+  pieceShares?: number;
 };
 
 // One config: your character, one boss, and who they run it with. A boss your character solos has
@@ -117,14 +120,16 @@ export type SavePartyBody = {
   characterId: string;
   bossKey: string;
   members: string[];
-  // One of the boss's own difficulties. Omitted or null says nothing, which the server keeps as
-  // nothing; anything the boss does not have is refused rather than stored.
+  // One of the boss's own difficulties. Omitted or null leaves the config's mode as it is, since the
+  // character's own config shares it; anything the boss does not have is refused.
   difficulty?: string | null;
   // Minutes door to door, or null for "not timed". Zero is a real answer and is kept as one.
   minutes?: number | null;
   // What each seat usually takes, by character name, your own included. The body is the whole
   // roster, so a name left out takes one share.
   shares?: Record<string, number>;
+  // How each seat divides a pooled pile of pieces, by name. A name left out keeps what it had.
+  pieceShares?: Record<string, number>;
   // Make this a one-off, on for this period alone. Read at create only: which kind of config it is
   // decides how every later period reads, so flipping it afterwards would rewrite weeks it has
   // already answered for.

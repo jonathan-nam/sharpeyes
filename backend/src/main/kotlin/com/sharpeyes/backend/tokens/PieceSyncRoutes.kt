@@ -57,10 +57,18 @@ private suspend fun RoutingContext.savePieceSync() {
     val response =
         dbQuery {
             ensureUser(userId, email)
-            Users.update({ Users.id eq userId }) { it[syncPiecesFromClears] = request.enabled }
+            setPieceSync(userId, request.enabled)
             pieceSyncFor(userId)
         }
     call.respond(response)
+}
+
+/** The flag and nothing else: turning the sync on or off never moves a count. */
+internal fun setPieceSync(
+    userId: String,
+    enabled: Boolean,
+) {
+    Users.update({ Users.id eq userId }) { it[syncPiecesFromClears] = enabled }
 }
 
 internal fun pieceSyncFor(userId: String): PieceSyncResponse =

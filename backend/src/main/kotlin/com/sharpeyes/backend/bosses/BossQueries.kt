@@ -3,6 +3,8 @@ package com.sharpeyes.backend.bosses
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Characters
+import com.sharpeyes.backend.db.TokenCatalog
+import com.sharpeyes.backend.db.TokenClearAmount
 import com.sharpeyes.backend.parties.lootFromClear
 import com.sharpeyes.backend.parties.unlootFromClear
 import com.sharpeyes.backend.services.DetectedBossClear
@@ -44,8 +46,23 @@ private var heldCatalog: List<BossResponse>? = null
 internal fun bossCatalog(): List<BossResponse> = heldCatalog ?: readBossCatalog().also { heldCatalog = it }
 
 // A race here costs one extra read and stores an identical answer, so it is left unsynchronised.
-private fun readBossCatalog(): List<BossResponse> =
-    BossCatalog
+private fun readBossCatalog(): List<BossResponse> {
+    val pieces =
+        TokenClearAmount
+            .innerJoin(TokenCatalog)
+            .selectAll()
+            .groupBy({ it[TokenClearAmount.bossCatalogId] }) {
+                BossPieceResponse(
+                    difficulty = it[TokenClearAmount.difficulty],
+                    world = it[TokenClearAmount.world],
+                    tokenName = it[TokenCatalog.name],
+                    iconUrl = it[TokenCatalog.iconRefKey]?.let { file -> "/token-icons/$file" },
+                    quantity = it[TokenClearAmount.quantity],
+                    stackSize = it[TokenClearAmount.stackSize],
+                    pooled = it[TokenClearAmount.pooled],
+                )
+            }
+    return BossCatalog
         .selectAll()
         .orderBy(BossCatalog.sortOrder)
         .map {
@@ -55,8 +72,10 @@ private fun readBossCatalog(): List<BossResponse> =
                 reset = it[BossCatalog.reset],
                 iconUrl = it[BossCatalog.iconRefKey]?.let { key -> "/boss-icons/$key" },
                 difficulties = it[BossCatalog.difficulties],
+                pieces = pieces[it[BossCatalog.id]].orEmpty(),
             )
         }
+}
 
 /**
  * Every character's clears for the period each boss is currently in, keyed by character id.

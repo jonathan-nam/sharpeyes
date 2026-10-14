@@ -7,6 +7,12 @@ import { RosterInputs } from "@/components/roster-inputs";
 import { apiAssetUrl } from "@/lib/api";
 import { MAX_MINUTES, parseMinutes } from "@/lib/boss-minutes";
 import { bossesWithoutConfig, namedSeats, standingMembers, standingParties } from "@/lib/parties";
+import {
+  parseWholeStacks,
+  pooledPieceAt,
+  sharesFromWholeStacks,
+  splitStacks,
+} from "@/lib/piece-stacks";
 import { splitTitle } from "@/lib/split-title";
 import {
   couponsOf,
@@ -92,7 +98,7 @@ export function PartyConfigEditor({
           drops={dropTables[party.bossKey] ?? []}
           spriteFor={spriteFor}
           busy={isSaving(party.id)}
-          onSave={(members, difficulty, minutes, shares) =>
+          onSave={(members, difficulty, minutes, shares, pieceShares) =>
             onSave(
               {
                 characterId,
@@ -101,6 +107,7 @@ export function PartyConfigEditor({
                 difficulty,
                 minutes,
                 shares,
+                pieceShares,
               },
               party.id,
             )
@@ -261,6 +268,7 @@ function ConfigRow({
     difficulty: string | null,
     minutes: number | null,
     shares: Record<string, number>,
+    pieceShares: Record<string, number>,
   ) => void;
   onDelete: () => void;
 }) {
@@ -316,14 +324,34 @@ function ConfigRow({
    * editing a party's MINUTES quietly rewrote its 2:1 into 1:1.
    */
   const stacksDirty = stacksKey(entitled) !== stacksKey(savedStacks(savedBundles));
+  // The Eternal piece split, in whole stacks. Null until typed in: untouched, the boxes show the
+  // stored ratio at whatever mode is picked, and the save leaves the ratio alone.
+  const [pieceBoxes, setPieceBoxes] = useState<Record<string, string> | null>(null);
   const dirty =
     members.join(" ") !== saved.join(" ") ||
     difficulty !== savedDifficulty ||
     minutes !== savedMinutes ||
-    stacksDirty;
+    stacksDirty ||
+    pieceBoxes !== null;
   // The roster as it is being edited, not as it was saved, so somebody added in this same edit can
   // be picked and a renamed seat keeps whatever it was designated for.
   const rosterNames = [ownName, ...members.map((m) => m.trim())].filter((name) => name !== "");
+  const piece = pooledPieceAt(boss, difficulty, world);
+  const pieceStacks = piece ? piece.quantity / piece.stackSize : 0;
+  const savedPieceShares = new Map(
+    party.seats.filter((s) => !s.guest).map((s) => [s.name, s.pieceShares ?? 1]),
+  );
+  const shownPieceBoxes: Record<string, string> =
+    pieceBoxes ??
+    Object.fromEntries(
+      splitStacks(
+        pieceStacks,
+        rosterNames.map((name) => savedPieceShares.get(name) ?? 1),
+      ).map((n, i) => [rosterNames[i], String(n)]),
+    );
+  const pieceTyped = rosterNames.map((name) => parseWholeStacks(shownPieceBoxes[name] ?? ""));
+  const pieceSum = pieceTyped.reduce<number>((a, n) => a + (n ?? 0), 0);
+  const pieceOk = !piece || (pieceTyped.every((n) => n !== null) && pieceSum === pieceStacks);
   /** What each seat is on now, by name, for a save that must not restate a deal it cannot show. */
   const savedShares = new Map(party.seats.filter((s) => !s.guest).map((s) => [s.name, s.shares]));
   const attributed = standingMembers(party).filter((m) => m.personName);
@@ -379,6 +407,7 @@ function ConfigRow({
             value={difficulty}
             label={`Difficulty for ${boss?.name ?? party.bossKey}`}
             disabled={busy}
+            required={(boss?.pieces?.length ?? 0) > 0}
             onChange={setDifficulty}
           />
         </div>
@@ -488,16 +517,56 @@ function ConfigRow({
         </div>
       )}
 
+      {/* The Eternal piece split, the same shape as the coupon one above. Only where this mode
+          drops one pile for the party, which is Interactive Kalos, Kaling, Adversary and Star. */}
+      {piece && (
+        <div className="config-section config-panel">
+          <div className="config-panel-head">
+            {piece.iconUrl && <img className="loot-icon" src={apiAssetUrl(piece.iconUrl)} alt="" />}
+            <h4 className="loot-group-title is-config">{piece.tokenName}</h4>
+          </div>
+          <div className="config-vestige">
+            <span className="config-share-drop">
+              {piece.stackSize > 1
+                ? `${piece.quantity} in ${pieceStacks} stacks of ${piece.stackSize}`
+                : `${piece.quantity} pieces`}
+            </span>
+            <div className="config-shares">
+              {rosterNames.map((name, i) => (
+                <label className="config-share" key={name}>
+                  {name}
+                  <input
+                    className="split-input"
+                    value={shownPieceBoxes[name] ?? ""}
+                    onChange={(e) => setPieceBoxes({ ...shownPieceBoxes, [name]: e.target.value })}
+                    inputMode="numeric"
+                    aria-label={`Stacks of ${piece.tokenName} ${name} takes each week`}
+                    disabled={busy}
+                  />
+                  {pieceTyped[i] !== null && piece.stackSize > 1 && (
+                    <span className="config-share-stacks">{`${pieceTyped[i]! * piece.stackSize} pieces`}</span>
+                  )}
+                </label>
+              ))}
+            </div>
+            {!pieceOk && (
+              <p className="split-error">{`These come to ${pieceSum} of ${pieceStacks} stacks.`}</p>
+            )}
+          </div>
+        </div>
+      )}
+
       {dirty && (
         <div className="loot-actions">
           <button
             type="button"
             className="party-save"
-            disabled={busy || !parsed.ok || badStacks}
+            disabled={busy || !parsed.ok || badStacks || !pieceOk}
             onClick={() =>
               parsed.ok &&
               !badStacks &&
               addsUp &&
+              pieceOk &&
               onSave(
                 namedSeats(members),
                 difficulty === "" ? null : difficulty,
@@ -522,6 +591,15 @@ function ConfigRow({
                   : Object.fromEntries(
                       rosterNames.map((name) => [name, savedShares.get(name) ?? 1]),
                     ),
+                // Only once typed in. Untouched, nothing is sent and every seat keeps its ratio.
+                pieceBoxes !== null && piece
+                  ? Object.fromEntries(
+                      rosterNames.map((name, i) => [
+                        name,
+                        sharesFromWholeStacks(pieceTyped.map((n) => n ?? 0))?.[i] ?? 1,
+                      ]),
+                    )
+                  : {},
               )
             }
           >
@@ -534,6 +612,7 @@ function ConfigRow({
             onClick={() => {
               setMembers(saved.length > 0 ? saved : [""]);
               setEntitled(savedStacks(savedBundles));
+              setPieceBoxes(null);
               setDifficulty(savedDifficulty);
               setMinutes(savedMinutes);
             }}

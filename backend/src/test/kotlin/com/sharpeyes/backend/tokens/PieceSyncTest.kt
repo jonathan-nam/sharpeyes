@@ -259,6 +259,29 @@ class PieceSyncTest {
     }
 
     @Test
+    fun `turning the sync off and on again never adds or removes a piece`() {
+        transaction {
+            val me = character()
+            solo(me, "kalos-the-guardian", "EXTREME")
+            tick(me, "kalos-the-guardian")
+            assertEquals(14, held(me, "kalos-token"))
+
+            setPieceSync(userId, false)
+            assertEquals(14, held(me, "kalos-token"))
+            setPieceSync(userId, true)
+            assertEquals(14, held(me, "kalos-token"))
+
+            // A clear ticked while it was off is not added when it comes back on.
+            setPieceSync(userId, false)
+            solo(me, "kaling", "HARD")
+            tick(me, "kaling")
+            setPieceSync(userId, true)
+            assertEquals(0, held(me, "ferocious-beast-ring"))
+            assertEquals(14, held(me, "kalos-token"))
+        }
+    }
+
+    @Test
     fun `nothing moves while the sync is off`() {
         transaction {
             val me = character(sync = false)
