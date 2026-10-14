@@ -44,8 +44,8 @@ const BOSS_ART = join(
 const ICON_VERSION = 268;
 
 // Not the catalog's 46. A tab mark is drawn at its canvas size, so the canvas IS the drawn size.
-// 36 was sized for the boss crystal, since retired. The largest sprite now is Royal Family Chair
-// (34x30), so every one of them sits 1:1. Raising it grows every chip in the strip, so raise it deliberately when a mark needs it,
+// 36 was sized for the boss crystal, since retired. The largest sprite now is Grindstone of Faith
+// (33x32), so every one of them sits 1:1. Raising it grows every chip in the strip, so raise it deliberately when a mark needs it,
 // and never as a way of making one fit.
 const MARK_CANVAS = 36;
 
@@ -62,11 +62,16 @@ const MARKS = [
   // a settlement is.
   { key: "owl-of-minerva", id: 2310000, name: "The Owl of Minerva" },
   // The home screen's rows. A character's photo for the characters, a bag for the inventory, a
-  // ticked sheet for a week of clears, a group on stage for the parties, and a route for Run Order.
+  // ticked sheet for a week of clears, a leader and followers for the parties, and a route for Run
+  // Order. Follow the Lead is a skill, so it comes out of the wz tree, not the item endpoint.
   { key: "roly-poly-photo", id: 4031079, name: "Photo of Roly-Poly 1" },
   { key: "party-quest-bag", id: 4330016, name: "8-slot Party Quest Bag" },
   { key: "attendance-sheet", id: 4032057, name: "Attendance Sheet" },
-  { key: "royal-family-chair", id: 3015799, name: "Royal Family Chair" },
+  {
+    key: "follow-the-lead",
+    wz: "Skill/_Canvas/000.img/skill/0000008/icon",
+    name: "Follow the Lead",
+  },
   { key: "treasure-map", id: 3994353, name: "Pirate King's Treasure Map <1st Piece>" },
   // The home screen's Bossing row. A boss portrait, so it is cut from a planner capture rather than
   // fetched: see vision/app/cv/build_boss_portraits.py.
@@ -114,6 +119,11 @@ for (const mark of MARKS) {
   let art;
   if (mark.file) {
     art = await readFile(mark.file);
+  } else if (mark.wz) {
+    id = mark.wz;
+    const res = await fetch(`https://maplestory.io/api/wz/GMS/${ICON_VERSION}/${mark.wz}`);
+    if (!res.ok) throw new Error(`${mark.key} (${id}): ${res.status} from the mirror`);
+    art = Buffer.from((await res.json()).value, "base64");
   } else {
     id = mark.id ?? (await catalogIconId(mark.fromCatalog));
     const res = await fetch(URL_FOR(id));

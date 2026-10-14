@@ -22,7 +22,7 @@ const PAGE_ART: Record<string, string> = {
   "/inventory": "/marks/party-quest-bag.png",
   Bossing: "/marks/jupiter.png",
   "/bosses": "/marks/attendance-sheet.png",
-  "/bosses/parties": "/marks/royal-family-chair.png",
+  "/bosses/parties": "/marks/follow-the-lead.png",
   "/bosses/order": "/marks/treasure-map.png",
   "/bosses/drops": "/marks/grindstone-of-faith.png",
 };
