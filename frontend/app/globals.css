@@ -5221,6 +5221,12 @@ button.link:disabled {
   font-size: var(--text-sm);
 }
 
+/* Held by a party, so read here and changed on the party, dimmed like the locked box beside it. */
+.config-difficulty:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 /* A mode the clear's pieces depend on, not yet said. */
 .config-difficulty.is-missing {
   border-color: var(--warn);

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { apiFetch } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
-import { gapLine } from "@/lib/piece-sync";
+import { gapLine, shownGaps } from "@/lib/piece-sync";
 import type { PieceSync, SavePieceSyncBody } from "@/types/piece-sync";
 
 const KEY = "/api/tokens/sync";
@@ -61,11 +61,11 @@ export function PieceSyncSettings() {
         />
         <span>Auto Sync Eternal Pieces with Boss Clears</span>
       </label>
-      {sync.gaps.length > 0 && (
+      {shownGaps(sync.gaps).length > 0 && (
         <div className="inventory-sync-gaps">
           <p className="inventory-sync-gaps-title">Not synced</p>
           <ul>
-            {sync.gaps.map((gap) => (
+            {shownGaps(sync.gaps).map((gap) => (
               <li key={`${gap.characterId}:${gap.bossKey}`}>{gapLine(gap)}</li>
             ))}
           </ul>

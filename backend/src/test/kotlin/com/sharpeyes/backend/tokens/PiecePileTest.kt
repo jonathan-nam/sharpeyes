@@ -310,7 +310,7 @@ class PiecePileTest {
             tick(me, "kalos-the-guardian")
             assertEquals(0, held(me, "kalos-token"))
             assertEquals(
-                listOf("kalos-the-guardian" to PieceSyncGap.NO_DIFFICULTY),
+                listOf("kalos-the-guardian" to PieceSyncGap.PARTY_OFF),
                 pieceSyncGapsFor(userId, Clock.System.now()).map { it.bossKey to it.reason },
             )
         }
@@ -319,7 +319,7 @@ class PiecePileTest {
     // --- Interactive parties: added by hand, like coupons --------------------------------------
 
     @Test
-    fun `a party clear adds nothing on its own, and says the pieces are not added`() {
+    fun `a party clear adds nothing on its own, and leaves the prompt to Party View`() {
         transaction {
             val me = character()
             val partyId = party(me, "kalos-the-guardian", "EXTREME")
@@ -327,7 +327,7 @@ class PiecePileTest {
             assertNull(pile(partyId))
             assertEquals(0, held(me, "kalos-token"))
             assertEquals(
-                listOf("kalos-the-guardian" to PieceSyncGap.PARTY_LOOT),
+                emptyList(),
                 pieceSyncGapsFor(userId, Clock.System.now()).map { it.bossKey to it.reason },
             )
         }
