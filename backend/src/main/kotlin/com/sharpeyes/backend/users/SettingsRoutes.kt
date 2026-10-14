@@ -48,6 +48,8 @@ data class SettingsResponse(
     val mainCharacterId: String? = null,
     // That character's sprite, joined fresh rather than stored: see V66.
     val mainCharacterSprite: String? = null,
+    // That character's name, for the welcome line. Joined, so a rename follows.
+    val mainCharacterName: String? = null,
 )
 
 @Serializable
@@ -99,7 +101,7 @@ internal fun settingsFor(userId: String): SettingsResponse {
                 JoinType.LEFT,
                 onColumn = Users.mainCharacterId,
                 otherColumn = Characters.id,
-            ).select(Users.mainCharacterId, Characters.spriteImgUrl)
+            ).select(Users.mainCharacterId, Characters.spriteImgUrl, Characters.name)
             .where { Users.id eq userId }
             .single()
 
@@ -109,6 +111,7 @@ internal fun settingsFor(userId: String): SettingsResponse {
         otherWorldCharacters = elsewhere,
         mainCharacterId = main[Users.mainCharacterId]?.toString(),
         mainCharacterSprite = main[Characters.spriteImgUrl]?.let(::spriteProxyPath),
+        mainCharacterName = main.getOrNull(Characters.name),
     )
 }
 

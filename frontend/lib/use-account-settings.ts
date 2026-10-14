@@ -26,7 +26,8 @@ export function setAccountSettings(settings: Settings): void {
     current?.trades === settings.trades &&
     current?.otherWorldCharacters === settings.otherWorldCharacters &&
     current?.mainCharacterId === settings.mainCharacterId &&
-    current?.mainCharacterSprite === settings.mainCharacterSprite
+    current?.mainCharacterSprite === settings.mainCharacterSprite &&
+    current?.mainCharacterName === settings.mainCharacterName
   ) {
     return;
   }

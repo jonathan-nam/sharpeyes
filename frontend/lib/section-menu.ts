@@ -62,6 +62,28 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
   },
 ];
 
+/** A row on the welcome-back screen: a link, a heading that only folds, or a link that also folds. */
+export type HomeRow = {
+  /** Undefined for a heading with no page of its own. */
+  href?: string;
+  label: string;
+  /** What its chevron unfolds. The Drop Log's stages are not menu entries, so the page adds those. */
+  items: SectionItem[];
+};
+
+/** Resolved at import, so a stale href fails the build's tests rather than a user's click. */
+function menuItem(href: string): SectionItem {
+  const item = SECTIONS.flatMap((s) => s.items).find((i) => i.href === href);
+  if (!item) throw new Error(`No section owns ${href}`);
+  return item;
+}
+
+function menuGroup(href: string): string {
+  const group = SECTIONS.find((s) => s.items.some((i) => i.href === href))?.group;
+  if (!group) throw new Error(`${href} is in no group`);
+  return group;
+}
+
 /**
  * What the welcome-back screen offers, in the order it draws them.
  *
@@ -69,20 +91,12 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
  * hamburger like everything else. Labels are looked up in SECTIONS rather than written
  * again, so a section renamed there cannot keep its old name here.
  */
-export const HOME_HREFS = [
-  "/characters",
-  "/inventory",
-  "/bosses",
-  "/bosses/parties",
-  "/bosses/drops",
+export const HOME_ROWS: HomeRow[] = [
+  { ...menuItem("/characters"), items: [] },
+  { label: menuGroup("/bosses"), items: [menuItem("/bosses"), menuItem("/bosses/parties")] },
+  { ...menuItem("/bosses/drops"), items: [] },
+  { ...menuItem("/inventory"), items: [] },
 ];
-
-/** Resolved at import, so a stale href fails the build's tests rather than a user's click. */
-export const HOME_ACTIONS: SectionItem[] = HOME_HREFS.map((href) => {
-  const item = SECTIONS.flatMap((s) => s.items).find((i) => i.href === href);
-  if (!item) throw new Error(`No section owns ${href}`);
-  return item;
-});
 
 /** Every href the menu routes, hidden ones included. Not narrowed by world: routing is not listing. */
 export const HREFS = SECTIONS.flatMap((s) => s.items.map((i) => i.href));

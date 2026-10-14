@@ -1,15 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  activeHref,
-  HOME_ACTIONS,
-  HOME_HREFS,
-  HREFS,
-  MENU_HREFS,
-  SECTIONS,
-  sectionsFor,
-} from "./section-menu";
+import { activeHref, HOME_ROWS, HREFS, MENU_HREFS, SECTIONS, sectionsFor } from "./section-menu";
 
 const listedFor = (trades: boolean | undefined) =>
   sectionsFor(trades).flatMap((s) => s.items.filter((i) => !i.hidden).map((i) => i.href));
@@ -93,27 +85,39 @@ describe("what the menu lists", () => {
 });
 
 describe("what the welcome-back screen offers", () => {
-  it("names the sections in the order it draws them", () => {
-    expect(HOME_ACTIONS.map((i) => i.label)).toEqual([
+  it("names the rows in the order it draws them", () => {
+    expect(HOME_ROWS.map((r) => r.label)).toEqual([
       "Characters",
-      "Inventory",
-      "Individual View",
-      "Party View",
+      "Bossing",
       "Drop Log",
+      "Inventory",
     ]);
+  });
+
+  it("folds the two boss views under Bossing, which is not a page", () => {
+    const bossing = HOME_ROWS.find((r) => r.label === "Bossing")!;
+    expect(bossing.href).toBeUndefined();
+    expect(bossing.items.map((i) => i.label)).toEqual(["Individual View", "Party View"]);
   });
 
   it("takes every label from the menu, so the two cannot drift apart", () => {
     // The point of resolving them rather than writing them twice. A rename in SECTIONS lands here
     // by itself; a label typed here again would quietly keep the old word.
-    for (const item of HOME_ACTIONS) {
-      expect(SECTIONS.flatMap((s) => s.items)).toContainEqual(item);
+    const items = SECTIONS.flatMap((s) => s.items);
+    for (const row of HOME_ROWS) {
+      if (row.href) expect(items.find((i) => i.href === row.href)?.label).toBe(row.label);
+      else expect(SECTIONS.map((s) => s.group)).toContain(row.label);
+      for (const item of row.items) expect(items).toContainEqual(item);
     }
   });
 
   it("offers nothing the menu does not list", () => {
     // A button to a hidden page would be the only door to it, which is not what this screen is.
-    for (const href of HOME_HREFS) expect(MENU_HREFS).toContain(href);
+    for (const row of HOME_ROWS) {
+      for (const href of [row.href, ...row.items.map((i) => i.href)]) {
+        if (href) expect(MENU_HREFS).toContain(href);
+      }
+    }
   });
 });
 

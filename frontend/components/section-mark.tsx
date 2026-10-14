@@ -16,10 +16,11 @@ const MARK_ART: Partial<Record<DropSectionKey, string>> = {
   settlement: "/marks/owl-of-minerva.png",
 };
 
-/** The home screen's marks, by the section each row opens. */
+/** The home screen's marks, by the section each row opens, or by its group for a row with no page. */
 const PAGE_ART: Record<string, string> = {
   "/characters": "/marks/character-slot-coupon.png",
   "/inventory": "/marks/party-quest-bag.png",
+  Bossing: "/marks/jupiter.png",
   "/bosses": "/marks/intense-power-crystal.png",
   "/bosses/parties": "/marks/party-hat.png",
   "/bosses/drops": "/marks/grindstone-of-faith.png",
