@@ -79,6 +79,19 @@ describe("the add row", () => {
     expect(total).toBeLessThanOrEqual(INNER);
   });
 
+  // Add for Week: Character, Boss, Difficulty, then the roster. Seats laid out beside the selects
+  // stacked into a column, and a fixed basis that kept the roster off their line at one --measure
+  // stopped doing so when the column widened.
+  it("puts Add for Week's roster on its own line, with the + still beside it", () => {
+    const rest = Number(rule(".add-field.is-roster").match(/calc\(100% - (\d+)px\)/)?.[1]);
+    expect(rest).toBeGreaterThanOrEqual(
+      num(".add-plus", /width:\s*(\d+)px/) + num(".add-fields", /gap:\s*(\d+)px/),
+    );
+    const selects = 2 * basis(".add-field") + basis(".add-field.is-wide") + overhead(3);
+    const roster = INNER - rest;
+    expect(selects + roster).toBeGreaterThan(INNER);
+  });
+
   // Character, Boss, Drop, How many. The drop picker is the wide one here, and it is sized by the
   // floor that keeps its popup list readable rather than by a basis we chose.
   it("fits the Drop Log's four boxes and the + across the page", () => {
