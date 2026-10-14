@@ -175,9 +175,9 @@ export function splitOf(loot: Loot, members: PartyMember[]): LootSplit | null {
 export type LootSummary = {
   /** Dropped, not sold yet. */
   pending: number;
-  /** Sold, with somebody still unpaid. */
+  /** Sold, with a share through your seats still unpaid. */
   awaitingPayout: number;
-  /** Sold, everybody paid, nothing left to do. */
+  /** Sold, every share through your seats paid, nothing left to do. */
   settled: number;
 };
 

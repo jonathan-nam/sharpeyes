@@ -155,12 +155,14 @@ internal fun lootFor(partyId: Uuid): List<LootResponse> {
     val ranByLoot = ranThatWeekFor(rows, weekRosters)
     val sharesByLoot = sharesThatWeekFor(rows, weekRosters)
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
+    val mine = ownSeatsIn(rows.map { it[PartyLoot.partyId] }.distinct())
     return rows.map {
         it.toLootResponse(
             payoutsByLoot[it[PartyLoot.id]].orEmpty(),
             ranByLoot[it[PartyLoot.id]].orEmpty(),
             sharesByLoot[it[PartyLoot.id]].orEmpty(),
             bundlesByLoot[it[PartyLoot.id]].orEmpty(),
+            mine,
         )
     }
 }
@@ -195,12 +197,14 @@ internal fun allLootFor(userId: String): List<PartyLootPoolResponse> {
     val ranByLoot = ranThatWeekFor(rows, weekRosters)
     val sharesByLoot = sharesThatWeekFor(rows, weekRosters)
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
+    val mine = ownSeatsIn(rows.map { it[PartyLoot.partyId] }.distinct())
     val response = { row: ResultRow ->
         row.toLootResponse(
             payoutsByLoot[row[PartyLoot.id]].orEmpty(),
             ranByLoot[row[PartyLoot.id]].orEmpty(),
             sharesByLoot[row[PartyLoot.id]].orEmpty(),
             bundlesByLoot[row[PartyLoot.id]].orEmpty(),
+            mine,
         )
     }
     // groupBy keeps the order rows arrived in, so each pool stays newest-first.
@@ -237,11 +241,19 @@ internal fun seatsWithLootHistory(partyId: Uuid): Set<Uuid> {
     return (sellers + owed).toSet()
 }
 
-/** Derived, never stored, so it cannot drift from the sale and the payout rows it reads. */
+/**
+ * Derived, never stored, so it cannot drift from the sale and the payout rows it reads.
+ *
+ * PAID_OUT once every share through one of [mine] is paid: you sold it and paid everyone, or you
+ * were owed and got it. A share between two other members is theirs to settle and holds nothing
+ * open here. See crossesOwner.
+ */
 private fun statusOf(
     sold: Boolean,
     taken: Boolean,
     payouts: List<LootPayoutResponse>,
+    sellerMine: Boolean,
+    mine: Set<Uuid>,
 ): String =
     when {
         // Before sold, though the two cannot both be true (party_loot_sold_or_taken). Checking the
@@ -249,7 +261,7 @@ private fun statusOf(
         // status rather than as two readings of the same row in different callers.
         taken -> STATUS_TAKEN
         !sold -> STATUS_PENDING
-        payouts.all { it.paid } -> STATUS_PAID_OUT
+        payouts.all { it.paid || !(sellerMine || Uuid.parse(it.memberId) in mine) } -> STATUS_PAID_OUT
         else -> STATUS_SOLD
     }
 
@@ -258,6 +270,7 @@ private fun ResultRow.toLootResponse(
     ranThatWeek: List<String>,
     sharesThatWeek: Map<String, Int>,
     bundlesBy: List<LootBundleResponse>,
+    mine: Set<Uuid>,
 ): LootResponse {
     val sold = this[PartyLoot.soldAt] != null
     val takenBy = this[PartyLoot.takenByMemberId]?.toString()
@@ -275,7 +288,7 @@ private fun ResultRow.toLootResponse(
         difficulty = this[PartyLoot.difficulty],
         droppedOn = this[PartyLoot.droppedOn].toString(),
         weekStart = weekOf(this[PartyLoot.droppedOn]).toString(),
-        status = statusOf(sold, takenBy != null, payouts),
+        status = statusOf(sold, takenBy != null, payouts, this[PartyLoot.sellerMemberId] in mine, mine),
         saleAmount = this[PartyLoot.saleAmount],
         saleUsdCents = this[PartyLoot.saleUsdCents],
         amountBasis = this[PartyLoot.amountBasis],

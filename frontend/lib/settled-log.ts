@@ -117,10 +117,7 @@ export function buildSettledLog(
     // its status stays PENDING for ever. Reading the status here would file every coupon night the
     // account has ever had as unfinished.
     if (entry.pieces) continue;
-    // Settled HERE, which is not the same as the party being square. Reading PAID_OUT held a drop
-    // open on an unpaid share between two other people: they settle that between themselves and
-    // nothing about it reaches this account, so the only ways out were to wait for ever or to tick
-    // a box asserting something nobody here can see. See settledForYou.
+    // Settled HERE, which is not the same as the party being square. See settledForYou.
     if (!settledForYou(entry)) continue;
 
     const taken = entry.status === "TAKEN";

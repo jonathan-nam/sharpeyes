@@ -7,6 +7,7 @@ import { apiAssetUrl } from "@/lib/api";
 import { copyText, formatMoney } from "@/lib/money";
 import { sharesLabel } from "@/lib/shares";
 import { divides, formatDropped, saleMoney, splitOf, statusLabel } from "@/lib/loot";
+import { isMine } from "@/lib/wallet";
 import { canTrade, isPerMember } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Loot, SellLootBody } from "@/types/loot";
@@ -103,6 +104,12 @@ export function LootRow({
   // Against every seat, not `ran`: a payout pinned before somebody left still names them, and
   // reading it against the week's roster would refuse a split that is perfectly readable.
   const result = splitOf(loot, party.seats);
+  // A share is yours to mark when it passes through one of your seats: you sold or bought it, or
+  // you are owed it. One between two other members is theirs to settle, and the server refuses it.
+  // Owner-side only: in a read-only pool `isMine` names the owner's seats, not the reader's.
+  const mySeats = new Set(party.seats.filter(isMine).map((m) => m.id));
+  const crossesYou = (memberId: string) =>
+    result !== null && (mySeats.has(result.seller.memberId) || mySeats.has(memberId));
   // Every figure on a sold row is in the sale's own unit, read off the split rather than assumed.
   // Mesos where nothing else is said, which is what an unsold row's absent figures were anyway.
   const currency = result?.currency ?? "MESO";
@@ -300,7 +307,12 @@ export function LootRow({
 
               <ul className="loot-shares">
                 {result.shares.map((share) => (
-                  <li key={share.memberId} className={share.paid ? "is-paid" : undefined}>
+                  <li
+                    key={share.memberId}
+                    className={
+                      share.paid && (readOnly || crossesYou(share.memberId)) ? "is-paid" : undefined
+                    }
+                  >
                     <span className="loot-share-name">{share.name}</span>
                     {/* The raw digits, because this gets pasted into the game's price box, or into
                         whatever is moving the dollars. See copyText. */}
@@ -328,17 +340,19 @@ export function LootRow({
                         {share.paid ? "paid" : "unpaid"}
                       </span>
                     ) : (
-                      <button
-                        type="button"
-                        className={share.paid ? "loot-paid is-paid" : "loot-paid"}
-                        onClick={() => onSetPaid(share.memberId, !share.paid)}
-                        disabled={busy}
-                        aria-label={
-                          share.paid ? `Mark ${share.name} unpaid` : `Mark ${share.name} paid`
-                        }
-                      >
-                        {share.paid ? "paid \u00d7" : "mark paid"}
-                      </button>
+                      crossesYou(share.memberId) && (
+                        <button
+                          type="button"
+                          className={share.paid ? "loot-paid is-paid" : "loot-paid"}
+                          onClick={() => onSetPaid(share.memberId, !share.paid)}
+                          disabled={busy}
+                          aria-label={
+                            share.paid ? `Mark ${share.name} unpaid` : `Mark ${share.name} paid`
+                          }
+                        >
+                          {share.paid ? "paid \u00d7" : "mark paid"}
+                        </button>
+                      )
                     )}
                   </li>
                 ))}

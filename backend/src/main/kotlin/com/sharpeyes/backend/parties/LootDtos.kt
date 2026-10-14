@@ -49,7 +49,7 @@ data class LootResponse(
     // client so the week a drop is filed under is the same one ranThatWeek was read against, and
     // so the reset boundary keeps its single implementation in BossPeriod.kt.
     val weekStart: String,
-    // PENDING (not sold), SOLD (sold, someone still unpaid), PAID_OUT (everyone paid), TAKEN
+    // PENDING (not sold), SOLD (a share of yours unpaid), PAID_OUT (all of yours paid), TAKEN
     // (somebody has the item, in a world that cannot sell it). Derived from the sale, the payout
     // rows and taken_by rather than stored, so it cannot drift from them.
     val status: String,
