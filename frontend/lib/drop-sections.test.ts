@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { dropSections, saleCards, shownSection } from "./drop-sections";
+import {
+  dropSections,
+  homeSections,
+  saleCards,
+  sectionFromQuery,
+  sectionHref,
+  shownSection,
+} from "./drop-sections";
 
 const none = { unanswered: 0, holders: 0, lots: 0, rows: 0 };
 const keys = (trades?: boolean) => dropSections(trades).map((s) => s.key);
@@ -77,5 +84,27 @@ describe("which section to draw", () => {
     for (const key of ["sales", "settlement", "settled"] as const) {
       expect(shownSection(key, dropSections(false))).toBe("drops");
     }
+  });
+});
+
+describe("linking straight to a stage", () => {
+  it("opens on the stage the link names", () => {
+    for (const { key } of dropSections()) {
+      const url = new URL(sectionHref(key), "http://x");
+      expect(shownSection(sectionFromQuery(url.search) ?? "drops", dropSections())).toBe(key);
+    }
+  });
+
+  it("ignores a section that is not a stage", () => {
+    expect(sectionFromQuery("?section=wallet")).toBeUndefined();
+    expect(sectionFromQuery("")).toBeUndefined();
+  });
+
+  it("offers the home screen every stage but Settled", () => {
+    expect(homeSections().map((s) => s.key)).toEqual(["drops", "sales", "settlement"]);
+  });
+
+  it("offers a Heroic home screen the drops alone", () => {
+    expect(homeSections(false).map((s) => s.key)).toEqual(["drops"]);
   });
 });

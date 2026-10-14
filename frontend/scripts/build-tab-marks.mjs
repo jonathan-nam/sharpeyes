@@ -1,6 +1,6 @@
-// The Drop Log's tab marks, as static art.
+// The Drop Log's tab marks and the home screen's, as static art.
 //
-// All three are the game's own item sprites, trimmed to their art and centred on a square canvas
+// All of them are the game's own item sprites, trimmed to their art and centred on a square canvas
 // that the tab draws 1:1. Nothing here is ever scaled: a sprite bigger than the canvas is an error,
 // not something to quietly shrink. Both ways of getting that wrong have now shipped. First a 46px
 // canvas was drawn into a 23px box, which halved every mark and made the owl an unreadable 13x16px
@@ -33,10 +33,10 @@ const DROPS_YAML = join(HERE, "..", "..", "catalog", "drops.yaml");
 const ICON_VERSION = 268;
 
 // Not the catalog's 46. A tab mark is drawn at its canvas size, so the canvas IS the drawn size.
-// 34 is the largest sprite in the set below, which is what lets every one of them sit 1:1. Raising
-// it grows every chip in the strip, so raise it deliberately when a mark needs it, and never as a
-// way of making one fit.
-const MARK_CANVAS = 34;
+// 36 is the largest sprite in the set below (the boss crystal), which is what lets every one of them
+// sit 1:1. Raising it grows every chip in the strip, so raise it deliberately when a mark needs it,
+// and never as a way of making one fit.
+const MARK_CANVAS = 36;
 
 const URL_FOR = (id) => `https://maplestory.io/api/GMS/${ICON_VERSION}/item/${id}/icon`;
 
@@ -50,6 +50,12 @@ const MARKS = [
   // The Free Market search owl: the game's own mark for dealing with another player, which is what
   // a settlement is.
   { key: "owl-of-minerva", id: 2310000, name: "The Owl of Minerva" },
+  // The home screen's rows. A character card for the characters, a bag for the inventory, the
+  // weekly boss crystal for a week of clears, and a party hat for the parties.
+  { key: "character-slot-coupon", id: 5430000, name: "Extra Character Slot Coupon" },
+  { key: "party-quest-bag", id: 4330016, name: "8-slot Party Quest Bag" },
+  { key: "intense-power-crystal", id: 4001928, name: "Intense Power Crystal (Weekly)" },
+  { key: "party-hat", id: 1002345, name: "Party Hat" },
 ];
 
 /** The `icon_id` catalog/drops.yaml gives a drop, so this file never states one twice. */

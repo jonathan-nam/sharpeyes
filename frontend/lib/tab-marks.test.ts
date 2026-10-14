@@ -20,7 +20,7 @@ function pngSize(path: string): { width: number; height: number } {
   return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
 }
 
-describe("the Drop Log tab marks", () => {
+describe("the tab and home marks", () => {
   const paths = [...component.matchAll(/"(\/marks\/[\w-]+\.png)"/g)].map((m) => m[1]!);
 
   it("names some", () => {
