@@ -15,6 +15,8 @@ import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
 import { SharedParties } from "@/components/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { peek, put, storedAt } from "@/lib/cache";
+import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
+import { replaceQuery, useQueryString } from "@/lib/url-state";
 import { reportDataReady } from "@/lib/rum";
 import { buildDropLog, couponsOutstandingByParty, pieceStatusByParty } from "@/lib/drop-log";
 import { dropsInWeek, NOTHING_OUTSTANDING } from "@/lib/loot";
@@ -63,7 +65,6 @@ type LoadState = "loading" | "loaded" | "error";
 //   boss        who am I doing Kalos with tonight
 //   party       filed by ARRANGEMENT: a duo with the same person across three bosses is one
 //               section, the roster in its banner and a row per boss under it
-type Grouping = "character" | "boss" | "party";
 
 // Party View's two reads, in place of the nine requests this page used to make on load. Two
 // rather than one because six of those nine were allowed to fail: see types/parties-page.ts.
@@ -142,8 +143,20 @@ export default function PartiesPage() {
   const [state, setState] = useState<LoadState>(
     seededParties && seededBosses && seededCharacters ? "loaded" : "loading",
   );
-  const [grouping, setGrouping] = useState<Grouping>("character");
-  const [clearFilter, setClearFilter] = useState<ClearFilter>("all");
+  // Kept in the URL, so a reload lands on the same tabs. See lib/url-state.ts.
+  const asked = partyViewFromQuery(useQueryString());
+  const [chosenGrouping, setChosenGrouping] = useState<Grouping | null>(null);
+  const [chosenFilter, setChosenFilter] = useState<ClearFilter | null>(null);
+  const grouping = chosenGrouping ?? asked.grouping;
+  const clearFilter = chosenFilter ?? asked.filter;
+  function setGrouping(next: Grouping) {
+    setChosenGrouping(next);
+    replaceQuery(partyViewQuery({ grouping: next, filter: clearFilter }));
+  }
+  function setClearFilter(next: ClearFilter) {
+    setChosenFilter(next);
+    replaceQuery(partyViewQuery({ grouping, filter: next }));
+  }
   // Per row, so a tick on one boss does not grey out every other row's controls. One write at a
   // time still, because each one refetches the list. See lib/use-row-writes.ts.
   const { isSaving, write } = useRowWrites();

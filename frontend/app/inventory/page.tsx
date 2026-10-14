@@ -25,6 +25,7 @@ import type { CharacterToken } from "@/types/character-token";
 import { SearchBar, SearchResults, search } from "@/components/item-search";
 import { CharacterCarousel, type Selection } from "@/components/character-carousel";
 import { PieceSyncSettings } from "@/components/piece-sync-settings";
+import { replaceQuery } from "@/lib/url-state";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -48,6 +49,11 @@ export default function CharactersPage() {
 
   // null until the roster loads; then the first character. null again only via the eye toggle.
   const [selectedId, setSelectedId] = useState<Selection>(null);
+  // Kept in the URL, so a reload stays on the same character. See lib/url-state.ts.
+  function selectCharacter(id: Selection) {
+    setSelectedId(id);
+    replaceQuery({ character: id });
+  }
 
   const [query, setQuery] = useState("");
 
@@ -101,10 +107,18 @@ export default function CharactersPage() {
 
         setCharacters(characterResult);
         setTokensByChar(seeded);
-        // Land on a character rather than on nothing. There is no "everyone" view any more, the
+        // Land on the character the URL names, else the first, rather than on nothing. There is
+        // no "everyone" view any more, the
         // aggregate was summing items that cannot be moved between characters, which is a number
         // with no meaning, and "who has what" is now a search, not a landing page.
-        setSelectedId((current) => current ?? characterResult[0]?.id ?? null);
+        const asked = new URLSearchParams(window.location.search).get("character");
+        setSelectedId(
+          (current) =>
+            current ??
+            characterResult.find((c) => c.id === asked)?.id ??
+            characterResult[0]?.id ??
+            null,
+        );
         put(CHARACTERS_KEY, characterResult);
         put(ALL_TOKENS_KEY, seeded);
         if (catalogResult) {
@@ -240,13 +254,13 @@ export default function CharactersPage() {
               onQuery={setQuery}
               characters={characters}
               tokensByChar={tokensByChar}
-              onSelectCharacter={setSelectedId}
+              onSelectCharacter={selectCharacter}
             />
 
             <CharacterCarousel
               characters={characters}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={selectCharacter}
             />
 
             {/* The selected character's inventory sits directly under the carousel: pick a

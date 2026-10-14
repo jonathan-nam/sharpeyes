@@ -45,6 +45,7 @@ import { useRowWrites } from "@/lib/use-row-writes";
 import { useEveryoneOn } from "@/lib/everyone-on";
 import { useShowTimes } from "@/lib/show-times";
 import { useWhoIsOn } from "@/lib/who-is-on";
+import { queryParam, replaceQuery, useQueryString } from "@/lib/url-state";
 import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
@@ -162,7 +163,16 @@ export default function RunOrderPage() {
     setAnswered((current) => (current.has(partyId) ? current : new Set(current).add(partyId)));
   }
 
-  const [duration, setDuration] = useState(120);
+  // The budget preset and the plan tab are kept in the URL, so a reload lands on the same night.
+  // See lib/url-state.ts. `plan` is "full" or a boss count, never a tab's position: the tabs are
+  // recomputed on the way back in, and a position would name whichever one landed there.
+  const search = useQueryString();
+  const [chosenDuration, setChosenDuration] = useState<number | null>(null);
+  const duration = chosenDuration ?? Number(queryParam(search, "for", PRESETS.map(String)) ?? 120);
+  function setDuration(next: number) {
+    setChosenDuration(next);
+    replaceQuery({ for: next === 120 ? null : String(next) });
+  }
   const [openOnly, setOpenOnly] = useState(true);
   // Whether a run has to seat everyone who is on, kept across visits: how you plan, not something
   // about tonight. Same reasoning as `timed` below. See lib/everyone-on.ts.
@@ -171,7 +181,12 @@ export default function RunOrderPage() {
   // them again every visit is the sort of setup that gets skipped, which plans a night around
   // somebody who is not there. See lib/who-is-on.ts.
   const [away, setAway] = useWhoIsOn();
+  // The chosen plan tab, by its boss count. Null is the full plan.
   const [chosen, setChosen] = useState<number | null>(null);
+  function choosePlan(bosses: number) {
+    setChosen(bosses);
+    replaceQuery({ plan: String(bosses) });
+  }
 
   // Whether the night runs to the clock at all. Off, it is an ORDER: nothing bounds it, the windows
   // people gave are not applied, and no time is drawn anywhere. That is a night where the length of
@@ -450,6 +465,20 @@ export default function RunOrderPage() {
   function showOrder() {
     setAsked({ inputs, key });
     setChosen(null);
+    replaceQuery({ plan: "full" });
+  }
+
+  // A reload with a plan in the URL shows it again, adjusted during render as in PageSwap. Not
+  // before the clock is read: the night starts from it, and the prerender has none.
+  const [restored, setRestored] = useState(false);
+  if (!restored && now !== null) {
+    setRestored(true);
+    const planned = new URLSearchParams(search).get("plan");
+    if (planned !== null) {
+      setAsked({ inputs, key });
+      const bosses = Number(planned);
+      setChosen(Number.isInteger(bosses) && bosses > 0 ? bosses : null);
+    }
   }
 
   // The same two lists again, from the night that was asked for. Not shared with the live ones
@@ -543,9 +572,8 @@ export default function RunOrderPage() {
   const best = byCount[byCount.length - 1] ?? EMPTY_PLAN;
 
   const options = useMemo(() => tradeOffs(byCount), [byCount]);
-  // Clamps by itself: a stale index from a previous set of inputs falls back to the full plan
-  // rather than showing one built for a question that is no longer being asked.
-  const plan = (chosen !== null && options[chosen]) || best;
+  // A count no option has falls back to the full plan.
+  const plan = (chosen !== null && options.find((o) => o.runs.length === chosen)) || best;
 
   const scheduled = new Set(plan.runs.map((planned) => planned.run.id));
   const unscheduled = eligible.filter((run) => !scheduled.has(run.id));
@@ -875,13 +903,13 @@ export default function RunOrderPage() {
             </div>
             {options.length > 1 && (
               <div className="basis-row" role="group" aria-label="Plans to choose between">
-                {options.map((option, i) => (
+                {options.map((option) => (
                   <button
                     key={option.runs.length}
                     type="button"
                     className={plan === option ? "basis-tab active" : "basis-tab"}
                     aria-pressed={plan === option}
-                    onClick={() => setChosen(i)}
+                    onClick={() => choosePlan(option.runs.length)}
                   >
                     {option.runs.length} {option.runs.length === 1 ? "boss" : "bosses"}
                     <span className="tab-count">
