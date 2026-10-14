@@ -24,9 +24,8 @@
      themselves at 792px, the carousel stretched to the viewport, and the inventory window and the
      headings stayed hard left, so widening the window slid them apart.
 
-     It used to be 794px, the inventory window's measured border-box width (16 slots at 42px + 1px
-     borders, 4px gaps, 6px grid padding, 8px grid margins, 1px window border), so the search bar
-     and the game window shared both edges. At 1280px the window no longer fills the column. */
+     It used to be 794px, the inventory window's own width, so the search bar and the game window
+     shared both edges. The window now grows its slots to fill whatever this is (see .ms-slot). */
   --measure: 1280px;
 
   /* Four steps and nothing between them, plus one display size kept to a single line. Reaching for
@@ -725,9 +724,10 @@ a:hover {
   --ms-slot: #dfdfdf;
   --ms-slot-edge: #c8c8c8;
 
-  display: inline-block;
-  width: max-content;
-  max-width: 100%;
+  /* The column's width, at any window width: the slots grow to fill it (see .ms-slot). Below the
+     16 slots' floor the window scrolls on its own rather than pushing the page sideways. */
+  display: block;
+  overflow-x: auto;
   /* top 8 pairs with .carousel's 8px bottom (the two collapse); bottom 16 keeps the dock spaced. */
   margin: 8px 0 16px;
   padding-bottom: 6px;
@@ -978,10 +978,13 @@ a:hover {
   cursor: default;
 }
 
-/* 42px fill on a 46px pitch: the client's own slot size. */
+/* Square, and as wide as a 16th of the window. Never below 44px: the client's own 42px fill and
+   its border, on the 46px pitch the 4px gap makes. */
 .ms-slot {
-  width: 42px;
-  height: 42px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 44px;
+  aspect-ratio: 1;
   position: relative;
   border: 1px solid var(--ms-slot-edge);
   border-radius: 5px;
@@ -997,8 +1000,8 @@ a:hover {
 }
 
 /* Filled slots render as a <button> when clickable (clicking searches every character for the
-   item). Strip the button chrome so they lay out exactly like the <div> slots: with no global
-   box-sizing the slot is content-box 42x42, so any default button padding would break the grid. */
+   item). Strip the button chrome so they lay out exactly like the <div> slots: any default button
+   padding would break the grid. */
 button.ms-slot {
   padding: 0;
   font: inherit;
@@ -1021,7 +1024,7 @@ button.ms-slot {
  * helped; the damage was happening at paint time.
  *
  * The asset IS the client's 46px slot, with the border ring alpha'd away. So centre that frame on
- * our 42px slot and the artwork lands exactly where the client puts it. Including the icons that
+ * our slot and the artwork lands exactly where the client puts it. Including the icons that
  * are genuinely off-centre in-game, because their glow or shadow is lopsided. Centring the FRAME
  * is right; centring the artwork inside it would be us second-guessing the game. */
 .ms-slot > img {
@@ -1039,12 +1042,12 @@ button.ms-slot {
  *
  * Placed from the sprite geometry, not by eye. In the client's 46px slot the glyphs are 11px tall
  * and their band starts at y=25 (ocr.py's BAND_TOP), so they occupy roughly y=27..38, hard against
- * the left edge. The 46px frame is centred on our 42px slot, i.e. offset by -2px, which puts the
- * digits' baseline 6px up from the slot's bottom and their left edge flush with it. */
+ * the left edge, so their baseline is 8px up from the frame's bottom. The frame is centred on the
+ * slot, so both offsets follow it as the slot grows: 6px up and flush left at the 42px floor. */
 .ms-qty {
   position: absolute;
-  bottom: 6px;
-  left: 0;
+  bottom: calc(50% - 15px);
+  left: max(0px, calc(50% - 23px));
   z-index: 1;
   display: flex;
   align-items: flex-end;
@@ -1055,15 +1058,6 @@ button.ms-slot {
 .ms-qty img {
   display: block;
   image-rendering: pixelated;
-}
-
-/* 16 slots at 46px is a wide window. Let it scroll on its own rather than
-   pushing the page sideways. */
-@media (width <= 900px) {
-  .ms-window {
-    display: block;
-    overflow-x: auto;
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1096,15 +1090,17 @@ button.ms-slot {
   display: none;
 }
 
-/* Four across the strip, whatever the strip is wide: four is the number anywhere this app puts
+/* Six across the strip, whatever the strip is wide: six is the number anywhere this app puts
    sprites in a row (lib/carousel.ts, pinned to this rule by lib/carousel.test.ts). A share of the
-   track rather than a fixed width, so the strip fills its column and the fifth tile is fully off
-   the end. Capping the track's width instead let a fifth name show at the edge, because a long IGN
-   widened its own tile past the width the cap was arithmetic on: min-width is the flex default of
-   auto, so content, not the declared width, was setting the tile's size. */
+   track rather than a fixed width, so the strip fills its column and the seventh tile is fully off
+   the end. The floor is the 96px sprite and the tile's 4px padding: a window too narrow for six
+   shows fewer and scrolls, rather than overlapping the sprites. Capping the track's width instead
+   let the next name show at the edge, because a long IGN widened its own tile past the width the
+   cap was arithmetic on: min-width is the flex default of auto, so content, not the declared
+   width, was setting the tile's size. */
 .carousel-track .char-tile,
 .carousel-track .roster-tile {
-  flex: 0 0 calc((100% - 3 * 16px) / 4);
+  flex: 0 0 max(calc((100% - 5 * 16px) / 6), 104px);
   box-sizing: border-box;
   min-width: 0;
   scroll-snap-align: start;
@@ -1181,6 +1177,23 @@ button.ms-slot {
 
 .brand:hover .brand-name {
   color: var(--ink-strong);
+}
+
+/* A phone cannot fit the name, the menu, the world toggle and the avatar on one line, and the
+   overflow pushed the whole page sideways. The mark stays; the name stays for screen readers. */
+@media (width <= 480px) {
+  .site-header-inner {
+    gap: 16px;
+  }
+
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 .site-nav {
@@ -1891,8 +1904,11 @@ img.user-avatar-img {
 .sk-slot {
   position: relative;
   overflow: hidden;
-  width: 42px;
-  height: 42px;
+  /* .ms-slot's box, so the grid it stands in for is the same height. */
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 44px;
+  aspect-ratio: 1;
   border: 1px solid var(--ms-slot-edge);
   border-radius: 5px;
   background: var(--ms-slot);
