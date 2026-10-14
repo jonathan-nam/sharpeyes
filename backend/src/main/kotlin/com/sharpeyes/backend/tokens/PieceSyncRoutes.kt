@@ -13,6 +13,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 
@@ -62,6 +63,14 @@ private suspend fun RoutingContext.savePieceSync() {
         }
     call.respond(response)
 }
+
+/** Whether this account has the sync on. */
+internal fun syncEnabled(userId: String): Boolean =
+    Users
+        .selectAll()
+        .where { Users.id eq userId }
+        .firstOrNull()
+        ?.get(Users.syncPiecesFromClears) == true
 
 /** The flag and nothing else: turning the sync on or off never moves a count. */
 internal fun setPieceSync(

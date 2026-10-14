@@ -9,7 +9,6 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PieceClearCredit
 import com.sharpeyes.backend.db.TokenClearAmount
-import com.sharpeyes.backend.db.Users
 import com.sharpeyes.backend.parties.runsInPeriod
 import com.sharpeyes.backend.users.inActiveWorld
 import kotlinx.datetime.LocalDate
@@ -134,14 +133,6 @@ private fun syncOne(
     if (free && owed is Owed.Pieces) give(characterId, bossCatalogId, period, owed, now, capture)
 }
 
-/** Whether this account has the sync on. */
-internal fun syncEnabled(userId: String): Boolean =
-    Users
-        .selectAll()
-        .where { Users.id eq userId }
-        .firstOrNull()
-        ?.get(Users.syncPiecesFromClears) == true
-
 private fun isCleared(
     characterId: Uuid,
     bossCatalogId: Uuid,
@@ -182,12 +173,7 @@ private fun owedFor(
             .selectAll()
             .where { (TokenClearAmount.bossCatalogId eq bossCatalogId) and (TokenClearAmount.world eq world) }
             .associateBy { it[TokenClearAmount.difficulty] }
-    val config =
-        Party
-            .selectAll()
-            .where { (Party.characterId eq characterId) and (Party.bossCatalogId eq bossCatalogId) }
-            .firstOrNull()
-            ?.takeIf { it[Party.standing] && runsInPeriod(it[Party.id], it[Party.oneOff], period) }
+    val (config, alone) = configFor(characterId, bossCatalogId, period) ?: (null to false)
     // build.py refuses a boss with a mode nobody counted, so a miss on a boss that has rows is the
     // catalog and the config disagreeing about which modes exist. Refused rather than read as none.
     val amount = config?.get(Party.difficulty)?.let { amounts[it] }
@@ -196,9 +182,34 @@ private fun owedFor(
         amounts.isEmpty() -> Owed.None
         amount == null -> Owed.Gap(PieceSyncGap.NO_DIFFICULTY)
         amount[TokenClearAmount.quantity] == 0 -> Owed.None
-        amount[TokenClearAmount.pooled] && config?.get(Party.solo) != true -> Owed.Gap(PieceSyncGap.PARTY_LOOT)
+        amount[TokenClearAmount.pooled] && !alone -> Owed.Gap(PieceSyncGap.PARTY_LOOT)
         else -> Owed.Pieces(amount[TokenClearAmount.tokenCatalogId], amount[TokenClearAmount.quantity])
     }
+}
+
+/**
+ * The config a clear in [period] is read against, and whether it was a run alone. Null when the
+ * character has none that says anything about that period.
+ *
+ * A one-off that is not on [period] is an earlier week's temp party, which keeps the pair's slot
+ * (one config per pair) without saying anything about now. A clear then was run alone, at the mode
+ * the config was left on: one difficulty, last writer wins. A standing party skipped that week is
+ * not read as a solo run: who was there is not known.
+ */
+private fun configFor(
+    characterId: Uuid,
+    bossCatalogId: Uuid,
+    period: LocalDate,
+): Pair<ResultRow, Boolean>? {
+    val held =
+        Party
+            .selectAll()
+            .where { (Party.characterId eq characterId) and (Party.bossCatalogId eq bossCatalogId) }
+            .firstOrNull()
+            ?.takeIf { it[Party.standing] }
+    val runs = held != null && runsInPeriod(held[Party.id], held[Party.oneOff], period)
+    val aloneAfterTemp = held != null && held[Party.oneOff] && !runs
+    return held?.takeIf { runs || aloneAfterTemp }?.let { it to (it[Party.solo] || aloneAfterTemp) }
 }
 
 private fun countRow(
