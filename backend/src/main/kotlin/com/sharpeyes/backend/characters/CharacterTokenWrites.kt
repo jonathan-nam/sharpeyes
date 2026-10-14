@@ -18,6 +18,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
 import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 // Typing a count in, which until now nothing could do: the only writer of character_token_count was
@@ -95,6 +96,8 @@ internal fun writeTokenCount(
     characterId: Uuid,
     tokenId: Uuid,
     quantity: Int,
+    // The piece sync passes its own clock, so its credit can recognise this write later.
+    at: Instant = Clock.System.now(),
 ) {
     if (quantity == 0) {
         CharacterTokenCount.deleteWhere {
@@ -109,7 +112,7 @@ internal fun writeTokenCount(
         it[CharacterTokenCount.quantity] = quantity
         // When it was said, not when it was seen. It is the same column a parse fills, and it is
         // read as "how current is this figure", which a typed one answers just as well.
-        it[CharacterTokenCount.capturedAt] = Clock.System.now()
+        it[CharacterTokenCount.capturedAt] = at
         // Null is what says nobody photographed this. Left explicit rather than defaulted, because
         // an upsert over a row a parse wrote must CLEAR the screenshot it came from.
         it[CharacterTokenCount.sourceScreenshotId] = null
