@@ -19,12 +19,15 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
- * A drop is settled once every share through one of your seats is paid. See crossesOwner.
+ * What is yours to settle or keep. A drop is settled once every share through one of your seats is
+ * paid (crossesOwner), and it can be kept without a sale only where nobody else ran (onlyYours).
  *
  * Its own class rather than more of PartyLootTest, which is already the size detekt allows.
  */
@@ -89,6 +92,34 @@ class YourSharesTest {
             dropped,
             Clock.System.now(),
         )
+
+    @Test
+    fun `a drop only your characters ran can be kept, one others ran cannot`() {
+        transaction {
+            val party = trio()
+            val partyId = Uuid.parse(party.id)
+            val rune = seat(party, "Rune").id
+            val solo =
+                addLoot(
+                    partyId,
+                    LootedDrop(dropIdForKey("grindstone-of-faith")!!),
+                    bossIdForKey("limbo"),
+                    dropped,
+                    Clock.System.now(),
+                    LootSource(solo = true),
+                )
+            val shared = addGrindstone(party)
+
+            val soloRan = findLoot(solo, partyId)!!.ranThatWeek
+            assertTrue(onlyYours(soloRan, partyId))
+            assertNull(takenRefusal(rune, soloRan, canSell = true, sold = false, onlyYours = true))
+
+            // Steve and Bob ran too, so keeping it would quietly stop them being paid.
+            val sharedRan = findLoot(shared, partyId)!!.ranThatWeek
+            assertFalse(onlyYours(sharedRan, partyId))
+            assertNotNull(takenRefusal(rune, sharedRan, canSell = true, sold = false, onlyYours = false))
+        }
+    }
 
     private fun seat(
         party: PartyResponse,

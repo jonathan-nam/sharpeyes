@@ -19,7 +19,8 @@ import kotlin.uuid.Uuid
 // reasoning behind the refusal is longer than the handler.
 
 /**
- * Who took this drop, in a world that cannot sell it. A null memberId puts it back in the pool.
+ * Who took this drop, in a world that cannot sell it, or who kept it where only your own characters
+ * ran. A null memberId puts it back in the pool.
  *
  * Refused where the party CAN sell, which is not a technicality. In a trading world a drop that
  * changes hands is a sale, with a pot and a roster owed a share of it, and letting it be recorded
@@ -53,6 +54,7 @@ internal suspend fun RoutingContext.setTakenRoute() {
                         // The row already carries the catalog's flag, so this needs only the world
                         // it is read against. See isPerMember.
                         isPerMember(loot.perMember, partyWorld(partyId) ?: WORLD_INTERACTIVE),
+                        onlyYours(loot.ranThatWeek, partyId),
                     ) ?: run {
                         setLootTakenBy(lootId, memberId, Clock.System.now())
                         findLoot(lootId, partyId)!!
@@ -60,4 +62,13 @@ internal suspend fun RoutingContext.setTakenRoute() {
             }
         }
     respondToLoot(outcome, HttpStatusCode.OK)
+}
+
+/** Every seat that ran this drop's week is one of the owner's, so keeping it owes nobody. */
+internal fun onlyYours(
+    ranThatWeek: List<String>,
+    partyId: Uuid,
+): Boolean {
+    val mine = ownSeatsIn(listOf(partyId)).map { it.toString() }.toSet()
+    return ranThatWeek.isNotEmpty() && ranThatWeek.all { it in mine }
 }

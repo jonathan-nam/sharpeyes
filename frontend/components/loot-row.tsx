@@ -127,6 +127,9 @@ export function LootRow({
   // Everyone received their own copy, so the row has no pot and no holder. In Heroic that is every
   // piece drop there is; ordinary drops (a grindstone, a ring) still pool.
   const instanced = isPerMember(loot.perMember, party.worldType);
+  // Only your own characters ran, so keeping it owes nobody and is not a sale. The server checks
+  // the same thing: see takenRefusal.
+  const keepable = !instanced && ran.length > 0 && ran.every(isMine);
 
   return (
     <article className={`loot-row status-${loot.status.toLowerCase()}`}>
@@ -263,6 +266,18 @@ export function LootRow({
             >
               Mark sold
             </button>
+            {keepable &&
+              ran.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="party-cancel"
+                  onClick={() => onSetTaken(m.id)}
+                  disabled={busy}
+                >
+                  {ran.length === 1 ? "Keep" : `${m.name} kept it`}
+                </button>
+              ))}
             <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
               Remove
             </button>
