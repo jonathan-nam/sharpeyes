@@ -96,7 +96,7 @@ class LootFromClearTest {
             if (difficulty == null) {
                 poolFor(userId, mine, bossId, now)
             } else {
-                setSoloDifficulty(userId, mine, bossId, bossResetOf(bossId)!!, difficulty, now)!!
+                setSoloDifficulty(userId, mine, bossId, bossResetOf(bossId)!!, difficulty, now)
             }
         return mine to partyId
     }

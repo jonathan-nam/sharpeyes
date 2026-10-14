@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import { DropPicker } from "@/components/drop-picker";
 import { LootList, type StackAssignment } from "@/components/loot-list";
+import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
 import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl, failureText } from "@/lib/api";
@@ -50,7 +51,14 @@ export function PartyCard({
   onSaveRoster,
   onTakeOff,
   stacks,
+  piecePile,
 }: {
+  /** The week's pile of Eternal pieces, added or to add, where this party drops one. */
+  piecePile?: {
+    form: PileForm;
+    onSave: (total: number, takes: Record<string, number>) => Promise<void>;
+    onRemove: () => Promise<void>;
+  };
   party: Party;
   heading: ReactNode;
   /** THIS row's write. Fed the page's, it dimmed every row at once: the page appeared to flicker. */
@@ -433,6 +441,19 @@ export function PartyCard({
               onSetTaken={pool.onSetTaken}
               onSetPaid={pool.onSetPaid}
               onDelete={pool.onDelete}
+            />
+          )}
+          {/* The week's pile of Eternal pieces. Never part of the pool above: pieces cannot be sold,
+              so they stay out of the Drop Log, sales and settlement. Keyed on what is on file, so
+              an add, a save or a remove opens the boxes on the new figures. */}
+          {piecePile && (
+            <PiecePileEditor
+              key={`${piecePile.form.added}:${piecePile.form.total}:${piecePile.form.takes.join(",")}`}
+              party={party}
+              form={piecePile.form}
+              busy={busy ?? false}
+              onSave={piecePile.onSave}
+              onRemove={piecePile.onRemove}
             />
           )}
           {/* One press opens the roster, the night's pickup and the split, so one press has to

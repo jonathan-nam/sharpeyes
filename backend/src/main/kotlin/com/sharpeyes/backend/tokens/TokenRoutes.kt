@@ -13,6 +13,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
+import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
@@ -28,6 +29,7 @@ fun Route.tokenRoutes() {
     // carry what somebody already HOLDS. Typing a count for an item you hold none of needs the list
     // of items that exist, which nothing else served.
     get("/catalog") { getTokenCatalog() }
+    route("/sync") { pieceSyncRoutes() }
 }
 
 /**

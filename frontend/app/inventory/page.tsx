@@ -24,6 +24,7 @@ import type { Character } from "@/types/character";
 import type { CharacterToken } from "@/types/character-token";
 import { SearchBar, SearchResults, search } from "@/components/item-search";
 import { CharacterCarousel, type Selection } from "@/components/character-carousel";
+import { PieceSyncSettings } from "@/components/piece-sync-settings";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -286,6 +287,8 @@ export default function CharactersPage() {
             ) : (
               <p className="finder-empty">Pick a character to see their inventory.</p>
             )}
+
+            {characters.length > 0 && <PieceSyncSettings />}
           </>
         )}
       </PageSwap>

@@ -39,6 +39,8 @@ data class PartyMemberResponse(
     // What this seat usually takes of a split. 1 unless somebody carries and the party agreed they
     // take more. Only ever a DEFAULT: a sale pins its own counts, so this cannot rewrite one.
     val shares: Int = 1,
+    // How this seat usually divides a pooled pile of Eternal pieces.
+    val pieceShares: Int = 1,
 )
 
 /**
@@ -180,6 +182,9 @@ data class SavePartyRequest(
      * clearing a weight a matter of typing 1 rather than a second call to undo it.
      */
     val shares: Map<String, Int> = emptyMap(),
+    // How each seat usually divides a pooled pile of Eternal pieces, keyed like `shares`. A name left
+    // out keeps what it had (1 for a new seat), so a client that never sends this changes nothing.
+    val pieceShares: Map<String, Int> = emptyMap(),
     // One of the boss's own difficulties, or null for "not said". Anything else is refused rather
     // than dropped: a config claiming Normal Black Mage would read as a fact somebody entered.
     val difficulty: String? = null,

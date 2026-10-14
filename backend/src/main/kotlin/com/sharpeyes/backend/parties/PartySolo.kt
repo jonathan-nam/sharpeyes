@@ -1,8 +1,10 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.bossClearedOn
+import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyWeekSeat
+import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -104,12 +106,11 @@ internal fun poolFor(
  * ticked does not leave this week's coupons missing until the reset, and Chaos corrected to Extreme
  * leaves one row of 180 rather than two.
  *
- * Null when the pair is held by a party that is on. That config carries the mode already, beside the
- * roster and the split it is read with, and writing one here would edit a party through a door that
- * sees neither.
+ * A party that is on keeps its roster and is not made solo, but its mode is written all the same: the
+ * character's config and the party share one difficulty, and the last to set it wins.
  *
- * A RETIRED config and a SPENT ONE-OFF are not that claim, so each is taken back as the pool it now
- * is. See soloAgain.
+ * A RETIRED config and a SPENT ONE-OFF are not a party that is on, so each is taken back as the pool
+ * it now is. See soloAgain.
  */
 internal fun setSoloDifficulty(
     userId: String,
@@ -118,25 +119,30 @@ internal fun setSoloDifficulty(
     reset: String,
     difficulty: String?,
     now: Instant,
-): Uuid? {
+): Uuid {
     val held = partyIdFor(characterId, bossCatalogId)
     // The pair's slot can be held by a config that is not a party anybody set up, and then there is
     // no other door out: a party needs somebody else in it. The same three takesOverConfig fills in
     // rather than refuses. A solo pool is already this. A retired config and a spent one-off both
     // claim nothing about now, so they are taken back as the pool this makes them.
     val takeBack = held != null && !isSoloParty(held) && (isRetiredParty(held) || isSpentOneOff(held, now))
-    if (held != null && !isSoloParty(held) && !takeBack) return null
+    val liveParty = held != null && !isSoloParty(held) && !takeBack
     val partyId = held ?: createSoloParty(userId, characterId, bossCatalogId, now)
     if (takeBack) soloAgain(userId, partyId, characterId, reset, now)
     Party.update({ Party.id eq partyId }) {
         it[Party.difficulty] = difficulty
         it[updatedAt] = now
     }
-    val today = todayIn(now)
-    unlootFromClear(characterId, bossCatalogId, reset, today)
-    if (bossClearedOn(characterId, bossCatalogId, reset, today)) {
-        lootFromClear(characterId, bossCatalogId, reset, today, now)
+    // Coupons a clear files are a solo pool's only; a party's are typed. See LootFromClear.kt.
+    if (!liveParty) {
+        val today = todayIn(now)
+        unlootFromClear(characterId, bossCatalogId, reset, today)
+        if (bossClearedOn(characterId, bossCatalogId, reset, today)) {
+            lootFromClear(characterId, bossCatalogId, reset, today, now)
+        }
     }
+    // Re-files this period's pieces at the new mode, solo or party.
+    syncPiecesForClear(characterId, bossCatalogId, periodStartFor(reset, now), now)
     return partyId
 }
 

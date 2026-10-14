@@ -5214,6 +5214,18 @@ button.link:disabled {
   max-width: 130px;
 }
 
+/* The mode a week's pile of pieces was filed at, beside its name. */
+.piece-pile-mode {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* A mode the clear's pieces depend on, not yet said. */
+.config-difficulty.is-missing {
+  border-color: var(--warn);
+}
+
 /* Wide enough for three digits and the spinner Chrome puts inside the box, no wider: a run time
    is two digits, and a field sized for prose reads as one that wants prose. */
 .config-minutes {
@@ -6518,6 +6530,27 @@ button.link:disabled {
   color: var(--muted);
   font-size: var(--text-base);
   cursor: pointer;
+}
+
+/* Below the inventory on /inventory. */
+.inventory-settings {
+  margin-top: 28px;
+}
+
+.inventory-sync-gaps {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.inventory-sync-gaps-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.inventory-sync-gaps ul {
+  margin: 0;
+  padding-left: 18px;
 }
 
 /* What asks for the run order. Between the controls and the plan, because it is the line between

@@ -3,9 +3,13 @@ package com.sharpeyes.backend.bosses
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Characters
+import com.sharpeyes.backend.db.TokenCatalog
+import com.sharpeyes.backend.db.TokenClearAmount
 import com.sharpeyes.backend.parties.lootFromClear
 import com.sharpeyes.backend.parties.unlootFromClear
 import com.sharpeyes.backend.services.DetectedBossClear
+import com.sharpeyes.backend.tokens.CaptureCounts
+import com.sharpeyes.backend.tokens.syncPiecesForClear
 import com.sharpeyes.backend.users.inActiveWorld
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -42,8 +46,23 @@ private var heldCatalog: List<BossResponse>? = null
 internal fun bossCatalog(): List<BossResponse> = heldCatalog ?: readBossCatalog().also { heldCatalog = it }
 
 // A race here costs one extra read and stores an identical answer, so it is left unsynchronised.
-private fun readBossCatalog(): List<BossResponse> =
-    BossCatalog
+private fun readBossCatalog(): List<BossResponse> {
+    val pieces =
+        TokenClearAmount
+            .innerJoin(TokenCatalog)
+            .selectAll()
+            .groupBy({ it[TokenClearAmount.bossCatalogId] }) {
+                BossPieceResponse(
+                    difficulty = it[TokenClearAmount.difficulty],
+                    world = it[TokenClearAmount.world],
+                    tokenName = it[TokenCatalog.name],
+                    iconUrl = it[TokenCatalog.iconRefKey]?.let { file -> "/token-icons/$file" },
+                    quantity = it[TokenClearAmount.quantity],
+                    stackSize = it[TokenClearAmount.stackSize],
+                    pooled = it[TokenClearAmount.pooled],
+                )
+            }
+    return BossCatalog
         .selectAll()
         .orderBy(BossCatalog.sortOrder)
         .map {
@@ -53,8 +72,10 @@ private fun readBossCatalog(): List<BossResponse> =
                 reset = it[BossCatalog.reset],
                 iconUrl = it[BossCatalog.iconRefKey]?.let { key -> "/boss-icons/$key" },
                 difficulties = it[BossCatalog.difficulties],
+                pieces = pieces[it[BossCatalog.id]].orEmpty(),
             )
         }
+}
 
 /**
  * Every character's clears for the period each boss is currently in, keyed by character id.
@@ -209,6 +230,7 @@ internal fun setBossClearByHand(
     } else {
         unlootFromClear(characterId, boss[BossCatalog.id], boss[BossCatalog.reset], day)
     }
+    syncPiecesForClear(characterId, boss[BossCatalog.id], periodStartFor(boss[BossCatalog.reset], now), now)
     return true
 }
 
@@ -224,6 +246,7 @@ internal fun upsertBossClears(
     clears: List<DetectedBossClear>,
     screenshotId: Uuid,
     capturedAt: Instant,
+    inventoryComplete: Boolean = false,
 ) {
     if (clears.isEmpty()) return
     val catalog = BossCatalog.selectAll().associateBy { it[BossCatalog.bossKey] }
@@ -258,5 +281,14 @@ internal fun upsertBossClears(
         } else {
             unlootFromClear(characterId, row[BossCatalog.id], row[BossCatalog.reset], day)
         }
+        // After the token counts, which ingestion writes first: a count this capture also read
+        // already includes the drop, and CaptureCounts is how the sync tells.
+        syncPiecesForClear(
+            characterId,
+            row[BossCatalog.id],
+            period,
+            capturedAt,
+            CaptureCounts(screenshotId, inventoryComplete),
+        )
     }
 }

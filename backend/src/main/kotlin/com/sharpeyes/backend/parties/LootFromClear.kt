@@ -11,6 +11,7 @@ import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyLootBundle
 import com.sharpeyes.backend.db.VestigeSettlementLoot
+import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -259,4 +260,5 @@ internal fun withdrawClear(
             (BossClear.bossCatalogId eq bossId) and
             (BossClear.periodStart eq period)
     }
+    syncPiecesForClear(characterId, bossId, period, now)
 }

@@ -3,9 +3,11 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.bosses.periodOf
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.db.BossDropAmount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.db.TokenClearAmount
 import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
@@ -60,6 +62,7 @@ internal fun validateNewParty(
                 ?: validateMinutes(request.minutes)
                 ?: validateMembers(request.members)
                 ?: validateShares(request.shares, characterId, request.members)
+                ?: validatePieceShares(request.pieceShares, characterId, request.members)
                 ?: validateBossRoster(
                     userId,
                     bossCatalogId,
@@ -96,6 +99,7 @@ internal fun validateSavedParty(
         ?: validateMinutes(request.minutes)
         ?: validateMembers(request.members, allowNone = true)
         ?: validateShares(request.shares, characterIdOfParty(partyId), request.members)
+        ?: validatePieceShares(request.pieceShares, characterIdOfParty(partyId), request.members)
         ?: bossCatalogId?.let {
             validateBossRoster(
                 userId,
@@ -191,6 +195,14 @@ internal fun validateMinutes(minutes: Int?): String? =
         minutes > MAX_RUN_MINUTES -> "minutes must be at most $MAX_RUN_MINUTES"
         else -> null
     }
+
+/**
+ * True when what a clear of this boss puts anywhere (coupons, pieces) depends on its mode, so the
+ * character's own config may not leave it unsaid. See setSoloDifficultyRoute.
+ */
+internal fun difficultyRequired(bossCatalogId: Uuid): Boolean =
+    !TokenClearAmount.selectAll().where { TokenClearAmount.bossCatalogId eq bossCatalogId }.empty() ||
+        !BossDropAmount.selectAll().where { BossDropAmount.bossCatalogId eq bossCatalogId }.empty()
 
 /**
  * Why this difficulty cannot stand against this boss, or null.

@@ -67,6 +67,7 @@ internal fun ownCharacterIds(userId: String): Map<String, Uuid> =
 internal data class NewSeat(
     val standing: Boolean,
     val shares: Int = 1,
+    val pieceShares: Int = 1,
 )
 
 internal fun insertSeat(
@@ -94,6 +95,7 @@ internal fun insertSeat(
         it[position] = seatPosition
         it[standing] = seat.standing
         it[shares] = seat.shares
+        it[pieceShares] = seat.pieceShares
         it[spriteImgUrl] = if (looked) context.sprites[name] else null
         it[spriteRefreshedAt] = if (looked) context.now else null
     }
@@ -149,6 +151,24 @@ internal fun validateShares(
         // sent is the whole party, so no absent name is going to make up the difference.
         named.sumOf { byName[it] ?: 1 } < 1 -> "somebody in the party has to take a share"
         else -> null
+    }
+}
+
+/**
+ * [validateShares]'s rules for the piece ratio, except that a name left out keeps what it has, so
+ * only a request naming every seat can be refused for leaving nobody a share.
+ */
+internal fun validatePieceShares(
+    pieceShares: Map<String, Int>,
+    ownCharacterId: Uuid?,
+    members: List<String>,
+): String? {
+    val named = (listOfNotNull(ownCharacterId?.let(::ownSeatName)) + members).map { it.trim().lowercase() }.toSet()
+    val everySeat = pieceShares.keys.map { it.trim().lowercase() }.containsAll(named)
+    return when {
+        pieceShares.isEmpty() -> null
+        everySeat && pieceShares.values.sum() < 1 -> "somebody in the party has to take pieces"
+        else -> validateShares(pieceShares, ownCharacterId, members)?.replace("share", "piece share")
     }
 }
 

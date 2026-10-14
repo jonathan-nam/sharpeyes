@@ -86,6 +86,7 @@ internal fun leaveParty(
     // which is the same failure unlinkPerson exists to avoid from the other end.
     PartyMember.update({ PartyMember.id inList seatIds }) { it[linkedCharacterId] = null }
     Party.update({ Party.id eq partyId }) { it[updatedAt] = now }
+    syncPiecesForParty(partyId, now)
     return true
 }
 

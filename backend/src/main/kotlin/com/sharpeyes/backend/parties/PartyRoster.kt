@@ -263,7 +263,6 @@ internal fun saveWeekRoster(
             .mapNotNull { row -> row[PartyWeekSeat.shares]?.let { row[PartyWeekSeat.memberId] to it } }
             .toMap()
     PartyWeekSeat.deleteWhere { (PartyWeekSeat.partyId eq partyId) and (PartyWeekSeat.weekStart eq week) }
-    if (members == null) return
 
     val existing = seatIdsByName(partyId)
     // After every seat the party already has, so a guest does not take a usual member's place in
@@ -271,7 +270,9 @@ internal fun saveWeekRoster(
     var nextPosition = existing.size
     val mine = ownCharacterIds(context.userId)
 
-    seatNames(ownSeatName(ownCharacterId), members).forEach { name ->
+    // Null members is the week back on the usual roster, which the delete above already says.
+    val names = if (members == null) emptyList() else seatNames(ownSeatName(ownCharacterId), members)
+    names.forEach { name ->
         val seatId =
             existing[name.lowercase()]
                 ?: insertSeat(partyId, name, mine[name.lowercase()], nextPosition++, NewSeat(standing = false), context)
@@ -282,4 +283,6 @@ internal fun saveWeekRoster(
             it[shares] = pinned[seatId]
         }
     }
+    // That week's pile divides among whoever ran it.
+    syncPiecesForParty(partyId, context.now, week)
 }

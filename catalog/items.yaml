@@ -43,6 +43,21 @@
 # and it would do so silently. It is also NOT the same axis as `category`: category says what an
 # item IS to the backend (does redemption apply to it), group says where a human expects to find
 # it. Symbols and elixirs are both CONSUMABLE and nobody looks for them in the same place.
+#
+# `per_clear` is how many of this item one clear puts in ONE character's inventory, by the boss's
+# difficulty, as `{ interactive: N, heroic: M }` or a bare N for both worlds. It is what the
+# inventory's auto sync adds when a clear is ticked. Validated by hand against the game; web
+# sources were wrong repeatedly, so never derive one world's figure from the other's.
+#
+# A pile that falls in stacks of more than one is `{ total, bundles }` (Hard Malefic Star, 18 in 6),
+# because a stack is the smallest thing a party can hand out.
+#
+# Every difficulty of the boss is listed by exactly one of its items, and `0` is how "drops none"
+# is said. build.py refuses a gap, so a mode nobody counted cannot read as a mode that drops none.
+#
+# `per_member` says who that count goes to, in drops.yaml's terms. ALWAYS: each character gets
+# their own. HEROIC: one pile for the whole party in Interactive, so the Interactive figure is only
+# one character's when they ran it alone.
 
 items:
   - key: blissful-fantasy-shard
@@ -53,6 +68,9 @@ items:
     sort: 13
     redeem_threshold: 10
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      HARD: { interactive: { total: 18, bundles: 6 }, heroic: 2 }
     art: cut
 
   - key: distorted-ambition
@@ -64,6 +82,10 @@ items:
     icon_id: 2638063
     redeem_threshold: 10
     redeem_slots: [Cape, Glove, Shoe]
+    per_member: ALWAYS
+    per_clear:
+      NORMAL: 1
+      HARD: 2
 
   - key: echo-ancient-resolve
     name: Echo of Ancient Resolve
@@ -74,6 +96,11 @@ items:
     icon_id: 2830304
     redeem_threshold: 10
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      EASY: 0
+      HARD: { interactive: 6, heroic: 2 }
+      EXTREME: { interactive: 16, heroic: 3 }
 
   - key: ferocious-beast-ring
     name: Ferocious Beast Entanglement Ring
@@ -84,6 +111,10 @@ items:
     icon_id: 2635747
     redeem_threshold: 10
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      HARD: { interactive: 7, heroic: 2 }
+      EXTREME: { interactive: 18, heroic: 3 }
 
   # NOTE: the icon asset for this one shipped as `kalos-residual-determination.png`
   # while the vision key was `kalos-token`. Two names for one item, kept in step by
@@ -97,6 +128,11 @@ items:
     icon_id: 2634472
     redeem_threshold: 10
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      EASY: 0
+      CHAOS: { interactive: 5, heroic: 2 }
+      EXTREME: { interactive: 14, heroic: 3 }
 
   - key: trace-eternal-loyalty
     name: Trace of Eternal Loyalty
@@ -107,6 +143,10 @@ items:
     icon_id: 2639252
     redeem_threshold: 10
     redeem_slots: [Cape, Glove, Shoe]
+    per_member: ALWAYS
+    per_clear:
+      NORMAL: 1
+      HARD: 2
 
   # No icon_id: GMS v268 is the newest dataset the mirror carries and this is a v270 item, so there
   # is no sprite to point at. Cut instead from a capture taken on black, which hides two different
@@ -122,6 +162,10 @@ items:
     sort: 16
     redeem_threshold: 10
     redeem_slots: [Cape, Glove, Shoe]
+    per_member: ALWAYS
+    per_clear:
+      NORMAL: 1
+      HARD: 2
     art: cut
 
   # --- Fragments ---------------------------------------------------------------------
@@ -146,6 +190,9 @@ items:
     icon_id: 2636606
     redeem_threshold: 20
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      NORMAL: { interactive: 3, heroic: 2 }
 
   - key: ferocious-entanglement-ring-fragment
     name: Ferocious Entanglement Ring Fragment
@@ -156,6 +203,10 @@ items:
     icon_id: 2636607
     redeem_threshold: 20
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      EASY: { interactive: 1, heroic: 1 }
+      NORMAL: { interactive: 5, heroic: 2 }
 
   - key: whisper-ancient-resolve
     name: Whisper of Ancient Resolve
@@ -166,6 +217,9 @@ items:
     icon_id: 2830305
     redeem_threshold: 20
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      NORMAL: { interactive: 4, heroic: 2 }
 
   # No art, for the same reason as Jupiter's token above: v270, and the mirror stops at v268.
   - key: blissful-fantasy-fragment
@@ -176,6 +230,9 @@ items:
     sort: 20
     redeem_threshold: 20
     redeem_slots: [Hat, Top, Bottom, Shoulder]
+    per_member: HEROIC
+    per_clear:
+      NORMAL: { interactive: 6, heroic: 2 }
 
   # --- Consumables -------------------------------------------------------------------
   # Bought and drunk, not collected and redeemed: no redeem_threshold, and the UI must not

@@ -11,6 +11,20 @@ export type Boss = {
   // The modes it can be fought at, lowest first: what a party config picks from. CHAOS is the
   // third rung's name for the bosses that are monsters, so a boss has HARD or CHAOS, never both.
   difficulties: string[];
+  // What one clear puts in one inventory, per mode and world. Optional: a cached boss list from
+  // before this field read as having none.
+  pieces?: BossPiece[];
+};
+
+export type BossPiece = {
+  difficulty: string;
+  world: string;
+  tokenName: string;
+  iconUrl: string | null;
+  quantity: number;
+  stackSize: number;
+  // One pile for the whole party, divided by the config's piece ratio.
+  pooled: boolean;
 };
 
 export type BossClear = {

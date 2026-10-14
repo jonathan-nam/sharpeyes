@@ -18,6 +18,20 @@ data class BossResponse(
     // rather than held client side because it is catalog data, and a second copy in the frontend
     // would be the one that misses the next boss.
     val difficulties: List<String> = emptyList(),
+    // What one clear puts in one inventory, per mode and world. See V79__piece_sync.sql.
+    val pieces: List<BossPieceResponse> = emptyList(),
+)
+
+@Serializable
+data class BossPieceResponse(
+    val difficulty: String,
+    val world: String,
+    val tokenName: String,
+    val iconUrl: String?,
+    val quantity: Int,
+    val stackSize: Int,
+    // One pile for the whole party, divided by the config's piece ratio.
+    val pooled: Boolean,
 )
 
 @Serializable

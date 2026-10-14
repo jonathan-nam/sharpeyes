@@ -8,8 +8,10 @@ import com.sharpeyes.backend.db.CharacterBossSkip
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.db.PartyPiecePile
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.PersonCharacter
+import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -64,9 +66,25 @@ internal fun createParty(
         setRunsInPeriod(partyId, oneOff = true, period, runs = true, now = now)
     }
     val context = SeatContext(userId, sprites, now)
-    writeMembers(partyId, characterId, request.members, context, request.shares)
+    writeMembers(partyId, characterId, request.members, context, request.shares, request.pieceShares)
     if (request.oneOff) writeNightRoster(partyId, characterId, request.members, now, context)
+    syncPiecesForParty(partyId, now)
     return partyId
+}
+
+/**
+ * Re-files [period]'s pieces at the config's mode, ratio and roster as they are now, so Hard to
+ * Normal swaps them. The current period when [period] is null.
+ */
+internal fun syncPiecesForParty(
+    partyId: Uuid,
+    now: Instant,
+    period: LocalDate? = null,
+) {
+    val config = Party.selectAll().where { Party.id eq partyId }.firstOrNull() ?: return
+    val bossId = config[Party.bossCatalogId]
+    val week = period ?: periodStartFor(bossResetOf(bossId) ?: return, now)
+    syncPiecesForClear(config[Party.characterId], bossId, week, now)
 }
 
 /**
@@ -93,7 +111,9 @@ internal fun saveParty(
             .where { (Party.id eq partyId) and (Party.userId eq userId) }
             .first()[Party.characterId]
     Party.update({ (Party.id eq partyId) and (Party.userId eq userId) }) {
-        it[difficulty] = request.difficulty
+        // One difficulty serves the solo config and the party, last writer wins. A save that names
+        // none is not a write of "none": it would wipe the mode the character's own config set.
+        if (request.difficulty != null) it[difficulty] = request.difficulty
         it[minutes] = request.minutes
         it[updatedAt] = now
     }
@@ -104,8 +124,16 @@ internal fun saveParty(
     if (request.members.isEmpty()) {
         soloAgain(userId, partyId, characterId, bossResetOf(bossIdOfParty(partyId)!!)!!, now)
     } else {
-        writeMembers(partyId, characterId, request.members, SeatContext(userId, sprites, now), request.shares)
+        writeMembers(
+            partyId,
+            characterId,
+            request.members,
+            SeatContext(userId, sprites, now),
+            request.shares,
+            request.pieceShares,
+        )
     }
+    syncPiecesForParty(partyId, now)
 }
 
 /**
@@ -142,6 +170,7 @@ internal fun setPartyClear(
     } else {
         unlootFromClear(own, bossCatalogId, reset, today)
     }
+    syncPiecesForClear(own, bossCatalogId, periodStartFor(reset, now), now)
 }
 
 /** Today, as the clock the periods are measured on sees it. */
@@ -189,6 +218,7 @@ internal fun clearFromDrop(
         row[capturedAt] = now
         row[sourceScreenshotId] = null
     }
+    syncPiecesForClear(characterId, bossCatalogId, period, now)
 }
 
 /** What taking a config off Party View did to it. */
@@ -223,7 +253,9 @@ internal fun retireOrDeleteParty(
         !ownsParty(partyId, userId) -> Removal.NOT_FOUND
         else -> {
             withdrawClear(partyId, now)
-            if (PartyLoot.selectAll().where { PartyLoot.partyId eq partyId }.empty()) {
+            // Pieces added on Party View are a record the way a drop is, and are kept the same way.
+            val pieces = !PartyPiecePile.selectAll().where { PartyPiecePile.partyId eq partyId }.empty()
+            if (!pieces && PartyLoot.selectAll().where { PartyLoot.partyId eq partyId }.empty()) {
                 Party.deleteWhere { (Party.id eq partyId) and (Party.userId eq userId) }
                 Removal.DELETED
             } else {
@@ -289,9 +321,12 @@ internal fun writeMembers(
     // What each seat usually takes, by character name. A name left out takes one: the roster passed
     // in is the whole party, so absence is the answer rather than a gap to preserve.
     shares: Map<String, Int> = emptyMap(),
+    // The piece ratio, by name. Unlike `shares`, a name left out keeps what its seat has.
+    pieceShares: Map<String, Int> = emptyMap(),
 ) {
     val names = seatNames(ownSeatName(ownCharacterId), members)
     val sharesByName = shares.mapKeys { (name, _) -> name.trim().lowercase() }
+    val pieceSharesByName = pieceShares.mapKeys { (name, _) -> name.trim().lowercase() }
     val wanted = names.associate { it.lowercase() to (sharesByName[it.lowercase()] ?: 1) }
 
     // Before the party moves, freeze the roster onto every week already written into, and the split
@@ -314,14 +349,17 @@ internal fun writeMembers(
         val looked = characterId == null && context.sprites.containsKey(name)
         val seatId = existing[name.lowercase()]
         val seatShares = wanted.getValue(name.lowercase())
+        val seatPieceShares = pieceSharesByName[name.lowercase()]
         if (seatId == null) {
-            insertSeat(partyId, name, characterId, index, NewSeat(standing = true, shares = seatShares), context)
+            val seat = NewSeat(standing = true, shares = seatShares, pieceShares = seatPieceShares ?: 1)
+            insertSeat(partyId, name, characterId, index, seat, context)
         } else {
             PartyMember.update({ PartyMember.id eq seatId }) {
                 it[PartyMember.name] = name
                 it[PartyMember.characterId] = characterId
                 it[position] = index
                 it[PartyMember.shares] = seatShares
+                if (seatPieceShares != null) it[PartyMember.pieceShares] = seatPieceShares
                 // A guest named in the usual roster is joining it for good.
                 it[standing] = true
                 // Left alone unless this character was looked up just now, or the seat became one
