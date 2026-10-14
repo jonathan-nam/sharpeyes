@@ -844,21 +844,21 @@ export default function PartiesPage() {
                     className={grouping === "character" ? "basis-tab active" : "basis-tab"}
                     onClick={() => setGrouping("character")}
                   >
-                    By character
+                    By Character
                   </button>
                   <button
                     type="button"
                     className={grouping === "boss" ? "basis-tab active" : "basis-tab"}
                     onClick={() => setGrouping("boss")}
                   >
-                    By boss
+                    By Boss
                   </button>
                   <button
                     type="button"
                     className={grouping === "party" ? "basis-tab active" : "basis-tab"}
                     onClick={() => setGrouping("party")}
                   >
-                    By party
+                    By Party
                   </button>
                 </div>
 

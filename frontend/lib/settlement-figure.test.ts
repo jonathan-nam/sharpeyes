@@ -74,7 +74,7 @@ describe("what the card says a person owes", () => {
     // Mark sent's own button, which names both pots AND both units. It used to have to be pinned
     // apart from the Settle line, which carried the same words after "also"; that button is gone
     // now (see below), so this is the only line saying it.
-    expect(source).toContain("Mark ${movedBoth(owes, row.usd.owe)} sent");
+    expect(source).toContain("Mark ${movedBoth(owes, row.usd.owe)} Sent");
   });
   it("puts the nights behind the shares figure on hover, and marks that it has them", () => {
     // The same list sits under its own step further down, with two forms between the two, so the
@@ -102,7 +102,7 @@ describe("what the card says a person owes", () => {
   it("puts the act on the line it is about, named for that line's own direction", () => {
     // The same write either way. What differs is which way the money went, and the line knows.
     expect(source).toContain("onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }])");
-    expect(source).toContain('line.direction === "owed" ? "Mark received" : "Mark sent"');
+    expect(source).toContain('line.direction === "owed" ? "Mark Received" : "Mark Sent"');
     // The Closing Actions face, not the paid pill's. They are the same kind of thing, and a pill
     // beside a squared button read as a different one.
     expect(source).toContain('className="party-save ledger-line-act"');

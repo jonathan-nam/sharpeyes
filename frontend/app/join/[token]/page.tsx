@@ -171,7 +171,7 @@ export default function JoinPage() {
                   disabled={busy || (mine?.length ?? 0) === 0}
                   onClick={accept}
                 >
-                  {busy ? "Setting up..." : "Set up my account"}
+                  {busy ? "Setting Up..." : "Set Up My Account"}
                 </button>
               )}
               {problem && <p className="split-error">{problem}</p>}

@@ -41,7 +41,7 @@ import type { SettlementDebt, VestigePayment, VestigeTranche } from "@/types/ves
 // parts are listed because a figure nobody can take apart is a figure nobody can check.
 //
 // What YOU owe is beside it, not inside it. A share of yours comes off their debt when you press
-// Offset and stays off it when you press Mark sent, and the card cannot know which until you say.
+// Offset and stays off it when you press Mark Sent, and the card cannot know which until you say.
 // See Settlement.sharesYouOwe.
 //
 // PIECES are the other unit and stay a count. Coupons are single-trade, so pieces of yours in
@@ -449,7 +449,7 @@ function SettlementCard({
    * SHARES you owe are your cut of a night of theirs. HOLDING is their own money, which a sale of
    * their coupons left in your hands. What can happen to each is the same pair of things, so one
    * button covers both: one trade settles both, and two buttons wearing one word ("Offset" twice,
-   * "Mark sent" beside "I paid them") said nothing about which pot each was for.
+   * "Mark Sent" beside "I paid them") said nothing about which pot each was for.
    *
    * Each pot is still WRITTEN on its own, so a click is two calls where both apply. If the second is
    * refused the first stands, which the refusal line says; both are reversible where they are drawn,
@@ -870,7 +870,7 @@ function SettlementCard({
                   {weeks.length > 1 && (
                     <div className="ledger-filter">
                       <label className="ledger-step" htmlFor={`off-week-${row.key}`}>
-                        Filter by
+                        Filter By
                       </label>
                       <select
                         id={`off-week-${row.key}`}
@@ -878,7 +878,7 @@ function SettlementCard({
                         value={weekShown}
                         onChange={(e) => setWeek(e.target.value)}
                       >
-                        <option value="">All weeks</option>
+                        <option value="">All Weeks</option>
                         {weeks.map((w) => (
                           <option key={w} value={w}>
                             Week of {formatWeekStart(w)}
@@ -1074,7 +1074,7 @@ function SettlementCard({
                             line.direction === "owed" ? "received from" : "sent to"
                           } ${line.theirs}`}
                         >
-                          {line.direction === "owed" ? "Mark received" : "Mark sent"}
+                          {line.direction === "owed" ? "Mark Received" : "Mark Sent"}
                         </button>
                       </div>
                     </li>
@@ -1156,7 +1156,7 @@ function SettlementCard({
                   {nightWeeks.length > 1 && (
                     <div className="ledger-filter">
                       <label className="ledger-step" htmlFor={`nights-week-${row.key}`}>
-                        Filter by
+                        Filter By
                       </label>
                       <select
                         id={`nights-week-${row.key}`}
@@ -1164,7 +1164,7 @@ function SettlementCard({
                         value={nightWeekShown}
                         onChange={(e) => setNightWeek(e.target.value)}
                       >
-                        <option value="">All weeks</option>
+                        <option value="">All Weeks</option>
                         {nightWeeks.map((w) => (
                           <option key={w} value={w}>
                             Week of {formatWeekStart(w)}
@@ -1273,7 +1273,7 @@ function SettlementCard({
       {/* Every act the card offers, in one place, each button naming what pressing it records.
 
           They were scattered across the steps they acted on, which put two buttons wearing the word
-          Offset on one card and "Mark sent" a step above "I paid them" for the same errand. What an
+          Offset on one card and "Mark Sent" a step above "I paid them" for the same errand. What an
           act moves is now on its button instead, so the step is a list of what can be done and
           the steps above are a statement of what stands.
 
@@ -1321,7 +1321,7 @@ function SettlementCard({
                 disabled={busy}
                 onClick={() => void write(sendAll(), null)}
               >
-                {`Mark ${movedBoth(owes, row.usd.owe)} sent`}
+                {`Mark ${movedBoth(owes, row.usd.owe)} Sent`}
               </button>
             </span>
           )}
@@ -1340,7 +1340,7 @@ function SettlementCard({
                     and a night shared with a third person is not closed here. Both sides is the
                     fact worth carrying, closing one alone being what put the figure UP. See
                     settleThePair. */}
-                Settle both sides
+                Settle Both Sides
               </button>
             </span>
           )}

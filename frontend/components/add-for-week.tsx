@@ -17,7 +17,7 @@ import type { Party, SavePartyBody } from "@/types/party";
 // price of having to be found first.
 //
 // The Add is a + on the end of the row, so the boxes and the thing that submits them read as one
-// control. Its label ("Add for this week") is the tooltip, which is the only place the week is
+// control. Its label ("Add for This Week") is the tooltip, which is the only place the week is
 // still said.
 //
 // The roster is RosterInputs, the same control the edit page and Party View's row use, and not one
@@ -169,8 +169,8 @@ export function AddForWeek({
           <button
             type="submit"
             className="party-save add-plus"
-            title="Add for this week"
-            aria-label="Add for this week"
+            title="Add for This Week"
+            aria-label="Add for This Week"
             disabled={busy || !ready}
           >
             <span aria-hidden="true">+</span>

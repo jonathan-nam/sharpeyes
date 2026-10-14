@@ -67,7 +67,7 @@ export function RosterInputs({
           disabled={disabled}
           onClick={() => onChange([...members, ""])}
         >
-          Add member
+          Add Member
         </button>
       )}
     </div>

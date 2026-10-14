@@ -230,15 +230,15 @@ export function DropPicker({
         <button
           type="submit"
           className="party-save add-plus"
-          title="Add drop"
-          aria-label="Add drop"
+          title="Add Drop"
+          aria-label="Add Drop"
           disabled={busy || !ready}
         >
           <span aria-hidden="true">+</span>
         </button>
       ) : (
         <button type="submit" className="party-save" disabled={busy || !ready}>
-          Add drop
+          Add Drop
         </button>
       )}
     </>

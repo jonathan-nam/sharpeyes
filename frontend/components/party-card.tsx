@@ -300,7 +300,7 @@ export function PartyCard({
                   disabled={busy || !dirty || cleaned.length === 0}
                   onClick={() => save(cleaned)}
                 >
-                  Save roster for this week
+                  Save Roster for This Week
                 </button>
                 {/* Only once the week has been spelled out: there is nothing to go back to
                     otherwise, and offering it would imply the week is currently unusual. A one-off
@@ -312,7 +312,7 @@ export function PartyCard({
                     disabled={busy}
                     onClick={() => save(null)}
                   >
-                    Use the usual party
+                    Use the Usual Party
                   </button>
                 )}
               </div>
@@ -368,7 +368,7 @@ export function PartyCard({
 
           {onAddDrop && (
             <>
-              <h3 className="loot-group-title">Add drop</h3>
+              <h3 className="loot-group-title">Add Drop</h3>
               <DropPicker
                 bossKey={party.bossKey}
                 worldType={party.worldType}

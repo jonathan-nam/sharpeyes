@@ -31,11 +31,11 @@ export default function SignUp() {
   return (
     <main className="page">
       <AuthForm
-        title="Create an account"
-        submitLabel="Create account"
+        title="Create an Account"
+        submitLabel="Create Account"
         onSubmit={submit}
         done="Check your email to confirm your address."
-        footer={<Link href="/sign-in">Already have one? Sign in</Link>}
+        footer={<Link href="/sign-in">Already Have One? Sign In</Link>}
       >
         <AuthField label="Name" type="text" value={name} onChange={setName} autoComplete="name" />
         <AuthField

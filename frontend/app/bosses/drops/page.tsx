@@ -820,7 +820,7 @@ export default function DropLogPage() {
                           value={character ?? ""}
                           onChange={(e) => setCharacter(e.target.value || null)}
                         >
-                          <option value="">All characters</option>
+                          <option value="">All Characters</option>
                           {withDrops.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
@@ -838,7 +838,7 @@ export default function DropLogPage() {
                           value={boss ?? ""}
                           onChange={(e) => setBoss(e.target.value || null)}
                         >
-                          <option value="">All bosses</option>
+                          <option value="">All Bosses</option>
                           {bossesWithDrops.map((b) => (
                             <option key={b.bossKey} value={b.bossKey}>
                               {b.name}

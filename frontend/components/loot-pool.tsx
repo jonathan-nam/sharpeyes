@@ -95,7 +95,7 @@ export function LootPool({
   return (
     <section className="loot-pool">
       <div className="loot-pool-head">
-        <h2 className="loot-pool-title">Loot pool</h2>
+        <h2 className="loot-pool-title">Loot Pool</h2>
         {correctable && !readOnly && (
           <button
             type="button"
@@ -193,7 +193,7 @@ export function LootPool({
             className="party-cancel"
             onClick={() => setShowingOthers((open) => !open)}
           >
-            {showingOthers ? "Hide" : "Other nights"}
+            {showingOthers ? "Hide" : "Other Nights"}
           </button>
           {showingOthers &&
             others.map((night) => (

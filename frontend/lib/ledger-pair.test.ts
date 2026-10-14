@@ -214,7 +214,7 @@ describe("every act in one step", () => {
     // their own money a coupon sale left with you. One trade settles both.
     // The label, not the word: the comment above the acts records the shape this replaced.
     expect(ledger.match(/^\s*I paid them$/gm)).toBeNull();
-    expect(ledger.match(/Mark \$\{movedBoth\(owes, row\.usd\.owe\)\} sent/g)).toHaveLength(1);
+    expect(ledger.match(/Mark \$\{movedBoth\(owes, row\.usd\.owe\)\} Sent/g)).toHaveLength(1);
     expect(ledger.match(/`Offset \$\{moved\(/g)).toHaveLength(1);
   });
 
@@ -245,12 +245,12 @@ describe("every act in one step", () => {
     }
   });
 
-  it("says what Settle both sides closes and never how much of it", () => {
+  it("says what Settle Both Sides closes and never how much of it", () => {
     // Every act carries a line saying what pressing it will record, this one included. What it must
     // not carry is a figure: counting the nights back matched nothing else on the card (22 was
     // eleven rows in each pile), and a count of coupons would overclaim, a night shared with a third
     // person being one this cannot close. That much is said with the lists themselves.
-    expect(ledger.match(/^\s*Settle both sides$/gm)).toHaveLength(1);
+    expect(ledger.match(/^\s*Settle Both Sides$/gm)).toHaveLength(1);
     expect(ledger).not.toContain("row.piecesNet)} coupons`");
     // Nor the count of what it will NOT close, which was the same reasoning stopping one step
     // short. Each of those nights says so on its own row: see the marker in PieceNights.
@@ -259,15 +259,15 @@ describe("every act in one step", () => {
   });
 
   it("titles every act the same way, so one is not a different kind of thing", () => {
-    // One case for every act, sentence case like every other button in the app, and each names the
+    // One case for every act, Title Case like every other button in the app, and each names the
     // amount it moves. Settle is gone: see settlement-figure.
     expect(ledger).toContain("`Offset ${moved(offset.offered ? offset.amount : 0)}`");
-    expect(ledger).toContain("`Mark ${movedBoth(owes, row.usd.owe)} sent`");
-    expect(ledger.match(/^\s*Settle both sides$/gm)).toHaveLength(1);
+    expect(ledger).toContain("`Mark ${movedBoth(owes, row.usd.owe)} Sent`");
+    expect(ledger.match(/^\s*Settle Both Sides$/gm)).toHaveLength(1);
     expect(ledger).not.toMatch(/^\s*Settle$/gm);
-    expect(ledger).toContain('"Mark received" : "Mark sent"');
-    expect(ledger).not.toContain("Mark Received");
-    expect(ledger).not.toContain("Mark Sent");
+    expect(ledger).toContain('"Mark Received" : "Mark Sent"');
+    expect(ledger).not.toContain("Mark received");
+    expect(ledger).not.toContain("Mark sent");
     expect(ledger).not.toContain("Mark Settled");
   });
 });

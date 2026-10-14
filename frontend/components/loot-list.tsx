@@ -127,7 +127,7 @@ export function LootList({
    * These rows are a Party View row's panel rather than a page, so the two kinds are named.
    *
    * A panel's neighbours are headed, and its own heading is the boss. A page's pool already has
-   * "Loot pool" over it, so a "Drops" under that is the same word twice. It rode on `stacks` until
+   * "Loot Pool" over it, so a "Drops" under that is the same word twice. It rode on `stacks` until
    * the party's own page carried those too.
    */
   panel?: boolean;

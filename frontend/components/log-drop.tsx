@@ -63,7 +63,7 @@ export function LogDrop({
 
   return (
     <section className="loot-pool add-section">
-      <h2 className="loot-pool-title">Add drop</h2>
+      <h2 className="loot-pool-title">Add Drop</h2>
 
       <DropPicker
         bossKey={chosen}

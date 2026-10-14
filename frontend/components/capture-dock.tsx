@@ -252,7 +252,7 @@ export function CaptureDock({
         >
           <span aria-hidden="true">👁</span>
           <span className="dock-eye-label">
-            {generic ? "Reading name from screenshot" : "Read name from screenshot"}
+            {generic ? "Reading Name From Screenshot" : "Read Name From Screenshot"}
           </span>
         </button>
       </div>

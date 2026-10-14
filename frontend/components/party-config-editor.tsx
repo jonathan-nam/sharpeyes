@@ -185,7 +185,7 @@ function AddParty({
           setDifficulty("");
         }}
       >
-        Add party
+        Add Party
       </button>
       <KnownCharacters names={knownCharacters} />
     </>

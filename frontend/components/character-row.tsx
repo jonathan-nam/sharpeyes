@@ -88,7 +88,7 @@ export function CharacterRow({
         className={`tile-star${isMain ? " is-main" : ""}`}
         aria-label={isMain ? `${character.name} is your main` : `Make ${character.name} your main`}
         aria-pressed={isMain}
-        title={isMain ? "Your main" : "Set as main"}
+        title={isMain ? "Your Main" : "Set as Main"}
         onClick={setMain}
       >
         {isMain ? "★" : "☆"}

@@ -27,7 +27,7 @@ describe("the week's coupons are drops, not configuration", () => {
     expect(list).toContain('const couponTitle = !headed && panel ? "Drops" : null');
     expect(list).not.toContain('"Coupons"');
     // On the PANEL, not on `stacks`. The two were the same thing until the party's own page carried
-    // the stack blocks too, and heading its pool "Drops" under "Loot pool" is the same word twice.
+    // the stack blocks too, and heading its pool "Drops" under "Loot Pool" is the same word twice.
     expect(list).not.toContain('stacks ? "Drops"');
   });
 

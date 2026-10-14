@@ -101,7 +101,7 @@ export function InviteLink({
               telling them there is none. */}
           {url !== null && left !== null && (
             <button type="button" className="party-save" onClick={copy}>
-              {copied ? "Copied" : "Copy link"}
+              {copied ? "Copied" : "Copy Link"}
             </button>
           )}
           <button type="button" className="party-cancel" onClick={onClose}>

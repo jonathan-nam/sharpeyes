@@ -471,7 +471,7 @@ export function CopyPlan({ plan, roster }: { plan: Plan; roster: NightPerson[] }
           .catch(() => setCopied(false));
       }}
     >
-      <span className="copy-value">{copied ? "Copied" : "Copy the order"}</span>
+      <span className="copy-value">{copied ? "Copied" : "Copy the Order"}</span>
     </button>
   );
 }

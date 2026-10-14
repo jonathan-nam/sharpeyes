@@ -51,8 +51,8 @@ export default function DropSplitPage() {
           <span className="basis-row">
             {(
               [
-                ["listed", "Gross sale amount"],
-                ["received", "Net sale amount"],
+                ["listed", "Gross Sale Amount"],
+                ["received", "Net Sale Amount"],
               ] as const
             ).map(([value, label]) => (
               <label key={value} className={amountIs === value ? "basis-tab active" : "basis-tab"}>
@@ -72,13 +72,13 @@ export default function DropSplitPage() {
             onChange={(e) => setPrice(e.target.value)}
             placeholder="e.g. 9.5b, 970m, 1,000,000,000"
             inputMode="text"
-            aria-label={amountIs === "listed" ? "Gross sale amount" : "Net sale amount"}
+            aria-label={amountIs === "listed" ? "Gross Sale Amount" : "Net Sale Amount"}
             autoFocus
           />
         </div>
 
         <label className="split-field">
-          <span>Party size (including you)</span>
+          <span>Party Size (Including You)</span>
           <input
             className="split-input"
             type="number"
@@ -146,15 +146,15 @@ export default function DropSplitPage() {
             onClick={() => setGrouped((g) => !g)}
             aria-pressed={grouped}
           >
-            {grouped ? "Show raw numbers" : "Show comma separators"}
+            {grouped ? "Show Raw Numbers" : "Show Comma Separators"}
           </button>
 
           <table className="split-table">
             <thead>
               <tr>
                 <th>Who</th>
-                <th>You send</th>
-                <th>They end up with</th>
+                <th>You Send</th>
+                <th>They End Up With</th>
               </tr>
             </thead>
             <tbody>
@@ -179,7 +179,7 @@ export default function DropSplitPage() {
 
           <dl className="split-lines">
             <div>
-              <dt>You received from the sale</dt>
+              <dt>You Received From the Sale</dt>
               <dd>{mesos(split.sellerReceives)}</dd>
             </div>
             <div className="split-fee">
@@ -192,7 +192,7 @@ export default function DropSplitPage() {
           </dl>
 
           <details className="split-math">
-            <summary>Show the math</summary>
+            <summary>Show the Math</summary>
             <ol className="math-steps">
               {explainSplit(input, split, { grouped }).map((step) => (
                 <li key={step.label}>

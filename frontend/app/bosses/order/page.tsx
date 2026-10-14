@@ -492,7 +492,7 @@ export default function RunOrderPage() {
   // longer shows it: a run nobody can staff now just does not appear.
   //
   // Nothing until the night has been asked for, which is what keeps the search, the plan and
-  // "Left out" all empty rather than each needing its own gate.
+  // "Left Out" all empty rather than each needing its own gate.
   const searched = useMemo(
     () =>
       planning
@@ -675,9 +675,9 @@ export default function RunOrderPage() {
               is about. A seat nobody has claimed is chipped under its character's name instead of
               whose it is (see rosterFrom), and Edit People is the page that says whose it is. */}
           <div className="night-heading-row">
-            <h2 className="night-heading">Who&apos;s free</h2>
+            <h2 className="night-heading">Party Members</h2>
             <Link className="party-cancel" href="/bosses/people">
-              Edit people
+              Edit People
             </Link>
           </div>
           <ul className="night-roster">
@@ -784,7 +784,7 @@ export default function RunOrderPage() {
       {runs.length > 0 && (
         <label className="night-toggle">
           <input type="checkbox" checked={timed} onChange={(e) => setTimed(e.target.checked)} />
-          <span>Set a time limit</span>
+          <span>Set a Time Limit</span>
         </label>
       )}
 
@@ -851,7 +851,7 @@ export default function RunOrderPage() {
           disabled={asked !== null && !outdated}
           onClick={showOrder}
         >
-          {outdated ? "Update run order" : "Show run order"}
+          {outdated ? "Update Run Order" : "Show Run Order"}
         </button>
       )}
 
@@ -924,11 +924,11 @@ export default function RunOrderPage() {
         </p>
       )}
 
-      {/* Just "Left out". Time is not the only thing that drops a run, so a heading that named one
+      {/* Just "Left Out". Time is not the only thing that drops a run, so a heading that named one
           reason was wrong for the others, and no budget could fix what it blamed on the budget. */}
       {unscheduled.length > 0 && (
         <section className="night-section" aria-busy={stale}>
-          <h2 className="night-heading">Left out</h2>
+          <h2 className="night-heading">Left Out</h2>
           <ul className="night-leftovers">
             {unscheduled.map((run) => (
               <li key={run.id}>

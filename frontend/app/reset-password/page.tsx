@@ -18,7 +18,7 @@ function ResetForm() {
   if (!token) {
     return (
       <section className="auth-panel">
-        <h1>Reset your password</h1>
+        <h1>Reset Your Password</h1>
         <p className="auth-error">
           This link has expired. <Link href="/forgot-password">Send another.</Link>
         </p>
@@ -35,11 +35,11 @@ function ResetForm() {
 
   return (
     <AuthForm
-      title="Choose a new password"
-      submitLabel="Save password"
+      title="Choose a New Password"
+      submitLabel="Save Password"
       onSubmit={submit}
       done="Your password is changed."
-      footer={<Link href="/sign-in">Sign in</Link>}
+      footer={<Link href="/sign-in">Sign In</Link>}
     >
       <AuthField
         label={`New password (${MIN_PASSWORD}+ characters)`}

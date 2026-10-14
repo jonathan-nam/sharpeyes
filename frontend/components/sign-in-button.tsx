@@ -6,7 +6,7 @@ import { authClient } from "@/lib/auth-client";
 // Discord, because that is where the players are: the game links a Discord account to a Nexon one,
 // and a party is organised in a Discord server before it is organised in game.
 //
-// The provider is named on the button rather than hidden behind a generic "Sign in", so nobody is
+// The provider is named on the button rather than hidden behind a generic "Sign In", so nobody is
 // sent to a third-party consent screen they did not expect.
 export function SignInButton({
   // Where to land afterwards, when it is not the app's front door. A sign-on link sends its own
@@ -36,7 +36,7 @@ export function SignInButton({
   return (
     <button type="button" className="sign-in-btn" onClick={signIn} disabled={busy}>
       <DiscordMark />
-      Sign in with Discord
+      Sign In with Discord
     </button>
   );
 }

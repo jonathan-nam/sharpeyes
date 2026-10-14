@@ -233,7 +233,7 @@ function LotCard({
         )}
         <button type="submit" className="party-save" disabled={busy || !ready}>
           {proposal && proposal.rows.length > 0
-            ? `Sell ${proposal.rows.length === 1 ? "this drop" : `these ${proposal.rows.length}`}`
+            ? `Sell ${proposal.rows.length === 1 ? "This Drop" : `These ${proposal.rows.length}`}`
             : "Sell"}
         </button>
 

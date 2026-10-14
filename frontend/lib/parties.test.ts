@@ -473,7 +473,7 @@ describe("namedSeats", () => {
   });
 
   it("drops a seat nobody filled in", () => {
-    // "Add member" adds an empty box. Sending it would be refused ("a member needs a character
+    // "Add Member" adds an empty box. Sending it would be refused ("a member needs a character
     // name"), which would make adding a seat and changing your mind an error to read.
     expect(namedSeats(["Bryants", "", "CreedBratton"])).toEqual(["Bryants", "CreedBratton"]);
   });

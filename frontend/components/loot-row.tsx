@@ -229,7 +229,7 @@ export function LootRow({
                 onClick={() => onSetTaken(null)}
                 disabled={busy}
               >
-                Put back
+                Put Back
               </button>
               <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
                 Remove
@@ -261,7 +261,7 @@ export function LootRow({
               onClick={() => setSelling(true)}
               disabled={busy}
             >
-              Mark sold
+              Mark Sold
             </button>
             <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
               Remove
@@ -287,16 +287,16 @@ export function LootRow({
                   its receiver pays. */}
               {bought ? (
                 <p className="loot-sold-line">
-                  Bought by {result.seller.name} · <strong>{sold}</strong> · Their share{" "}
+                  Bought By {result.seller.name} · <strong>{sold}</strong> · Their Share{" "}
                   <strong>{money(result.seller.keeps)}</strong>
                   {result.seller.shares === 1 ? "" : ` (${result.seller.shares} shares)`} · Hands
-                  over <strong>{money(result.seller.paysOut)}</strong>
+                  Over <strong>{money(result.seller.paysOut)}</strong>
                   {splitWord}
                 </p>
               ) : (
                 <p className="loot-sold-line">
-                  {loot.amountBasis === "LISTED" ? "Listed at" : "Received"} <strong>{sold}</strong>{" "}
-                  · Sold by {result.seller.name} · Keeps{" "}
+                  {loot.amountBasis === "LISTED" ? "Listed At" : "Received"} <strong>{sold}</strong>{" "}
+                  · Sold By {result.seller.name} · Keeps{" "}
                   <strong>{money(result.seller.keeps)}</strong>
                   {result.seller.shares === 1 ? "" : ` (${result.seller.shares} shares)`}
                   {splitWord}
@@ -348,7 +348,7 @@ export function LootRow({
                             share.paid ? `Mark ${share.name} unpaid` : `Mark ${share.name} paid`
                           }
                         >
-                          {share.paid ? "Paid \u00d7" : "Mark paid"}
+                          {share.paid ? "Paid \u00d7" : "Mark Paid"}
                         </button>
                       )
                     )}
@@ -361,7 +361,7 @@ export function LootRow({
           {!readOnly && (
             <div className="loot-actions">
               <button type="button" className="party-cancel" onClick={onUnsell} disabled={busy}>
-                Undo sale
+                Undo Sale
               </button>
               <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
                 Remove
