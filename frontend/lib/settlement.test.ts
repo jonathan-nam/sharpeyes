@@ -246,6 +246,8 @@ describe("what one person owes you", () => {
     );
     expect([row!.pieces, row!.piecesYouOwe, row!.piecesNet]).toEqual([0, 0, 0]);
     expect(closes(settleThePair(row!))).toBe(2);
+    // Nothing outstanding either way, so the card offers nothing to press.
+    expect(settleThePair(row!).offered).toBe(false);
   });
 
   it("nets the two directions into the one count that changes hands", () => {
@@ -1752,8 +1754,9 @@ describe("pieces a sale has already answered for", () => {
     );
     expect([row!.piecesYouOwe, row!.pieces, row!.piecesNet]).toEqual([0, 0, 0]);
     expect(row!.piecesAnswered.theirs).toBe(130);
-    // Six nights to close still: the coupons are square, the books are not.
-    expect(closes(settleThePair(row!))).toBe(6);
+    // Six nights still open, but square books offer no act to close them.
+    const pair = settleThePair(row!);
+    expect([closes(pair), pair.offered]).toEqual([6, false]);
   });
 
   it("drops the card once nothing is outstanding in either unit", () => {

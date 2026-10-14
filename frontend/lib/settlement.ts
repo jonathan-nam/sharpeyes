@@ -816,7 +816,8 @@ export type PairSettlement = {
    */
   shared: number;
   /**
-   * Whether there is anything for one handover to close. `theirs` and `yours` are what it closes.
+   * Whether there is anything for one handover to close: coupons still outstanding either way.
+   * `theirs` and `yours` are what it closes.
    *
    * There is deliberately no COUNT of them here. It was drawn beside the button as "closes 22
    * bosses", which was wrong twice over: they are nights, so the same boss two weeks running is two
@@ -852,7 +853,9 @@ export function settleThePair(row: Settlement): PairSettlement {
     theirs: lootIds,
     yours,
     shared,
-    offered: lootIds.length + yours.length > 0,
+    // Square books offer nothing: a card with no coupons outstanding either way has no act to take,
+    // the same as an unpinned one that is not drawn at all. The zero nights ride along when it is.
+    offered: lootIds.length + yours.length > 0 && (row.pieces > 0 || row.piecesYouOwe > 0),
   };
 }
 
