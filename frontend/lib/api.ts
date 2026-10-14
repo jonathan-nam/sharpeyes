@@ -32,11 +32,26 @@ export function spriteUrl(sprite: string): string {
 }
 
 export class ApiError extends Error {
+  /** The backend's own words, only when it sent them as fit to show. See failureText. */
+  readonly refusal: string | null;
+
   constructor(
     public status: number,
     public body: string,
   ) {
     super(`API request failed (${status}): ${body}`);
+    this.refusal = refusalIn(body);
+  }
+}
+
+/** A refusal the backend wrote for users arrives as `{"refusal": "..."}`. Anything else is not one. */
+function refusalIn(body: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    const refusal = (parsed as { refusal?: unknown } | null)?.refusal;
+    return typeof refusal === "string" && refusal !== "" ? refusal : null;
+  } catch {
+    return null;
   }
 }
 
@@ -60,6 +75,19 @@ export class StaleAfterWrite extends Error {
 
 /** What every screen says when a write landed and its read-back did not. One wording, one meaning. */
 export const SAVED_BUT_STALE = "Saved. Reload to see it.";
+
+/**
+ * What a failed request says on screen.
+ *
+ * A raw response body never reaches the screen: it is "malformed characterId", a stack of JSON, or
+ * nginx's 502 page. Only a refusal the backend marked as user-facing is shown, so a new backend
+ * message stays hidden until somebody words it for users.
+ */
+export function failureText(e: unknown, fallback: string): string {
+  if (e instanceof StaleAfterWrite) return SAVED_BUT_STALE;
+  if (e instanceof ApiError && e.refusal !== null) return e.refusal;
+  return fallback;
+}
 
 /**
  * Reads the list back after a write that has already landed, marking a failure as the screen's.

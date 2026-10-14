@@ -6,6 +6,7 @@ import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -30,7 +31,7 @@ internal fun validateNewParty(
     characterId: Uuid?,
     bossCatalogId: Uuid?,
     now: Instant,
-): String? {
+): Any? {
     val owned =
         characterId != null &&
             Characters
@@ -89,7 +90,7 @@ internal fun validateSavedParty(
     request: SavePartyRequest,
     now: Instant,
     oneOff: Boolean,
-): String? {
+): Any? {
     val bossCatalogId = bossIdOfParty(partyId)
     return bossCatalogId?.let { validateDifficulty(it, request.difficulty) }
         ?: validateMinutes(request.minutes)
@@ -127,7 +128,7 @@ internal fun validateWeekRoster(
     exclude: Uuid,
     week: LocalDate,
     roster: List<String>,
-): String? {
+): Refusal? {
     val wanted = roster.map { it.trim().lowercase() }.toSet()
     val period = bossResetOf(bossCatalogId)?.let { periodOf(it, week) }
     val ownerOf =
@@ -156,7 +157,7 @@ internal fun validateWeekRoster(
 
     return clash?.let {
         val owner = ownerOf[it[PartyMember.partyId]]?.let(::characterName)
-        "${it[PartyMember.name]} already ran this boss with your $owner party this week"
+        Refusal("${it[PartyMember.name]} already ran this boss this week. Remove them from this week.")
     }
 }
 
@@ -258,7 +259,7 @@ internal fun validateBossRoster(
     roster: List<String>,
     now: Instant,
     oneOff: Boolean,
-): String? {
+): Refusal? {
     val wanted = roster.map { it.trim().lowercase() }.toSet()
     if (wanted.isEmpty()) return null
     // The one period a one-off runs in, or null for a config that runs in all of them. A boss whose
@@ -295,5 +296,8 @@ internal fun validateBossRoster(
                 ?.let { it to characterName(other[Party.characterId]) }
         }
 
-    return clash?.let { (name, owner) -> "$name is already in your $owner party for this boss" }
+    return clash?.let { (name, owner) ->
+        val party = if (owner == null) "another party" else "$owner's party"
+        Refusal("$name is already in $party for this boss. Remove them from it first.")
+    }
 }

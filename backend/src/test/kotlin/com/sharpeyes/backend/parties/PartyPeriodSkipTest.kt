@@ -6,6 +6,7 @@ import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
@@ -319,7 +320,7 @@ class PartyPeriodSkipTest {
 
             // On its own period a one-off holds its seats like anything else: two configs running
             // Steve on Limbo this week is the clear that cannot happen twice.
-            assertEquals("Steve is already in your Rune party for this boss", check())
+            assertEquals(Refusal("Steve is already in Rune's party for this boss. Remove them from it first."), check())
 
             // The period passes, and the night stops holding him. Refusing here named a config that
             // is not on the edit page to be changed, so there was nothing the user could do: the
@@ -333,7 +334,7 @@ class PartyPeriodSkipTest {
             val other2 = mine("Kestrel")
             partyOn(other2, "limbo", members = listOf("Steve"))
             assertEquals(
-                "Steve is already in your Kestrel party for this boss",
+                Refusal("Steve is already in Kestrel's party for this boss. Remove them from it first."),
                 validateSavedParty(
                     userId,
                     Uuid.parse(night.id),
@@ -343,7 +344,7 @@ class PartyPeriodSkipTest {
                 ),
             )
             assertEquals(
-                "Steve is already in your Kestrel party for this boss",
+                Refusal("Steve is already in Kestrel's party for this boss. Remove them from it first."),
                 validateBossRoster(
                     userId,
                     limbo,
@@ -365,7 +366,7 @@ class PartyPeriodSkipTest {
             val acorn = mine("acornacorn")
             val kalos = bossIdForKey("kalos-the-guardian")!!
             val standing = partyOn(warrior, "kalos-the-guardian", members = listOf("iPhone69C"))
-            val held = "iPhone69C is already in your warrior2020 party for this boss"
+            val held = Refusal("iPhone69C is already in warrior2020's party for this boss. Remove them from it first.")
 
             fun check(oneOff: Boolean) =
                 validateBossRoster(
@@ -396,7 +397,7 @@ class PartyPeriodSkipTest {
             // night is armed comes back through the same rule, from the other end.
             val night = partyOn(acorn, "kalos-the-guardian", oneOff = true, members = listOf("iPhone69C"))
             assertEquals(
-                "iPhone69C is already in your acornacorn party for this boss",
+                Refusal("iPhone69C is already in acornacorn's party for this boss. Remove them from it first."),
                 validateBossRoster(
                     userId,
                     kalos,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LootSaleForm } from "@/components/loot-sale-form";
-import { apiAssetUrl } from "@/lib/api";
+import { apiAssetUrl, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatDropped } from "@/lib/loot";
 import type { LotRow } from "@/lib/lot-sale";
@@ -86,7 +86,7 @@ function RowCard({
     try {
       await onSell(row, body);
     } catch (e) {
-      setRefusal(e instanceof Error ? e.message : "That didn't save.");
+      setRefusal(failureText(e, "That didn't save. Try again."));
     }
   }
 

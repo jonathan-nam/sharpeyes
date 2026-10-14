@@ -2,9 +2,11 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -179,7 +181,7 @@ private suspend fun RoutingContext.addDebtRoute() {
     // The whole list, like a tranche or a payment: what a person owes you is read off all of it.
     when (result) {
         is DebtWrite.AlreadyDischarged ->
-            call.respond(HttpStatusCode.Conflict, "one of those shares is already discharged")
+            call.refuse(HttpStatusCode.Conflict, Refusal("This is already settled. Reload to see it."))
         is DebtWrite.NotYourPerson ->
             call.respond(HttpStatusCode.BadRequest, "personId is not somebody on your people list")
         is DebtWrite.Wrote -> call.respond(HttpStatusCode.Created, result.debts)
