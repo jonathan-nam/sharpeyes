@@ -19,7 +19,7 @@ function propertiesOf(selector: string): string[] {
   return declarationsOf(selector).map((line) => (line.split(":")[0] ?? "").trim());
 }
 
-// Untick Set a time limit and every time control stays where it was, disabled. That
+// Untick Enable Time Configuration and every time control stays where it was, disabled. That
 // only holds while the off state is drawn with properties that cannot resize a box: one `display: none` or one padding
 // here and the page jumps under the cursor that ticked it again, which is what this replaced.
 const NON_LAYOUT = ["opacity", "color", "background", "border-color", "cursor", "filter"];
