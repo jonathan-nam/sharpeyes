@@ -87,13 +87,16 @@ function menuGroup(href: string): string {
 /**
  * What the welcome-back screen offers, in the order it draws them.
  *
- * A way in, not a second copy of the menu: Run Order and the Split Utility are reached from the
- * hamburger like everything else. Labels are looked up in SECTIONS rather than written
- * again, so a section renamed there cannot keep its old name here.
+ * A way in, not a second copy of the menu: the Split Utility is reached from the hamburger like
+ * everything else. Labels are looked up in SECTIONS rather than written again, so a section renamed
+ * there cannot keep its old name here.
  */
 export const HOME_ROWS: HomeRow[] = [
   { ...menuItem("/characters"), items: [] },
-  { label: menuGroup("/bosses"), items: [menuItem("/bosses"), menuItem("/bosses/parties")] },
+  {
+    label: menuGroup("/bosses"),
+    items: [menuItem("/bosses"), menuItem("/bosses/parties"), menuItem("/bosses/order")],
+  },
   { ...menuItem("/bosses/drops"), items: [] },
   { ...menuItem("/inventory"), items: [] },
 ];

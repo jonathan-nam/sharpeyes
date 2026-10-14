@@ -18,11 +18,12 @@ const MARK_ART: Partial<Record<DropSectionKey, string>> = {
 
 /** The home screen's marks, by the section each row opens, or by its group for a row with no page. */
 const PAGE_ART: Record<string, string> = {
-  "/characters": "/marks/character-slot-coupon.png",
+  "/characters": "/marks/roly-poly-photo.png",
   "/inventory": "/marks/party-quest-bag.png",
   Bossing: "/marks/jupiter.png",
-  "/bosses": "/marks/intense-power-crystal.png",
-  "/bosses/parties": "/marks/party-hat.png",
+  "/bosses": "/marks/attendance-sheet.png",
+  "/bosses/parties": "/marks/follow-the-lead.png",
+  "/bosses/order": "/marks/treasure-map.png",
   "/bosses/drops": "/marks/grindstone-of-faith.png",
 };
 
