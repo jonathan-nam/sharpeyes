@@ -6,6 +6,7 @@ import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
 import { WorldChoice } from "@/components/world-choice";
+import { spriteUrl } from "@/lib/api";
 import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
@@ -39,8 +40,22 @@ export default function Home() {
     <main className="page">
       {isSignedIn ? (
         <section className="hero">
-          <SharpEyesMark size={64} />
-          <h1>{main ? `Welcome back, ${main}` : "Welcome back"}</h1>
+          {/* An empty slot while settings load, so the mark never flashes ahead of the sprite. */}
+          {!settings ? (
+            <span className="hero-sprite" aria-hidden="true" />
+          ) : settings.mainCharacterSprite ? (
+            <img className="hero-sprite" src={spriteUrl(settings.mainCharacterSprite)} alt="" />
+          ) : (
+            <SharpEyesMark size={64} />
+          )}
+          {main ? (
+            <h1>
+              <span className="hero-greeting">Welcome back,</span>
+              <span className="hero-ign">{main}</span>
+            </h1>
+          ) : (
+            <h1>Welcome back</h1>
+          )}
           <nav className="hero-actions">
             {HOME_ROWS.map((row) => (
               <HomeRowView key={row.label} row={row}>
