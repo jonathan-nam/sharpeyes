@@ -29,7 +29,8 @@ private const val PARSE_TIMEOUT_MS = 15_000L
 // Recorded against each screenshot in place of a model id. Cost accounting
 // multiplies tokens by a per-model rate, and this service reports zero tokens,
 
-private const val VISION_UNAVAILABLE = "Screenshot parsing is temporarily unavailable."
+private const val VISION_UNAVAILABLE = "Screenshot reading is down. Try again later."
+private const val UNREADABLE = "Couldn't read this screenshot. Try another."
 
 fun createVisionHttpClient(): HttpClient =
     HttpClient(CIO) {
@@ -121,11 +122,11 @@ class VisionServiceClient(
             // instead of flattening it to a generic failure.
             HttpStatusCode.UnprocessableEntity -> ScreenshotParseOutcome.Failed(detail(response.bodyAsText()))
 
-            HttpStatusCode.BadRequest -> ScreenshotParseOutcome.Failed("That file could not be read as an image.")
+            HttpStatusCode.BadRequest -> ScreenshotParseOutcome.Failed("That file isn't an image. Upload a screenshot.")
 
             else -> {
                 log.error("vision service returned {}: {}", response.status, response.bodyAsText())
-                ScreenshotParseOutcome.Failed("Screenshot parsing failed.")
+                ScreenshotParseOutcome.Failed(UNREADABLE)
             }
         }
     }
@@ -157,5 +158,5 @@ class VisionServiceClient(
         } catch (e: SerializationException) {
             log.warn("could not read vision error body: {}", raw, e)
             null
-        } ?: "That screenshot could not be parsed."
+        } ?: UNREADABLE
 }

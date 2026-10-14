@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 // same drop in coupons, which is two settlements for one drop.
 //
 // The row gates its sale on `loot.status === "PENDING"`, and a piece drop is PENDING for ever, so it
-// offered "Mark sold" on every coupon stack any party had ever dropped. There are no component tests in
+// offered "Mark Sold" on every coupon stack any party had ever dropped. There are no component tests in
 // this repo and the condition is not reachable from a unit test, so this reads the source: the same
 // approach as ledger-css.test.ts, and the alternative is nothing checking it at all.
 //

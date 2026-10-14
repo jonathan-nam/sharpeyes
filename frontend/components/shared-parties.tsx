@@ -36,7 +36,7 @@ export function SharedParties({
       {/* The banner stays the section's, not a character's. Under headings that are only names,
           somebody else's parties would read as your own. */}
       <header className="party-banner">
-        <h2 className="party-group-name">Shared with you</h2>
+        <h2 className="party-group-name">Shared with You</h2>
       </header>
       {groups.map((group) => (
         <div className="shared-group" key={group.characterId}>

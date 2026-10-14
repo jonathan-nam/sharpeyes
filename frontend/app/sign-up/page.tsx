@@ -20,21 +20,22 @@ export default function SignUp() {
   if (!PASSWORD_LOGIN) redirect("/");
 
   async function submit() {
-    if (password.length < MIN_PASSWORD) return `Passwords are ${MIN_PASSWORD} characters or more.`;
+    if (password.length < MIN_PASSWORD)
+      return `Password too short. Use ${MIN_PASSWORD} or more characters.`;
     const { error } = await authClient.signUp.email({ name, email, password });
     // Deliberately not distinguishing "already registered": the server does not either, so that a
     // stranger cannot use this form to find out who has an account here.
-    return error ? "Could not create that account." : null;
+    return error ? "Couldn't create that account. Try again." : null;
   }
 
   return (
     <main className="page">
       <AuthForm
-        title="Create an account"
-        submitLabel="Create account"
+        title="Create an Account"
+        submitLabel="Create Account"
         onSubmit={submit}
-        done="Check your email for a link to confirm the address."
-        footer={<Link href="/sign-in">Already have one? Sign in</Link>}
+        done="Check your email to confirm your address."
+        footer={<Link href="/sign-in">Already Have One? Sign In</Link>}
       >
         <AuthField label="Name" type="text" value={name} onChange={setName} autoComplete="name" />
         <AuthField

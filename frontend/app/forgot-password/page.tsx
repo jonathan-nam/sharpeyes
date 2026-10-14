@@ -18,18 +18,18 @@ export default function ForgotPassword() {
       email,
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    return error ? "Could not send that. Try again." : null;
+    return error ? "Couldn't send that. Try again." : null;
   }
 
   return (
     <main className="page">
       <AuthForm
-        title="Reset your password"
-        submitLabel="Send a reset link"
+        title="Reset Your Password"
+        submitLabel="Send a Reset Link"
         onSubmit={submit}
         // Says nothing about whether the address is registered, because the server does not either.
         done="If that address has an account, a reset link is on its way."
-        footer={<Link href="/sign-in">Back to sign in</Link>}
+        footer={<Link href="/sign-in">Back to Sign In</Link>}
       >
         <AuthField
           label="Email"

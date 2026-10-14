@@ -301,7 +301,7 @@ describe("what the closing actions say they move", () => {
 
   it("names both units in what Mark Sent records, and offers it for a dollar debt at all", () => {
     expect(source).toContain("const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;");
-    expect(source).toContain("records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}");
+    expect(source).toContain("Mark ${movedBoth(owes, row.usd.owe)} Sent");
     // Side by side, never added: there is no rate in this app to add them at.
     expect(source).toContain('.join(" and ")');
   });

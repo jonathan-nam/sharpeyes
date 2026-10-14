@@ -132,7 +132,7 @@ export function SlotGrid({
      invisibly, so the + underneath is what you see and the browser's own dropdown is what you get. */
   function addSlot(key: number) {
     return (
-      <div key={key} className="ms-slot ms-add" title="Add item">
+      <div key={key} className="ms-slot ms-add" title="Add Item">
         <select
           className="ms-add-select"
           aria-label="Add an item"
@@ -141,7 +141,7 @@ export function SlotGrid({
         >
           {/* Selected and empty, so the box reads as unanswered and picking the same item twice in
               a row still fires a change. */}
-          <option value="">Add item</option>
+          <option value="">Add Item</option>
           {addable!.map((option) => (
             <option key={option.tokenCatalogId} value={option.tokenCatalogId}>
               {option.name}

@@ -193,7 +193,6 @@ export function CaptureDock({
           key={capture.id}
           capture={capture}
           characters={characters}
-          pinned={pinned}
           onResolve={(id) => resolveTo(capture, id)}
           onIgnore={() => ignore(capture)}
           onAddAndResolve={(name) => addAndResolve(capture, name)}
@@ -225,11 +224,7 @@ export function CaptureDock({
             ? `Drop ${pinned.name}'s inventory screenshot here`
             : "Drop an inventory screenshot here"}
         </span>
-        <span className="dock-drop-sub">
-          {pinned
-            ? "or paste it, it will be saved to this character"
-            : "or paste it. We'll read the character's name from the screenshot"}
-        </span>
+        <span className="dock-drop-sub">or paste it</span>
         <input
           ref={fileInputRef}
           type="file"
@@ -254,15 +249,10 @@ export function CaptureDock({
             e.stopPropagation();
             onToggleGeneric();
           }}
-          title={
-            generic
-              ? "Reading the character's name from the screenshot. Pick a character to save it to them instead."
-              : "Not this character's? Read the name from the screenshot instead."
-          }
         >
           <span aria-hidden="true">👁</span>
           <span className="dock-eye-label">
-            {generic ? "Reading the name from the screenshot" : "Not this character's?"}
+            {generic ? "Reading Name From Screenshot" : "Read Name From Screenshot"}
           </span>
         </button>
       </div>
@@ -273,7 +263,6 @@ export function CaptureDock({
 function CaptureCard({
   capture,
   characters,
-  pinned,
   onResolve,
   onIgnore,
   onAddAndResolve,
@@ -281,7 +270,6 @@ function CaptureCard({
 }: {
   capture: Capture;
   characters: Character[];
-  pinned: Character | undefined;
   onResolve: (characterId: string) => void;
   onIgnore: () => void;
   onAddAndResolve: (name: string) => void;
@@ -325,9 +313,9 @@ function CaptureCard({
   // every item is new and the whole parse still shows, which is exactly right.
   const changed = items.filter((i) => i.delta !== 0);
 
-  const { text, tone } = describe(capture, pinned);
+  const { text, tone } = describe(capture);
   const saved = result?.outcome === "MATCHED";
-  const note = previewNote(saved, changed.length, items.length);
+  const note = previewNote(saved, changed.length);
 
   return (
     <article className={`capture${busy ? " busy" : ""}`}>
@@ -391,14 +379,14 @@ function Actions({
   if (capture.phase === "error" || !result) {
     return (
       <button className="link" onClick={onDismiss}>
-        dismiss
+        Dismiss
       </button>
     );
   }
   if (saved) {
     return (
       <button className="link" onClick={onDismiss} disabled={busy}>
-        done
+        Done
       </button>
     );
   }
@@ -412,12 +400,12 @@ function Actions({
     <>
       {result.outcome === "MISMATCH" && known && (
         <button className="link" disabled={busy} onClick={() => onResolve(known.id)}>
-          save to {known.name} instead
+          Save to {known.name}
         </button>
       )}
       {result.outcome === "NEW_CHARACTER_DETECTED" && detected && (
         <button className="link" disabled={busy} onClick={() => onAddAndResolve(detected)}>
-          add {detected}
+          Add {detected}
         </button>
       )}
       {(result.outcome === "UNRESOLVABLE" ||
@@ -429,7 +417,7 @@ function Actions({
           onChange={(e) => e.target.value && onResolve(e.target.value)}
         >
           <option value="" disabled>
-            save to…
+            Save to…
           </option>
           {characters.map((c) => (
             <option key={c.id} value={c.id}>
@@ -439,28 +427,20 @@ function Actions({
         </select>
       )}
       <button className="link" disabled={busy} onClick={onIgnore}>
-        discard
+        Discard
       </button>
     </>
   );
 }
 
-// The note counts CHANGES, not items read, because the grid now shows only changes. `total` is
-// still named so "no changes" can say how many were checked, otherwise it reads as "nothing was
-// in the screenshot" rather than "nothing moved".
-function previewNote(saved: boolean, changed: number, total: number): string {
+// The note counts CHANGES, not items read, because the grid now shows only changes.
+function previewNote(saved: boolean, changed: number): string {
   const n = `${changed} ${changed === 1 ? "change" : "changes"}`;
-  if (changed === 0) {
-    const checked = `${total} ${total === 1 ? "item" : "items"}`;
-    return saved ? `No changes. ${checked} already up to date.` : "No changes to save.";
-  }
-  return saved ? `${n} saved.` : `${n} to save. Nothing has been saved yet.`;
+  if (changed === 0) return "No changes.";
+  return saved ? `${n} saved.` : `${n} to save.`;
 }
 
-function describe(
-  capture: Capture,
-  pinned: Character | undefined,
-): { text: ReactNode; tone: string } {
+function describe(capture: Capture): { text: ReactNode; tone: string } {
   if (capture.phase === "reading")
     return {
       text: (
@@ -471,8 +451,7 @@ function describe(
       ),
       tone: "pending",
     };
-  if (capture.phase === "error")
-    return { text: "The upload didn't reach the server.", tone: "bad" };
+  if (capture.phase === "error") return { text: "Upload failed. Try again.", tone: "bad" };
 
   const r = capture.result!;
   switch (r.outcome) {
@@ -483,30 +462,31 @@ function describe(
     // contradiction and is worded as one. You said this is Bob's; the picture says Alice.
     case "MISMATCH":
       return {
-        text: `This screenshot is ${r.detectedCharacterName}'s, but you dropped it on ${
-          pinned?.name ?? r.pinnedCharacterName
-        }. Nothing was saved.`,
+        text: `This is ${r.detectedCharacterName}'s screenshot. Drop it on ${r.detectedCharacterName}.`,
         tone: "bad",
       };
 
     case "NEW_CHARACTER_DETECTED":
       return {
-        text: `This looks like ${r.detectedCharacterName}, who isn't in your roster yet.`,
+        text: `${r.detectedCharacterName} isn't one of your characters. Add them first.`,
         tone: "warn",
       };
 
     // Only reachable with no character selected. Pick one and there is nothing to resolve.
     case "UNRESOLVABLE":
       return {
-        text: "No character name is visible in this screenshot. Pick a character to save it to.",
+        text: "No name found. Pick a character.",
         tone: "warn",
       };
 
     case "UNRECOGNIZED_SCREENSHOT":
-      return { text: "That isn't an inventory screenshot.", tone: "bad" };
+      return { text: "Not an inventory screenshot. Upload one.", tone: "bad" };
 
     case "FAILED":
-      return { text: r.failureReason ?? "Couldn't read this one.", tone: "bad" };
+      return {
+        text: r.failureReason ?? "Couldn't read this screenshot. Try another.",
+        tone: "bad",
+      };
 
     default:
       return { text: "", tone: "" };

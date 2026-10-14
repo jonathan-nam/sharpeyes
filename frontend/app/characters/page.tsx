@@ -186,12 +186,12 @@ export default function CharactersPage() {
             character added from here on arrives with a world already. */}
         {unplaced.length > 0 && (
           <button type="button" className="party-cancel" onClick={findWorlds} disabled={finding}>
-            {finding ? "Looking up..." : `Look up ${unplaced.length} world${plural}`}
+            {finding ? "Looking Up..." : `Look Up ${unplaced.length} World${plural}`}
           </button>
         )}
       </div>
 
-      {failed && !loaded && <p>Couldn&apos;t load your characters.</p>}
+      {failed && !loaded && <p>Couldn&apos;t load your characters. Reload to try again.</p>}
       <PageSwap waiting={!loaded && !failed} placeholder={<p className="party-hint">Loading...</p>}>
         {loaded && (
           <>

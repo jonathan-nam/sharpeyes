@@ -115,12 +115,15 @@ export function DropPicker({
   const [boxes, setBoxes] = useState<Record<string, string>>({});
 
   const drops = pickableDrops(table, worldType, difficulty);
-  const body = addDropBody(bossKey, dropKey, customName, quantity);
+  // A boss with no table has only "something else" to offer, so it starts there.
+  const noTable = (table?.length ?? 0) === 0 && bossKey !== "";
+  const chosen = noTable && dropKey === "" ? OTHER : dropKey;
+  const body = addDropBody(bossKey, chosen, customName, quantity);
 
   // The night about to be logged, when the picked drop is the one that stacks. Rebuilt from the
   // count as typed, so changing it re-reads the stacks against what actually fell.
   const night =
-    draft && dropKey === draft.dropKey
+    draft && chosen === draft.dropKey
       ? draftDrop(draft.config, body?.quantity ?? 0, draft.behind)
       : null;
   const stacks = night ? draftStacks(night, boxes) : null;
@@ -169,7 +172,7 @@ export function DropPicker({
         <DropSelect
           drops={drops}
           worldType={worldType}
-          value={dropKey}
+          value={chosen}
           label="Which drop"
           onChange={(picked) => {
             setDropKey(picked);
@@ -194,7 +197,7 @@ export function DropPicker({
         />
       </Field>
 
-      {dropKey === OTHER && (
+      {chosen === OTHER && (
         <Field on={Boolean(card)} label="Name" cls="is-wide">
           <input
             className="split-input"
@@ -207,7 +210,7 @@ export function DropPicker({
         </Field>
       )}
 
-      {dropKey !== "" && (
+      {chosen !== "" && (
         <Field on={Boolean(card)} label="How many" cls="is-narrow">
           <input
             className="split-input loot-count-input"
@@ -227,15 +230,15 @@ export function DropPicker({
         <button
           type="submit"
           className="party-save add-plus"
-          title="Add drop"
-          aria-label="Add drop"
+          title="Add Drop"
+          aria-label="Add Drop"
           disabled={busy || !ready}
         >
           <span aria-hidden="true">+</span>
         </button>
       ) : (
         <button type="submit" className="party-save" disabled={busy || !ready}>
-          Add drop
+          Add Drop
         </button>
       )}
     </>
@@ -251,18 +254,6 @@ export function DropPicker({
         <form className="loot-add" onSubmit={submit}>
           {fields}
         </form>
-      )}
-
-      {/* The "only drops in Interactive worlds" note that used to sit here is gone: the list is
-          now narrowed to this party's world and mode, so anything still on it does drop here.
-
-          On the TABLE rather than on what survived the filters, so the sentence stays true: a boss
-          whose table is all counted rows could narrow down to nothing at some mode, and that is not
-          a boss with no table. */}
-      {(table?.length ?? 0) === 0 && bossKey !== "" && (
-        <p className="party-hint">
-          No drop table recorded for this boss yet, so pick “something else” and type it.
-        </p>
       )}
     </>
   );

@@ -119,7 +119,7 @@ export function LootSaleForm({
                 The payouts are still taxed, so the split is the same one. Not offered where one
                 seat ran: there is nobody to have bought it off. */}
             {shared && (
-              <option value="BOUGHT">{labelled ? "Member bought" : "member bought"}</option>
+              <option value="BOUGHT">{labelled ? "Member Bought" : "member bought"}</option>
             )}
           </select>
         </Field>
@@ -147,7 +147,7 @@ export function LootSaleForm({
           </Field>
         )}
         {shared && (
-          <Field on={Boolean(labelled)} label={basis === "BOUGHT" ? "Bought by" : "Sold by"}>
+          <Field on={Boolean(labelled)} label={basis === "BOUGHT" ? "Bought By" : "Sold By"}>
             <select
               className="split-input"
               value={sellerMemberId}
@@ -201,7 +201,7 @@ export function LootSaleForm({
           className="party-save"
           disabled={busy || money === null || !sellerMemberId || !sharesReadable}
         >
-          Save sale
+          Save Sale
         </button>
         {onCancel && (
           <button type="button" className="party-cancel" onClick={onCancel} disabled={busy}>

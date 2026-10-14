@@ -205,7 +205,7 @@ export function PeopleBoard({
         ))}
       </div>
 
-      <h2 className="night-heading people-pool-title">Unassigned party members</h2>
+      <h2 className="night-heading people-pool-title">Unassigned Party Members</h2>
       <TileStrip zone={zoneProps(null)} deps={[unassigned, picked]}>
         {unassigned.map((name) => (
           <Chip

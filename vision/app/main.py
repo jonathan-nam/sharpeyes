@@ -118,10 +118,7 @@ def _downscaled_message() -> str:
     So this is the only rescale left that we refuse, and unlike the old blanket refusal it
     asks the user for something they can always do: send the file they already have, whole.
     """
-    return (
-        "This screenshot was shrunk before upload, and the stack-count digits did not "
-        "survive it. Upload the original file at its full resolution."
-    )
+    return "This screenshot was shrunk. Upload the original."
 
 
 def _decode_upload(body: bytes) -> np.ndarray:
@@ -267,8 +264,7 @@ async def parse(request: Request, response: Response) -> ScreenshotParseResult:
         if looks_like_inventory_window(img):
             raise HTTPException(
                 422,
-                "This looks like an inventory window, but the slot grid could not be located "
-                "in it. Upload the original screenshot file, unedited and uncropped.",
+                "No inventory found. Upload an uncropped screenshot.",
             ) from e
         return ScreenshotParseResult(screenshotType="UNRECOGNIZED")
 
@@ -360,9 +356,7 @@ async def parse(request: Request, response: Response) -> ScreenshotParseResult:
             return _planner_only(img, planner, stage, response)
         raise HTTPException(
             422,
-            "Part of the inventory was covered or out of frame, so the counts could not be "
-            "trusted. Bring the whole inventory into view, clear of other windows, and take "
-            "the screenshot again.",
+            "Part of the inventory is covered. Retake it in full view.",
         )
 
     complete = cov.complete and unreadable_counts == 0

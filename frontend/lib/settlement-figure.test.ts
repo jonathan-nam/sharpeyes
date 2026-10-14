@@ -71,10 +71,10 @@ describe("what the card says a person owes", () => {
     // fact rather than as the act the button performs. Same subject-less fragment as the entry box
     // it replaced.
     expect(source).not.toContain("already sent");
-    // Mark Sent's own line, which names both pots AND both units. It used to have to be pinned
+    // Mark sent's own button, which names both pots AND both units. It used to have to be pinned
     // apart from the Settle line, which carried the same words after "also"; that button is gone
     // now (see below), so this is the only line saying it.
-    expect(source).toContain("records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}");
+    expect(source).toContain("Mark ${movedBoth(owes, row.usd.owe)} Sent");
   });
   it("puts the nights behind the shares figure on hover, and marks that it has them", () => {
     // The same list sits under its own step further down, with two forms between the two, so the
@@ -162,11 +162,9 @@ describe("what the card says a person owes", () => {
     // It used to say "clears", because the headline was the net and the two halves of an offset
     // cancelled in it: the button could not promise to take anything off a figure that did not move.
     // A share you owe is outside the net now, so it can.
-    expect(source).toContain(
-      "takes ${moved(offset.offered ? offset.amount : 0)} off what ${row.name} owes you",
-    );
+    expect(source).toContain("`Offset ${moved(offset.offered ? offset.amount : 0)}`");
     // ONE figure, the Unsettled Amounts one: the shares you owe and their money you are holding,
-    // added. Naming the two pots in the caption repeated the list under that heading.
+    // added. Naming the two pots on the button repeated the list under that heading.
     expect(source).toContain(
       "const moved = (shares: number) => formatMesos(shares + row.holding, true);",
     );

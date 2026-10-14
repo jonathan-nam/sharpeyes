@@ -1007,7 +1007,7 @@ export function settlementTotals(rows: Settlement[]): SettlementTotals {
 }
 
 /**
- * The payout rows for the shares YOU owe, which is what "Mark sent" and "Offset" both act on.
+ * The payout rows for the shares YOU owe, which is what "Mark Sent" and "Offset" both act on.
  *
  * Not sharesOf, which is every line: on a card running both ways that would mark what THEY owe you
  * paid at the same time, and say you had collected money nobody has sent.

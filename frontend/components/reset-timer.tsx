@@ -105,9 +105,7 @@ export function ResetTimer({
           );
         })}
       </span>
-      <span className="reset-zone" title="Bosses reset at 00:00 UTC; weeklies on Thursday.">
-        UTC
-      </span>
+      <span className="reset-zone">UTC</span>
     </p>
   );
 }

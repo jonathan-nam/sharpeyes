@@ -200,7 +200,7 @@ export function InventoryPanel({
         </section>
       ) : (
         <div className="ms-empty">
-          {category === "Use" ? (emptyHint ?? "Nothing here yet.") : `No ${category} items.`}
+          {category === "Use" ? (emptyHint ?? "No items yet.") : `No ${category} items.`}
         </div>
       )}
     </div>

@@ -183,11 +183,7 @@ export function PlannerDock({
             ? `Drop ${selected.name}'s Maple Planner screenshot here`
             : "Choose a character first"}
         </span>
-        <span className="dock-drop-sub">
-          {selected
-            ? "or paste it. The list usually takes two or three captures, one per scroll position"
-            : "The planner doesn't show whose it is"}
-        </span>
+        {selected && <span className="dock-drop-sub">or paste it</span>}
         <input
           ref={fileInputRef}
           type="file"
@@ -203,8 +199,7 @@ export function PlannerDock({
 
       {refused && !selected && (
         <p className="planner-refused" role="alert">
-          Nothing was uploaded. Choose a character above first, otherwise there is no way to tell
-          whose clears these are.
+          No character chosen. Pick one first.
         </p>
       )}
     </DockShell>
@@ -234,7 +229,7 @@ function PlannerCard({ capture, onDismiss }: { capture: Capture; onDismiss: () =
             </span>
           ) : (
             <button className="link" onClick={onDismiss}>
-              {result?.outcome === "MATCHED" ? "done" : "dismiss"}
+              {result?.outcome === "MATCHED" ? "Done" : "Dismiss"}
             </button>
           )}
         </span>
@@ -256,7 +251,7 @@ function PlannerCard({ capture, onDismiss }: { capture: Capture; onDismiss: () =
 
           <p className="capture-preview-note">
             {result.bossClears.length === 0
-              ? "The planner was read but no boss rows came back."
+              ? "No bosses found. Upload the boss list."
               : `${clearedCount(result)} of ${result.bossClears.length} cleared.`}
           </p>
 
@@ -284,8 +279,7 @@ function describe(capture: Capture): { text: ReactNode; tone: string } {
       ),
       tone: "pending",
     };
-  if (capture.phase === "error")
-    return { text: "The upload didn't reach the server.", tone: "bad" };
+  if (capture.phase === "error") return { text: "Upload failed. Try again.", tone: "bad" };
 
   const r = capture.result!;
   switch (r.outcome) {
@@ -295,7 +289,7 @@ function describe(capture: Capture): { text: ReactNode; tone: string } {
       return hasPlanner(r)
         ? { text: `Saved to ${capture.characterName}`, tone: "good" }
         : {
-            text: `Saved to ${capture.characterName}, but there was no Maple Planner in this capture.`,
+            text: `Saved to ${capture.characterName}. Upload the planner separately.`,
             tone: "warn",
           };
 
@@ -303,24 +297,27 @@ function describe(capture: Capture): { text: ReactNode; tone: string } {
     // the pick is the only thing that could be wrong.
     case "MISMATCH":
       return {
-        text: `This screenshot is ${r.detectedCharacterName}'s, but you chose ${capture.characterName}. Nothing was saved.`,
+        text: `This is ${r.detectedCharacterName}'s screenshot. Pick ${r.detectedCharacterName} instead.`,
         tone: "bad",
       };
 
     case "NEW_CHARACTER_DETECTED":
       return {
-        text: `This looks like ${r.detectedCharacterName}, who isn't in your roster yet. Nothing was saved.`,
+        text: `${r.detectedCharacterName} isn't one of your characters. Add them first.`,
         tone: "warn",
       };
 
     case "UNRESOLVABLE":
-      return { text: "Couldn't tell whose planner this is. Nothing was saved.", tone: "bad" };
+      return { text: "No character chosen. Pick one first.", tone: "bad" };
 
     case "UNRECOGNIZED_SCREENSHOT":
-      return { text: "That isn't a Maple Planner screenshot.", tone: "bad" };
+      return { text: "Not a Maple Planner screenshot. Upload one.", tone: "bad" };
 
     case "FAILED":
-      return { text: r.failureReason ?? "Couldn't read this one.", tone: "bad" };
+      return {
+        text: r.failureReason ?? "Couldn't read this screenshot. Try another.",
+        tone: "bad",
+      };
 
     default:
       return { text: "", tone: "" };

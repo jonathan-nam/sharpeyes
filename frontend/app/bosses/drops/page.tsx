@@ -548,7 +548,7 @@ export default function DropLogPage() {
             memberId: share.memberId,
             item: loot.name,
             iconUrl: loot.iconUrl,
-            boss: boss ? bossLabel(boss.name, party.difficulty) : "Unknown boss",
+            boss: boss ? bossLabel(boss.name, party.difficulty) : "–",
             // Everybody the night paid out to, which is who was in it. Off the same split the share
             // came from, so the row cannot name a roster the figure was not divided by.
             members: split.shares.map((s) => s.name),
@@ -767,7 +767,7 @@ export default function DropLogPage() {
     <main className="page">
       <h1 className="page-title">Drop Log</h1>
 
-      {state === "error" && <p>Couldn&apos;t load your drops.</p>}
+      {state === "error" && <p>Couldn&apos;t load your drops. Reload to try again.</p>}
       {/* The page's own shape, not a line of text where a page will be. See DropLogSkeleton. */}
       <PageSwap waiting={state === "loading"} placeholder={<DropLogSkeleton />} shaped>
         {state === "loaded" && (
@@ -820,7 +820,7 @@ export default function DropLogPage() {
                           value={character ?? ""}
                           onChange={(e) => setCharacter(e.target.value || null)}
                         >
-                          <option value="">All characters</option>
+                          <option value="">All Characters</option>
                           {withDrops.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
@@ -838,7 +838,7 @@ export default function DropLogPage() {
                           value={boss ?? ""}
                           onChange={(e) => setBoss(e.target.value || null)}
                         >
-                          <option value="">All bosses</option>
+                          <option value="">All Bosses</option>
                           {bossesWithDrops.map((b) => (
                             <option key={b.bossKey} value={b.bossKey}>
                               {b.name}
@@ -863,7 +863,7 @@ export default function DropLogPage() {
                 )}
 
                 {/* The form to fix it is directly above, so this says what is here and nothing else. */}
-                {whole.totals.drops === 0 && <p className="finder-empty">No drops logged yet.</p>}
+                {whole.totals.drops === 0 && <p className="finder-empty">No drops yet. Add one.</p>}
                 {/* Each filter only offers what has drops, but a character and a boss can still
                   have none in common. */}
                 {whole.totals.drops > 0 && totals.drops === 0 && (
@@ -1101,17 +1101,14 @@ export default function DropLogPage() {
                   <ul className="ledger-notes">
                     {wallet.unreadable > 0 && (
                       <li className="loot-warn">
-                        {wallet.unreadable} sold{" "}
-                        {wallet.unreadable === 1 ? "drop names a seat" : "drops name a seat"} that
-                        has left its party, so {wallet.unreadable === 1 ? "its" : "their"} split
-                        cannot be read. Not counted above.
+                        {wallet.unreadable} sold {wallet.unreadable === 1 ? "drop" : "drops"}{" "}
+                        unreadable, not counted above.
                       </li>
                     )}
                     {wallet.betweenMine > 0 && (
                       <li>
-                        {wallet.betweenMine} unpaid{" "}
-                        {wallet.betweenMine === 1 ? "share is" : "shares are"} between two of your
-                        own characters, so there is nobody to settle with.
+                        {wallet.betweenMine} {wallet.betweenMine === 1 ? "share" : "shares"} between
+                        your own characters.
                       </li>
                     )}
                   </ul>
@@ -1246,7 +1243,7 @@ function DropRow({
               <>
                 <span className="loot-name">
                   {line.name}
-                  <span className="loot-count"> x{line.yours}</span>
+                  <span className="loot-count"> ×{line.yours}</span>
                 </span>
                 <button
                   type="button"
@@ -1264,7 +1261,7 @@ function DropRow({
               // in is every drop that boss ever gave you. The way back to the party is on that page.
               <Link href={`/bosses/drops/${entry.lootId}`} className="loot-name">
                 {line.name}
-                {line.yours > 1 && <span className="loot-count"> x{line.yours}</span>}
+                {line.yours > 1 && <span className="loot-count"> ×{line.yours}</span>}
               </Link>
             )}
           </span>
@@ -1286,7 +1283,7 @@ function DropRow({
                 <RunGroup
                   key={fold.key}
                   fold={fold}
-                  name={characterById.get(fold.key)?.name ?? "Unknown character"}
+                  name={characterById.get(fold.key)?.name ?? "–"}
                   panelId={`${panelId}-${fold.key}`}
                   bossByKey={bossByKey}
                 />
@@ -1331,7 +1328,7 @@ function RunGroup({
         <span className="droplog-name-line">
           <span className="loot-name">
             {name}
-            <span className="loot-count"> x{fold.yours}</span>
+            <span className="loot-count"> ×{fold.yours}</span>
           </span>
           <button
             type="button"
@@ -1407,7 +1404,7 @@ function RunRow({
         {label}
         {/* Yours, the same as the line above sums. Counting what fell here made a fold of 440
             open onto runs adding up to 900. */}
-        {entry.yours > 1 && <span className="loot-count"> x{entry.yours}</span>}
+        {entry.yours > 1 && <span className="loot-count"> ×{entry.yours}</span>}
       </Link>
       <span className="loot-meta">{meta.join(" · ")}</span>
       <Stage label={dropStatusLabel(entry)} statusClass={entry.status.toLowerCase()} />

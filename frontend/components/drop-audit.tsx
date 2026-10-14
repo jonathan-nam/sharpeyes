@@ -45,10 +45,10 @@ function detail(event: AuditEvent, audit: DropAudit): React.ReactNode {
       return (
         <>
           {audit.partyRetired ? (
-            <span className="loot-name">{event.boss ?? "Unknown boss"}</span>
+            <span className="loot-name">{event.boss ?? "–"}</span>
           ) : (
             <Link href={`/bosses/parties/${audit.partySlug}`} className="loot-name">
-              {event.boss ?? "Unknown boss"}
+              {event.boss ?? "–"}
             </Link>
           )}
           {event.ranWith.length > 0 && ` with ${event.ranWith.join(", ")}`}
@@ -155,7 +155,7 @@ export function DropAuditView({ audit }: { audit: DropAudit }) {
             {share} out of {audit.quantity}
           </span>
         ) : (
-          audit.quantity > 1 && <span className="loot-count"> x{audit.quantity}</span>
+          audit.quantity > 1 && <span className="loot-count"> ×{audit.quantity}</span>
         )}
         {/* Where the drop stands now. The list says what happened; without this the reader works
             that out by finding the last row and knowing which acts end a drop. */}

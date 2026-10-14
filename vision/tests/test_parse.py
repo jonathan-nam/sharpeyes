@@ -198,7 +198,7 @@ def test_downscaled_upload_is_rejected_loudly():
     small = cv2.resize(img, None, fx=0.9, fy=0.9, interpolation=cv2.INTER_AREA)
     r = client.post("/parse", content=cv2.imencode(".png", small)[1].tobytes())
     assert r.status_code == 422
-    assert "full resolution" in r.json()["detail"]
+    assert "Upload the original" in r.json()["detail"]
 
 
 @pytest.mark.parametrize("factor", [1.1, 1.25, 1.326, 1.5, 1.75])
@@ -911,7 +911,7 @@ def test_an_obscured_inventory_with_no_planner_says_what_to_do():
     cropped = img[150:780, 1000:1900]
     r = client.post("/parse", content=cv2.imencode(".png", cropped)[1].tobytes())
     assert r.status_code == 422
-    assert "covered or out of frame" in r.json()["detail"]
+    assert "inventory is covered" in r.json()["detail"]
 
 
 def test_a_blurred_capture_is_not_mistaken_for_an_obscured_one():

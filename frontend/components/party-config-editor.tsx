@@ -77,12 +77,7 @@ export function PartyConfigEditor({
 
   return (
     <section className="configs">
-      {standing.length === 0 && (
-        <p className="party-hint">
-          {characterName} has no parties yet. A boss they solo needs none, so add only the ones they
-          run with somebody.
-        </p>
-      )}
+      {standing.length === 0 && <p className="party-hint">{characterName} has no parties yet.</p>}
 
       {standing.map((party) => (
         <ConfigRow
@@ -190,7 +185,7 @@ function AddParty({
           setDifficulty("");
         }}
       >
-        Add party
+        Add Party
       </button>
       <KnownCharacters names={knownCharacters} />
     </>

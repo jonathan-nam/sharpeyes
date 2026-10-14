@@ -177,9 +177,9 @@ export default function BossRoutinePage() {
       <p className="loot-back">
         <Link href="/bosses">&larr; Individual View</Link>
       </p>
-      <h1 className="page-title">Edit Boss Config</h1>
+      <h1 className="page-title">Edit Bosses</h1>
 
-      {state === "error" && <p>Couldn&apos;t load your bosses.</p>}
+      {state === "error" && <p>Couldn&apos;t load your bosses. Reload to try again.</p>}
       <PageSwap
         waiting={state === "loading"}
         placeholder={<p className="party-hint">Loading...</p>}

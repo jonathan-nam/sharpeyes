@@ -261,7 +261,7 @@ export default function CharactersPage() {
                 key={selected.id}
                 title={selected.name}
                 loading={!tokensReady}
-                emptyHint="No tokens here yet."
+                emptyHint="No items yet. Upload a screenshot."
                 items={characterItems}
                 // Hovering an item raises the stepper. onAdjust is every step and writes nothing;
                 // onCommit is the total once the pressing stops.
@@ -277,7 +277,7 @@ export default function CharactersPage() {
               // went. Without this the screen is a search bar over nothing.
               <>
                 <p className="finder-empty">
-                  No characters yet. <Link href="/characters">Add one</Link> to start tracking.
+                  No characters yet. <Link href="/characters">Add one</Link>.
                 </p>
                 {/* This roster is one world's, so "no characters" can mean they are all in the
                     other one. See OtherWorld. */}

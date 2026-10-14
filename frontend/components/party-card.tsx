@@ -263,11 +263,7 @@ export function PartyCard({
             className={`party-clear is-${clearClass(clear.cleared)}`}
             disabled={busy}
             onClick={() => onToggleClear(nextClear(clear.cleared))}
-            title={
-              clear.cleared === null
-                ? "No planner capture has mentioned this boss this period"
-                : undefined
-            }
+            title={clear.cleared === null ? "No capture yet" : undefined}
           >
             {clearStateLabel(clear.cleared)}
           </button>
@@ -304,7 +300,7 @@ export function PartyCard({
                   disabled={busy || !dirty || cleaned.length === 0}
                   onClick={() => save(cleaned)}
                 >
-                  Save roster for this week
+                  Save Roster for This Week
                 </button>
                 {/* Only once the week has been spelled out: there is nothing to go back to
                     otherwise, and offering it would imply the week is currently unusual. A one-off
@@ -316,7 +312,7 @@ export function PartyCard({
                     disabled={busy}
                     onClick={() => save(null)}
                   >
-                    Use the usual party
+                    Use the Usual Party
                   </button>
                 )}
               </div>

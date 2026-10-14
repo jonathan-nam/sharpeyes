@@ -492,7 +492,7 @@ export default function RunOrderPage() {
   // longer shows it: a run nobody can staff now just does not appear.
   //
   // Nothing until the night has been asked for, which is what keeps the search, the plan and
-  // "Left out" all empty rather than each needing its own gate.
+  // "Left Out" all empty rather than each needing its own gate.
   const searched = useMemo(
     () =>
       planning
@@ -629,10 +629,14 @@ export default function RunOrderPage() {
           for anything, and hiding all of it to cover one line would blank the controls too. */}
       {state === "loading" && <p className="party-hint page-waiting">Loading your parties...</p>}
 
-      {state === "error" && <p className="finder-empty">Couldn&apos;t load your parties.</p>}
+      {state === "error" && (
+        <p className="finder-empty">Couldn&apos;t load your parties. Reload to try again.</p>
+      )}
 
       {state === "loaded" && parties.length === 0 && (
-        <p className="finder-empty">No parties yet. Add some under Party View.</p>
+        <p className="finder-empty">
+          No parties yet. <Link href="/bosses/parties/edit">Set one up.</Link>
+        </p>
       )}
 
       {/* The filter sits with the parties it narrows, not down in the budget section, because it
@@ -667,13 +671,13 @@ export default function RunOrderPage() {
           {/* Opposite the heading, not among the chips: a chip is an attendance switch, so a link
               standing in that row would read as one more person to toggle.
 
-              People sits with the roster rather than the page title because these are the names it
+              The link sits with the roster rather than the page title because these are the names it
               is about. A seat nobody has claimed is chipped under its character's name instead of
-              whose it is (see rosterFrom), and People is the page that says whose it is. */}
+              whose it is (see rosterFrom), and Edit People is the page that says whose it is. */}
           <div className="night-heading-row">
-            <h2 className="night-heading">Who is on</h2>
+            <h2 className="night-heading">Party Members</h2>
             <Link className="party-cancel" href="/bosses/people">
-              People
+              Edit People
             </Link>
           </div>
           <ul className="night-roster">
@@ -780,13 +784,12 @@ export default function RunOrderPage() {
       {runs.length > 0 && (
         <label className="night-toggle">
           <input type="checkbox" checked={timed} onChange={(e) => setTimed(e.target.checked)} />
-          <span>Enable Time Configuration</span>
+          <span>Set a Time Limit</span>
         </label>
       )}
 
       {runs.length > 0 && (
         <section className={timed ? "night-section" : "night-section night-off"}>
-          <h2 className="night-heading">When you&apos;re running</h2>
           <div className="night-budget">
             <label className="night-custom">
               <span>From</span>
@@ -848,7 +851,7 @@ export default function RunOrderPage() {
           disabled={asked !== null && !outdated}
           onClick={showOrder}
         >
-          {outdated ? "Update run order" : "Show run order"}
+          {outdated ? "Update Run Order" : "Show Run Order"}
         </button>
       )}
 
@@ -866,7 +869,7 @@ export default function RunOrderPage() {
                   {progressLabel({ cleared, total: plan.runs.length })}
                   {shown.timed &&
                     minutesLeft > 0 &&
-                    ` · Remaining Time: ${formatDuration(minutesLeft).replace(/m$/, "min")}`}
+                    ` · ${formatDuration(minutesLeft).replace(/m$/, "min")} left`}
                 </span>
               )}
             </div>
@@ -902,9 +905,7 @@ export default function RunOrderPage() {
               time presented without it reads as a measurement of your parties. */}
           {shown.timed && assumed > 0 && (
             <p className="split-caveat">
-              {assumed === plan.runs.length
-                ? `Every run is assumed to take ${formatDuration(DEFAULT_MINUTES)}.`
-                : `${assumed} ${assumed === 1 ? "run" : "runs"} assumed at ${formatDuration(DEFAULT_MINUTES)}.`}
+              {`${assumed} ${assumed === 1 ? "run" : "runs"} assumed at ${formatDuration(DEFAULT_MINUTES)}.`}
             </p>
           )}
         </section>
@@ -918,16 +919,16 @@ export default function RunOrderPage() {
           {eligible.length === 0 && shown.everyoneOn
             ? "No parties available"
             : eligible.length === 0 || !shown.timed
-              ? "No run can go ahead with the people who are on."
-              : `Nothing fits in ${formatDuration(shown.budget)}. The shortest run needs longer than that.`}
+              ? "No party has everyone it needs. Mark more people as free."
+              : `Nothing fits in ${formatDuration(shown.budget)}. Add more time.`}
         </p>
       )}
 
-      {/* Just "Left out". Time is not the only thing that drops a run, so a heading that named one
+      {/* Just "Left Out". Time is not the only thing that drops a run, so a heading that named one
           reason was wrong for the others, and no budget could fix what it blamed on the budget. */}
       {unscheduled.length > 0 && (
         <section className="night-section" aria-busy={stale}>
-          <h2 className="night-heading">Left out</h2>
+          <h2 className="night-heading">Left Out</h2>
           <ul className="night-leftovers">
             {unscheduled.map((run) => (
               <li key={run.id}>

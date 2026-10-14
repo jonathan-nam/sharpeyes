@@ -254,7 +254,7 @@ class VisionServiceClientTest {
                     .parseScreenshot(ByteArray(8), "image/png")
 
             val failed = assertIs<ScreenshotParseOutcome.Failed>(outcome)
-            assertTrue(failed.reason.contains("temporarily unavailable"), failed.reason)
+            assertTrue(failed.reason.contains("Try again later"), failed.reason)
         }
 
     // Contract test against a response captured from the *live* vision service

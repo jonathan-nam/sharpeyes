@@ -87,9 +87,8 @@ const SLOT_ALIASES: Record<string, string[]> = {
 // That falls out of terms being independent facts rather than a phrase: "lumi" narrows to who is
 // holding it, "lumi kalos" narrows to both, and neither needs a syntax to say which is which.
 //
-// Without it, typing a character's own name answered "No character is holding anything matching
-// Lumi", which is true of the items and useless to the person: the character is right there on the
-// strip above.
+// Without it, typing a character's own name answered "No matches for Lumi", which is true of the
+// items and useless to the person: the character is right there on the strip above.
 export function matchesQuery(token: CharacterToken, terms: string[], owner = ""): boolean {
   const slots = token.redeemSlots.flatMap((s) => [s, ...(SLOT_ALIASES[s.toLowerCase()] ?? [])]);
   const fields = [token.name, token.sourceBoss ?? "", token.itemGroup ?? "", owner, ...slots]
@@ -364,7 +363,7 @@ export function SearchBar({
           ref={inputRef}
           type="search"
           className="finder-input"
-          placeholder="Search every character. “kaling”, “eternal hat”, “symbol”, or a character’s name"
+          placeholder="Search items or characters"
           value={query}
           onChange={(e) => {
             onQuery(e.target.value);
@@ -392,7 +391,7 @@ export function SearchBar({
           aria-hidden={!query}
           tabIndex={query ? 0 : -1}
         >
-          clear
+          Clear
         </button>
       </div>
 
@@ -447,7 +446,7 @@ export function SearchResults({ query, matches }: { query: string; matches: Matc
       <div className="finder-results">
         {matches.length === 0 ? (
           <p className="finder-empty">
-            No character is holding anything matching <strong>{query}</strong>.
+            No matches for <strong>{query}</strong>.
           </p>
         ) : (
           <>

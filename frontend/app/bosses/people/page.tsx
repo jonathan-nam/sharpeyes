@@ -187,7 +187,7 @@ export default function PeoplePage() {
       </p>
       <h1 className="page-title">Edit People</h1>
 
-      {state === "error" && <p>Couldn&apos;t load your people.</p>}
+      {state === "error" && <p>Couldn&apos;t load your people. Reload to try again.</p>}
       <PageSwap
         waiting={state === "loading"}
         placeholder={<p className="party-hint">Loading...</p>}
@@ -225,10 +225,10 @@ export default function PeoplePage() {
                 className="party-add-seat"
                 onClick={() => setDraft([...draft, { name: "", characters: [], owned: [] }])}
               >
-                + Person
+                Add Person
               </button>
               <button type="button" className="party-save" disabled={busy || !dirty} onClick={save}>
-                {busy ? "Saving..." : "Save people"}
+                {busy ? "Saving..." : "Save People"}
               </button>
               {error && <span className="split-error">{error}</span>}
               {inviteError && <span className="split-error">{inviteError}</span>}

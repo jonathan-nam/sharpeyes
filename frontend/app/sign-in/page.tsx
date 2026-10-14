@@ -22,9 +22,9 @@ export default function SignIn() {
     // one distinction worth passing on: it is the difference between "try again" and "go and click
     // the link we sent you". Everything else stays deliberately vague.
     if (error.code === "EMAIL_NOT_VERIFIED") {
-      return "Check your email for the link, this address is not confirmed yet.";
+      return "Your email isn't confirmed. Check your inbox.";
     }
-    return "That email and password do not match.";
+    return "Wrong email or password. Try again.";
   }
 
   // Discord alone, and no empty form above it, when passwords are not a way in.
@@ -32,7 +32,7 @@ export default function SignIn() {
     return (
       <main className="page">
         <section className="auth-panel">
-          <h1>Sign in</h1>
+          <h1>Sign In</h1>
           <SignInButton />
         </section>
       </main>
@@ -42,14 +42,14 @@ export default function SignIn() {
   return (
     <main className="page">
       <AuthForm
-        title="Sign in"
-        submitLabel="Sign in"
+        title="Sign In"
+        submitLabel="Sign In"
         onSubmit={submit}
         footer={
           <>
-            <Link href="/forgot-password">Forgot your password?</Link>
+            <Link href="/forgot-password">Forgot Your Password?</Link>
             {" · "}
-            <Link href="/sign-up">Create an account</Link>
+            <Link href="/sign-up">Create an Account</Link>
           </>
         }
       >

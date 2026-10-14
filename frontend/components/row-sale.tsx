@@ -103,7 +103,7 @@ function RowCard({
         <span className="loot-title">
           <span className="loot-name">
             {row.name}
-            {row.units > 1 && <span className="loot-count"> x{row.units}</span>}
+            {row.units > 1 && <span className="loot-count"> ×{row.units}</span>}
           </span>
           <span className="loot-meta">
             {[

@@ -60,7 +60,7 @@ function SettledNights({
             {/* The night's own history, not the party's: one of these rows IS one drop, and the
                 party it fell in is every drop that boss ever gave you. */}
             <Link href={`/bosses/drops/${row.lootId}`} className="loot-name">
-              {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
+              {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"}
             </Link>
             <span className="loot-meta">{formatDropped(row.droppedOn)}</span>
             {/* The same wrapper the Drop Log's runs put their figures in, so the counts line up down
@@ -137,7 +137,7 @@ function SettledRow({
             ) : (
               <Link href={`/bosses/drops/${row.lootId}`} className="loot-name">
                 {row.name}
-                {row.quantity > 1 && <span className="loot-count"> x{row.quantity}</span>}
+                {row.quantity > 1 && <span className="loot-count"> ×{row.quantity}</span>}
               </Link>
             )}
           </span>
@@ -296,17 +296,14 @@ export function SettledView({
           absence nothing says is the silent wrong number. */}
         {totals.unreadable > 0 && (
           <p className="loot-warn droplog-note">
-            {totals.unreadable} sold{" "}
-            {totals.unreadable === 1 ? "drop names a seat" : "drops name seats"} that has left, so{" "}
-            {totals.unreadable === 1 ? "its split cannot" : "their splits cannot"} be read and{" "}
-            {totals.unreadable === 1 ? "its" : "their"} money is in neither total above.
+            {totals.unreadable} sold {totals.unreadable === 1 ? "drop" : "drops"} unreadable, not in
+            the totals above.
           </p>
         )}
 
         {orphans > 0 && (
           <p className="loot-warn droplog-note">
-            {orphans} {orphans === 1 ? "settlement names a drop" : "settlements name drops"} the
-            pool no longer has, so {orphans === 1 ? "it is" : "they are"} not listed.
+            {orphans} {orphans === 1 ? "settlement" : "settlements"} hidden, drop deleted.
           </p>
         )}
       </section>

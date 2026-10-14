@@ -119,7 +119,7 @@ export function LootRow({
   // Silent in dollars, where the two methods are the same arithmetic and naming one states a
   // choice that was never offered. See the sale form.
   const splitWord =
-    currency === "USD" ? "" : `, ${loot.splitMethod === "FAIR" ? "fair" : "lazy"} split`;
+    currency === "USD" ? "" : ` · ${loot.splitMethod === "FAIR" ? "Fair" : "Lazy"} split`;
   // Heroic worlds do not trade. The row stays, because a Heroic player still logs what fell; what
   // goes is every control that would turn a drop into money. The backend refuses the sale too, so
   // this is what the rule looks like rather than the whole of it.
@@ -153,7 +153,7 @@ export function LootRow({
                 {share} out of {loot.quantity}
               </span>
             ) : (
-              loot.quantity > 1 && <span className="loot-count"> x{loot.quantity}</span>
+              loot.quantity > 1 && <span className="loot-count"> ×{loot.quantity}</span>
             )}
           </span>
           <span className="loot-meta">
@@ -173,7 +173,7 @@ export function LootRow({
           NOT gated on selling. `per_member: HEROIC` is true exactly where nothing sells, so pairing
           the two meant the one drop that most needed this never said it: a Heroic pool still shares
           out by hand, and a stack of 2 each was being taken by one seat. */}
-      {instanced && <p className="loot-warn">Everyone gets their own. Nothing to split.</p>}
+      {instanced && <p className="loot-warn">Instanced</p>}
 
       {/* Where nothing sells, the question is who takes it. That is the whole of a Heroic pool's
           product: the item cannot move again, so which seat ends up with it is the only lever the
@@ -231,7 +231,7 @@ export function LootRow({
                 onClick={() => onSetTaken(null)}
                 disabled={busy}
               >
-                Put back
+                Put Back
               </button>
               <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
                 Remove
@@ -263,7 +263,7 @@ export function LootRow({
               onClick={() => setSelling(true)}
               disabled={busy}
             >
-              Mark sold
+              Mark Sold
             </button>
             {keepers.map((m) => (
               <button
@@ -283,16 +283,13 @@ export function LootRow({
         ))}
 
       {/* Sold, which TAKEN is not: it has no pot, no seller and no payout roster, so splitOf would
-          refuse it and the row would read "this sale names somebody who is no longer in the party"
-          about a drop that was never sold. */}
+          refuse it and the row would say "Split unreadable" about a drop that was never sold. */}
       {loot.status !== "PENDING" && loot.status !== "TAKEN" && (
         <>
           {result === null ? (
             // splitOf refuses when a seat it needs is missing. Saying so beats drawing a payout
             // list that is short a person.
-            <p className="loot-warn">
-              This sale names somebody who is no longer in the party, so the split cannot be shown.
-            </p>
+            <p className="loot-warn">Split unreadable</p>
           ) : (
             <>
               {/* The buyer keeps the item, not the mesos, so "they keep" would be naming the wrong
@@ -303,18 +300,19 @@ export function LootRow({
                   its receiver pays. */}
               {bought ? (
                 <p className="loot-sold-line">
-                  Bought by {result.seller.name} for <strong>{sold}</strong>
-                  {splitWord}. Their share
-                  {result.seller.shares === 1 ? " is" : ` (${result.seller.shares} shares) is`}{" "}
-                  <strong>{money(result.seller.keeps)}</strong>, and they hand over{" "}
-                  <strong>{money(result.seller.paysOut)}</strong>.
+                  Bought By {result.seller.name} · <strong>{sold}</strong> · Their Share{" "}
+                  <strong>{money(result.seller.keeps)}</strong>
+                  {result.seller.shares === 1 ? "" : ` (${result.seller.shares} shares)`} · Hands
+                  Over <strong>{money(result.seller.paysOut)}</strong>
+                  {splitWord}
                 </p>
               ) : (
                 <p className="loot-sold-line">
-                  {loot.amountBasis === "LISTED" ? "Listed at" : "Received"} <strong>{sold}</strong>{" "}
-                  by {result.seller.name}
-                  {splitWord}. They keep <strong>{money(result.seller.keeps)}</strong>
-                  {result.seller.shares === 1 ? "" : ` on ${result.seller.shares} shares`}.
+                  {loot.amountBasis === "LISTED" ? "Listed At" : "Received"} <strong>{sold}</strong>{" "}
+                  · Sold By {result.seller.name} · Keeps{" "}
+                  <strong>{money(result.seller.keeps)}</strong>
+                  {result.seller.shares === 1 ? "" : ` (${result.seller.shares} shares)`}
+                  {splitWord}
                 </p>
               )}
 
@@ -350,7 +348,7 @@ export function LootRow({
                         entered debt carry. */}
                     {readOnly ? (
                       <span className={share.paid ? "loot-paid is-paid" : "loot-paid"}>
-                        {share.paid ? "paid" : "unpaid"}
+                        {share.paid ? "Paid" : "Unpaid"}
                       </span>
                     ) : (
                       crossesYou(share.memberId) && (
@@ -363,7 +361,7 @@ export function LootRow({
                             share.paid ? `Mark ${share.name} unpaid` : `Mark ${share.name} paid`
                           }
                         >
-                          {share.paid ? "paid \u00d7" : "mark paid"}
+                          {share.paid ? "Paid \u00d7" : "Mark Paid"}
                         </button>
                       )
                     )}
@@ -376,7 +374,7 @@ export function LootRow({
           {!readOnly && (
             <div className="loot-actions">
               <button type="button" className="party-cancel" onClick={onUnsell} disabled={busy}>
-                Undo sale
+                Undo Sale
               </button>
               <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
                 Remove

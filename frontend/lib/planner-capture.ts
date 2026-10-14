@@ -22,9 +22,9 @@ export function plannerCaveats(result: {
 export function describeCaveat(caveat: PlannerCaveat, unreadableRows: number): string {
   if (caveat === "unreadable-rows") {
     const n = `${unreadableRows} ${unreadableRows === 1 ? "row" : "rows"}`;
-    return `${n} couldn't be read and ${unreadableRows === 1 ? "was" : "were"} not saved. They stay blank rather than counting as not cleared.`;
+    return `${n} unreadable. Upload a clearer capture.`;
   }
-  return "This capture didn't reach the bottom of the list. Scroll down and add another, or the rest will stay blank.";
+  return "The list is cut off. Scroll down and add another.";
 }
 
 // Whether a result carries a planner at all. A capture can hold the inventory, the planner, or

@@ -70,7 +70,7 @@ export function UserAvatar() {
               void signOut();
             }}
           >
-            Sign out
+            Sign Out
           </button>
         </div>
       ) : null}

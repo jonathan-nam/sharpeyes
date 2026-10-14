@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 // Marking a share paid is a TOGGLE, and the paid state has to look like one.
 //
 // It read "paid" in a green pill, which is exactly what a status badge looks like. Undoing a share
-// marked paid by mistake was not discoverable: the only obviously clickable thing said "mark paid",
+// marked paid by mistake was not discoverable: the only obviously clickable thing said "Mark Paid",
 // and clicking that put it straight back. Three attempts in a row ended with the row still paid, and
 // the figure it was supposed to move never moved.
 //
@@ -17,7 +17,7 @@ const source = readFileSync(join(__dirname, "..", "components", "loot-row.tsx"),
 describe("the paid toggle on a share", () => {
   it("marks the paid state as undoable, not as a badge", () => {
     // × is this app's own undo mark: a tranche row and an entered debt both carry it.
-    expect(source).toContain('share.paid ? "paid \\u00d7" : "mark paid"');
+    expect(source).toContain('share.paid ? "Paid \\u00d7" : "Mark Paid"');
   });
 
   it("names the ACTION to a screen reader, in both states", () => {

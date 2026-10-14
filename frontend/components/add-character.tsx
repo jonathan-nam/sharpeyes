@@ -59,7 +59,7 @@ export function AddCharacter({ onAdded }: { onAdded: (character: Character) => v
           onChange={(e) => setName(e.target.value)}
         />
         <button type="submit" className="party-save" disabled={submitting || !name.trim()}>
-          {submitting ? "Adding..." : "Add character"}
+          {submitting ? "Adding..." : "Add Character"}
         </button>
       </form>
       {error && <p className="routine-error">{error}</p>}
