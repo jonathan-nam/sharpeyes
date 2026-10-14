@@ -1652,14 +1652,16 @@ img.user-avatar-img {
   font-size: var(--text-xl);
 }
 
-/* One line, the IGN larger than the greeting so it is what the eye lands on. */
+/* The IGN is the line that matters, so the greeting steps down above it. */
 .hero-greeting {
+  display: block;
   color: var(--ink);
   font-size: var(--text-lg);
   font-weight: 400;
 }
 
 .hero-ign {
+  display: block;
   color: var(--ink-strong);
   font-size: var(--text-display);
   line-height: 1.2;
