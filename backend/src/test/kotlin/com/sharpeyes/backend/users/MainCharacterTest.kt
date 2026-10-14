@@ -128,6 +128,7 @@ class MainCharacterTest {
 
             assertNull(settingsFor(userId).mainCharacterId)
             assertNull(settingsFor(userId).mainCharacterSprite)
+            assertNull(settingsFor(userId).mainCharacterName)
         }
     }
 
@@ -155,6 +156,7 @@ class MainCharacterTest {
             assertTrue(setMainCharacter(userId, id))
             assertEquals(id.toString(), settingsFor(userId).mainCharacterId)
             assertNull(settingsFor(userId).mainCharacterSprite)
+            assertEquals("Unranked", settingsFor(userId).mainCharacterName)
         }
     }
 }

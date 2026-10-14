@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useId, useState, type ReactNode } from "react";
 import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
 import { WorldChoice } from "@/components/world-choice";
 import { homeSections, sectionHref } from "@/lib/drop-sections";
-import { HOME_ACTIONS } from "@/lib/section-menu";
+import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
 
@@ -15,6 +16,8 @@ export default function Home() {
   const settings = useAccountSettings();
   // A Heroic world has only the drops, and then the row is the Drop Log's own.
   const stages = homeSections(settings?.trades);
+  // `??` because a tab open across the deploy that added it holds settings without the field.
+  const main = settings?.mainCharacterName ?? null;
 
   // Neither hero until the session is known. Drawing the signed-out one first and swapping it is a
   // returning user being asked to sign in for a frame.
@@ -37,30 +40,27 @@ export default function Home() {
       {isSignedIn ? (
         <section className="hero">
           <SharpEyesMark size={64} />
-          <h1>Welcome back</h1>
+          <h1>{main ? `Welcome back, ${main}` : "Welcome back"}</h1>
           <nav className="hero-actions">
-            {HOME_ACTIONS.map((item) =>
-              item.href === "/bosses/drops" && stages.length > 1 ? (
-                <div
-                  key={item.href}
-                  className="hero-action-stages"
-                  role="group"
-                  aria-label={item.label}
-                >
-                  {stages.map((s) => (
-                    <Link key={s.key} href={sectionHref(s.key)}>
-                      <SectionMark section={s.key} />
-                      {s.label}
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <Link key={item.href} href={item.href}>
-                  <PageMark href={item.href} />
-                  {item.label}
-                </Link>
-              ),
-            )}
+            {HOME_ROWS.map((row) => (
+              <HomeRowView key={row.label} row={row}>
+                {row.href === "/bosses/drops"
+                  ? stages.length > 1 &&
+                    stages.map((s) => (
+                      <Link key={s.key} href={sectionHref(s.key)}>
+                        <SectionMark section={s.key} />
+                        {s.label}
+                      </Link>
+                    ))
+                  : row.items.length > 0 &&
+                    row.items.map((item) => (
+                      <Link key={item.href} href={item.href}>
+                        <PageMark href={item.href} />
+                        {item.label}
+                      </Link>
+                    ))}
+              </HomeRowView>
+            ))}
           </nav>
         </section>
       ) : (
@@ -71,5 +71,59 @@ export default function Home() {
         </section>
       )}
     </main>
+  );
+}
+
+/**
+ * One row, and the links its chevron unfolds when it has any.
+ *
+ * A row with a page links there and folds from a separate chevron. A row with no page (Bossing) is
+ * all toggle, since a heading that navigated nowhere would lie about what it does.
+ */
+function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const mark = <PageMark href={row.href ?? row.label} />;
+
+  if (!children) {
+    return (
+      <Link href={row.href!}>
+        {mark}
+        {row.label}
+      </Link>
+    );
+  }
+
+  const toggle = {
+    "aria-expanded": open,
+    "aria-controls": panelId,
+    onClick: () => setOpen((o) => !o),
+  };
+
+  return (
+    <div className="hero-fold">
+      <div className="hero-fold-head">
+        {row.href ? (
+          <>
+            <Link href={row.href}>
+              {mark}
+              {row.label}
+            </Link>
+            <button type="button" className="hero-fold-toggle" aria-label={row.label} {...toggle}>
+              <span className="party-row-chevron" aria-hidden="true" />
+            </button>
+          </>
+        ) : (
+          <button type="button" {...toggle}>
+            {mark}
+            {row.label}
+            <span className="party-row-chevron hero-fold-caret" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      <div id={panelId} className="hero-action-stages" hidden={!open}>
+        {children}
+      </div>
+    </div>
   );
 }

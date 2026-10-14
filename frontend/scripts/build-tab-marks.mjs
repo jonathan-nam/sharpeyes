@@ -26,6 +26,17 @@ const sharp = require("sharp");
 const HERE = dirname(fileURLToPath(import.meta.url));
 const OUT = join(HERE, "..", "public", "marks");
 const DROPS_YAML = join(HERE, "..", "..", "catalog", "drops.yaml");
+const BOSS_ART = join(
+  HERE,
+  "..",
+  "..",
+  "backend",
+  "src",
+  "main",
+  "resources",
+  "seed-assets",
+  "bosses",
+);
 
 // catalog/build.py's ICON_VERSION. Pinned, not "latest", for the reason stated there: "latest" is
 // whatever got extracted last and can regress an id out from under us. tab-marks.test.ts holds this
@@ -56,6 +67,9 @@ const MARKS = [
   { key: "party-quest-bag", id: 4330016, name: "8-slot Party Quest Bag" },
   { key: "intense-power-crystal", id: 4001928, name: "Intense Power Crystal (Weekly)" },
   { key: "party-hat", id: 1002345, name: "Party Hat" },
+  // The home screen's Bossing row. A boss portrait, so it is cut from a planner capture rather than
+  // fetched: see vision/app/cv/build_boss_portraits.py.
+  { key: "jupiter", file: join(BOSS_ART, "jupiter.png") },
 ];
 
 /** The `icon_id` catalog/drops.yaml gives a drop, so this file never states one twice. */
@@ -95,10 +109,17 @@ async function place(buf, key) {
 
 await mkdir(OUT, { recursive: true });
 for (const mark of MARKS) {
-  const id = mark.id ?? (await catalogIconId(mark.fromCatalog));
-  const res = await fetch(URL_FOR(id));
-  if (!res.ok) throw new Error(`${mark.key} (${id}): ${res.status} from the mirror`);
-  const png = await place(Buffer.from(await res.arrayBuffer()), mark.key);
+  let id = "file";
+  let art;
+  if (mark.file) {
+    art = await readFile(mark.file);
+  } else {
+    id = mark.id ?? (await catalogIconId(mark.fromCatalog));
+    const res = await fetch(URL_FOR(id));
+    if (!res.ok) throw new Error(`${mark.key} (${id}): ${res.status} from the mirror`);
+    art = Buffer.from(await res.arrayBuffer());
+  }
+  const png = await place(art, mark.key);
   const { width, height } = await sharp(png).metadata();
   if (width !== MARK_CANVAS || height !== MARK_CANVAS) {
     throw new Error(`${mark.key} came out ${width}x${height}, not ${MARK_CANVAS}x${MARK_CANVAS}`);

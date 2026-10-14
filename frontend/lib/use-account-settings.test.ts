@@ -16,6 +16,7 @@ const SETTINGS: Settings = {
   otherWorldCharacters: 0,
   mainCharacterId: null,
   mainCharacterSprite: null,
+  mainCharacterName: null,
 };
 
 async function freshModule() {

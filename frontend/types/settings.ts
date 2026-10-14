@@ -18,6 +18,8 @@ export type Settings = {
   mainCharacterId: string | null;
   // That character's sprite, sent fresh with every read rather than stored anywhere here. See V66.
   mainCharacterSprite: string | null;
+  // That character's name, for the home screen's welcome.
+  mainCharacterName: string | null;
 };
 
 // PUT /api/settings. Changes which world the site shows. Moves no character: see saveSettings.

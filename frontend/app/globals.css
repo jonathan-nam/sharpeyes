@@ -1654,7 +1654,8 @@ img.user-avatar-img {
   container-type: inline-size;
 }
 
-.hero-actions a {
+.hero-actions a,
+.hero-fold-head button {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1664,18 +1665,48 @@ img.user-avatar-img {
   background: var(--surface);
   color: var(--ink-strong);
   font-size: var(--text-lg);
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
 }
 
-.hero-actions a:hover {
+.hero-actions a:hover,
+.hero-fold-head button:hover {
   border-color: var(--ink-strong);
   background: var(--surface-2);
 }
 
-/* The Drop Log's row, one link per stage. Equal thirds, so no stage's label sets the layout. */
+/* A row that folds: its link (or, with no page, its whole toggle) and then the chevron. */
+.hero-fold-head {
+  display: flex;
+  gap: 8px;
+}
+
+.hero-fold-head > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hero-fold-caret {
+  margin-left: auto;
+}
+
+.hero-fold-head .hero-fold-toggle {
+  flex: none;
+  justify-content: center;
+  width: 50px;
+  padding: 0;
+}
+
+/* What a row unfolds: one link per page. Equal shares, so no label sets the layout. */
 .hero-action-stages {
   display: flex;
   gap: 8px;
+  margin-top: 8px;
+}
+
+.hero-action-stages[hidden] {
+  display: none;
 }
 
 .hero-action-stages a {
