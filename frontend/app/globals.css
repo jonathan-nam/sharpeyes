@@ -7568,11 +7568,6 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   color: var(--muted-2);
 }
 
-.hero-alt {
-  margin: 12px 0 0;
-  font-size: var(--text-base);
-}
-
 /* --- The invite dialog ----------------------------------------------------------------------- */
 
 /* Fixed to the viewport, so where the board had scrolled to does not decide whether the dialog is
