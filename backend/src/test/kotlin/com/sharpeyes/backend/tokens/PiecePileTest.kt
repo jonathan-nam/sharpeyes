@@ -256,6 +256,66 @@ class PiecePileTest {
         }
     }
 
+    // --- solo runs of the pooled bosses, ticked on Individual View -----------------------------
+
+    @Test
+    fun `a solo pooled boss adds the whole pile on its tick, swaps on a mode change, and leaves on untick`() {
+        transaction {
+            val me = character()
+            solo(me, "kalos-the-guardian", "EXTREME")
+            tick(me, "kalos-the-guardian")
+            assertEquals(14, held(me, "kalos-token"))
+
+            solo(me, "kalos-the-guardian", "CHAOS")
+            assertEquals(5, held(me, "kalos-token"))
+
+            solo(me, "kalos-the-guardian", "NORMAL")
+            assertEquals(0, held(me, "kalos-token"))
+            assertEquals(3, held(me, "kalos-residual-determination-fragment"))
+
+            tick(me, "kalos-the-guardian", cleared = false)
+            assertEquals(0, held(me, "kalos-residual-determination-fragment"))
+
+            val star = character()
+            solo(star, "malefic-star", "HARD")
+            tick(star, "malefic-star")
+            assertEquals(18, held(star, "blissful-fantasy-shard"))
+            assertEquals(emptyList(), pieceSyncGapsFor(userId, Clock.System.now()))
+        }
+    }
+
+    @Test
+    fun `a solo clear in the week after a temp party adds the whole pile at the mode it was left on`() {
+        transaction {
+            val me = character()
+            val configId = solo(me, "kalos-the-guardian", "NORMAL")
+            val now = Clock.System.now()
+            val temp = request(me, "kalos-the-guardian", "CHAOS", listOf("Steve"), oneOff = true)
+            takeOverParty(userId, configId, temp, now)
+            // The temp party's week is over: a one-off is off every period it is not armed for.
+            setRunsInPeriod(configId, oneOff = true, week(), runs = false, now = now)
+
+            tick(me, "kalos-the-guardian")
+            assertEquals(5, held(me, "kalos-token"))
+            assertEquals(emptyList(), pieceSyncGapsFor(userId, Clock.System.now()))
+        }
+    }
+
+    @Test
+    fun `a standing party skipped this week is still not guessed to be a solo run`() {
+        transaction {
+            val me = character()
+            val partyId = party(me, "kalos-the-guardian", "EXTREME", members = listOf("Steve"))
+            setRunsInPeriod(partyId, oneOff = false, week(), runs = false, now = Clock.System.now())
+            tick(me, "kalos-the-guardian")
+            assertEquals(0, held(me, "kalos-token"))
+            assertEquals(
+                listOf("kalos-the-guardian" to PieceSyncGap.NO_DIFFICULTY),
+                pieceSyncGapsFor(userId, Clock.System.now()).map { it.bossKey to it.reason },
+            )
+        }
+    }
+
     // --- Interactive parties: added by hand, like coupons --------------------------------------
 
     @Test
