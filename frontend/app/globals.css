@@ -6521,6 +6521,27 @@ button.link:disabled {
   cursor: pointer;
 }
 
+/* Below the inventory on /inventory. */
+.inventory-settings {
+  margin-top: 28px;
+}
+
+.inventory-sync-gaps {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.inventory-sync-gaps-title {
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.inventory-sync-gaps ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
 /* What asks for the run order. Between the controls and the plan, because it is the line between
    them: everything above is what you are asking, everything below is the answer. */
 .night-go {

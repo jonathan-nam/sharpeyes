@@ -1,0 +1,76 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/use-auth";
+import { apiFetch } from "@/lib/api";
+import { peek, put } from "@/lib/cache";
+import { gapLine } from "@/lib/piece-sync";
+import type { PieceSync, SavePieceSyncBody } from "@/types/piece-sync";
+
+const KEY = "/api/tokens/sync";
+
+/** The inventory's settings: whether a boss clear adds its Eternal pieces. */
+export function PieceSyncSettings() {
+  const { getToken, isLoaded } = useAuth();
+  const [sync, setSync] = useState<PieceSync | null>(peek<PieceSync>(KEY) ?? null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
+    if (!isLoaded) return;
+    apiFetch<PieceSync>(KEY, { method: "GET" }, getToken)
+      .then((result) => {
+        setSync(result);
+        put(KEY, result);
+      })
+      .catch(() => {
+        /* keep what we have */
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  async function save(enabled: boolean) {
+    setSaving(true);
+    try {
+      const body: SavePieceSyncBody = { enabled };
+      const result = await apiFetch<PieceSync>(
+        KEY,
+        { method: "PUT", body: JSON.stringify(body) },
+        getToken,
+      );
+      setSync(result);
+      put(KEY, result);
+    } catch {
+      // The box stays as the server last said, which is what `checked` reads.
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (sync === null) return null;
+
+  return (
+    <section className="inventory-settings">
+      <h2 className="night-heading">Settings</h2>
+      <label className="night-toggle">
+        <input
+          type="checkbox"
+          checked={sync.enabled}
+          disabled={saving}
+          onChange={(e) => void save(e.target.checked)}
+        />
+        <span>Auto Sync Eternal Pieces with Boss Clears</span>
+      </label>
+      {sync.gaps.length > 0 && (
+        <div className="inventory-sync-gaps">
+          <p className="inventory-sync-gaps-title">Not synced</p>
+          <ul>
+            {sync.gaps.map((gap) => (
+              <li key={`${gap.characterId}:${gap.bossKey}`}>{gapLine(gap)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
