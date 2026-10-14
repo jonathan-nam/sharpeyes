@@ -5,7 +5,6 @@ import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
 import { WorldChoice } from "@/components/world-choice";
-import { PASSWORD_LOGIN } from "@/lib/auth-client";
 import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ACTIONS } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
@@ -69,11 +68,6 @@ export default function Home() {
           <SharpEyesMark size={96} />
           <h1>A greater view of your whole MapleStory account.</h1>
           <SignInButton />
-          {PASSWORD_LOGIN ? (
-            <p className="hero-alt">
-              <Link href="/sign-in">or use an email and password</Link>
-            </p>
-          ) : null}
         </section>
       )}
     </main>
