@@ -68,8 +68,8 @@ internal fun sharesRefusal(
  * instead would move the drop off the pending list with nobody owed anything, so a party would
  * quietly stop being paid and the pool would look tidier for it.
  *
- * [onlyYours] is the exception: every seat that ran is one of the owner's, so nobody is owed a
- * share and keeping the drop is not a sale. That was being recorded as a sale for 0.
+ * [keptSolo] is the exception: a drop you got solo, kept by your own seat, owes nobody a share, so
+ * keeping it is not a sale. That was being recorded as a sale for 0.
  *
  * [instanced] is the other half of the same idea. An instanced drop is already in the inventory of
  * everyone who ran, so there is no one copy for a seat to have taken. Recording one hands over
@@ -86,10 +86,10 @@ internal fun takenRefusal(
     canSell: Boolean,
     sold: Boolean,
     instanced: Boolean = false,
-    onlyYours: Boolean = false,
+    keptSolo: Boolean = false,
 ): String? =
     when {
-        canSell && !onlyYours -> "This world trades, so a drop that changes hands is a sale."
+        canSell && !keptSolo -> "This world trades, so a drop that changes hands is a sale."
         sold -> "This drop is already sold."
         instanced && memberId != null -> "Everyone who ran got their own, so nobody took it."
         memberId != null && memberId !in ranThatWeek ->
