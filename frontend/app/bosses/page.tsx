@@ -171,13 +171,13 @@ export default function BossesPage() {
                 whole set is the thing being answered, and a grid of cells cannot show one
                 character's set without you reading down a column. */}
             <Link className="party-cancel" href="/bosses/routine">
-              Edit Boss Config
+              Edit Bosses
             </Link>
           </span>
         )}
       </div>
 
-      {state === "error" && <p>Couldn&apos;t load your boss clears.</p>}
+      {state === "error" && <p>Couldn&apos;t load your boss clears. Reload to try again.</p>}
 
       {/* The loading state IS the real matrix with shimmer in its cells, so the two cannot drift
           apart. A separate skeleton that restated the table's metrics by hand is exactly what put

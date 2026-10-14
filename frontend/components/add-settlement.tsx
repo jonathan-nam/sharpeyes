@@ -97,7 +97,7 @@ export function AddSettlement({
               and nothing saying what "for" wanted. The step names the act, the labels name the
               fields, and the b/m suffix is the one thing about parseMesos nobody can guess, so it
               stays a placeholder on the amount. */}
-          <span className="ledger-heading">Add Debt</span>
+          <span className="ledger-heading">Add debt</span>
           <form
             className="ledger-sale"
             onSubmit={(e) => {
@@ -164,7 +164,7 @@ export function AddSettlement({
         <div className="ledger-entry">
           {/* Mesos arriving, against everything on their card at once. A payment is against the
               person, not against a particular boss or a particular coupon. See V51. */}
-          <span className="ledger-heading">Add Payment</span>
+          <span className="ledger-heading">Add payment</span>
           <form
             className="ledger-sale"
             onSubmit={(e) => {

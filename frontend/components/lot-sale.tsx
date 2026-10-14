@@ -250,8 +250,8 @@ function LotCard({
               <li key={row.lootId} className="ledger-drop">
                 <div className="ledger-drop-head">
                   <span className="loot-name">
-                    {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
-                    {row.units > 1 && <span className="loot-count"> x{row.units}</span>}
+                    {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"}
+                    {row.units > 1 && <span className="loot-count"> ×{row.units}</span>}
                   </span>
                   <span className="loot-meta">
                     {/* Who ran it, but only where the card shows more than one set of boxes: with

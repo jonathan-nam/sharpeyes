@@ -93,10 +93,10 @@ export default function JoinPage() {
         {state === "gone" && (
           <>
             <h1>This link doesn&apos;t work.</h1>
-            <p className="party-hint">Ask whoever sent it for a new one.</p>
+            <p className="party-hint">Ask for a new one.</p>
           </>
         )}
-        {state === "error" && <h1>Couldn&apos;t open this link.</h1>}
+        {state === "error" && <h1>Couldn&apos;t open this link. Reload to try again.</h1>}
 
         <PageSwap
           waiting={state === "loading"}

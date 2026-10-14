@@ -40,7 +40,7 @@ export function AuthForm({
     } catch {
       // Anything that never reached the server. Named as such rather than reported as a rejection,
       // which would send somebody to check their password over a dropped connection.
-      setError("Could not reach the server. Try again.");
+      setError("Couldn't reach the server. Try again.");
     } finally {
       setBusy(false);
     }

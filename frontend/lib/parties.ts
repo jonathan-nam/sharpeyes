@@ -21,7 +21,7 @@ export function otherMembers(party: Party) {
 /**
  * What a roster of text boxes actually states: trimmed, with the boxes nobody filled in dropped.
  *
- * RosterInputs always carries a box, and "+ Member" adds an empty one, so what is on screen is
+ * RosterInputs always carries a box, and "Add member" adds an empty one, so what is on screen is
  * never quite what to send. Blank is not a refusal, it is a seat somebody opened and did not use,
  * and refusing over it would make the add button a trap. The rules that matter are the server's
  * (validateMembers refuses nobody, a blank, and the same character twice) and it states them

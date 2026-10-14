@@ -35,7 +35,7 @@ describe("the way in for somebody with no card", () => {
   it("asks in the card's own words, so it is not a second vocabulary", () => {
     // The card's step, and the card's two labels. This form used to spell the sentence itself
     // ("owes me ___ for ___"), which was the second vocabulary the moment the card stopped.
-    expect(component).toContain('<span className="ledger-heading">Add Debt</span>');
+    expect(component).toContain('<span className="ledger-heading">Add debt</span>');
     expect(component).toContain("Amount");
     expect(component).toContain("Description");
     // The b/m suffix is the one thing about parseMesos nobody can guess, so it stays a placeholder.

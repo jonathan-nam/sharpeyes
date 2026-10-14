@@ -191,7 +191,7 @@ export default function CharactersPage() {
         )}
       </div>
 
-      {failed && !loaded && <p>Couldn&apos;t load your characters.</p>}
+      {failed && !loaded && <p>Couldn&apos;t load your characters. Reload to try again.</p>}
       <PageSwap waiting={!loaded && !failed} placeholder={<p className="party-hint">Loading...</p>}>
         {loaded && (
           <>

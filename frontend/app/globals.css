@@ -3554,20 +3554,6 @@ button.link:disabled {
   font-size: var(--text-lg);
 }
 
-/* Second row, under the radio rather than beside it. */
-.split-method-hint {
-  grid-column: 2;
-  color: var(--muted-2);
-  font-size: var(--text-sm);
-  line-height: 1.4;
-}
-
-.split-hint {
-  color: var(--muted-2);
-  font-size: var(--text-sm);
-  line-height: 1.4;
-}
-
 /* Toggles the result's number grouping. Raw digits are the default because they are what gets
    pasted into the game; commas are for reading. */
 .group-toggle {
@@ -3830,13 +3816,6 @@ button.link:disabled {
 
 .split-fee dd {
   color: var(--bad);
-}
-
-.split-note {
-  margin: 14px 0 0;
-  color: var(--warn);
-  font-size: var(--text-base);
-  line-height: 1.5;
 }
 
 /* Parties. The roster of who a character runs each boss with, and the editor that maintains it.
@@ -5235,7 +5214,7 @@ button.link:disabled {
 }
 
 /* With sprites a seat is a tile: the character, then the box that names them. Bottom-aligned so
-   the boxes line up with the "+ Member" button and with a seat whose name has no sprite yet. */
+   the boxes line up with the "Add member" button and with a seat whose name has no sprite yet. */
 .config-members.has-sprites {
   align-items: flex-end;
   gap: 12px;
@@ -7095,68 +7074,6 @@ button.link:disabled {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-
-.ledger-hint {
-  display: inline-flex;
-}
-
-/* 24px of target around a 14px mark, which is WCAG 2.5.8's floor. The mark is smaller than the box
-   it is about on purpose: it is a way in, not a thing to read. */
-.ledger-hint-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  margin: -4px 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--muted);
-  font: inherit;
-  cursor: help;
-}
-
-.ledger-hint-mark:hover,
-.ledger-hint-mark:focus-visible {
-  color: var(--ink);
-}
-
-.ledger-hint-mark > svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* Drawn always and hidden until asked for, so aria-describedby has something to read. BELOW the
-   mark: above it the bubble covered the card's header, which is where the debt the text talks about
-   is written. Over the boxes is the lesser harm, and it clears the moment the pointer leaves. */
-.ledger-hint-bubble {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 6px);
-  /* Anchored to the STEP ROW, which is a stretched flex item and so is exactly the card's content
-     width. Off the mark instead, a 260px bubble hung past the card's right edge on a phone, and any
-     width that fixed it was a number measured against where the word "pieces" happens to end. */
-  left: 0;
-  right: 0;
-  max-width: 320px;
-  padding: 8px 10px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
-  color: var(--ink);
-  font-size: var(--text-sm);
-  visibility: hidden;
-  opacity: 0;
-}
-
-/* On the wrapper, not the mark, so moving the pointer into the bubble does not close it. */
-.ledger-hint:hover .ledger-hint-bubble,
-.ledger-hint-mark:focus-visible + .ledger-hint-bubble {
-  visibility: visible;
-  opacity: 1;
 }
 
 /* One act per line: the button, and what pressing it will record beside it. Unstyled, these were

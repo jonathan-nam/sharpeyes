@@ -316,7 +316,7 @@ export default function PartyPage() {
         )}
       </p>
 
-      {state === "error" && <p>Couldn&apos;t load that party.</p>}
+      {state === "error" && <p>Couldn&apos;t load that party. Reload to try again.</p>}
       <PageSwap
         waiting={state === "loading"}
         placeholder={<p className="party-hint">Loading...</p>}

@@ -54,6 +54,6 @@ describe("the controls a dollar sale does not get", () => {
   });
 
   it("does not name a split method on a sold row that was never asked for one", () => {
-    expect(row).toContain('currency === "USD" ? "" : `, ${loot.splitMethod === "FAIR"');
+    expect(row).toContain('currency === "USD" ? "" : ` · ${loot.splitMethod === "FAIR"');
   });
 });

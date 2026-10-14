@@ -723,7 +723,6 @@ export default function PartiesPage() {
       value: "not-cleared",
       label: "Not Cleared",
       count: running.length - clearedCount,
-      title: "Includes bosses no planner capture has mentioned this period",
     },
     { value: "cleared", label: "Cleared", count: clearedCount },
   ];
@@ -790,7 +789,7 @@ export default function PartiesPage() {
         )}
       </div>
 
-      {state === "error" && <p>Couldn&apos;t load your parties.</p>}
+      {state === "error" && <p>Couldn&apos;t load your parties. Reload to try again.</p>}
       <PageSwap
         waiting={state === "loading"}
         placeholder={<p className="party-hint">Loading...</p>}
@@ -896,8 +895,7 @@ export default function PartiesPage() {
             {parties.length === 0 && seated.length === 0 && (
               <>
                 <p className="finder-empty">
-                  No parties yet. <Link href="/bosses/parties/edit">Set them up</Link>: pick a
-                  character, then say who they run each boss with.
+                  No parties yet. <Link href="/bosses/parties/edit">Set one up.</Link>
                 </p>
                 {/* This list is one world's, so "no parties" can mean every party you have belongs
                     to characters in the other one. See OtherWorld. */}
@@ -947,7 +945,7 @@ export default function PartiesPage() {
                       ) : (
                         <span className="party-banner-sprite is-empty" aria-hidden="true" />
                       )}
-                      <h2 className="party-group-name">{character?.name ?? "Unknown character"}</h2>
+                      <h2 className="party-group-name">{character?.name ?? "–"}</h2>
                       {/* Of what is listed below, not of what the character has: under a filter the
                         two differ, and the number that describes the rows you can see is the one
                         that cannot be read as a claim about the rows you cannot. */}
@@ -1021,7 +1019,7 @@ export default function PartiesPage() {
                               />
                             )}
                             <h3 className="party-row-name">
-                              {characterById.get(party.characterId)?.name ?? "Unknown character"}
+                              {characterById.get(party.characterId)?.name ?? "–"}
                             </h3>
                             {/* Beside the character, not folded into the heading: filed by boss,
                               two of your characters can run the same boss at different modes. */}

@@ -137,7 +137,7 @@ function DropArrangement({
         {/* Linked like the ledger's own rows: one boss can be run by two of your characters, and
             which party this is cannot be read off the boss name alone. */}
         <Link href={partyHref(party)} className="loot-name">
-          {boss ? bossLabel(boss.name, party.difficulty) : "Unknown boss"}
+          {boss ? bossLabel(boss.name, party.difficulty) : "–"}
         </Link>
         <span className="loot-meta">
           {drop.bundles} × {size} · week of {formatWeekStart(drop.weekStart)}

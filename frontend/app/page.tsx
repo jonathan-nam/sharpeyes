@@ -66,7 +66,7 @@ export default function Home() {
       ) : (
         <section className="hero">
           <SharpEyesMark size={96} />
-          <h1>A greater view of your whole MapleStory account.</h1>
+          <h1>SharpEyes</h1>
           <SignInButton />
         </section>
       )}

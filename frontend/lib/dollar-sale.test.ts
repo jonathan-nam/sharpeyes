@@ -295,13 +295,13 @@ describe("what the closing actions say they move", () => {
   it("puts the collecting act on the line, the aggregate that hid it being gone", () => {
     // It used to be the aggregate Settle, whose caption named only the mesos and so said nothing
     // about the $333.33 it also collected. See settlement-figure for why that button went entirely.
-    expect(source).toContain('line.direction === "owed" ? "Mark Received" : "Mark Sent"');
+    expect(source).toContain('line.direction === "owed" ? "Mark received" : "Mark sent"');
     expect(source).not.toContain("{collectable && (");
   });
 
-  it("names both units in what Mark Sent records, and offers it for a dollar debt at all", () => {
+  it("names both units in what Mark sent records, and offers it for a dollar debt at all", () => {
     expect(source).toContain("const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;");
-    expect(source).toContain("records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}");
+    expect(source).toContain("Mark ${movedBoth(owes, row.usd.owe)} sent");
     // Side by side, never added: there is no rate in this app to add them at.
     expect(source).toContain('.join(" and ")');
   });

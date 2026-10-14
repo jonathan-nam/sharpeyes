@@ -5,7 +5,6 @@ import { CopyAmount } from "@/components/copy-amount";
 import {
   type AmountBasis,
   explainSplit,
-  FEE_MVP,
   FEE_STANDARD,
   formatMesos,
   parseMesos,
@@ -76,16 +75,6 @@ export default function DropSplitPage() {
             aria-label={amountIs === "listed" ? "Gross sale amount" : "Net sale amount"}
             autoFocus
           />
-          <span className="split-hint">
-            {amountIs === "listed" ? (
-              <>
-                What the item was listed at, before the fee.
-                {split ? <> You received {mesos(split.sellerReceives)}.</> : null}
-              </>
-            ) : (
-              <>What actually landed in your inventory. Your own fee is already spent.</>
-            )}
-          </span>
         </div>
 
         <label className="split-field">
@@ -106,10 +95,10 @@ export default function DropSplitPage() {
           <legend>Split</legend>
           {(
             [
-              ["fair", "Fair", "All party members receive the same net amount."],
-              ["lazy", "Lazy", "Seller divides the net amount received by the party member size."],
+              ["fair", "Fair"],
+              ["lazy", "Lazy"],
             ] as const
-          ).map(([value, label, hint]) => (
+          ).map(([value, label]) => (
             <label
               key={value}
               className={method === value ? "split-method active" : "split-method"}
@@ -122,16 +111,13 @@ export default function DropSplitPage() {
                 onChange={() => setMethod(value)}
               />
               <span className="split-method-label">{label}</span>
-              <span className="split-method-hint">{hint}</span>
             </label>
           ))}
         </fieldset>
       </div>
 
       {price.trim() !== "" && amount === null && (
-        <p className="split-error">
-          Couldn&apos;t read that as an amount. Try 9.5b, 970m or 1,000,000,000.
-        </p>
+        <p className="split-error">Not an amount. Try 9.5b or 970m.</p>
       )}
 
       {split && input && (
@@ -205,14 +191,6 @@ export default function DropSplitPage() {
             </div>
           </dl>
 
-          {/* The uneven outcome is the warning. Why the second fee lands where it does is in
-              splitDrop, and "Show the math" below walks the figures for anyone who wants it. */}
-          {others > 0 && method === "lazy" && (
-            <p className="split-note">
-              Every member ends up short of your own share. Switch to fair to even it out.
-            </p>
-          )}
-
           <details className="split-math">
             <summary>Show the math</summary>
             <ol className="math-steps">
@@ -223,15 +201,10 @@ export default function DropSplitPage() {
                 </li>
               ))}
             </ol>
+            <p className="math-fee">Fee: {percent(FEE_STANDARD)}</p>
           </details>
         </div>
       )}
-
-      <p className="split-caveat">
-        Assumes the standard {percent(FEE_STANDARD)} Auction House fee throughout. MVP pays{" "}
-        {percent(FEE_MVP)}, so anyone on MVP keeps a little more than shown here. Treat the figures
-        as the fair share to aim for, not to the meso.
-      </p>
     </main>
   );
 }

@@ -79,7 +79,7 @@ export function DropLogSkeleton() {
       {/* The real Add Drop panel, down to the disabled controls and their labels, so its height is
           its own and not a number copied out of it. The labels are half of that height now. */}
       <section className="loot-pool add-section" aria-hidden="true">
-        <h2 className="loot-pool-title">Add Drop</h2>
+        <h2 className="loot-pool-title">Add drop</h2>
         <form className="add-card">
           <div className="add-fields">
             <label className="add-field">

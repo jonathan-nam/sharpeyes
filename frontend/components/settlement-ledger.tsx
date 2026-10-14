@@ -41,7 +41,7 @@ import type { SettlementDebt, VestigePayment, VestigeTranche } from "@/types/ves
 // parts are listed because a figure nobody can take apart is a figure nobody can check.
 //
 // What YOU owe is beside it, not inside it. A share of yours comes off their debt when you press
-// Offset and stays off it when you press Mark Sent, and the card cannot know which until you say.
+// Offset and stays off it when you press Mark sent, and the card cannot know which until you say.
 // See Settlement.sharesYouOwe.
 //
 // PIECES are the other unit and stay a count. Coupons are single-trade, so pieces of yours in
@@ -354,7 +354,7 @@ function SettlementCard({
       .map((line) => {
         const boss = bossByKey.get(line.bossKey ?? "");
         const party = partyById.get(line.partyId);
-        const where = boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss";
+        const where = boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–";
         return `${line.name} \u00b7 ${where} \u00b7 ${line.theirs}: ${formatMoney(line.pay, line.currency, true)}`;
       })
       .join("\n");
@@ -449,7 +449,7 @@ function SettlementCard({
    * SHARES you owe are your cut of a night of theirs. HOLDING is their own money, which a sale of
    * their coupons left in your hands. What can happen to each is the same pair of things, so one
    * button covers both: one trade settles both, and two buttons wearing one word ("Offset" twice,
-   * "Mark Sent" beside "I paid them") said nothing about which pot each was for.
+   * "Mark sent" beside "I paid them") said nothing about which pot each was for.
    *
    * Each pot is still WRITTEN on its own, so a click is two calls where both apply. If the second is
    * refused the first stands, which the refusal line says; both are reversible where they are drawn,
@@ -614,9 +614,7 @@ function SettlementCard({
     const counts = new Map<string, number>();
     for (const { bossKey, partyId, pieces } of taken) {
       const boss = bossByKey.get(bossKey ?? "");
-      const label = boss
-        ? bossLabel(boss.name, partyById.get(partyId)?.difficulty ?? null)
-        : "Unknown boss";
+      const label = boss ? bossLabel(boss.name, partyById.get(partyId)?.difficulty ?? null) : "–";
       counts.set(label, (counts.get(label) ?? 0) + pieces);
     }
     const ranked = [...counts].sort((a, b) => b[1] - a[1]);
@@ -669,7 +667,6 @@ function SettlementCard({
             disabled={busy}
             onClick={() => void write(onPin(row, !row.pinned), null)}
             aria-label={row.pinned ? `Stop keeping ${row.name}'s card` : `Keep ${row.name}'s card`}
-            title={row.pinned ? "Kept. Click to stop." : "Keep this card when nothing is owed"}
           >
             {row.pinned ? "★" : "☆"}
           </button>
@@ -1050,8 +1047,8 @@ function SettlementCard({
                           {line.name}
                         </Link>
                         <span className="loot-meta">
-                          {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}{" "}
-                          · {line.theirs}
+                          {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"} ·{" "}
+                          {line.theirs}
                         </span>
                         <span className="ledger-amount">
                           {signed(line.direction === "owe" ? -line.pay : line.pay, line.currency)}
@@ -1077,7 +1074,7 @@ function SettlementCard({
                             line.direction === "owed" ? "received from" : "sent to"
                           } ${line.theirs}`}
                         >
-                          {line.direction === "owed" ? "Mark Received" : "Mark Sent"}
+                          {line.direction === "owed" ? "Mark received" : "Mark sent"}
                         </button>
                       </div>
                     </li>
@@ -1273,11 +1270,11 @@ function SettlementCard({
         </div>
       )}
 
-      {/* Every act the card offers, in one place, each beside what pressing it will record.
+      {/* Every act the card offers, in one place, each button naming what pressing it records.
 
           They were scattered across the steps they acted on, which put two buttons wearing the word
-          Offset on one card and "Mark Sent" a step above "I paid them" for the same errand. What an
-          act moves is now said in its line instead, so the step is a list of what can be done and
+          Offset on one card and "Mark sent" a step above "I paid them" for the same errand. What an
+          act moves is now on its button instead, so the step is a list of what can be done and
           the steps above are a statement of what stands.
 
           Last on the card on purpose: it is what you do about the figures, so it comes after all of
@@ -1300,17 +1297,17 @@ function SettlementCard({
                 disabled={busy}
                 onClick={() => void write(offsetAll(), null)}
               >
-                Offset
+                {`Offset ${moved(offset.offered ? offset.amount : 0)}`}
               </button>
-              {/* What it leaves behind, where their debt cannot cover the shares. Said, because the
+              {/* What it leaves behind, where their debt cannot cover the shares, because the
                   alternative is a button promising to take 800m off a 500m debt. Only where the
                   shares are the whole act: with their money in it too the remainder is a subtraction
                   across two pots, and this card does not make that one. */}
-              <span className="ledger-progress">
-                {offset.leftOwing > 0 && row.holding === 0
-                  ? `clears what ${row.name} owes you, leaving you owing ${formatMesos(offset.leftOwing, true)}`
-                  : `takes ${moved(offset.offered ? offset.amount : 0)} off what ${row.name} owes you`}
-              </span>
+              {offset.leftOwing > 0 && row.holding === 0 && (
+                <span className="ledger-progress">
+                  {`You still owe ${formatMesos(offset.leftOwing, true)}`}
+                </span>
+              )}
             </span>
           )}
 
@@ -1324,11 +1321,8 @@ function SettlementCard({
                 disabled={busy}
                 onClick={() => void write(sendAll(), null)}
               >
-                Mark Sent
+                {`Mark ${movedBoth(owes, row.usd.owe)} sent`}
               </button>
-              <span className="ledger-progress">
-                {`records ${movedBoth(owes, row.usd.owe)} sent to ${row.name}`}
-              </span>
             </span>
           )}
 
@@ -1342,14 +1336,12 @@ function SettlementCard({
                 disabled={busy}
                 onClick={() => void write(onSettlePair(row.holder, pair.theirs, pair.yours), null)}
               >
-                Mark Settled
+                {/* WHAT it closes, not how much: a count of nights matched nothing else on the card,
+                    and a night shared with a third person is not closed here. Both sides is the
+                    fact worth carrying, closing one alone being what put the figure UP. See
+                    settleThePair. */}
+                Settle both sides
               </button>
-              {/* WHAT it closes, not how much of it. Counting the nights back read as a second fact
-                  matching nothing else on the card (22 was eleven rows in each pile), and a count of
-                  coupons would overclaim: a night shared with a third person is not closed here, and
-                  that is said with the lists themselves. Both sides is the fact worth carrying,
-                  closing one alone being what put the figure UP. See settleThePair. */}
-              <span className="ledger-progress">closes the coupon nights on both sides</span>
             </span>
           )}
         </div>
@@ -1576,7 +1568,7 @@ function DischargeRow({
                         href={partyHrefById(night.partyId, partyById)}
                         className="loot-share-name loot-name"
                       >
-                        {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
+                        {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"}
                       </Link>
                       <span className="ledger-offset-sub">
                         <span className="ledger-amount">{pieces}</span>
@@ -1634,7 +1626,7 @@ function PieceNights({
               )}
               <div className="ledger-offset-text">
                 <Link href={partyHrefById(drop.partyId, partyById)} className="loot-name">
-                  {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "Unknown boss"}
+                  {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"}
                 </Link>
                 <span className="ledger-offset-sub">
                   <span className="ledger-amount">{drop.pieces + drop.sold}</span>

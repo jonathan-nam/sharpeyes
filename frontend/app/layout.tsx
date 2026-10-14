@@ -10,7 +10,6 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "SharpEyes",
-  description: "Your boss tokens, every character, counted in one place.",
 };
 
 // Auth resolves in the browser, so the header's signed-in controls cannot be drawn on first paint

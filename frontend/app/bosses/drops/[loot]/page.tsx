@@ -128,7 +128,7 @@ export default function DropAuditPage() {
         <Link href="/bosses/drops">&larr; Drop Log</Link>
       </p>
 
-      {state === "error" && <p>Couldn&apos;t load that drop.</p>}
+      {state === "error" && <p>Couldn&apos;t load that drop. Reload to try again.</p>}
       <PageSwap
         waiting={state === "loading"}
         placeholder={<p className="party-hint">Loading...</p>}
@@ -138,7 +138,7 @@ export default function DropAuditPage() {
             <DropAuditView audit={audit} />
           ) : (
             // Refused rather than half-drawn. See buildDropAudit.
-            <p className="party-hint">That drop is not in the log.</p>
+            <p className="party-hint">This drop was deleted. Go back to the Drop Log.</p>
           ))}
       </PageSwap>
     </main>

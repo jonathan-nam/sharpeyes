@@ -19,18 +19,18 @@ function ResetForm() {
     return (
       <section className="auth-panel">
         <h1>Reset your password</h1>
-        <p className="auth-error">That link has expired.</p>
-        <p className="auth-footer">
-          <Link href="/forgot-password">Send another</Link>
+        <p className="auth-error">
+          This link has expired. <Link href="/forgot-password">Send another.</Link>
         </p>
       </section>
     );
   }
 
   async function submit() {
-    if (password.length < MIN_PASSWORD) return `Passwords are ${MIN_PASSWORD} characters or more.`;
+    if (password.length < MIN_PASSWORD)
+      return `Password too short. Use ${MIN_PASSWORD} or more characters.`;
     const { error } = await authClient.resetPassword({ newPassword: password, token: token! });
-    return error ? "That link has expired. Ask for another." : null;
+    return error ? "This link has expired. Ask for another." : null;
   }
 
   return (

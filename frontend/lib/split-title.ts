@@ -6,5 +6,5 @@
  * appending to the full name said coupon twice. This takes that one word off the end.
  */
 export function splitTitle(dropName: string): string {
-  return `${dropName.replace(/ Coupon$/, "")} Config`;
+  return `${dropName.replace(/ Coupon$/, "")} Split`;
 }

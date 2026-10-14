@@ -9,7 +9,7 @@ export default function Loading() {
       <p className="loot-back">
         <Link href="/bosses">&larr; Individual View</Link>
       </p>
-      <h1 className="page-title">Edit Boss Config</h1>
+      <h1 className="page-title">Edit Bosses</h1>
       <p className="party-hint">Loading...</p>
     </RouteLoading>
   );

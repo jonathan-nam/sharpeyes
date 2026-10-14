@@ -272,72 +272,11 @@ describe("the Settled View's money", () => {
   });
 });
 
-describe("the hint beside the pieces step", () => {
+describe("the pieces step", () => {
   const source = readFileSync(join(__dirname, "..", "components", "piece-ledger.tsx"), "utf8");
-  const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 
-  it("carries the wording, in a bubble rather than under the form", () => {
-    // JSX folds the line breaks in the literal, so the text is matched a clause at a time.
-    expect(source).toMatch(/you may optionally enter the whole sale beyond the\s+quantity owed/);
-    expect(source).toMatch(
-      /The sale amount for the pieces you owe will be automatically\s+calculated/,
-    );
-    expect(source).toMatch(/role="tooltip" className="ledger-hint-bubble"/);
-    // Three lines of it standing under the boxes is what the bubble replaced.
-    expect(source).not.toMatch(/className="ledger-progress">\s*To assist with calculation/);
-  });
-
-  it("only speaks where there is a debt for it to be about", () => {
-    // The form also opens on a pile that owes nobody, through the "Record a sale" link. There "the
-    // quantity owed" names nothing.
-    expect(source).toMatch(/\{outstanding > 0 && \(\s*<span className="ledger-hint">/);
-  });
-
-  it("is reachable without a pointer", () => {
-    // A bubble that only answers to hover is no hint on a touch screen, and none to a keyboard.
-    expect(source).toMatch(/<button type="button" className="ledger-hint-mark"/);
-    expect(source).toMatch(/aria-describedby=\{hintId\}/);
-    // The mark is a glyph, so the button needs a name that is not the letter i.
-    expect(source).toMatch(
-      /<span className="visually-hidden">What can go in the pieces box<\/span>/,
-    );
-    expect(css).toMatch(/\.ledger-hint-mark:focus-visible \+ \.ledger-hint-bubble/);
-  });
-
-  it("keeps the bubble in the DOM, since aria-describedby has to read it", () => {
-    // visibility/opacity, never a conditional render: a description that is not there is not read.
-    const rule = css.match(/^\.ledger-hint-bubble \{([^}]*)\}/m);
-    expect(rule?.[1]).toContain("visibility: hidden");
-    expect(rule?.[1]).not.toContain("display: none");
-  });
-
-  it("gives the mark a target big enough to hit", () => {
-    // WCAG 2.5.8's floor, around a 14px glyph.
-    const rule = css.match(/^\.ledger-hint-mark \{([^}]*)\}/m);
-    expect(rule?.[1]).toContain("width: 24px");
-    expect(rule?.[1]).toContain("height: 24px");
-  });
-
-  it("is anchored to the step row, so it cannot hang off the card", () => {
-    // The step row is a stretched flex item, so it IS the card's content width. Anchored to the
-    // MARK instead, a 260px bubble ran past the card's right edge on a phone, and every width that
-    // fixed that was a number measured against where the word "pieces" happens to end.
-    const step = css.match(/^\.ledger-step-hinted \{([^}]*)\}/m);
-    expect(step?.[1]).toContain("position: relative");
-    const bubble = css.match(/^\.ledger-hint-bubble \{([^}]*)\}/m);
-    expect(bubble?.[1]).toContain("left: 0");
-    expect(bubble?.[1]).toContain("right: 0");
-    // Below the mark. Above it, the bubble covered the header, which is where the debt it talks
-    // about is written.
-    expect(bubble?.[1]).toContain("top: calc(100% + 6px)");
-    expect(bubble?.[1]).not.toContain("bottom:");
-  });
-
-  it("leaves the other step labels alone", () => {
-    // .ledger-step is seven more labels on the Settlement card. The row layout the mark needs is a
-    // modifier, so none of them gained a flex context they never asked for.
-    expect(css).toMatch(/^\.ledger-step-hinted \{/m);
-    const rule = css.match(/^\.ledger-step \{([^}]*)\}/m);
-    expect(rule?.[1]).not.toContain("display:");
+  it("carries no help text", () => {
+    // The bubble explaining the whole-sale entry was cut in the copy pass: never explain a control.
+    expect(source).not.toContain("ledger-hint");
   });
 });

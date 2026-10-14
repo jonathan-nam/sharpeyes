@@ -157,7 +157,7 @@ export default function EditPartiesPage() {
       </div>
       <h1 className="page-title">Edit Parties</h1>
 
-      {state === "error" && <p>Couldn&apos;t load your parties.</p>}
+      {state === "error" && <p>Couldn&apos;t load your parties. Reload to try again.</p>}
       <PageSwap
         waiting={state === "loading"}
         placeholder={<p className="party-hint">Loading...</p>}

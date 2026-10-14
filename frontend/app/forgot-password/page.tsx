@@ -18,7 +18,7 @@ export default function ForgotPassword() {
       email,
       redirectTo: `${window.location.origin}/reset-password`,
     });
-    return error ? "Could not send that. Try again." : null;
+    return error ? "Couldn't send that. Try again." : null;
   }
 
   return (

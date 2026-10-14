@@ -263,11 +263,7 @@ export function PartyCard({
             className={`party-clear is-${clearClass(clear.cleared)}`}
             disabled={busy}
             onClick={() => onToggleClear(nextClear(clear.cleared))}
-            title={
-              clear.cleared === null
-                ? "No planner capture has mentioned this boss this period"
-                : undefined
-            }
+            title={clear.cleared === null ? "No capture yet" : undefined}
           >
             {clearStateLabel(clear.cleared)}
           </button>
@@ -372,7 +368,7 @@ export function PartyCard({
 
           {onAddDrop && (
             <>
-              <h3 className="loot-group-title">Add Drop</h3>
+              <h3 className="loot-group-title">Add drop</h3>
               <DropPicker
                 bossKey={party.bossKey}
                 worldType={party.worldType}

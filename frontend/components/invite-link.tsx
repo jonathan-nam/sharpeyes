@@ -93,7 +93,7 @@ export function InviteLink({
         {/* The clock, because a link this short outlives the conversation about it by less than you
             would guess. It runs out while the dialog is open, so what it says has to change. */}
         <p className={`invite-countdown${left === null ? " is-spent" : ""}`}>
-          {left !== null ? `Expires in ${left}` : "Expired. Generate another."}
+          {left !== null ? `Expires in ${left}` : "Expired"}
         </p>
 
         <div className="invite-actions">
