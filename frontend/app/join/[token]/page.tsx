@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageSwap } from "@/components/page-swap";
 import { SignInButton } from "@/components/sign-in-button";
-import { ApiError, apiFetch } from "@/lib/api";
+import { ApiError, apiFetch, failureText } from "@/lib/api";
 import { reportDataReady } from "@/lib/rum";
 import {
   invitedSummary,
@@ -78,7 +78,7 @@ export default function JoinPage() {
     } catch (e) {
       // The backend refuses with the reason: an account that already has characters, your own
       // link, or one made before the payload changed shape. Each is worth reading.
-      setProblem(e instanceof ApiError && e.body !== "" ? e.body : "Couldn't set that up.");
+      setProblem(failureText(e, "Couldn't set that up. Try again."));
       setBusy(false);
     }
   }

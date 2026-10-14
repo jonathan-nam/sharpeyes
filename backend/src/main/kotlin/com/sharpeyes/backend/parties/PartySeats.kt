@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.plugins.Refusal
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -183,15 +184,18 @@ internal fun validatePieceShares(
 internal fun validateMembers(
     members: List<String>,
     allowNone: Boolean = false,
-): String? {
+): Refusal? {
     val names = members.map { it.trim() }
     return when {
         // Your own character is the config; the members are the others. Nobody else means a solo
         // run, and a solo run is not a party.
-        names.isEmpty() -> if (allowNone) null else "a party needs somebody else in it"
-        names.size > MAX_PARTY_SIZE - 1 -> "a party holds at most $MAX_PARTY_SIZE including your character"
-        names.any { it.isBlank() } -> "a member needs a character name"
-        names.map { it.lowercase() }.distinct().size != names.size -> "the same character twice"
+        names.isEmpty() -> if (allowNone) null else Refusal("This party has nobody else in it. Add a member.")
+        names.size > MAX_PARTY_SIZE - 1 -> Refusal("Parties hold up to $MAX_PARTY_SIZE. Remove a member.")
+        names.any { it.isBlank() } -> Refusal("A member has no name. Add one.")
+        names.map { it.lowercase() }.distinct().size != names.size ->
+            Refusal(
+                "A character is listed twice. Remove one.",
+            )
         else -> null
     }
 }

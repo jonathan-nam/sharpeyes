@@ -1,8 +1,10 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
@@ -238,6 +240,7 @@ internal suspend fun RoutingContext.respondToLoot(
     when (outcome) {
         null -> call.respond(HttpStatusCode.NotFound)
         is String -> call.respond(HttpStatusCode.BadRequest, outcome)
+        is Refusal -> call.refuse(HttpStatusCode.BadRequest, outcome)
         is LootResponse -> call.respond(onSuccess, outcome)
         else -> call.respond(HttpStatusCode.InternalServerError)
     }

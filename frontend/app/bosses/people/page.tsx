@@ -6,7 +6,7 @@ import { PeopleBoard } from "@/components/people-board";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, failureText } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { type PersonDraft, toDraft, unclaimed } from "@/lib/people-board";
@@ -136,7 +136,7 @@ export default function PeoplePage() {
     } catch (e) {
       // The backend refuses with the reason (see validatePeople): two people sharing a name, or
       // both claiming the same character. Both are worth reading rather than "went wrong".
-      setError(e instanceof ApiError ? e.body : "Couldn't save that.");
+      setError(failureText(e, "Couldn't save that. Try again."));
     } finally {
       setBusy(false);
     }

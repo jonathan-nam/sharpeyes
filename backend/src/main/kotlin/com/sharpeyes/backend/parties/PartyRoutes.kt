@@ -2,9 +2,11 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.sprites.SpriteCache
 import com.sharpeyes.backend.users.ensureUser
@@ -341,6 +343,7 @@ internal suspend fun RoutingContext.respondToSave(
     when (outcome) {
         null -> call.respond(HttpStatusCode.NotFound)
         is String -> call.respond(HttpStatusCode.BadRequest, outcome)
+        is Refusal -> call.refuse(HttpStatusCode.BadRequest, outcome)
         is PartyResponse -> call.respond(onSuccess, outcome)
         else -> call.respond(HttpStatusCode.InternalServerError)
     }

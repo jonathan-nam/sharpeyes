@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CountPopup } from "@/components/count-popup";
 import { apiAssetUrl } from "@/lib/api";
 import type { TokenCatalogItem } from "@/types/token-catalog";
@@ -26,11 +26,42 @@ function Count({ value }: { value: number }) {
   );
 }
 
-// The real inventory is 16 wide, the same lattice the parser locks onto
-// (vision/app/cv/grid.py), and the same 128 the client's own "SLOT 112 / 128" readout counts
-// against. The preview shows the same 16 columns over fewer rows, so a screenshot's items land
-// in the same shape they will occupy once they are saved.
-export const COLS = 16;
+// The client's 42px slot and its border: the narrowest a column gets (.ms-slot's min-width,
+// pinned by slot-grid-css.test.ts). Slots stay this size so the 46px icon fills them, and a wider
+// window gets more columns rather than bigger slots.
+export const SLOT_PX = 44;
+
+/** Whole slots across `inner` px: n slots take n widths and n - 1 gaps. Never fewer than one. */
+export function slotColumns(inner: number, gap: number): number {
+  return Math.max(1, Math.floor((inner + gap) / (SLOT_PX + gap)));
+}
+
+/**
+ * How many slots fit across the grid, re-measured as the window resizes.
+ *
+ * Measured rather than left to CSS `auto-fill` because the empty slots that pad out a row are
+ * rendered, and the count has to be known to draw them. A layout effect, so the first paint
+ * already has it. 16, the game's own width, until then.
+ */
+export function useSlotColumns(): [RefObject<HTMLDivElement | null>, number] {
+  const ref = useRef<HTMLDivElement>(null);
+  const [cols, setCols] = useState(16);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const style = getComputedStyle(el);
+      const gap = parseFloat(style.columnGap) || 0;
+      const inner = el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      setCols(slotColumns(inner, gap));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, cols];
+}
 
 export type SlotItem = {
   id: string;
@@ -53,14 +84,12 @@ function deltaLabel(delta: number | null | undefined): string | null {
 
 export function SlotGrid({
   items,
-  rows,
   onAdjust,
   onCommit,
   addable,
   onAdd,
 }: {
   items: SlotItem[];
-  rows: number;
   // When set, clicking a filled slot opens a popup to edit its count. Left unset by the capture
   // preview, whose slots are a parse to look at rather than holdings to change.
   //
@@ -80,8 +109,9 @@ export function SlotGrid({
   // The + sits at the item's own index, immediately after the last one drawn, rather than after
   // the empty cells that pad the grid out: at the end of the padding it was nowhere near the item
   // it follows. A grid the items fill exactly gets one more row to put it in.
-  const padded = COLS * rows;
-  const slots = wantsAdd && items.length >= padded ? padded + COLS : padded;
+  const [gridRef, cols] = useSlotColumns();
+  const padded = cols * Math.max(1, Math.ceil(items.length / cols));
+  const slots = wantsAdd && items.length >= padded ? padded + cols : padded;
   // The item being edited, with its slot in viewport coordinates: the popup is fixed, so it needs
   // an anchor rather than a positioned parent. See CountPopup.
   const [editing, setEditing] = useState<{ id: string; anchor: DOMRect } | null>(null);
@@ -126,7 +156,7 @@ export function SlotGrid({
   }
 
   return (
-    <div className="ms-grid" style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}>
+    <div ref={gridRef} className="ms-grid" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
       {Array.from({ length: slots }, (_, i) => {
         const item = items[i];
         if (!item)

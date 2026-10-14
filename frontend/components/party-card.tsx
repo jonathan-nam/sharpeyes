@@ -7,7 +7,7 @@ import { LootList, type StackAssignment } from "@/components/loot-list";
 import { PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
-import { ApiError, SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl } from "@/lib/api";
+import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl, failureText } from "@/lib/api";
 import { clearClass, clearStateLabel, nextClear } from "@/lib/boss-clears";
 import type { PieceStatus } from "@/lib/drop-log";
 import { type CouponsOutstanding, poolLabel } from "@/lib/loot";
@@ -186,8 +186,7 @@ export function PartyCard({
       await onSaveRoster(members);
       setEditing(false);
     } catch (e) {
-      // The server's own reason. It is the only part of a refusal you can act on.
-      setSaveError(e instanceof ApiError ? e.body : "That didn't save.");
+      setSaveError(failureText(e, "That didn't save. Try again."));
     }
   }
 

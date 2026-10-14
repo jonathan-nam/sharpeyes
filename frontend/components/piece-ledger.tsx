@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 import { Field } from "@/components/add-field";
-import { apiAssetUrl } from "@/lib/api";
+import { apiAssetUrl, failureText } from "@/lib/api";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatMesos, parseMesos, shortMesos } from "@/lib/drop-split";
@@ -262,7 +262,7 @@ function HolderCard({
         setAmount("");
       }
     } catch (e) {
-      setRefusal(e instanceof Error ? e.message : "That didn't save.");
+      setRefusal(failureText(e, "That didn't save. Try again."));
     }
   }
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { apiAssetUrl } from "@/lib/api";
+import { apiAssetUrl, failureText } from "@/lib/api";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { suggestArrangement } from "@/lib/vestige-ledger";
@@ -127,7 +127,7 @@ function DropArrangement({
     try {
       await onSave(party.id, drop.lootId, bundles);
     } catch (e) {
-      setRefusal(e instanceof Error ? e.message : "That didn't save.");
+      setRefusal(failureText(e, "That didn't save. Try again."));
     }
   }
 

@@ -46,7 +46,7 @@ export function PiecePileEditor({
     try {
       await write();
     } catch {
-      setError("That didn't save.");
+      setError("That didn't save. Try again.");
     }
   }
 

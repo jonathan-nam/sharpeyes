@@ -17,12 +17,12 @@ import { StackArrangement } from "@/components/stack-arrangement";
 import { SettledView } from "@/components/settled-view";
 import { buildSettledLog, orphansOf, settledTotals } from "@/lib/settled-log";
 import {
-  ApiError,
   SAVED_BUT_STALE,
   StaleAfterWrite,
   apiAssetUrl,
   apiFetch,
   readBack,
+  failureText,
 } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { peek, put } from "@/lib/cache";
@@ -279,7 +279,7 @@ export default function DropLogPage() {
         setError(SAVED_BUT_STALE);
         return;
       }
-      setError(e instanceof ApiError ? e.body : "That didn't save.");
+      setError(failureText(e, "That didn't save. Try again."));
       throw e;
     } finally {
       setBusy(false);
@@ -295,12 +295,10 @@ export default function DropLogPage() {
    */
   async function saleWrite(path: string, options: RequestInit) {
     setBusy(true);
+    // Thrown on, not shown here: the card that asked for it is a screen away from this page's
+    // error line, and a refusal nobody is looking at is a refusal that did not happen.
     try {
       setTranches(await apiFetch<VestigeTranche[]>(path, options, getToken));
-    } catch (e) {
-      // Thrown on, not shown here: the card that asked for it is a screen away from this page's
-      // error line, and a refusal nobody is looking at is a refusal that did not happen.
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -311,8 +309,6 @@ export default function DropLogPage() {
     setBusy(true);
     try {
       setSettlements(await apiFetch<VestigeSettlement[]>(path, options, getToken));
-    } catch (e) {
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -337,8 +333,6 @@ export default function DropLogPage() {
           getToken,
         ),
       );
-    } catch (e) {
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -364,8 +358,6 @@ export default function DropLogPage() {
       setPools(done.pools);
       setDebts(done.debts);
       setDisposals(done.disposals);
-    } catch (e) {
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -376,8 +368,6 @@ export default function DropLogPage() {
     setBusy(true);
     try {
       setDebts(await apiFetch<SettlementDebt[]>(path, options, getToken));
-    } catch (e) {
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -388,8 +378,6 @@ export default function DropLogPage() {
     setBusy(true);
     try {
       setDisposals(await apiFetch<ProceedsDisposal[]>(path, options, getToken));
-    } catch (e) {
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -400,8 +388,6 @@ export default function DropLogPage() {
     setBusy(true);
     try {
       setPayments(await apiFetch<VestigePayment[]>(path, options, getToken));
-    } catch (e) {
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -415,6 +401,8 @@ export default function DropLogPage() {
    */
   async function lotSale(body: LotSaleBody) {
     setBusy(true);
+    // Thrown on rather than shown here, as a tranche is: the card that asked is what the reader
+    // is looking at, and this page's error line is a screen away from it.
     try {
       setPools(
         await apiFetch<PartyLootPool[]>(
@@ -423,10 +411,6 @@ export default function DropLogPage() {
           getToken,
         ),
       );
-    } catch (e) {
-      // Thrown on rather than shown here, as a tranche is: the card that asked is what the reader
-      // is looking at, and this page's error line is a screen away from it.
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -441,6 +425,8 @@ export default function DropLogPage() {
    */
   async function rowSale(row: LotRow, body: SellLootBody) {
     setBusy(true);
+    // Thrown on rather than shown here, as a lot is: the card that asked is what the reader is
+    // looking at, and this page's error line is a screen away from it.
     try {
       await apiFetch<unknown>(
         `/api/parties/${row.partyId}/loot/${row.lootId}/sale`,
@@ -448,10 +434,6 @@ export default function DropLogPage() {
         getToken,
       );
       setPools(await apiFetch<PartyLootPool[]>(POOLS_KEY, {}, getToken));
-    } catch (e) {
-      // Thrown on rather than shown here, as a lot is: the card that asked is what the reader is
-      // looking at, and this page's error line is a screen away from it.
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -473,8 +455,6 @@ export default function DropLogPage() {
         getToken,
       );
       setPools(await apiFetch<PartyLootPool[]>(POOLS_KEY, {}, getToken));
-    } catch (e) {
-      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
     } finally {
       setBusy(false);
     }
@@ -1081,8 +1061,6 @@ export default function DropLogPage() {
                       );
                       setPeople(next);
                       put(PEOPLE_KEY, next);
-                    } catch (e) {
-                      throw new Error(e instanceof ApiError ? e.body : "That didn't save.");
                     } finally {
                       setBusy(false);
                     }

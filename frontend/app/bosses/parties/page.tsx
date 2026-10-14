@@ -10,15 +10,7 @@ import { PartyCard } from "@/components/party-card";
 import { ResetTimer } from "@/components/reset-timer";
 import { RosterStrip } from "@/components/roster-strip";
 import { WeekStepper } from "@/components/week-stepper";
-import {
-  ApiError,
-  SAVED_BUT_STALE,
-  StaleAfterWrite,
-  apiAssetUrl,
-  apiFetch,
-  readBack,
-  spriteUrl,
-} from "@/lib/api";
+import { apiAssetUrl, apiFetch, readBack, spriteUrl, failureText } from "@/lib/api";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
 import { SharedParties } from "@/components/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
@@ -505,8 +497,7 @@ export default function PartiesPage() {
         put(PARTY_LIST_KEY, refreshed);
       });
     } catch (e) {
-      // The server's own reason. It is the only part of a refusal you can act on.
-      setAddError(e instanceof ApiError ? e.body : "Couldn't add that boss.");
+      setAddError(failureText(e, "Couldn't add that boss. Try again."));
     }
   }
 
@@ -570,15 +561,9 @@ export default function PartiesPage() {
         await readBack(refreshPools);
       });
     } catch (e) {
-      // The server's own reason. It is the only part of a refusal you can act on.
       setPoolError({
         partyId: party.id,
-        message:
-          e instanceof StaleAfterWrite
-            ? SAVED_BUT_STALE
-            : e instanceof ApiError
-              ? e.body
-              : "That didn't save.",
+        message: failureText(e, "That didn't save. Try again."),
       });
     }
   }

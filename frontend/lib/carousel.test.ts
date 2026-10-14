@@ -16,10 +16,19 @@ describe("how many sprites a strip shows", () => {
       ".carousel-track .char-tile,\n.carousel-track .roster-tile {",
     );
     const share = css.match(
-      /\.carousel-track \.char-tile,\n\.carousel-track \.roster-tile \{[^}]*flex: 0 0 calc\(\(100% - (\d+) \* 16px\) \/ (\d+)\)/,
+      /\.carousel-track \.char-tile,\n\.carousel-track \.roster-tile \{[^}]*flex: 0 0 max\(calc\(\(100% - (\d+) \* 16px\) \/ (\d+)\), (\d+)px\)/,
     );
     expect(share?.[2], "tiles across the strip").toBe(String(TILES_SHOWN));
     // One gap fewer than tiles, or the shares do not add up to the width they divide.
     expect(share?.[1], "gaps between them").toBe(String(TILES_SHOWN - 1));
+  });
+
+  // A narrow window shows fewer tiles rather than overlapping the sprites, so the floor must hold
+  // the 96px sprite and the tile's padding either side.
+  it("never shrinks a tile below its sprite", () => {
+    const floor = css.match(/flex: 0 0 max\(calc\([^)]*\) \/ \d+\), (\d+)px\)/)?.[1];
+    const sprite = css.match(/\.tile-sprite \{[^}]*width: (\d+)px/)?.[1];
+    const padding = css.match(/\n\.char-tile \{[^}]*padding: (\d+)px/)?.[1];
+    expect(Number(floor)).toBeGreaterThanOrEqual(Number(sprite) + 2 * Number(padding));
   });
 });

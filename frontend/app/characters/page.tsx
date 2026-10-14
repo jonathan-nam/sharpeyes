@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
 import { CharacterRow } from "@/components/character-row";
 import { PageSwap } from "@/components/page-swap";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, failureText } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
 import { groupByWorld } from "@/lib/character-groups";
 import { OtherWorld } from "@/components/other-world";
@@ -78,7 +78,7 @@ export default function CharactersPage() {
       // screen that no party actually reads.
       setCharacters(before);
       put(CHARACTERS_KEY, before);
-      setError(e instanceof ApiError ? e.body : "Couldn't save that.");
+      setError(failureText(e, "Couldn't save that. Try again."));
     }
   }
 
@@ -170,7 +170,7 @@ export default function CharactersPage() {
       invalidate("/api/");
     } catch (e) {
       // Whatever was found before the failure is kept: those characters really are placed now.
-      setError(e instanceof ApiError ? e.body : "Couldn't look those up.");
+      setError(failureText(e, "Couldn't look those up. Try again."));
     } finally {
       setFinding(false);
     }

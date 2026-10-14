@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { DockShell } from "@/components/dock-shell";
 import { Ellipsis } from "@/components/ellipsis";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
-import { COLS, SlotGrid, type SlotItem } from "@/components/slot-grid";
+import { SlotGrid, type SlotItem } from "@/components/slot-grid";
 import { apiFetch } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
 import { compressImage } from "@/lib/compress-image";
@@ -324,7 +324,6 @@ function CaptureCard({
   // app exists to prevent) both stay. On a character's first upload nothing is stored yet, so
   // every item is new and the whole parse still shows, which is exactly right.
   const changed = items.filter((i) => i.delta !== 0);
-  const rows = Math.max(1, Math.ceil(changed.length / COLS));
 
   const { text, tone } = describe(capture, pinned);
   const saved = result?.outcome === "MATCHED";
@@ -354,7 +353,7 @@ function CaptureCard({
 
       {capture.phase === "read" && items.length > 0 && (
         <div className={`capture-preview${saved ? " saved" : " pending"}`}>
-          {changed.length > 0 && <SlotGrid items={changed} rows={rows} />}
+          {changed.length > 0 && <SlotGrid items={changed} />}
           <p className="capture-preview-note">{note}</p>
         </div>
       )}

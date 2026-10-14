@@ -7,7 +7,7 @@ import { OtherWorld } from "@/components/other-world";
 import { useEffect, useState } from "react";
 import { CharacterPicker } from "@/components/character-picker";
 import { PartyConfigEditor } from "@/components/party-config-editor";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, failureText } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { preloadBossArt } from "@/lib/preload-boss-art";
@@ -110,7 +110,7 @@ export default function EditPartiesPage() {
     } catch (e) {
       // The backend refuses with the reason in the body (see validateNewParty). Showing it beats
       // "something went wrong" for the one thing the user can actually fix.
-      setError(e instanceof ApiError ? e.body : "Couldn't save that party.");
+      setError(failureText(e, "Couldn't save that party. Try again."));
     }
   }
 
@@ -122,7 +122,7 @@ export default function EditPartiesPage() {
         await loadParties();
       });
     } catch (e) {
-      setError(e instanceof ApiError ? e.body : "Couldn't remove that party.");
+      setError(failureText(e, "Couldn't remove that party. Try again."));
     }
   }
 
