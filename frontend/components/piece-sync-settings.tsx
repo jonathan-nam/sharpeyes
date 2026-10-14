@@ -64,23 +64,16 @@ export function PieceSyncSettings() {
           <span>Auto Sync Eternal Pieces with Boss Clears</span>
         </label>
         {/* Outside the label, so pressing it cannot tick the box. */}
-        <InfoBubble label="How auto sync works">
+        <InfoBubble label="Pooled pieces">
           <ul className="info-bubble-list">
             <li>
-              Ticking a boss cleared adds its pieces at its difficulty. Unticking takes them back.
+              In Interactive, Kalos, Kaling, First Adversary and Malefic Star drop one pooled pile
+              for the party.
             </li>
+            <li>Run solo, the whole pile is added when the boss is ticked cleared.</li>
             <li>
-              In Heroic (Reboot), every piece is instanced: each character gets their own count.
+              In a party, add the pile on Party View. It is split by the party&apos;s piece ratio.
             </li>
-            <li>
-              In Interactive, Limbo, Baldrix and Jupiter are instanced too. Kalos, Kaling, First
-              Adversary and Malefic Star drop one pooled pile for the whole party.
-            </li>
-            <li>
-              A pooled pile run solo is added whole. In a party, add it on Party View, split by the
-              party&apos;s piece ratio.
-            </li>
-            <li>Syncing is not retroactive: clears from before it was turned on are not added.</li>
           </ul>
         </InfoBubble>
       </div>
