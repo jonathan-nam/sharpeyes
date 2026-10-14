@@ -25,7 +25,7 @@
      headings stayed hard left, so widening the window slid them apart.
 
      It used to be 794px, the inventory window's own width, so the search bar and the game window
-     shared both edges. The window now grows its slots to fill whatever this is (see .ms-slot). */
+     shared both edges. The window now fits as many slots as this allows (see .ms-slot). */
   --measure: 1280px;
 
   /* Four steps and nothing between them, plus one display size kept to a single line. Reaching for
@@ -724,8 +724,7 @@ a:hover {
   --ms-slot: #dfdfdf;
   --ms-slot-edge: #c8c8c8;
 
-  /* The column's width, at any window width: the slots grow to fill it (see .ms-slot). Below the
-     16 slots' floor the window scrolls on its own rather than pushing the page sideways. */
+  /* The column's width, at any window width: a wider window fits more slots (see .ms-slot). */
   display: block;
   overflow-x: auto;
   /* top 8 pairs with .carousel's 8px bottom (the two collapse); bottom 16 keeps the dock spaced. */
@@ -978,8 +977,9 @@ a:hover {
   cursor: default;
 }
 
-/* Square, and as wide as a 16th of the window. Never below 44px: the client's own 42px fill and
-   its border, on the 46px pitch the 4px gap makes. */
+/* Square, and never below 44px: the client's own 42px fill and its border, on the 46px pitch the
+   4px gap makes. As many fit across as the window allows (useSlotColumns, which reads SLOT_PX for
+   this), and 1fr spreads the remainder, so a slot is at most a few px over. */
 .ms-slot {
   box-sizing: border-box;
   width: 100%;
@@ -1889,13 +1889,12 @@ img.user-avatar-img {
 }
 
 /* Inventory placeholder: stacked section blocks, matching a loaded inventory. Each grid mirrors
-   .ms-grid / SlotGrid exactly, 16 columns of 1fr, so it fills the window and lines up with the
-   search bar and carousel above instead of overhanging; .ms-section (reused) puts the real 10px
+   .ms-grid / SlotGrid exactly, the same measured columns of 1fr (useSlotColumns), so it fills the
+   window and lines up with the search bar and carousel above instead of overhanging; .ms-section (reused) puts the real 10px
    gap between them. These live in the always-light inventory window, so their base is the slot
    colour and the sweep is a brighter highlight than the dark-shell placeholders above. */
 .ms-grid-skeleton {
   display: grid;
-  grid-template-columns: repeat(16, 1fr);
   gap: 4px;
   margin: 0;
   padding: 6px;
