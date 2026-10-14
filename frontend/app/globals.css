@@ -1727,11 +1727,10 @@ img.user-avatar-img {
   margin-left: auto;
 }
 
-/* What a row unfolds: one link per line, indented under the row's own label. */
+/* What a row unfolds: one link per line, ruled off from the next and inset a little. */
 .hero-fold-items {
   display: flex;
   flex-direction: column;
-  padding: 4px;
   border-top: 1px solid var(--line);
 }
 
@@ -1743,11 +1742,14 @@ img.user-avatar-img {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 2px 8px 2px 32px;
-  border-radius: var(--radius-sm);
+  padding: 4px 12px 4px 24px;
   color: var(--ink-strong);
   font-size: var(--text-base);
   text-decoration: none;
+}
+
+.hero-fold-items a + a {
+  border-top: 1px solid var(--line);
 }
 
 /* --- Sectioned inventory ---------------------------------------------------------------- */
