@@ -447,14 +447,10 @@ export function buildDropLog(
 /**
  * Whether this drop is finished as far as THIS account can tell.
  *
- * NOT the same question as the party being square, and deliberately not. The server's PAID_OUT
- * wants every payout ticked, including ones between two other people: Scanian pays Daphynn
- * directly and nothing about that reaches here, so waiting on it is waiting for a fact nobody on
- * this account can observe, and ticking it to move the drop along would be recording a guess.
- * Prefer refusing over guessing means the drop has to be able to finish without one.
- *
- * So: every share this account could move has moved. What the party still owes between its other
- * members stays true, stays on the party's own row, and stops holding this account's books open.
+ * NOT the same question as the party being square, and deliberately not. A share between two other
+ * people (Scanian pays Daphynn directly) never reaches this account, so waiting on it is waiting for
+ * a fact nobody here can observe. The server's PAID_OUT asks the same question (statusOf in
+ * LootQueries.kt), and the pool row offers no toggle for such a share.
  */
 export function settledForYou(entry: DropEntry): boolean {
   if (entry.pieces) return false;

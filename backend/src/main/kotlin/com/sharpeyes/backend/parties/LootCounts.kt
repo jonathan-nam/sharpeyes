@@ -17,11 +17,11 @@ import kotlin.uuid.Uuid
 // predicates in countsOf, and each of them has been got wrong at least once in a way that put a
 // plausible number on a card rather than an error on screen.
 
-/** Unsold drops, sold ones with somebody still unpaid, and ones with nothing left to do. */
+/** Unsold drops, sold ones with a share of yours still unpaid, and ones with nothing left to do. */
 internal data class LootCounts(
     val pending: Int,
     val awaitingPayout: Int,
-    // Sold and everybody paid. Carried so a pool that is fully settled is still VISIBLE from the
+    // Sold and every share of yours paid. Carried so a pool that is fully settled is still VISIBLE from the
     // list: with only the two counters above, marking the last share paid made a party's whole
     // drop history vanish from its row, and there was nothing to say the pool was not empty.
     val settled: Int,
@@ -32,6 +32,7 @@ private data class LootRow(
     val partyId: Uuid,
     val droppedOn: LocalDate,
     val sold: Boolean,
+    val sellerMemberId: Uuid?,
     // Somebody has the item. The Heroic end-state, and terminal in the same way `sold` plus every
     // payout paid is: nothing further is owed or expected.
     val taken: Boolean,
@@ -53,9 +54,9 @@ private data class LootRow(
  * Nothing carries backwards. A drop that fell after the week being shown is not in that week, so a
  * settled pool stays settled when you step back to it.
  *
- * "Awaiting payout" is derived the same way the loot rows derive their status: sold, and at least
- * one payout row unpaid. Deriving it in one place and storing it in none is what keeps the card's
- * badge and the drop's own status from disagreeing.
+ * "Awaiting payout" is derived the same way the loot rows derive their status (statusOf): sold, and
+ * at least one share through one of your own seats unpaid. Deriving it in one place and storing it
+ * in none is what keeps the card's badge and the drop's own status from disagreeing.
  */
 internal fun lootCountsFor(
     partyIds: List<Uuid>,
@@ -74,16 +75,22 @@ internal fun lootCountsFor(
                         it[PartyLoot.partyId],
                         it[PartyLoot.droppedOn],
                         it[PartyLoot.soldAt] != null,
+                        it[PartyLoot.sellerMemberId],
                         it[PartyLoot.takenByMemberId] != null,
                     )
                 }
         }
     if (loot.isEmpty()) return emptyMap()
 
+    // Only shares that pass through your own seats hold a drop open. One between two other members
+    // is theirs to settle, and waiting on it left the drop awaiting payout with nothing to do.
+    val mine = ownSeatsIn(partyIds)
+    val sellerOf = loot.associate { it.id to it.sellerMemberId }
     val unpaidLootIds =
         PartyLootPayout
             .selectAll()
             .where { (PartyLootPayout.lootId inList loot.map { it.id }) and (PartyLootPayout.paid eq false) }
+            .filter { it[PartyLootPayout.memberId] in mine || sellerOf[it[PartyLootPayout.lootId]] in mine }
             .map { it[PartyLootPayout.lootId] }
             .toSet()
     val inPieces = pieceLootIds(partyIds)

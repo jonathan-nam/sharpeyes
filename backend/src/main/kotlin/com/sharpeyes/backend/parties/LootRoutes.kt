@@ -161,6 +161,7 @@ private suspend fun RoutingContext.setPayoutRoute() {
                 findLoot(lootId, partyId) == null -> null
                 // No row means this member is not on the drop's pinned roster: they joined after
                 // it sold, or they are the seller. Either way there is nothing owed to mark.
+                !crossesOwner(lootId, memberId) -> "This share is between two other members."
                 !setPayoutPaid(lootId, memberId, request.paid, Clock.System.now()) -> null
                 else -> findLoot(lootId, partyId)!!
             }
