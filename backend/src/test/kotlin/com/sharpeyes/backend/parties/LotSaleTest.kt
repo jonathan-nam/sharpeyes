@@ -197,6 +197,26 @@ class LotSaleTest {
     }
 
     @Test
+    fun `a kept row refuses the whole lot`() {
+        transaction {
+            val party = duo("limbo")
+            val partyId = Uuid.parse(party.id)
+            val good = addDrop(party, "grindstone-of-faith")
+            val kept = addDrop(party, "grindstone-of-faith")
+            setLootTakenBy(kept, Uuid.parse(party.members.first().id), Clock.System.now())
+
+            val why =
+                sellLot(
+                    "grindstone-of-faith",
+                    listOf(row(party, good, 500_000_000), row(party, kept, 500_000_000)),
+                )
+            assertTrue(why!!.contains("was kept since this list was drawn"))
+            assertEquals("PENDING", findLoot(good, partyId)!!.status)
+            assertEquals("TAKEN", findLoot(kept, partyId)!!.status)
+        }
+    }
+
+    @Test
     fun `a seller who did not run that week is refused`() {
         transaction {
             val party = duo("limbo")

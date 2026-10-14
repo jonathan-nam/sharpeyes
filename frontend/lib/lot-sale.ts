@@ -104,7 +104,9 @@ function sellableRows(
     if (!party || !canTrade(party.worldType)) continue;
 
     for (const loot of pool.loot) {
-      if (loot.soldAt !== null || loot.quantity < 1 || !wanted(loot, party)) continue;
+      // A kept drop is not for sale: #710 made it possible in a trading world.
+      if (loot.soldAt !== null || loot.takenByMemberId !== null) continue;
+      if (loot.quantity < 1 || !wanted(loot, party)) continue;
 
       const ran = party.seats.filter((s) => loot.ranThatWeek.includes(s.id));
       const seller = ran.find((s) => holderKey(holderOf(s)) === holder);
