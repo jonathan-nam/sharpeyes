@@ -77,7 +77,7 @@ export default function Home() {
 /**
  * One row, and the links its chevron unfolds when it has any.
  *
- * A row with a page links there and folds from a separate chevron. A row with no page (Bossing) is
+ * A row with a page links there and folds from its own chevron button. A row with no page (Bossing) is
  * all toggle, since a heading that navigated nowhere would lie about what it does.
  */
 function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
@@ -121,7 +121,7 @@ function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
           </button>
         )}
       </div>
-      <div id={panelId} className="hero-action-stages" hidden={!open}>
+      <div id={panelId} className="hero-fold-items" hidden={!open}>
         {children}
       </div>
     </div>

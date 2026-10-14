@@ -1654,15 +1654,26 @@ img.user-avatar-img {
   container-type: inline-size;
 }
 
-.hero-actions a,
-.hero-fold-head button {
+/* A row is one box. A folding row's link, toggle and unfolded links all sit inside it. */
+.hero-actions > a,
+.hero-fold {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.hero-actions > a:hover,
+.hero-fold:hover {
+  border-color: var(--ink-strong);
+}
+
+.hero-actions > a,
+.hero-fold-head > * {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
   color: var(--ink-strong);
   font-size: var(--text-lg);
   text-align: left;
@@ -1670,16 +1681,20 @@ img.user-avatar-img {
   cursor: pointer;
 }
 
-.hero-actions a:hover,
-.hero-fold-head button:hover {
-  border-color: var(--ink-strong);
+.hero-fold-head > * {
+  border: 0;
+  background: none;
+}
+
+.hero-actions > a:hover,
+.hero-fold-head > :hover,
+.hero-fold-items a:hover {
   background: var(--surface-2);
 }
 
-/* A row that folds: its link (or, with no page, its whole toggle) and then the chevron. */
+/* The link (or, with no page, the whole toggle) takes the row; the chevron sits at its end. */
 .hero-fold-head {
   display: flex;
-  gap: 8px;
 }
 
 .hero-fold-head > :first-child {
@@ -1691,34 +1706,42 @@ img.user-avatar-img {
   margin-left: auto;
 }
 
-.hero-fold-head .hero-fold-toggle {
+.hero-fold-head > .hero-fold-toggle {
   flex: none;
   justify-content: center;
-  width: 50px;
+  width: 44px;
   padding: 0;
 }
 
 /* What a row unfolds: one link per page. Equal shares, so no label sets the layout. */
-.hero-action-stages {
+.hero-fold-items {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 4px;
+  padding: 4px;
+  border-top: 1px solid var(--line);
 }
 
-.hero-action-stages[hidden] {
+.hero-fold-items[hidden] {
   display: none;
 }
 
-.hero-action-stages a {
+.hero-fold-items a {
   flex: 1 1 0;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-strong);
+  font-size: var(--text-base);
+  text-decoration: none;
 }
 
 /* "Settlements" beside its mark does not fit a third of a phone. */
 @container (max-width: 460px) {
-  .hero-action-stages a {
+  .hero-fold-items a {
     flex-direction: column;
     gap: 2px;
   }
