@@ -7,6 +7,7 @@ import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyLootPayout
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.PartyWeekSeat
+import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -176,10 +177,10 @@ internal fun validateRosterWeek(
     partyId: Uuid,
     week: LocalDate,
     thisWeek: LocalDate,
-): String? =
+): Refusal? =
     when {
-        week > thisWeek -> "a week that has not happened yet cannot be answered for"
-        week != thisWeek && payoutsPinnedIn(partyId, week) -> "that week has already been paid out"
+        week > thisWeek -> Refusal("That week hasn't happened yet.")
+        week != thisWeek && payoutsPinnedIn(partyId, week) -> Refusal("That week is paid out.")
         else -> null
     }
 

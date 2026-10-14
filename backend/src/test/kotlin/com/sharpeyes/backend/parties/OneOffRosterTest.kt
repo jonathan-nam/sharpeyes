@@ -4,6 +4,7 @@ import com.sharpeyes.backend.bosses.weekOf
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
@@ -176,8 +177,7 @@ class OneOffRosterTest {
                     bossIdForKey("limbo"),
                     Clock.System.now(),
                 )
-            assertNotNull(refusal)
-            assertTrue(refusal.contains("Steve"), refusal)
+            assertTrue(refusal is Refusal && refusal.refusal.contains("Steve"), refusal.toString())
         }
     }
 
@@ -219,7 +219,7 @@ class OneOffRosterTest {
         transaction {
             // The other half of the same rule: an edit has a config to demote, and a create does
             // not, so this would be a party of one on the page that lists parties.
-            assertEquals("a party needs somebody else in it", validateMembers(emptyList()))
+            assertEquals(Refusal("A party needs another member."), validateMembers(emptyList()))
             assertNull(validateMembers(emptyList(), allowNone = true))
         }
     }

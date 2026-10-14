@@ -5,6 +5,7 @@ import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.sprites.SpriteCache
 import com.sharpeyes.backend.users.ensureUser
@@ -32,6 +33,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
+import com.sharpeyes.backend.plugins.Refusal as Shown
 
 // A link that starts somebody else's account from your side of the parties you share. Three
 // audiences, and they are not the same person: the sender makes links, anybody holding one can see
@@ -232,8 +234,8 @@ private suspend fun RoutingContext.acceptInviteRoute(
 
     when (outcome) {
         Refusal.Unknown -> call.respond(HttpStatusCode.NotFound)
-        Refusal.Stale -> call.respond(HttpStatusCode.Gone, "this link is out of date, ask for a new one")
-        Refusal.Own -> call.respond(HttpStatusCode.Conflict, "this is your own link")
+        Refusal.Stale -> call.refuse(HttpStatusCode.Gone, Shown("This link has expired."))
+        Refusal.Own -> call.refuse(HttpStatusCode.Conflict, Shown("This is your own link."))
         Refusal.NothingTaken ->
             call.respond(HttpStatusCode.BadRequest, "tick at least one character that is yours")
         is AcceptedInvite -> call.respond(outcome)

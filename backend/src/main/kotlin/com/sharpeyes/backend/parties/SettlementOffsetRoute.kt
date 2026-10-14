@@ -3,8 +3,10 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -154,7 +156,7 @@ private suspend fun RoutingContext.closeRoute(kind: String) {
         }
     when (result) {
         is OffsetWrite.AlreadyDischarged ->
-            call.respond(HttpStatusCode.Conflict, "one of those shares is already discharged")
+            call.refuse(HttpStatusCode.Conflict, Refusal("Already settled. Reload to see it."))
         is OffsetWrite.NotYourPerson ->
             call.respond(HttpStatusCode.BadRequest, "personId is not somebody on your people list")
         is OffsetWrite.Unreachable ->

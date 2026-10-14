@@ -1,5 +1,6 @@
 "use client";
 
+import { failureText } from "@/lib/api";
 import { useState } from "react";
 import { holderKey, holderOf } from "@/lib/vestige-ledger";
 import {
@@ -102,7 +103,7 @@ function PickupBoxes({
     try {
       await onSave(drop.lootId, stacksToSave(whole));
     } catch (e) {
-      setRefusal(e instanceof Error ? e.message : "That didn't save.");
+      setRefusal(failureText(e, "That didn't save."));
     }
   }
 

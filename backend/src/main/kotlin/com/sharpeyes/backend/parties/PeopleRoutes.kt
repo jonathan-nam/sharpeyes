@@ -1,9 +1,11 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -69,7 +71,7 @@ private suspend fun RoutingContext.savePeopleRoute() {
             }
         }
     when (outcome) {
-        is String -> call.respond(HttpStatusCode.BadRequest, outcome)
+        is Refusal -> call.refuse(HttpStatusCode.BadRequest, outcome)
         else -> call.respond(outcome)
     }
 }
@@ -81,7 +83,7 @@ private suspend fun RoutingContext.savePeopleRoute() {
  * claiming the same one is a mistake, and letting it through would make "whose is this?" a
  * question with two answers.
  */
-internal fun validatePeople(request: SavePeopleRequest): String? {
+internal fun validatePeople(request: SavePeopleRequest): Refusal? {
     val names = request.people.map { it.name.trim() }
     val characters =
         request.people
@@ -90,9 +92,9 @@ internal fun validatePeople(request: SavePeopleRequest): String? {
             .map { it.lowercase() }
 
     return when {
-        names.any { it.isBlank() } -> "a person needs a name"
-        names.map { it.lowercase() }.distinct().size != names.size -> "two people share a name"
-        characters.distinct().size != characters.size -> "two people claim the same character"
+        names.any { it.isBlank() } -> Refusal("Every person needs a name.")
+        names.map { it.lowercase() }.distinct().size != names.size -> Refusal("Two people have the same name.")
+        characters.distinct().size != characters.size -> Refusal("Two people have the same character.")
         else -> null
     }
 }

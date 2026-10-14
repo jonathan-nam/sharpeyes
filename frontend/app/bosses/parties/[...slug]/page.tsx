@@ -7,11 +7,17 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
-import { apiAssetUrl } from "@/lib/api";
+import {
+  apiAssetUrl,
+  apiFetch,
+  failureText,
+  readBack,
+  SAVED_BUT_STALE,
+  StaleAfterWrite,
+} from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { useRowWrites } from "@/lib/use-row-writes";
-import { ApiError, SAVED_BUT_STALE, StaleAfterWrite, apiFetch, readBack } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import {
@@ -154,7 +160,7 @@ export default function PartyPage() {
       });
     } catch (e) {
       if (e instanceof StaleAfterWrite) setError(SAVED_BUT_STALE);
-      else setError(e instanceof ApiError ? e.body : "That didn't save.");
+      else setError(failureText(e, "That didn't save."));
     }
   }
 
@@ -202,7 +208,7 @@ export default function PartyPage() {
       invalidate("/api/parties");
       router.push("/bosses/parties");
     } catch (e) {
-      setError(e instanceof ApiError && e.body !== "" ? e.body : "Couldn't leave that party.");
+      setError(failureText(e, "Couldn't leave that party."));
     }
   }
 

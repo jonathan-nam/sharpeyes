@@ -1,7 +1,9 @@
 package com.sharpeyes.backend.bosses
 
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
@@ -128,9 +130,9 @@ internal suspend fun RoutingContext.setBossRoutineRoute() {
         // Shown to the user as-is, so it is a sentence rather than an error code. The editor locks
         // these bosses, so meeting this means the two got out of step.
         is RoutineRefusal.HasParty ->
-            call.respond(
+            call.refuse(
                 HttpStatusCode.Conflict,
-                "${outcome.bossNames.joinToString(", ")}: remove the party first.",
+                Refusal("Remove the party first: ${outcome.bossNames.joinToString(", ")}."),
             )
         else -> call.respond(outcome as BossClearsViewResponse)
     }

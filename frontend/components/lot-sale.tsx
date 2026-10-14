@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Field } from "@/components/add-field";
-import { apiAssetUrl } from "@/lib/api";
+import { apiAssetUrl, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
 import {
@@ -127,7 +127,7 @@ function LotCard({
       setAmount("");
       setShares({});
     } catch (e) {
-      setRefusal(e instanceof Error ? e.message : "That didn't save.");
+      setRefusal(failureText(e, "That didn't save."));
     }
   }
 

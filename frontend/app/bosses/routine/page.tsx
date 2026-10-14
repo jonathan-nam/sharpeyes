@@ -7,7 +7,7 @@ import { OtherWorld } from "@/components/other-world";
 import { useEffect, useRef, useState } from "react";
 import { BossRoutineEditor } from "@/components/boss-routine-editor";
 import { CharacterPicker } from "@/components/character-picker";
-import { ApiError, apiFetch } from "@/lib/api";
+import { apiFetch, failureText } from "@/lib/api";
 import { nextSkips } from "@/lib/boss-clears";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
@@ -128,7 +128,7 @@ export default function BossRoutinePage() {
       // Back to the server's set: what we asked for is not what it holds, and building the next
       // tick on it would send a set nobody has agreed to.
       asked.current = null;
-      setError(e instanceof ApiError ? e.body : "Couldn't save that.");
+      setError(failureText(e, "Couldn't save that."));
     }
   }
 
@@ -158,7 +158,7 @@ export default function BossRoutinePage() {
         });
       });
     } catch (e) {
-      setError(e instanceof ApiError ? e.body : "Couldn't save that.");
+      setError(failureText(e, "Couldn't save that."));
     }
   }
 

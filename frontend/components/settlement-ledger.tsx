@@ -22,7 +22,7 @@ import {
   settleThePair,
   shareKey,
 } from "@/lib/settlement";
-import { apiAssetUrl } from "@/lib/api";
+import { apiAssetUrl, failureText } from "@/lib/api";
 import { CopyAmount } from "@/components/copy-amount";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
 import { copyText, formatDollars, formatMoney } from "@/lib/money";
@@ -315,7 +315,7 @@ function SettlementCard({
       await action;
       clear?.();
     } catch (e) {
-      setRefusal(e instanceof Error ? e.message : "That didn't save.");
+      setRefusal(failureText(e, "That didn't save."));
     }
   }
 
