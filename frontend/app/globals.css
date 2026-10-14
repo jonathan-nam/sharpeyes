@@ -24,19 +24,21 @@
      themselves at 792px, the carousel stretched to the viewport, and the inventory window and the
      headings stayed hard left, so widening the window slid them apart.
 
-     It used to be 794px, the inventory window's measured border-box width (16 slots at 42px + 1px
-     borders, 4px gaps, 6px grid padding, 8px grid margins, 1px window border), so the search bar
-     and the game window shared both edges. At 1280px the window no longer fills the column. */
+     It used to be 794px, the inventory window's own width, so the search bar and the game window
+     shared both edges. The window now fits as many slots as this allows (see .ms-slot). */
   --measure: 1280px;
 
-  /* Four steps and nothing between them. Reaching for a fifth size is a design decision, not a
-     nudge, so it has to be made here where all four are visible at once. The inventory window is
+  /* Four steps and nothing between them, plus one display size kept to a single line. Reaching for
+     another size is a design decision, not a nudge, so it has to be made here where all of them are
+     visible at once. The inventory window is
      the one exemption: it replicates the game client at a measured 12/18, which is not ours to
      round. */
   --text-sm: 11px;
   --text-base: 13px;
   --text-lg: 15px;
   --text-xl: 20px;
+  /* Only for the home screen's IGN, the one line asked to outrank a page title. */
+  --text-display: 32px;
 
   /* Three steps and a pill. There are two container sizes because a corner nested inside another
      has to be the smaller one, so md is what sits in lg, not a second opinion about lg. The pill
@@ -722,9 +724,9 @@ a:hover {
   --ms-slot: #dfdfdf;
   --ms-slot-edge: #c8c8c8;
 
-  display: inline-block;
-  width: max-content;
-  max-width: 100%;
+  /* The column's width, at any window width: a wider window fits more slots (see .ms-slot). */
+  display: block;
+  overflow-x: auto;
   /* top 8 pairs with .carousel's 8px bottom (the two collapse); bottom 16 keeps the dock spaced. */
   margin: 8px 0 16px;
   padding-bottom: 6px;
@@ -975,10 +977,14 @@ a:hover {
   cursor: default;
 }
 
-/* 42px fill on a 46px pitch: the client's own slot size. */
+/* Square, and never below 44px: the client's own 42px fill and its border, on the 46px pitch the
+   4px gap makes. As many fit across as the window allows (useSlotColumns, which reads SLOT_PX for
+   this), and 1fr spreads the remainder, so a slot is at most a few px over. */
 .ms-slot {
-  width: 42px;
-  height: 42px;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 44px;
+  aspect-ratio: 1;
   position: relative;
   border: 1px solid var(--ms-slot-edge);
   border-radius: 5px;
@@ -994,8 +1000,8 @@ a:hover {
 }
 
 /* Filled slots render as a <button> when clickable (clicking searches every character for the
-   item). Strip the button chrome so they lay out exactly like the <div> slots: with no global
-   box-sizing the slot is content-box 42x42, so any default button padding would break the grid. */
+   item). Strip the button chrome so they lay out exactly like the <div> slots: any default button
+   padding would break the grid. */
 button.ms-slot {
   padding: 0;
   font: inherit;
@@ -1018,7 +1024,7 @@ button.ms-slot {
  * helped; the damage was happening at paint time.
  *
  * The asset IS the client's 46px slot, with the border ring alpha'd away. So centre that frame on
- * our 42px slot and the artwork lands exactly where the client puts it. Including the icons that
+ * our slot and the artwork lands exactly where the client puts it. Including the icons that
  * are genuinely off-centre in-game, because their glow or shadow is lopsided. Centring the FRAME
  * is right; centring the artwork inside it would be us second-guessing the game. */
 .ms-slot > img {
@@ -1036,12 +1042,12 @@ button.ms-slot {
  *
  * Placed from the sprite geometry, not by eye. In the client's 46px slot the glyphs are 11px tall
  * and their band starts at y=25 (ocr.py's BAND_TOP), so they occupy roughly y=27..38, hard against
- * the left edge. The 46px frame is centred on our 42px slot, i.e. offset by -2px, which puts the
- * digits' baseline 6px up from the slot's bottom and their left edge flush with it. */
+ * the left edge, so their baseline is 8px up from the frame's bottom. The frame is centred on the
+ * slot, so both offsets follow it as the slot grows: 6px up and flush left at the 42px floor. */
 .ms-qty {
   position: absolute;
-  bottom: 6px;
-  left: 0;
+  bottom: calc(50% - 15px);
+  left: max(0px, calc(50% - 23px));
   z-index: 1;
   display: flex;
   align-items: flex-end;
@@ -1052,15 +1058,6 @@ button.ms-slot {
 .ms-qty img {
   display: block;
   image-rendering: pixelated;
-}
-
-/* 16 slots at 46px is a wide window. Let it scroll on its own rather than
-   pushing the page sideways. */
-@media (width <= 900px) {
-  .ms-window {
-    display: block;
-    overflow-x: auto;
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1093,15 +1090,17 @@ button.ms-slot {
   display: none;
 }
 
-/* Four across the strip, whatever the strip is wide: four is the number anywhere this app puts
+/* Six across the strip, whatever the strip is wide: six is the number anywhere this app puts
    sprites in a row (lib/carousel.ts, pinned to this rule by lib/carousel.test.ts). A share of the
-   track rather than a fixed width, so the strip fills its column and the fifth tile is fully off
-   the end. Capping the track's width instead let a fifth name show at the edge, because a long IGN
-   widened its own tile past the width the cap was arithmetic on: min-width is the flex default of
-   auto, so content, not the declared width, was setting the tile's size. */
+   track rather than a fixed width, so the strip fills its column and the seventh tile is fully off
+   the end. The floor is the 96px sprite and the tile's 4px padding: a window too narrow for six
+   shows fewer and scrolls, rather than overlapping the sprites. Capping the track's width instead
+   let the next name show at the edge, because a long IGN widened its own tile past the width the
+   cap was arithmetic on: min-width is the flex default of auto, so content, not the declared
+   width, was setting the tile's size. */
 .carousel-track .char-tile,
 .carousel-track .roster-tile {
-  flex: 0 0 calc((100% - 3 * 16px) / 4);
+  flex: 0 0 max(calc((100% - 5 * 16px) / 6), 104px);
   box-sizing: border-box;
   min-width: 0;
   scroll-snap-align: start;
@@ -1178,6 +1177,23 @@ button.ms-slot {
 
 .brand:hover .brand-name {
   color: var(--ink-strong);
+}
+
+/* A phone cannot fit the name, the menu, the world toggle and the avatar on one line, and the
+   overflow pushed the whole page sideways. The mark stays; the name stays for screen readers. */
+@media (width <= 480px) {
+  .site-header-inner {
+    gap: 16px;
+  }
+
+  .brand-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 .site-nav {
@@ -1633,9 +1649,36 @@ img.user-avatar-img {
   margin: 0 auto 20px;
 }
 
+/* The main's avatar in place of the mark. Also the empty slot held while settings load. */
+.hero-sprite {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 12px;
+  object-fit: contain;
+  object-position: center bottom;
+  image-rendering: pixelated;
+}
+
 .hero h1 {
   margin: 0 0 12px;
   font-size: var(--text-xl);
+}
+
+/* The IGN is the line that matters, so the greeting steps down above it. */
+.hero-greeting {
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 400;
+}
+
+.hero-ign {
+  display: block;
+  color: var(--ink-strong);
+  font-size: var(--text-display);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .hero p {
@@ -1651,18 +1694,28 @@ img.user-avatar-img {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  container-type: inline-size;
 }
 
-.hero-actions a,
-.hero-fold-head button {
+/* A row is one box. A folding row's toggle and the links it unfolds both sit inside it. */
+.hero-actions > a,
+.hero-fold {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.hero-actions > a:hover,
+.hero-fold:hover {
+  border-color: var(--ink-strong);
+}
+
+.hero-actions > a,
+.hero-fold-head {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--surface);
   color: var(--ink-strong);
   font-size: var(--text-lg);
   text-align: left;
@@ -1670,58 +1723,46 @@ img.user-avatar-img {
   cursor: pointer;
 }
 
-.hero-actions a:hover,
-.hero-fold-head button:hover {
-  border-color: var(--ink-strong);
-  background: var(--surface-2);
-}
-
-/* A row that folds: its link (or, with no page, its whole toggle) and then the chevron. */
+/* The box is the fold's, so the button inside it draws none of its own. */
 .hero-fold-head {
-  display: flex;
-  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
 }
 
-.hero-fold-head > :first-child {
-  flex: 1 1 auto;
-  min-width: 0;
+.hero-actions > a:hover,
+.hero-fold-head:hover,
+.hero-fold-items a:hover {
+  background: var(--surface-2);
 }
 
 .hero-fold-caret {
   margin-left: auto;
 }
 
-.hero-fold-head .hero-fold-toggle {
-  flex: none;
-  justify-content: center;
-  width: 50px;
-  padding: 0;
-}
-
-/* What a row unfolds: one link per page. Equal shares, so no label sets the layout. */
-.hero-action-stages {
+/* What a row unfolds: one link per line, ruled off from the next and inset a little. */
+.hero-fold-items {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
 }
 
-.hero-action-stages[hidden] {
+.hero-fold-items[hidden] {
   display: none;
 }
 
-.hero-action-stages a {
-  flex: 1 1 0;
-  min-width: 0;
-  gap: 8px;
-  padding: 6px 8px;
+.hero-fold-items a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 24px;
+  color: var(--ink-strong);
+  font-size: var(--text-base);
+  text-decoration: none;
 }
 
-/* "Settlements" beside its mark does not fit a third of a phone. */
-@container (max-width: 460px) {
-  .hero-action-stages a {
-    flex-direction: column;
-    gap: 2px;
-  }
+.hero-fold-items a + a {
+  border-top: 1px solid var(--line);
 }
 
 /* --- Sectioned inventory ---------------------------------------------------------------- */
@@ -1848,13 +1889,12 @@ img.user-avatar-img {
 }
 
 /* Inventory placeholder: stacked section blocks, matching a loaded inventory. Each grid mirrors
-   .ms-grid / SlotGrid exactly, 16 columns of 1fr, so it fills the window and lines up with the
-   search bar and carousel above instead of overhanging; .ms-section (reused) puts the real 10px
+   .ms-grid / SlotGrid exactly, the same measured columns of 1fr (useSlotColumns), so it fills the
+   window and lines up with the search bar and carousel above instead of overhanging; .ms-section (reused) puts the real 10px
    gap between them. These live in the always-light inventory window, so their base is the slot
    colour and the sweep is a brighter highlight than the dark-shell placeholders above. */
 .ms-grid-skeleton {
   display: grid;
-  grid-template-columns: repeat(16, 1fr);
   gap: 4px;
   margin: 0;
   padding: 6px;
@@ -1865,8 +1905,11 @@ img.user-avatar-img {
 .sk-slot {
   position: relative;
   overflow: hidden;
-  width: 42px;
-  height: 42px;
+  /* .ms-slot's box, so the grid it stands in for is the same height. */
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 44px;
+  aspect-ratio: 1;
   border: 1px solid var(--ms-slot-edge);
   border-radius: 5px;
   background: var(--ms-slot);

@@ -19,12 +19,15 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
- * A drop is settled once every share through one of your seats is paid. See crossesOwner.
+ * What is yours to settle or keep. A drop is settled once every share through one of your seats is
+ * paid (crossesOwner), and only a drop you got solo can be kept without a sale (keptSolo).
  *
  * Its own class rather than more of PartyLootTest, which is already the size detekt allows.
  */
@@ -89,6 +92,39 @@ class YourSharesTest {
             dropped,
             Clock.System.now(),
         )
+
+    @Test
+    fun `a drop you got solo can be kept, a party drop cannot`() {
+        transaction {
+            val party = trio()
+            val partyId = Uuid.parse(party.id)
+            val rune = seat(party, "Rune").id
+            val steve = Uuid.parse(seat(party, "Steve").id)
+            val solo =
+                addLoot(
+                    partyId,
+                    LootedDrop(dropIdForKey("grindstone-of-faith")!!),
+                    bossIdForKey("limbo"),
+                    dropped,
+                    Clock.System.now(),
+                    LootSource(solo = true),
+                )
+            val shared = addGrindstone(party)
+
+            val soloLoot = findLoot(solo, partyId)!!
+            assertTrue(soloLoot.solo)
+            assertTrue(keptSolo(soloLoot.solo, partyId, Uuid.parse(rune)))
+            assertFalse(keptSolo(soloLoot.solo, partyId, steve))
+            assertNull(takenRefusal(rune, soloLoot.ranThatWeek, canSell = true, sold = false, keptSolo = true))
+
+            // Steve and Bob ran too, so keeping it would quietly stop them being paid.
+            val sharedLoot = findLoot(shared, partyId)!!
+            assertFalse(keptSolo(sharedLoot.solo, partyId, Uuid.parse(rune)))
+            assertNotNull(
+                takenRefusal(rune, sharedLoot.ranThatWeek, canSell = true, sold = false, keptSolo = false),
+            )
+        }
+    }
 
     private fun seat(
         party: PartyResponse,

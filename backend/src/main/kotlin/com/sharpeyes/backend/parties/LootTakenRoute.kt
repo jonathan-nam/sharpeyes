@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -10,6 +11,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receive
 import io.ktor.server.routing.RoutingContext
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -19,7 +22,8 @@ import kotlin.uuid.Uuid
 // reasoning behind the refusal is longer than the handler.
 
 /**
- * Who took this drop, in a world that cannot sell it. A null memberId puts it back in the pool.
+ * Who took this drop, in a world that cannot sell it, or which of your characters kept a drop you got
+ * solo. A null memberId puts it back in the pool.
  *
  * Refused where the party CAN sell, which is not a technicality. In a trading world a drop that
  * changes hands is a sale, with a pot and a roster owed a share of it, and letting it be recorded
@@ -53,6 +57,7 @@ internal suspend fun RoutingContext.setTakenRoute() {
                         // The row already carries the catalog's flag, so this needs only the world
                         // it is read against. See isPerMember.
                         isPerMember(loot.perMember, partyWorld(partyId) ?: WORLD_INTERACTIVE),
+                        keptSolo(loot.solo, partyId, memberId),
                     ) ?: run {
                         setLootTakenBy(lootId, memberId, Clock.System.now())
                         findLoot(lootId, partyId)!!
@@ -60,4 +65,19 @@ internal suspend fun RoutingContext.setTakenRoute() {
             }
         }
     respondToLoot(outcome, HttpStatusCode.OK)
+}
+
+/** The drop fell on a solo run or in a solo pool, and [memberId] is one of your own seats. */
+internal fun keptSolo(
+    lootSolo: Boolean,
+    partyId: Uuid,
+    memberId: Uuid?,
+): Boolean {
+    val soloPool =
+        Party
+            .selectAll()
+            .where { Party.id eq partyId }
+            .firstOrNull()
+            ?.get(Party.solo) == true
+    return (lootSolo || soloPool) && memberId != null && memberId in ownSeatsIn(listOf(partyId))
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { COLS, SlotGrid, type SlotItem } from "@/components/slot-grid";
+import { SlotGrid, useSlotColumns, type SlotItem } from "@/components/slot-grid";
 import type { TokenCatalogItem } from "@/types/token-catalog";
 
 // The client's tab row, in its order and with its spelling ("Etc." and "Set-up" carry their
@@ -18,13 +18,14 @@ const OTHER = "Other";
 export type InventoryItem = SlotItem & { itemGroup?: string | null };
 
 // The content area the panel shows while `loading`, shaped like a loaded inventory: stacked
-// section blocks (a header, then a rounded grid of the 16-column, 42px lattice), spaced apart the
+// section blocks (a header, then a rounded grid of the same slots), spaced apart the
 // same way the real sections are, so the real content replaces it without the layout jumping. Rows
 // per section evoke the real SECTION_ORDER (Eternal Pieces, Symbols, Consumables) rather than one
 // solid slab. Styles live in globals.css (.ms-grid-skeleton / .sk-slot / .sk-inv-line).
 const SKELETON_SECTION_ROWS = [1, 1, 1];
 
 function InventoryGridSkeleton() {
+  const [ref, cols] = useSlotColumns();
   return (
     <div aria-hidden="true">
       {SKELETON_SECTION_ROWS.map((rows, s) => (
@@ -33,8 +34,12 @@ function InventoryGridSkeleton() {
             <span className="sk-inv-line" style={{ width: 96 }} />
             <span className="sk-inv-line ms-section-count" style={{ width: 34 }} />
           </header>
-          <div className="ms-grid-skeleton">
-            {Array.from({ length: COLS * rows }).map((_, i) => (
+          <div
+            ref={s === 0 ? ref : undefined}
+            className="ms-grid-skeleton"
+            style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+          >
+            {Array.from({ length: cols * rows }).map((_, i) => (
               <span key={i} className="sk-slot" />
             ))}
           </div>
@@ -178,7 +183,6 @@ export function InventoryPanel({
             </header>
             <SlotGrid
               items={section.items}
-              rows={Math.max(1, Math.ceil(section.items.length / COLS))}
               onAdjust={onAdjust}
               onCommit={onCommit}
               // The LAST section only, so there is one + on the screen rather than one per
@@ -192,7 +196,7 @@ export function InventoryPanel({
         // Nothing held yet, which is the case with no slot to hover at all and so the one that
         // most needs a way in. The grid is drawn holding only the +.
         <section className="ms-section">
-          <SlotGrid items={[]} rows={1} addable={addable} onAdd={onAdd} />
+          <SlotGrid items={[]} addable={addable} onAdd={onAdd} />
         </section>
       ) : (
         <div className="ms-empty">

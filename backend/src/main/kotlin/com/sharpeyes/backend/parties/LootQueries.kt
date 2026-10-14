@@ -296,6 +296,7 @@ private fun ResultRow.toLootResponse(
         sellerShares = this[PartyLoot.sellerShares],
         sellerMemberId = this[PartyLoot.sellerMemberId]?.toString(),
         takenByMemberId = takenBy,
+        solo = this[PartyLoot.solo],
         soldAt = this[PartyLoot.soldAt]?.toString(),
         recordedAt = this[PartyLoot.createdAt].toString(),
         payouts = payouts,

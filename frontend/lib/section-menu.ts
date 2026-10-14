@@ -62,9 +62,9 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
   },
 ];
 
-/** A row on the welcome-back screen: a link, a heading that only folds, or a link that also folds. */
+/** A row on the welcome-back screen: a link, or a heading that folds open to its links. */
 export type HomeRow = {
-  /** Undefined for a heading with no page of its own. */
+  /** Undefined for a heading with no page of its own. A row that folds is drawn as a toggle either way. */
   href?: string;
   label: string;
   /** What its chevron unfolds. The Drop Log's stages are not menu entries, so the page adds those. */

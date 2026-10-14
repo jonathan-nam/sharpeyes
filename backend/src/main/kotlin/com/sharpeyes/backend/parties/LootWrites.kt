@@ -215,9 +215,9 @@ internal fun unsellLoot(
 /**
  * Records who took the item, or clears it when [memberId] is null.
  *
- * The Heroic counterpart of sellLoot, and much smaller than it because nothing follows: no pot to
- * divide, no payout rows to pin, nobody owed. The item cannot move again, so the only fact worth
- * keeping is which seat has it.
+ * The Heroic counterpart of sellLoot, and a drop you got solo and kept. Much
+ * smaller than a sale because nothing follows: no pot to divide, no payout rows to pin, nobody owed.
+ * The only fact worth keeping is which seat has it.
  */
 internal fun setLootTakenBy(
     lootId: Uuid,
