@@ -24,11 +24,10 @@
      themselves at 792px, the carousel stretched to the viewport, and the inventory window and the
      headings stayed hard left, so widening the window slid them apart.
 
-     794px is the inventory window's measured border-box width (16 slots at 42px + 1px borders, 4px
-     gaps, 6px grid padding, 8px grid margins, 1px window border). The column is set to exactly that
-     so the search bar, the results and the game window share both edges. Any less and the window
-     overflowed the column by 2px; any more and the search bar overhung the window. */
-  --measure: 794px;
+     It used to be 794px, the inventory window's measured border-box width (16 slots at 42px + 1px
+     borders, 4px gaps, 6px grid padding, 8px grid margins, 1px window border), so the search bar
+     and the game window shared both edges. At 1280px the window no longer fills the column. */
+  --measure: 1280px;
 
   /* Four steps and nothing between them. Reaching for a fifth size is a design decision, not a
      nudge, so it has to be made here where all four are visible at once. The inventory window is
