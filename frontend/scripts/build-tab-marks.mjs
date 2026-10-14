@@ -44,8 +44,8 @@ const BOSS_ART = join(
 const ICON_VERSION = 268;
 
 // Not the catalog's 46. A tab mark is drawn at its canvas size, so the canvas IS the drawn size.
-// 36 is the largest sprite in the set below (the boss crystal), which is what lets every one of them
-// sit 1:1. Raising it grows every chip in the strip, so raise it deliberately when a mark needs it,
+// 36 was sized for the boss crystal, since retired. The largest sprite now is Royal Family Chair
+// (34x30), so every one of them sits 1:1. Raising it grows every chip in the strip, so raise it deliberately when a mark needs it,
 // and never as a way of making one fit.
 const MARK_CANVAS = 36;
 
@@ -61,12 +61,13 @@ const MARKS = [
   // The Free Market search owl: the game's own mark for dealing with another player, which is what
   // a settlement is.
   { key: "owl-of-minerva", id: 2310000, name: "The Owl of Minerva" },
-  // The home screen's rows. A character card for the characters, a bag for the inventory, the
-  // weekly boss crystal for a week of clears, and a party hat for the parties.
-  { key: "character-slot-coupon", id: 5430000, name: "Extra Character Slot Coupon" },
+  // The home screen's rows. A character's photo for the characters, a bag for the inventory, a
+  // ticked sheet for a week of clears, a group on stage for the parties, and a route for Run Order.
+  { key: "roly-poly-photo", id: 4031079, name: "Photo of Roly-Poly 1" },
   { key: "party-quest-bag", id: 4330016, name: "8-slot Party Quest Bag" },
-  { key: "intense-power-crystal", id: 4001928, name: "Intense Power Crystal (Weekly)" },
-  { key: "party-hat", id: 1002345, name: "Party Hat" },
+  { key: "attendance-sheet", id: 4032057, name: "Attendance Sheet" },
+  { key: "royal-family-chair", id: 3015799, name: "Royal Family Chair" },
+  { key: "treasure-map", id: 3994353, name: "Pirate King's Treasure Map <1st Piece>" },
   // The home screen's Bossing row. A boss portrait, so it is cut from a planner capture rather than
   // fetched: see vision/app/cv/build_boss_portraits.py.
   { key: "jupiter", file: join(BOSS_ART, "jupiter.png") },

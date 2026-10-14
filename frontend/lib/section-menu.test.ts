@@ -94,10 +94,14 @@ describe("what the welcome-back screen offers", () => {
     ]);
   });
 
-  it("folds the two boss views under Bossing, which is not a page", () => {
+  it("folds the boss views and Run Order under Bossing, which is not a page", () => {
     const bossing = HOME_ROWS.find((r) => r.label === "Bossing")!;
     expect(bossing.href).toBeUndefined();
-    expect(bossing.items.map((i) => i.label)).toEqual(["Individual View", "Party View"]);
+    expect(bossing.items.map((i) => i.label)).toEqual([
+      "Individual View",
+      "Party View",
+      "Run Order",
+    ]);
   });
 
   it("takes every label from the menu, so the two cannot drift apart", () => {
