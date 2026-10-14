@@ -101,7 +101,9 @@ export function BossRoutineEditor({
                         difficulties={boss.difficulties}
                         value={difficultyByBoss.get(boss.bossKey) ?? ""}
                         label={`Difficulty ${characterName} runs ${boss.name} at`}
-                        disabled={isSaving(boss.bossKey)}
+                        // Read-only while a party holds the boss, like the box beside it: the
+                        // party's config is where its difficulty is changed.
+                        disabled={locked || isSaving(boss.bossKey)}
                         required
                         onChange={(picked) =>
                           onDifficulty(boss.bossKey, picked === "" ? null : picked)

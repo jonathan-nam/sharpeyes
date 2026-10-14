@@ -37,14 +37,15 @@ import kotlin.uuid.Uuid
 
 /** Why a cleared boss's pieces were not added. Shown beside the setting. */
 enum class PieceSyncGap {
-    // No standing config names the mode this character runs the boss at.
+    // No config names the mode this character runs the boss at.
     NO_DIFFICULTY,
 
-    // A pooled drop in a party whose pieces nobody has added on Party View yet.
-    PARTY_LOOT,
+    // Cleared in a week its standing party was taken off, so who ran it is not known.
+    PARTY_OFF,
 
-    // Ticked before the sync was on. Whether the count already includes it is unknown.
-    BEFORE_SYNC,
+    // A pooled drop in a party whose pieces nobody has added yet. Never listed: Party View's Add
+    // button on the party is that message, where it can be acted on.
+    PARTY_LOOT,
 }
 
 /** The capture a clear arrived with. Its inventory read, if any, already includes the drop. */
@@ -173,34 +174,42 @@ private fun owedFor(
             .selectAll()
             .where { (TokenClearAmount.bossCatalogId eq bossCatalogId) and (TokenClearAmount.world eq world) }
             .associateBy { it[TokenClearAmount.difficulty] }
-    val (config, alone) = configFor(characterId, bossCatalogId, period) ?: (null to false)
+    val read = configFor(characterId, bossCatalogId, period)
     // build.py refuses a boss with a mode nobody counted, so a miss on a boss that has rows is the
     // catalog and the config disagreeing about which modes exist. Refused rather than read as none.
-    val amount = config?.get(Party.difficulty)?.let { amounts[it] }
+    val amount = read.config?.get(Party.difficulty)?.let { amounts[it] }
     return when {
         // A boss that drops no Eternal pieces at any mode.
         amounts.isEmpty() -> Owed.None
+        read.partyOff -> Owed.Gap(PieceSyncGap.PARTY_OFF)
         amount == null -> Owed.Gap(PieceSyncGap.NO_DIFFICULTY)
         amount[TokenClearAmount.quantity] == 0 -> Owed.None
-        amount[TokenClearAmount.pooled] && !alone -> Owed.Gap(PieceSyncGap.PARTY_LOOT)
+        amount[TokenClearAmount.pooled] && !read.alone -> Owed.Gap(PieceSyncGap.PARTY_LOOT)
         else -> Owed.Pieces(amount[TokenClearAmount.tokenCatalogId], amount[TokenClearAmount.quantity])
     }
 }
 
+/** The config a clear is read against, whether it was a run alone, and whether its party was off. */
+private data class ConfigRead(
+    val config: ResultRow?,
+    val alone: Boolean,
+    val partyOff: Boolean,
+)
+
 /**
- * The config a clear in [period] is read against, and whether it was a run alone. Null when the
- * character has none that says anything about that period.
+ * The config a clear in [period] is read against. None when the character has no config that says
+ * anything about that period.
  *
  * A one-off that is not on [period] is an earlier week's temp party, which keeps the pair's slot
  * (one config per pair) without saying anything about now. A clear then was run alone, at the mode
- * the config was left on: one difficulty, last writer wins. A standing party skipped that week is
+ * the config was left on: one difficulty, last writer wins. A standing party taken off that week is
  * not read as a solo run: who was there is not known.
  */
 private fun configFor(
     characterId: Uuid,
     bossCatalogId: Uuid,
     period: LocalDate,
-): Pair<ResultRow, Boolean>? {
+): ConfigRead {
     val held =
         Party
             .selectAll()
@@ -209,7 +218,12 @@ private fun configFor(
             ?.takeIf { it[Party.standing] }
     val runs = held != null && runsInPeriod(held[Party.id], held[Party.oneOff], period)
     val aloneAfterTemp = held != null && held[Party.oneOff] && !runs
-    return held?.takeIf { runs || aloneAfterTemp }?.let { it to (it[Party.solo] || aloneAfterTemp) }
+    val config = held?.takeIf { runs || aloneAfterTemp }
+    return ConfigRead(
+        config = config,
+        alone = config?.get(Party.solo) == true || aloneAfterTemp,
+        partyOff = held != null && !runs && !held[Party.oneOff],
+    )
 }
 
 private fun countRow(
@@ -291,7 +305,11 @@ data class PieceSyncGapResponse(
 )
 
 /**
- * This period's cleared bosses, in the world being shown, whose pieces the sync did not add.
+ * This period's cleared bosses, in the world being shown, whose pieces the sync cannot add and
+ * nothing else on screen says so.
+ *
+ * Not a pooled party's pile (Party View's Add button is that message), and not a clear ticked before
+ * the sync was on (the sync never backfills, and it is gone at the reset).
  *
  * Empty while the sync is off: nothing was promised, so nothing is missing.
  */
@@ -316,22 +334,8 @@ internal fun pieceSyncGapsFor(
         .mapNotNull { row ->
             val characterId = row[BossClear.characterId]
             val bossId = row[BossClear.bossCatalogId]
-            val period = row[BossClear.periodStart]
-            val credited =
-                !PieceClearCredit
-                    .selectAll()
-                    .where {
-                        (PieceClearCredit.characterId eq characterId) and
-                            (PieceClearCredit.bossCatalogId eq bossId) and
-                            (PieceClearCredit.periodStart eq period)
-                    }.empty()
-            val owed = if (credited) Owed.None else owedFor(characterId, bossId, period)
-            val reason =
-                when (owed) {
-                    is Owed.Gap -> owed.gap
-                    is Owed.Pieces -> PieceSyncGap.BEFORE_SYNC
-                    Owed.None -> null
-                } ?: return@mapNotNull null
+            val owed = owedFor(characterId, bossId, row[BossClear.periodStart])
+            val reason = (owed as? Owed.Gap)?.gap?.takeIf { it != PieceSyncGap.PARTY_LOOT } ?: return@mapNotNull null
             PieceSyncGapResponse(
                 characterId = characterId.toString(),
                 characterName = row[Characters.name],

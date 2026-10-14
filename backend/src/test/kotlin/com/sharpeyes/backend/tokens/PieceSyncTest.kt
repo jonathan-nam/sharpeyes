@@ -378,7 +378,8 @@ class PieceSyncTest {
             tick(me, "kalos-the-guardian")
             // Added on Party View, like coupons. PiecePileTest covers adding it.
             assertEquals(0, held(me, "kalos-token"))
-            assertEquals(listOf("kalos-the-guardian" to PieceSyncGap.PARTY_LOOT), gaps())
+            // Not listed: the party's Add button on Party View is that message.
+            assertEquals(emptyList(), gaps())
         }
     }
 
@@ -495,14 +496,14 @@ class PieceSyncTest {
     }
 
     @Test
-    fun `a clear ticked before the sync was on is listed rather than added`() {
+    fun `a clear ticked before the sync was on is neither added nor listed`() {
         transaction {
             val me = character(sync = false)
             solo(me, "limbo", "HARD")
             tick(me, "limbo")
             Users.update({ Users.id eq userId }) { it[syncPiecesFromClears] = true }
             assertEquals(0, held(me, "distorted-ambition"))
-            assertEquals(listOf("limbo" to PieceSyncGap.BEFORE_SYNC), gaps())
+            assertEquals(emptyList(), gaps())
         }
     }
 }

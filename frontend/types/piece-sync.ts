@@ -1,6 +1,6 @@
 // Mirrors backend's tokens/PieceSyncRoutes.kt field-for-field. Served at /api/tokens/sync.
 
-export type PieceSyncGapReason = "NO_DIFFICULTY" | "PARTY_LOOT" | "BEFORE_SYNC";
+export type PieceSyncGapReason = "NO_DIFFICULTY" | "PARTY_OFF";
 
 // A boss cleared this week whose pieces are not in the inventory.
 export type PieceSyncGap = {
