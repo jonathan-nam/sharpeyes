@@ -316,6 +316,87 @@ class PiecePileTest {
         }
     }
 
+    // --- instanced pieces: counted from the tick alone -----------------------------------------
+
+    @Test
+    fun `every instanced piece is counted from a party's tick alone, with no pile, ratio or drop`() {
+        transaction {
+            val rows =
+                TokenClearAmount
+                    .innerJoin(BossCatalog)
+                    .innerJoin(TokenCatalog)
+                    .selectAll()
+                    .filter { !it[TokenClearAmount.pooled] && it[TokenClearAmount.quantity] > 0 }
+                    .map {
+                        listOf(
+                            it[BossCatalog.bossKey],
+                            it[TokenClearAmount.difficulty],
+                            it[TokenClearAmount.world],
+                            it[TokenCatalog.visionKey],
+                        ) to it[TokenClearAmount.quantity]
+                    }
+            // Every Heroic mode that drops a piece (18 of 20; Easy Kalos and Adversary drop none),
+            // plus Limbo, Baldrix and Jupiter in Interactive.
+            assertEquals(24, rows.size)
+            for ((key, count) in rows) {
+                val (bossKey, difficulty, world) = key
+                val item = key[3]
+                val me = character(world = world)
+                val partyId = party(me, bossKey, difficulty)
+                tick(me, bossKey)
+                assertEquals(count, held(me, item), "$bossKey $difficulty $world")
+                assertNull(pile(partyId))
+                assertTrue(PartyLoot.selectAll().where { PartyLoot.partyId eq partyId }.empty())
+                tick(me, bossKey, cleared = false)
+                assertEquals(0, held(me, item), "$bossKey $difficulty $world, unticked")
+            }
+        }
+    }
+
+    @Test
+    fun `an alt seated in your Heroic party is counted at the party's mode with nothing set up`() {
+        transaction {
+            val me = character(world = WORLD_HEROIC)
+            val alt = character(world = WORLD_HEROIC, name = "Altling")
+            val partyId = party(me, "kalos-the-guardian", "EXTREME", members = listOf("Altling", "Steve"))
+            tick(me, "kalos-the-guardian")
+            tick(alt, "kalos-the-guardian")
+            assertEquals(3, held(alt, "kalos-token"))
+
+            saveParty(
+                userId,
+                partyId,
+                request(me, "kalos-the-guardian", "CHAOS", listOf("Altling", "Steve")),
+                Clock.System.now(),
+            )
+            assertEquals(2, held(alt, "kalos-token"))
+
+            // Off the party for good: this week was already played with them, so it keeps them.
+            saveParty(userId, partyId, request(me, "kalos-the-guardian", "CHAOS", listOf("Steve")), Clock.System.now())
+            assertEquals(2, held(alt, "kalos-token"))
+
+            // Off THIS week's roster: they did not run it, so they lose it.
+            saveWeekRoster(partyId, me, week(), listOf("Steve"), SeatContext(userId, emptyMap(), Clock.System.now()))
+            assertEquals(0, held(alt, "kalos-token"))
+        }
+    }
+
+    @Test
+    fun `an alt taken off a party before its week is written loses its pieces with the seat`() {
+        transaction {
+            val me = character(world = WORLD_HEROIC)
+            val alt = character(world = WORLD_HEROIC, name = "Altling")
+            val partyId = party(me, "kaling", "HARD", members = listOf("Altling", "Steve"))
+            tick(alt, "kaling")
+            assertEquals(2, held(alt, "ferocious-beast-ring"))
+
+            // Nothing written this week by the party itself, so the seat is deleted outright, and
+            // with it the only link from the party to the alt.
+            saveParty(userId, partyId, request(me, "kaling", "HARD", listOf("Steve")), Clock.System.now())
+            assertEquals(0, held(alt, "ferocious-beast-ring"))
+        }
+    }
+
     // --- Interactive parties: added by hand, like coupons --------------------------------------
 
     @Test
