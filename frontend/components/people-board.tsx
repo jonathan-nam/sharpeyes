@@ -226,11 +226,11 @@ export function PeopleBoard({
 }
 
 /**
- * One lane of cards: four across, arrows for the rest.
+ * One lane of cards: TILES_SHOWN across, arrows for the rest.
  *
  * Its own component so each lane can hold its own scroll position, which a hook called in the
- * board's map could not do. Four is the number everywhere in this app that puts sprites in a row
- * (lib/carousel.ts); a lane used to wrap instead, so somebody with five characters made their row
+ * board's map could not do. TILES_SHOWN is the number everywhere in this app that puts sprites in a
+ * row (lib/carousel.ts); a lane used to wrap instead, so somebody with more characters made their row
  * twice the height of everybody else's and the column of names went ragged.
  *
  * The drop zone is the wrapper rather than the track, so a card dropped on the arrows still lands.

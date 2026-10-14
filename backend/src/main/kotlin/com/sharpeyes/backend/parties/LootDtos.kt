@@ -66,6 +66,8 @@ data class LootResponse(
     // Who took the item, where it cannot be sold. Null until somebody does, and never set at the
     // same time as a sale. Nothing is owed off it: the item cannot move again. See V49.
     val takenByMemberId: String? = null,
+    // It fell on a run with nobody else. See V72.
+    val solo: Boolean = false,
     val soldAt: String?,
     // When the drop was LOGGED, which is not droppedOn: that is a date the user picks, and this is a
     // timestamp nobody can set. A coupon sale can only have answered nights already on the books when

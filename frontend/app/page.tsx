@@ -6,6 +6,7 @@ import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
 import { WorldChoice } from "@/components/world-choice";
+import { spriteUrl } from "@/lib/api";
 import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
@@ -39,8 +40,22 @@ export default function Home() {
     <main className="page">
       {isSignedIn ? (
         <section className="hero">
-          <SharpEyesMark size={64} />
-          <h1>{main ? `Welcome back, ${main}` : "Welcome back"}</h1>
+          {/* An empty slot while settings load, so the mark never flashes ahead of the sprite. */}
+          {!settings ? (
+            <span className="hero-sprite" aria-hidden="true" />
+          ) : settings.mainCharacterSprite ? (
+            <img className="hero-sprite" src={spriteUrl(settings.mainCharacterSprite)} alt="" />
+          ) : (
+            <SharpEyesMark size={64} />
+          )}
+          {main ? (
+            <h1>
+              <span className="hero-greeting">Welcome back,</span>{" "}
+              <span className="hero-ign">{main}</span>
+            </h1>
+          ) : (
+            <h1>Welcome back</h1>
+          )}
           <nav className="hero-actions">
             {HOME_ROWS.map((row) => (
               <HomeRowView key={row.label} row={row}>
@@ -75,10 +90,10 @@ export default function Home() {
 }
 
 /**
- * One row, and the links its chevron unfolds when it has any.
+ * One row: a link, or, when it has links to unfold, a toggle for them.
  *
- * A row with a page links there and folds from a separate chevron. A row with no page (Bossing) is
- * all toggle, since a heading that navigated nowhere would lie about what it does.
+ * A folding row is all toggle even when it has a page of its own (the Drop Log), so every chevron
+ * works the same way. Its first unfolded link opens that page.
  */
 function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -94,34 +109,20 @@ function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
     );
   }
 
-  const toggle = {
-    "aria-expanded": open,
-    "aria-controls": panelId,
-    onClick: () => setOpen((o) => !o),
-  };
-
   return (
     <div className="hero-fold">
-      <div className="hero-fold-head">
-        {row.href ? (
-          <>
-            <Link href={row.href}>
-              {mark}
-              {row.label}
-            </Link>
-            <button type="button" className="hero-fold-toggle" aria-label={row.label} {...toggle}>
-              <span className="party-row-chevron" aria-hidden="true" />
-            </button>
-          </>
-        ) : (
-          <button type="button" {...toggle}>
-            {mark}
-            {row.label}
-            <span className="party-row-chevron hero-fold-caret" aria-hidden="true" />
-          </button>
-        )}
-      </div>
-      <div id={panelId} className="hero-action-stages" hidden={!open}>
+      <button
+        type="button"
+        className="hero-fold-head"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {mark}
+        {row.label}
+        <span className="party-row-chevron hero-fold-caret" aria-hidden="true" />
+      </button>
+      <div id={panelId} className="hero-fold-items" hidden={!open}>
         {children}
       </div>
     </div>

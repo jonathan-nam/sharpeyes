@@ -3,9 +3,9 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MAX_COUNT } from "./count-stepper";
 
-// Four sizes and two weights, pinned. The scale is only worth having if a fifth size costs
-// something, and a stylesheet this size drifts a px at a time with nobody noticing. These tests are
-// the cost.
+// Four sizes, one display size, and two weights, pinned. The scale is only worth having if another
+// size costs something, and a stylesheet this size drifts a px at a time with nobody noticing.
+// These tests are the cost.
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 
 // Comments quote declarations they are explaining, so a raw scan reads those as real rules.
@@ -24,9 +24,16 @@ function rules(): Rule[] {
 }
 
 describe("the type scale", () => {
-  it("defines exactly four steps", () => {
+  it("defines exactly four steps and one display size", () => {
     const defined = [...code.matchAll(/--text-([a-z]+):\s*(\d+)px;/g)].map((m) => m[1]);
-    expect(defined.sort()).toEqual(["base", "lg", "sm", "xl"]);
+    expect(defined.sort()).toEqual(["base", "display", "lg", "sm", "xl"]);
+  });
+
+  it("keeps the display size to the one line it was made for", () => {
+    const users = rules()
+      .filter((r) => r.body.includes("var(--text-display)"))
+      .map((r) => r.selector);
+    expect(users).toEqual([".hero-ign"]);
   });
 
   it("is the only source of a font size, outside the game window", () => {
