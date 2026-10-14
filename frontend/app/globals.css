@@ -1645,21 +1645,21 @@ img.user-avatar-img {
   margin: 0 0 12px;
 }
 
-/* The welcome-back screen's way in: one button per section. Same face as the world cards above,
-   at one line each.
-   Narrower than the hero it sits in, which is what makes five break 3/2. At the hero's own width
-   four fit on a line and the fifth sits alone under them. */
+/* The welcome-back screen's way in: one row per section, its mark ahead of its label. */
 .hero-actions {
-  max-width: 420px;
+  max-width: 480px;
   margin: 20px auto 0;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
+  container-type: inline-size;
 }
 
 .hero-actions a {
-  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -1671,6 +1671,27 @@ img.user-avatar-img {
 .hero-actions a:hover {
   border-color: var(--ink-strong);
   background: var(--surface-2);
+}
+
+/* The Drop Log's row, one link per stage. Equal thirds, so no stage's label sets the layout. */
+.hero-action-stages {
+  display: flex;
+  gap: 8px;
+}
+
+.hero-action-stages a {
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 8px;
+  padding: 6px 8px;
+}
+
+/* "Settlements" beside its mark does not fit a third of a phone. */
+@container (max-width: 460px) {
+  .hero-action-stages a {
+    flex-direction: column;
+    gap: 2px;
+  }
 }
 
 /* --- Sectioned inventory ---------------------------------------------------------------- */
@@ -3644,12 +3665,12 @@ button.link:disabled {
   color: var(--ink-strong);
 }
 
-/* A stage's mark, every one of them a game sprite on the 32px canvas scripts/build-tab-marks.mjs
-   builds. Drawn at 32, which is 1:1: these were halved into a 23px box before, and 13x16px of pale
-   art is not a mark anybody can see. Keep this in step with the script's MARK_CANVAS. */
+/* A mark, every one of them a game sprite on the canvas scripts/build-tab-marks.mjs builds. Drawn
+   1:1: these were halved into a 23px box before, and 13x16px of pale art is not a mark anybody can
+   see. Keep this in step with the script's MARK_CANVAS. */
 .tab-art {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   flex: none;
   image-rendering: pixelated;
 }

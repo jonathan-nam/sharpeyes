@@ -74,3 +74,19 @@ export function dropSections(trades?: boolean): DropSection[] {
 export function shownSection(chosen: DropSectionKey, sections: DropSection[]): DropSectionKey {
   return sections.some((s) => s.key === chosen) ? chosen : "drops";
 }
+
+/** A link straight to one stage. The Drop Log opens on Drops by itself, so that one takes no query. */
+export function sectionHref(key: DropSectionKey): string {
+  return key === "drops" ? "/bosses/drops" : `/bosses/drops?section=${key}`;
+}
+
+/** The stage a `?section=` asks for, or undefined for none or one that is not a stage. */
+export function sectionFromQuery(search: string): DropSectionKey | undefined {
+  const asked = new URLSearchParams(search).get("section");
+  return SECTIONS.find((s) => s.key === asked)?.key;
+}
+
+/** What the home screen links to: every stage but Settled, which asks nothing of the reader. */
+export function homeSections(trades?: boolean): DropSection[] {
+  return dropSections(trades).filter((s) => s.key !== "settled");
+}

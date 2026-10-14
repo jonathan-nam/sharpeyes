@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
 import { WorldChoice } from "@/components/world-choice";
 import { PASSWORD_LOGIN } from "@/lib/auth-client";
+import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ACTIONS } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
@@ -12,6 +14,8 @@ import { useAuth } from "@/lib/use-auth";
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth();
   const settings = useAccountSettings();
+  // A Heroic world has only the drops, and then the row is the Drop Log's own.
+  const stages = homeSections(settings?.trades);
 
   // Neither hero until the session is known. Drawing the signed-out one first and swapping it is a
   // returning user being asked to sign in for a frame.
@@ -36,11 +40,28 @@ export default function Home() {
           <SharpEyesMark size={64} />
           <h1>Welcome back</h1>
           <nav className="hero-actions">
-            {HOME_ACTIONS.map((item) => (
-              <Link key={item.href} href={item.href}>
-                {item.label}
-              </Link>
-            ))}
+            {HOME_ACTIONS.map((item) =>
+              item.href === "/bosses/drops" && stages.length > 1 ? (
+                <div
+                  key={item.href}
+                  className="hero-action-stages"
+                  role="group"
+                  aria-label={item.label}
+                >
+                  {stages.map((s) => (
+                    <Link key={s.key} href={sectionHref(s.key)}>
+                      <SectionMark section={s.key} />
+                      {s.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <Link key={item.href} href={item.href}>
+                  <PageMark href={item.href} />
+                  {item.label}
+                </Link>
+              ),
+            )}
           </nav>
         </section>
       ) : (

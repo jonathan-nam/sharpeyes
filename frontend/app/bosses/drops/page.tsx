@@ -4,7 +4,7 @@ import { DropLogSkeleton } from "@/components/drop-log-skeleton";
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AddSettlement } from "@/components/add-settlement";
 import { SettlementLedger } from "@/components/settlement-ledger";
 import { SettlementSummary } from "@/components/settlement-summary";
@@ -39,7 +39,14 @@ import {
 } from "@/lib/settlement";
 import { heldOfYoursBy, stillAsking, worthDrawing } from "@/lib/ledger-fates";
 import { buildWallet } from "@/lib/wallet";
-import { type DropSectionKey, dropSections, saleCards, shownSection } from "@/lib/drop-sections";
+import {
+  type DropSectionKey,
+  dropSections,
+  saleCards,
+  sectionFromQuery,
+  sectionHref,
+  shownSection,
+} from "@/lib/drop-sections";
 import {
   buildDropLog,
   foldRuns,
@@ -119,6 +126,9 @@ type LoadState = "loading" | "loaded" | "error";
 // pages seed from, and the resources this composes. See types/page.ts.
 const PAGE_KEY = "/api/pages/drop-log";
 
+/** The query is read once per render and never changes under the page, so nothing to listen to. */
+const noSubscription = () => () => {};
+
 // Solo pools included, and retired configs too: both hold drops whose configs are off every list,
 // and buildDropLog skips a pool whose config it cannot find, so without these the log would quietly
 // be missing them. Every page that reads a pool as a ledger asks the same, Party View included, or
@@ -180,8 +190,19 @@ export default function DropLogPage() {
   const [character, setCharacter] = useState<string | null>(null);
   const [grouping, setGrouping] = useState<Grouping>("month");
   const [boss, setBoss] = useState<string | null>(null);
-  // Whether the reader has asked for the box that sells out of a pile nobody is owed anything from.
-  const [section, setSection] = useState<DropSectionKey>("drops");
+  // The home screen links to a stage by `?section=`. Read from the URL rather than useSearchParams,
+  // which would need a Suspense boundary around the whole page to prerender. A click overrides it.
+  const asked = useSyncExternalStore(
+    noSubscription,
+    () => sectionFromQuery(window.location.search),
+    () => undefined,
+  );
+  const [chosen, setChosen] = useState<DropSectionKey | null>(null);
+  const section = chosen ?? asked ?? "drops";
+  function chooseSection(key: DropSectionKey) {
+    setChosen(key);
+    window.history.replaceState(null, "", sectionHref(key));
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -779,7 +800,7 @@ export default function DropLogPage() {
                     type="button"
                     className={shown === s.key ? "basis-tab active" : "basis-tab"}
                     aria-pressed={shown === s.key}
-                    onClick={() => setSection(s.key)}
+                    onClick={() => chooseSection(s.key)}
                   >
                     <SectionMark section={s.key} />
                     {s.label}

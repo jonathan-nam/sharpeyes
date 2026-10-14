@@ -30,7 +30,7 @@ const NATURAL: Record<string, number> = {
   ".ledger-entry > .ledger-fold > .loot-shares .loot-icon": 46, // a sale row inside the Unsettled fold
   ".loot-shares .loot-icon": 46, // half, in an offset's own list of nights
   ".counts-icon": 46,
-  ".tab-art": 34, // the Drop Log stage tabs, drawn 1:1 (see build-tab-marks.mjs MARK_CANVAS)
+  ".tab-art": 36, // the Drop Log stage tabs and the home rows, drawn 1:1 (see build-tab-marks.mjs MARK_CANVAS)
   ".world-emblem": 20, // world select emblem, 1:1 (see build-world-emblems.mjs EMBLEM_CANVAS)
   ".finder-suggest-row img": 46,
   ".drop-select-icon": 46,
