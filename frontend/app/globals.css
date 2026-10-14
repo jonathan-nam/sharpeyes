@@ -6543,6 +6543,67 @@ button.link:disabled {
   margin-top: 28px;
 }
 
+/* The toggle and its "i", on one line. Baseline-matched to the toggle's own top margin. */
+.inventory-sync-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inventory-sync-row .info-bubble {
+  margin-top: 10px;
+}
+
+/* An "i" that opens a note. See components/info-bubble.tsx. */
+.info-bubble {
+  position: relative;
+  display: inline-flex;
+}
+
+.info-bubble-button {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  font:
+    italic 600 12px/1 Georgia,
+    serif;
+  cursor: pointer;
+}
+
+.info-bubble-button:hover,
+.info-bubble-button[aria-expanded="true"] {
+  color: var(--ink-strong);
+  border-color: var(--muted);
+}
+
+.info-bubble-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  width: min(320px, 80vw);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+}
+
+.info-bubble-list {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.info-bubble-list li + li {
+  margin-top: 4px;
+}
+
 .inventory-sync-gaps {
   margin-top: 10px;
   color: var(--muted);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { apiFetch } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
+import { InfoBubble } from "@/components/info-bubble";
 import { gapLine, shownGaps } from "@/lib/piece-sync";
 import type { PieceSync, SavePieceSyncBody } from "@/types/piece-sync";
 
@@ -52,15 +53,31 @@ export function PieceSyncSettings() {
   return (
     <section className="inventory-settings">
       <h2 className="night-heading">Settings</h2>
-      <label className="night-toggle">
-        <input
-          type="checkbox"
-          checked={sync.enabled}
-          disabled={saving}
-          onChange={(e) => void save(e.target.checked)}
-        />
-        <span>Auto Sync Eternal Pieces with Boss Clears</span>
-      </label>
+      <div className="inventory-sync-row">
+        <label className="night-toggle">
+          <input
+            type="checkbox"
+            checked={sync.enabled}
+            disabled={saving}
+            onChange={(e) => void save(e.target.checked)}
+          />
+          <span>Auto Sync Eternal Pieces with Boss Clears</span>
+        </label>
+        {/* Outside the label, so pressing it cannot tick the box. */}
+        <InfoBubble label="How auto sync works">
+          <ul className="info-bubble-list">
+            <li>
+              Ticking a boss cleared adds its pieces at its difficulty. Unticking takes them back.
+            </li>
+            <li>A solo Kalos, Kaling, First Adversary or Malefic Star adds the whole pile.</li>
+            <li>
+              A party&apos;s pile for those four is added on Party View, split by the party&apos;s
+              piece ratio.
+            </li>
+            <li>Clears from before sync was turned on are not added.</li>
+          </ul>
+        </InfoBubble>
+      </div>
       {shownGaps(sync.gaps).length > 0 && (
         <div className="inventory-sync-gaps">
           <p className="inventory-sync-gaps-title">Not synced</p>
