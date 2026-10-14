@@ -29,14 +29,17 @@
      and the game window shared both edges. At 1280px the window no longer fills the column. */
   --measure: 1280px;
 
-  /* Four steps and nothing between them. Reaching for a fifth size is a design decision, not a
-     nudge, so it has to be made here where all four are visible at once. The inventory window is
+  /* Four steps and nothing between them, plus one display size kept to a single line. Reaching for
+     another size is a design decision, not a nudge, so it has to be made here where all of them are
+     visible at once. The inventory window is
      the one exemption: it replicates the game client at a measured 12/18, which is not ours to
      round. */
   --text-sm: 11px;
   --text-base: 13px;
   --text-lg: 15px;
   --text-xl: 20px;
+  /* Only for the home screen's IGN, the one line asked to outrank a page title. */
+  --text-display: 32px;
 
   /* Three steps and a pill. There are two container sizes because a corner nested inside another
      has to be the smaller one, so md is what sits in lg, not a second opinion about lg. The pill
@@ -1633,9 +1636,36 @@ img.user-avatar-img {
   margin: 0 auto 20px;
 }
 
+/* The main's avatar in place of the mark. Also the empty slot held while settings load. */
+.hero-sprite {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 12px;
+  object-fit: contain;
+  object-position: center bottom;
+  image-rendering: pixelated;
+}
+
 .hero h1 {
   margin: 0 0 12px;
   font-size: var(--text-xl);
+}
+
+/* The IGN is the line that matters, so the greeting steps down to make room for it. */
+.hero-greeting {
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-lg);
+  font-weight: 400;
+}
+
+.hero-ign {
+  display: block;
+  color: var(--ink-strong);
+  font-size: var(--text-display);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .hero p {

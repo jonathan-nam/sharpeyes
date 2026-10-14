@@ -46,6 +46,7 @@ const NATURAL: Record<string, number> = {
   ".member-sprite": 96, // the whole render, 1:1, above a roster box
   ".party-banner-sprite": 96,
   ".seat-sprite": 96,
+  ".hero-sprite": 96, // the main's avatar on the home screen
 };
 
 // Boxes that hold an image without being pixel art themselves, so there is no natural size for a
