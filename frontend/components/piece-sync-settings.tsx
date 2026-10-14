@@ -69,12 +69,18 @@ export function PieceSyncSettings() {
             <li>
               Ticking a boss cleared adds its pieces at its difficulty. Unticking takes them back.
             </li>
-            <li>A solo Kalos, Kaling, First Adversary or Malefic Star adds the whole pile.</li>
             <li>
-              A party&apos;s pile for those four is added on Party View, split by the party&apos;s
-              piece ratio.
+              In Heroic (Reboot), every piece is instanced: each character gets their own count.
             </li>
-            <li>Clears from before sync was turned on are not added.</li>
+            <li>
+              In Interactive, Limbo, Baldrix and Jupiter are instanced too. Kalos, Kaling, First
+              Adversary and Malefic Star drop one pooled pile for the whole party.
+            </li>
+            <li>
+              A pooled pile run solo is added whole. In a party, add it on Party View, split by the
+              party&apos;s piece ratio.
+            </li>
+            <li>Syncing is not retroactive: clears from before it was turned on are not added.</li>
           </ul>
         </InfoBubble>
       </div>
