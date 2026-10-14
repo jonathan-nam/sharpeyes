@@ -279,7 +279,7 @@ export default function DropLogPage() {
         setError(SAVED_BUT_STALE);
         return;
       }
-      setError(failureText(e, "That didn't save."));
+      setError(failureText(e, "That didn't save. Try again."));
       throw e;
     } finally {
       setBusy(false);

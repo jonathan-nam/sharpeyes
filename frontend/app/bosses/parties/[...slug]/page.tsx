@@ -160,7 +160,7 @@ export default function PartyPage() {
       });
     } catch (e) {
       if (e instanceof StaleAfterWrite) setError(SAVED_BUT_STALE);
-      else setError(failureText(e, "That didn't save."));
+      else setError(failureText(e, "That didn't save. Try again."));
     }
   }
 
@@ -208,7 +208,7 @@ export default function PartyPage() {
       invalidate("/api/parties");
       router.push("/bosses/parties");
     } catch (e) {
-      setError(failureText(e, "Couldn't leave that party."));
+      setError(failureText(e, "Couldn't leave that party. Try again."));
     }
   }
 

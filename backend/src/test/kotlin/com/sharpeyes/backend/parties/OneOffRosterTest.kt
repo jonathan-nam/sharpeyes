@@ -219,7 +219,7 @@ class OneOffRosterTest {
         transaction {
             // The other half of the same rule: an edit has a config to demote, and a create does
             // not, so this would be a party of one on the page that lists parties.
-            assertEquals(Refusal("A party needs another member."), validateMembers(emptyList()))
+            assertEquals(Refusal("This party has nobody else in it. Add a member."), validateMembers(emptyList()))
             assertNull(validateMembers(emptyList(), allowNone = true))
         }
     }

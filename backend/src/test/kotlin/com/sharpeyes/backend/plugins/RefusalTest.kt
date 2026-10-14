@@ -16,10 +16,12 @@ class RefusalTest {
         testApplication {
             application { configureSerialization() }
             routing {
-                get("/shown") { call.refuse(HttpStatusCode.BadRequest, Refusal("Two people have the same name.")) }
+                get(
+                    "/shown",
+                ) { call.refuse(HttpStatusCode.BadRequest, Refusal("Two people share a name. Rename one.")) }
             }
             val response = client.get("/shown")
             assertEquals(HttpStatusCode.BadRequest, response.status)
-            assertEquals("""{"refusal":"Two people have the same name."}""", response.bodyAsText())
+            assertEquals("""{"refusal":"Two people share a name. Rename one."}""", response.bodyAsText())
         }
 }

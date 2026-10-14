@@ -136,7 +136,7 @@ export default function PeoplePage() {
     } catch (e) {
       // The backend refuses with the reason (see validatePeople): two people sharing a name, or
       // both claiming the same character. Both are worth reading rather than "went wrong".
-      setError(failureText(e, "Couldn't save that."));
+      setError(failureText(e, "Couldn't save that. Try again."));
     } finally {
       setBusy(false);
     }

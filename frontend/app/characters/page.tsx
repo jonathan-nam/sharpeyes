@@ -78,7 +78,7 @@ export default function CharactersPage() {
       // screen that no party actually reads.
       setCharacters(before);
       put(CHARACTERS_KEY, before);
-      setError(failureText(e, "Couldn't save that."));
+      setError(failureText(e, "Couldn't save that. Try again."));
     }
   }
 
@@ -170,7 +170,7 @@ export default function CharactersPage() {
       invalidate("/api/");
     } catch (e) {
       // Whatever was found before the failure is kept: those characters really are placed now.
-      setError(failureText(e, "Couldn't look those up."));
+      setError(failureText(e, "Couldn't look those up. Try again."));
     } finally {
       setFinding(false);
     }

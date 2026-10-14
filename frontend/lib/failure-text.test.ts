@@ -5,8 +5,11 @@ import { ApiError, SAVED_BUT_STALE, StaleAfterWrite, failureText } from "./api";
 
 describe("failureText", () => {
   it("shows a refusal the backend marked for users", () => {
-    const e = new ApiError(400, JSON.stringify({ refusal: "Two people have the same name." }));
-    expect(failureText(e, "Couldn't save that.")).toBe("Two people have the same name.");
+    const e = new ApiError(
+      400,
+      JSON.stringify({ refusal: "Two people share a name. Rename one." }),
+    );
+    expect(failureText(e, "Couldn't save that.")).toBe("Two people share a name. Rename one.");
   });
 
   it("never shows a raw body", () => {

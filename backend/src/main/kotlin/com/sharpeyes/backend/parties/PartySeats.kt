@@ -169,10 +169,13 @@ internal fun validateMembers(
     return when {
         // Your own character is the config; the members are the others. Nobody else means a solo
         // run, and a solo run is not a party.
-        names.isEmpty() -> if (allowNone) null else Refusal("A party needs another member.")
-        names.size > MAX_PARTY_SIZE - 1 -> Refusal("Parties hold at most $MAX_PARTY_SIZE.")
-        names.any { it.isBlank() } -> Refusal("Every member needs a name.")
-        names.map { it.lowercase() }.distinct().size != names.size -> Refusal("A character is in twice.")
+        names.isEmpty() -> if (allowNone) null else Refusal("This party has nobody else in it. Add a member.")
+        names.size > MAX_PARTY_SIZE - 1 -> Refusal("Parties hold up to $MAX_PARTY_SIZE. Remove a member.")
+        names.any { it.isBlank() } -> Refusal("A member has no name. Add one.")
+        names.map { it.lowercase() }.distinct().size != names.size ->
+            Refusal(
+                "A character is listed twice. Remove one.",
+            )
         else -> null
     }
 }

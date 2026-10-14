@@ -110,7 +110,7 @@ export default function EditPartiesPage() {
     } catch (e) {
       // The backend refuses with the reason in the body (see validateNewParty). Showing it beats
       // "something went wrong" for the one thing the user can actually fix.
-      setError(failureText(e, "Couldn't save that party."));
+      setError(failureText(e, "Couldn't save that party. Try again."));
     }
   }
 
@@ -122,7 +122,7 @@ export default function EditPartiesPage() {
         await loadParties();
       });
     } catch (e) {
-      setError(failureText(e, "Couldn't remove that party."));
+      setError(failureText(e, "Couldn't remove that party. Try again."));
     }
   }
 

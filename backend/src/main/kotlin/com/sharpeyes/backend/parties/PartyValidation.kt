@@ -157,7 +157,7 @@ internal fun validateWeekRoster(
 
     return clash?.let {
         val owner = ownerOf[it[PartyMember.partyId]]?.let(::characterName)
-        Refusal("${it[PartyMember.name]} already ran this boss this week.")
+        Refusal("${it[PartyMember.name]} already ran this boss this week. Remove them from this week.")
     }
 }
 
@@ -297,7 +297,7 @@ internal fun validateBossRoster(
         }
 
     return clash?.let { (name, owner) ->
-        val party = if (owner == null) "a party" else "$owner's party"
-        Refusal("$name is already in $party for this boss.")
+        val party = if (owner == null) "another party" else "$owner's party"
+        Refusal("$name is already in $party for this boss. Remove them from it first.")
     }
 }

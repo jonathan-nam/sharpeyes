@@ -132,7 +132,7 @@ internal suspend fun RoutingContext.setBossRoutineRoute() {
         is RoutineRefusal.HasParty ->
             call.refuse(
                 HttpStatusCode.Conflict,
-                Refusal("Remove the party first: ${outcome.bossNames.joinToString(", ")}."),
+                Refusal("${outcome.bossNames.joinToString(", ")} still has a party. Remove it first."),
             )
         else -> call.respond(outcome as BossClearsViewResponse)
     }

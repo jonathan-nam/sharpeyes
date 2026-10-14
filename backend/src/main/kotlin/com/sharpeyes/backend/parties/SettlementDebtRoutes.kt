@@ -181,7 +181,7 @@ private suspend fun RoutingContext.addDebtRoute() {
     // The whole list, like a tranche or a payment: what a person owes you is read off all of it.
     when (result) {
         is DebtWrite.AlreadyDischarged ->
-            call.refuse(HttpStatusCode.Conflict, Refusal("Already settled. Reload to see it."))
+            call.refuse(HttpStatusCode.Conflict, Refusal("This is already settled. Reload to see it."))
         is DebtWrite.NotYourPerson ->
             call.respond(HttpStatusCode.BadRequest, "personId is not somebody on your people list")
         is DebtWrite.Wrote -> call.respond(HttpStatusCode.Created, result.debts)

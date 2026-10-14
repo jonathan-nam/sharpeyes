@@ -78,7 +78,7 @@ export default function JoinPage() {
     } catch (e) {
       // The backend refuses with the reason: an account that already has characters, your own
       // link, or one made before the payload changed shape. Each is worth reading.
-      setProblem(failureText(e, "Couldn't set that up."));
+      setProblem(failureText(e, "Couldn't set that up. Try again."));
       setBusy(false);
     }
   }

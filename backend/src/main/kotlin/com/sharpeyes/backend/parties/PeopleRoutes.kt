@@ -92,9 +92,9 @@ internal fun validatePeople(request: SavePeopleRequest): Refusal? {
             .map { it.lowercase() }
 
     return when {
-        names.any { it.isBlank() } -> Refusal("Every person needs a name.")
-        names.map { it.lowercase() }.distinct().size != names.size -> Refusal("Two people have the same name.")
-        characters.distinct().size != characters.size -> Refusal("Two people have the same character.")
+        names.any { it.isBlank() } -> Refusal("A person has no name. Add one.")
+        names.map { it.lowercase() }.distinct().size != names.size -> Refusal("Two people share a name. Rename one.")
+        characters.distinct().size != characters.size -> Refusal("Two people share a character. Remove it from one.")
         else -> null
     }
 }

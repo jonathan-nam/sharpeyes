@@ -449,7 +449,7 @@ export default function PartiesPage() {
         put(PARTY_LIST_KEY, refreshed);
       });
     } catch (e) {
-      setAddError(failureText(e, "Couldn't add that boss."));
+      setAddError(failureText(e, "Couldn't add that boss. Try again."));
     }
   }
 
@@ -515,7 +515,7 @@ export default function PartiesPage() {
     } catch (e) {
       setPoolError({
         partyId: party.id,
-        message: failureText(e, "That didn't save."),
+        message: failureText(e, "That didn't save. Try again."),
       });
     }
   }

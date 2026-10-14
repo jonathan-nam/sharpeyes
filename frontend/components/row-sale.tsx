@@ -86,7 +86,7 @@ function RowCard({
     try {
       await onSell(row, body);
     } catch (e) {
-      setRefusal(failureText(e, "That didn't save."));
+      setRefusal(failureText(e, "That didn't save. Try again."));
     }
   }
 

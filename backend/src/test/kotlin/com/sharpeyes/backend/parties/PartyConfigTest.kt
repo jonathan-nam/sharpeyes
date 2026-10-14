@@ -347,13 +347,16 @@ class PartyConfigTest {
             // Zakum is in catalog/bosses.yaml but untracked, so it is seeded into no table.
             assertEquals("unknown bossKey", check(mine, "zakum", listOf("X")))
             // A boss your character solos has no config at all, which is why solo runs never show.
-            assertEquals(Refusal("A party needs another member."), check(mine, "kalos-the-guardian", emptyList()))
             assertEquals(
-                Refusal("Parties hold at most 6."),
+                Refusal("This party has nobody else in it. Add a member."),
+                check(mine, "kalos-the-guardian", emptyList()),
+            )
+            assertEquals(
+                Refusal("Parties hold up to 6. Remove a member."),
                 check(mine, "kalos-the-guardian", (1..6).map { "M$it" }),
             )
             assertEquals(
-                Refusal("A character is in twice."),
+                Refusal("A character is listed twice. Remove one."),
                 check(mine, "kalos-the-guardian", listOf("Lynn", "lynn")),
             )
             assertNull(check(mine, "kalos-the-guardian", listOf("CreedBratton")))
@@ -410,17 +413,17 @@ class PartyConfigTest {
             // A character clears a boss once a week, so lending iPhone69C to a second Limbo party
             // states a night that cannot happen. Refused where it is written, not dropped later.
             assertEquals(
-                Refusal("iPhone69C is already in mechyfechy's party for this boss."),
+                Refusal("iPhone69C is already in mechyfechy's party for this boss. Remove them from it first."),
                 check(listOf("Lynn", "iPhone69C")),
             )
             // Case and padding are typing, not identity, the same as validateMembers.
             assertEquals(
-                Refusal("iPhone69C is already in mechyfechy's party for this boss."),
+                Refusal("iPhone69C is already in mechyfechy's party for this boss. Remove them from it first."),
                 check(listOf(" iphone69c ")),
             )
             // The owner of the other config holds its slot too, from either end.
             assertEquals(
-                Refusal("mechyfechy is already in mechyfechy's party for this boss."),
+                Refusal("mechyfechy is already in mechyfechy's party for this boss. Remove them from it first."),
                 check(listOf("mechyfechy")),
             )
             // Different people is still the whole point: this is what a second character is for.
@@ -473,7 +476,7 @@ class PartyConfigTest {
 
             // Somebody still in that roster is still competition, which is the rule's whole point.
             assertEquals(
-                Refusal("iPhone69C is already in warrior2020's party for this boss."),
+                Refusal("iPhone69C is already in warrior2020's party for this boss. Remove them from it first."),
                 validateBossRoster(
                     userOneId,
                     kalos,
@@ -529,7 +532,7 @@ class PartyConfigTest {
 
             // While Creed is in the other party's week, they are holding its Limbo clear.
             assertEquals(
-                Refusal("CreedBratton already ran this boss this week."),
+                Refusal("CreedBratton already ran this boss this week. Remove them from this week."),
                 check(listOf("Lynn", "CreedBratton")),
             )
 
@@ -565,7 +568,7 @@ class PartyConfigTest {
                     rosterOf(warrior, listOf("Lynn", "CreedBratton")),
                 )
 
-            assertEquals(Refusal("CreedBratton already ran this boss this week."), check())
+            assertEquals(Refusal("CreedBratton already ran this boss this week. Remove them from this week."), check())
 
             // The party did not run this week at all, so nothing in it ran the boss and Creed's
             // clear is free. The config is untouched and holds him again next week.
@@ -587,9 +590,9 @@ class PartyConfigTest {
                 )
             // Character names are unique in a world, so two owners is a mistake, and letting it
             // through makes "whose is this?" a question with two answers.
-            assertEquals(Refusal("Two people have the same character."), validatePeople(clash))
+            assertEquals(Refusal("Two people share a character. Remove it from one."), validatePeople(clash))
             assertEquals(
-                Refusal("Two people have the same name."),
+                Refusal("Two people share a name. Rename one."),
                 validatePeople(SavePeopleRequest(listOf(PersonRequest(name = "Chris"), PersonRequest(name = "chris")))),
             )
         }

@@ -128,7 +128,7 @@ export default function BossRoutinePage() {
       // Back to the server's set: what we asked for is not what it holds, and building the next
       // tick on it would send a set nobody has agreed to.
       asked.current = null;
-      setError(failureText(e, "Couldn't save that."));
+      setError(failureText(e, "Couldn't save that. Try again."));
     }
   }
 
@@ -158,7 +158,7 @@ export default function BossRoutinePage() {
         });
       });
     } catch (e) {
-      setError(failureText(e, "Couldn't save that."));
+      setError(failureText(e, "Couldn't save that. Try again."));
     }
   }
 

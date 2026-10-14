@@ -179,8 +179,8 @@ internal fun validateRosterWeek(
     thisWeek: LocalDate,
 ): Refusal? =
     when {
-        week > thisWeek -> Refusal("That week hasn't happened yet.")
-        week != thisWeek && payoutsPinnedIn(partyId, week) -> Refusal("That week is paid out.")
+        week > thisWeek -> Refusal("That week hasn't happened yet. Pick this week or earlier.")
+        week != thisWeek && payoutsPinnedIn(partyId, week) -> Refusal("That week is paid out. Pick another week.")
         else -> null
     }
 

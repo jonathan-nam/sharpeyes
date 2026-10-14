@@ -234,8 +234,8 @@ private suspend fun RoutingContext.acceptInviteRoute(
 
     when (outcome) {
         Refusal.Unknown -> call.respond(HttpStatusCode.NotFound)
-        Refusal.Stale -> call.refuse(HttpStatusCode.Gone, Shown("This link has expired."))
-        Refusal.Own -> call.refuse(HttpStatusCode.Conflict, Shown("This is your own link."))
+        Refusal.Stale -> call.refuse(HttpStatusCode.Gone, Shown("This link has expired. Ask for a new one."))
+        Refusal.Own -> call.refuse(HttpStatusCode.Conflict, Shown("This is your own link. Send it to someone else."))
         Refusal.NothingTaken ->
             call.respond(HttpStatusCode.BadRequest, "tick at least one character that is yours")
         is AcceptedInvite -> call.respond(outcome)

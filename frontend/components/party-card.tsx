@@ -177,7 +177,7 @@ export function PartyCard({
       await onSaveRoster(members);
       setEditing(false);
     } catch (e) {
-      setSaveError(failureText(e, "That didn't save."));
+      setSaveError(failureText(e, "That didn't save. Try again."));
     }
   }
 
