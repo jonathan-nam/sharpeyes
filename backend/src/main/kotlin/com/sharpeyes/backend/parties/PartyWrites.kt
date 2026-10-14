@@ -8,6 +8,7 @@ import com.sharpeyes.backend.db.CharacterBossSkip
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.db.PartyPiecePile
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.PersonCharacter
 import com.sharpeyes.backend.tokens.syncPiecesForClear
@@ -252,7 +253,9 @@ internal fun retireOrDeleteParty(
         !ownsParty(partyId, userId) -> Removal.NOT_FOUND
         else -> {
             withdrawClear(partyId, now)
-            if (PartyLoot.selectAll().where { PartyLoot.partyId eq partyId }.empty()) {
+            // Pieces added on Party View are a record the way a drop is, and are kept the same way.
+            val pieces = !PartyPiecePile.selectAll().where { PartyPiecePile.partyId eq partyId }.empty()
+            if (!pieces && PartyLoot.selectAll().where { PartyLoot.partyId eq partyId }.empty()) {
                 Party.deleteWhere { (Party.id eq partyId) and (Party.userId eq userId) }
                 Removal.DELETED
             } else {

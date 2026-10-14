@@ -371,14 +371,14 @@ class PieceSyncTest {
     }
 
     @Test
-    fun `an Interactive party's pooled pile adds this character's take of it`() {
+    fun `an Interactive party's pooled pile waits for the party to add it`() {
         transaction {
             val me = character()
             party(me, "kalos-the-guardian", "EXTREME")
             tick(me, "kalos-the-guardian")
-            // 14 between two seats on the default ratio. PiecePileTest covers the split itself.
-            assertEquals(7, held(me, "kalos-token"))
-            assertEquals(emptyList(), gaps())
+            // Added on Party View, like coupons. PiecePileTest covers adding it.
+            assertEquals(0, held(me, "kalos-token"))
+            assertEquals(listOf("kalos-the-guardian" to PieceSyncGap.PARTY_LOOT), gaps())
         }
     }
 

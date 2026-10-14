@@ -5,40 +5,52 @@ import { apiAssetUrl } from "@/lib/api";
 import { difficultyLabel } from "@/lib/boss-difficulty";
 import { parseCount, pileProblem } from "@/lib/piece-pile";
 import type { Party } from "@/types/party";
-import type { PiecePile } from "@/types/piece-pile";
+
+/** What the form is about: the pile already added, or the one the config would add. */
+export type PileForm = {
+  tokenName: string;
+  iconUrl: string | null;
+  difficulty: string;
+  stackSize: number;
+  total: number;
+  // Seat id to pieces, in the order the seats are drawn.
+  takes: [string, number][];
+  // False for one nobody has added yet, which opens behind an Add button.
+  added: boolean;
+};
 
 /**
  * One week's pile of Eternal pieces on a party, and what each seat took of it.
  *
- * Opens on what the clear filed from the config. Saving makes it that week's record, which nothing
- * re-files until it is reset.
+ * Added by hand, as a party's coupons are: the Add form opens on what the config says falls and how
+ * it divides, and the party corrects it to what actually happened.
  */
 export function PiecePileEditor({
   party,
-  pile,
+  form,
   busy,
   onSave,
-  onReset,
+  onRemove,
 }: {
   party: Party;
-  pile: PiecePile;
+  form: PileForm;
   busy: boolean;
   onSave: (total: number, takes: Record<string, number>) => Promise<void>;
-  onReset: () => Promise<void>;
+  onRemove: () => Promise<void>;
 }) {
   const nameOf = new Map(party.seats.map((s) => [s.id, s.name]));
-  const saved = Object.fromEntries(pile.takes.map((t) => [t.memberId, String(t.quantity)]));
-  const [total, setTotal] = useState(String(pile.total));
+  const saved = Object.fromEntries(form.takes.map(([id, n]) => [id, String(n)]));
+  const [open, setOpen] = useState(form.added);
+  const [total, setTotal] = useState(String(form.total));
   const [takes, setTakes] = useState<Record<string, string>>(saved);
   const [error, setError] = useState<string | null>(null);
 
   const dirty =
-    total !== String(pile.total) ||
-    pile.takes.some((t) => takes[t.memberId] !== String(t.quantity));
+    total !== String(form.total) || form.takes.some(([id, n]) => takes[id] !== String(n));
   const problem = pileProblem(
     parseCount(total),
-    pile.takes.map((t) => parseCount(takes[t.memberId] ?? "")),
-    pile.stackSize,
+    form.takes.map(([id]) => parseCount(takes[id] ?? "")),
+    form.stackSize,
   );
 
   async function run(write: () => Promise<void>) {
@@ -50,12 +62,30 @@ export function PiecePileEditor({
     }
   }
 
+  const save = () =>
+    run(() =>
+      onSave(
+        parseCount(total)!,
+        Object.fromEntries(form.takes.map(([id]) => [id, parseCount(takes[id] ?? "")!])),
+      ),
+    );
+
+  if (!open) {
+    return (
+      <div className="loot-actions">
+        <button type="button" className="party-save" disabled={busy} onClick={() => setOpen(true)}>
+          {`Add ${form.tokenName}`}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <section className="config-section config-panel piece-pile">
       <div className="config-panel-head">
-        {pile.iconUrl && <img className="loot-icon" src={apiAssetUrl(pile.iconUrl)} alt="" />}
-        <h4 className="loot-group-title is-config">{pile.tokenName}</h4>
-        <span className="piece-pile-mode">{difficultyLabel(pile.difficulty)}</span>
+        {form.iconUrl && <img className="loot-icon" src={apiAssetUrl(form.iconUrl)} alt="" />}
+        <h4 className="loot-group-title is-config">{form.tokenName}</h4>
+        <span className="piece-pile-mode">{difficultyLabel(form.difficulty)}</span>
       </div>
       <div className="config-shares">
         <label className="config-share">
@@ -65,71 +95,82 @@ export function PiecePileEditor({
             value={total}
             inputMode="numeric"
             onChange={(e) => setTotal(e.target.value)}
-            aria-label={`${pile.tokenName} dropped`}
+            aria-label={`${form.tokenName} dropped`}
             disabled={busy}
           />
         </label>
-        {pile.takes.map((t) => (
-          <label className="config-share" key={t.memberId}>
-            {nameOf.get(t.memberId) ?? "?"}
+        {form.takes.map(([id]) => (
+          <label className="config-share" key={id}>
+            {nameOf.get(id) ?? "?"}
             <input
               className="split-input"
-              value={takes[t.memberId] ?? ""}
+              value={takes[id] ?? ""}
               inputMode="numeric"
-              onChange={(e) => setTakes({ ...takes, [t.memberId]: e.target.value })}
-              aria-label={`${pile.tokenName} ${nameOf.get(t.memberId) ?? ""} took`}
+              onChange={(e) => setTakes({ ...takes, [id]: e.target.value })}
+              aria-label={`${form.tokenName} ${nameOf.get(id) ?? ""} took`}
               disabled={busy}
             />
           </label>
         ))}
       </div>
-      {dirty && problem && <p className="split-error">{problem}</p>}
+      {problem && <p className="split-error">{problem}</p>}
       {error && <p className="split-error">{error}</p>}
-      {(dirty || pile.edited) && (
-        <div className="loot-actions">
-          {dirty && (
+      <div className="loot-actions">
+        {form.added ? (
+          <>
+            {dirty && (
+              <button
+                type="button"
+                className="party-save"
+                disabled={busy || problem !== null}
+                onClick={save}
+              >
+                Save
+              </button>
+            )}
+            {dirty && (
+              <button
+                type="button"
+                className="party-cancel"
+                disabled={busy}
+                onClick={() => {
+                  setTotal(String(form.total));
+                  setTakes(saved);
+                }}
+              >
+                Revert
+              </button>
+            )}
+            <button
+              type="button"
+              className="party-delete"
+              disabled={busy}
+              onClick={() => run(onRemove)}
+            >
+              Remove
+            </button>
+          </>
+        ) : (
+          <>
             <button
               type="button"
               className="party-save"
               disabled={busy || problem !== null}
-              onClick={() =>
-                run(() =>
-                  onSave(
-                    parseCount(total)!,
-                    Object.fromEntries(
-                      pile.takes.map((t) => [t.memberId, parseCount(takes[t.memberId] ?? "")!]),
-                    ),
-                  ),
-                )
-              }
+              onClick={save}
             >
-              Save
+              Add
             </button>
-          )}
-          {dirty ? (
             <button
               type="button"
               className="party-cancel"
               disabled={busy}
-              onClick={() => {
-                setTotal(String(pile.total));
-                setTakes(saved);
-              }}
+              onClick={() => setOpen(false)}
             >
-              Revert
+              Cancel
             </button>
-          ) : (
-            <button
-              type="button"
-              className="party-cancel"
-              disabled={busy}
-              onClick={() => run(onReset)}
-            >
-              Use config split
-            </button>
-          )}
-        </div>
-      )}
+          </>
+        )}
+      </div>
     </section>
   );
 }

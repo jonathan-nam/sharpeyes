@@ -43,6 +43,9 @@ import type { DropTables } from "@/types/drop";
 import type { AddLootBody, PartyLootPool, SellLootBody } from "@/types/loot";
 import type { PartiesExtras, PartiesPage } from "@/types/parties-page";
 import type { PiecePile, SavePiecePileBody } from "@/types/piece-pile";
+import type { PileForm } from "@/components/piece-pile";
+import { draftPile } from "@/lib/piece-pile";
+import { pooledPieceAt } from "@/lib/piece-stacks";
 import type { VestigeSettlement } from "@/types/vestige";
 import type {
   Party,
@@ -216,16 +219,46 @@ export default function PartiesPage() {
     setPiles((current) => current.filter((p) => p.partyId !== party.id).concat(fresh));
   }
 
+  /**
+   * The week's pile on this party: the one added, or an Add form opened on what the config's mode
+   * drops and its piece ratio, where the party drops a pooled pile at all.
+   */
   const piecePileFor = (party: Party) => {
+    const weekStart = week ?? view?.currentWeekStart ?? null;
     const pile = piles.find((p) => p.partyId === party.id);
-    if (!pile) return undefined;
+    const piece = pooledPieceAt(
+      bossByKey.get(party.bossKey) ?? null,
+      party.difficulty ?? "",
+      party.worldType,
+    );
+    if (weekStart === null || (!pile && !piece)) return undefined;
+    const draft = piece ? draftPile(party, piece) : null;
+    const form: PileForm = pile
+      ? {
+          tokenName: pile.tokenName,
+          iconUrl: pile.iconUrl,
+          difficulty: pile.difficulty,
+          stackSize: pile.stackSize,
+          total: pile.total,
+          takes: pile.takes.map((t) => [t.memberId, t.quantity]),
+          added: true,
+        }
+      : {
+          tokenName: piece!.tokenName,
+          iconUrl: piece!.iconUrl,
+          difficulty: party.difficulty!,
+          stackSize: piece!.stackSize,
+          total: draft!.total,
+          takes: Object.entries(draft!.takes),
+          added: false,
+        };
     return {
-      pile,
+      form,
       onSave: (total: number, takes: Record<string, number>) => {
-        const body: SavePiecePileBody = { weekStart: pile.weekStart, total, takes };
+        const body: SavePiecePileBody = { weekStart, total, takes };
         return writePile(party, { method: "PUT", body: JSON.stringify(body) });
       },
-      onReset: () => writePile(party, { method: "DELETE" }, `?week=${pile.weekStart}`),
+      onRemove: () => writePile(party, { method: "DELETE" }, `?week=${weekStart}`),
     };
   };
 

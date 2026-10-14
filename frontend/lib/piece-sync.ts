@@ -2,7 +2,7 @@ import type { PieceSyncGap, PieceSyncGapReason } from "@/types/piece-sync";
 
 const REASONS: Record<PieceSyncGapReason, string> = {
   NO_DIFFICULTY: "no difficulty set",
-  PARTY_LOOT: "party loot",
+  PARTY_LOOT: "pieces not added on Party View",
   BEFORE_SYNC: "cleared before sync",
 };
 

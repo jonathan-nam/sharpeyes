@@ -5,12 +5,12 @@ import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.bosses.setBossClearByHand
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
-import com.sharpeyes.backend.db.PartyPiecePile
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.TokenCatalog
 import com.sharpeyes.backend.db.TokenClearAmount
@@ -53,7 +53,7 @@ import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
- * What lands in the inventory as clears, parties and difficulties change, against a real Postgres.
+ * What lands in the inventory as clears, piles, parties and difficulties change, against a real Postgres.
  *
  * Every case drives the same functions the routes call, then reads the inventory itself.
  */
@@ -189,22 +189,39 @@ class PiecePileTest {
 
     private fun ownName(me: Uuid) = Characters.selectAll().where { Characters.id eq me }.single()[Characters.name]
 
-    // --- the split -----------------------------------------------------------------------------
-
-    @Test
-    fun `stacks divide by the ratio in whole stacks, the remainder to the earlier seat`() {
-        assertEquals(listOf(7, 7), splitStacks(14, listOf(1, 1)))
-        assertEquals(listOf(7, 4, 3), splitStacks(14, listOf(2, 1, 1)))
-        assertEquals(listOf(2, 2, 1, 1), splitStacks(6, listOf(1, 1, 1, 1)))
-        assertEquals(listOf(0, 5), splitStacks(5, listOf(0, 1)))
-        assertEquals(listOf(3, 2), splitStacks(5, listOf(0, 0)))
-        // Every split adds back up to what fell, whatever the ratio.
-        for (stacks in 0..18) {
-            for (weights in listOf(listOf(1, 2, 3), listOf(5, 0, 1, 1), listOf(1), listOf(3, 3, 3, 3, 3, 3))) {
-                assertEquals(stacks, splitStacks(stacks, weights).sum(), "$stacks over $weights")
-            }
-        }
+    /** What Party View's Add/Save does: write the pile, then bring every inventory it touches along. */
+    private fun record(
+        me: Uuid,
+        partyId: Uuid,
+        boss: String,
+        vararg takes: Pair<String, Int>,
+    ) {
+        val now = Clock.System.now()
+        val before = seatedCharacters(partyId, week())
+        val edit = PileEdit(takes.sumOf { it.second }, takes.associate { (name, n) -> seat(partyId, name) to n })
+        assertNull(editPile(partyId, week(), edit, now))
+        syncSeated(before + seatedCharacters(partyId, week()) + me, boss(boss), week(), now)
     }
+
+    /** What Party View's Remove does. */
+    private fun remove(
+        me: Uuid,
+        partyId: Uuid,
+        boss: String,
+    ) {
+        val now = Clock.System.now()
+        val before = seatedCharacters(partyId, week())
+        removePile(partyId, week())
+        syncSeated(before + me, boss(boss), week(), now)
+    }
+
+    private fun cleared(
+        me: Uuid,
+        boss: String,
+    ) = BossClear
+        .selectAll()
+        .where { (BossClear.characterId eq me) and (BossClear.bossCatalogId eq boss(boss)) }
+        .any { it[BossClear.cleared] }
 
     // --- every boss and difficulty, run alone -------------------------------------------------
 
@@ -222,8 +239,7 @@ class PiecePileTest {
                             it[TokenClearAmount.difficulty],
                             it[TokenClearAmount.world],
                             it[TokenCatalog.visionKey],
-                        ) to
-                            it[TokenClearAmount.quantity]
+                        ) to it[TokenClearAmount.quantity]
                     }
             // 7 bosses, 20 difficulties, 2 worlds. A shrunken table would pass a loop over nothing.
             assertEquals(40, rows.size)
@@ -240,135 +256,143 @@ class PiecePileTest {
         }
     }
 
-    // --- Interactive parties -------------------------------------------------------------------
+    // --- Interactive parties: added by hand, like coupons --------------------------------------
 
     @Test
-    fun `a party clear files the pile by the piece ratio and adds this character's take`() {
+    fun `a party clear adds nothing on its own, and says the pieces are not added`() {
         transaction {
             val me = character()
-            val partyId = party(me, "kalos-the-guardian", "EXTREME", pieceShares = mapOf(ownName(me) to 2))
+            val partyId = party(me, "kalos-the-guardian", "EXTREME")
             tick(me, "kalos-the-guardian")
-
-            assertEquals(14, pile(partyId)!!.total)
-            assertEquals(mapOf(ownName(me) to 7, "Steve" to 4, "Bob" to 3), takes(partyId))
-            assertEquals(7, held(me, "kalos-token"))
-
-            tick(me, "kalos-the-guardian", cleared = false)
             assertNull(pile(partyId))
+            assertEquals(0, held(me, "kalos-token"))
+            assertEquals(
+                listOf("kalos-the-guardian" to PieceSyncGap.PARTY_LOOT),
+                pieceSyncGapsFor(userId, Clock.System.now()).map { it.bossKey to it.reason },
+            )
+        }
+    }
+
+    @Test
+    fun `adding the pile ticks the clear and adds this character's take`() {
+        transaction {
+            val me = character()
+            val partyId = party(me, "kalos-the-guardian", "EXTREME")
+            record(me, partyId, "kalos-the-guardian", ownName(me) to 7, "Steve" to 4, "Bob" to 3)
+
+            assertTrue(cleared(me, "kalos-the-guardian"))
+            assertEquals(14, pile(partyId)!!.total)
+            assertEquals(7, held(me, "kalos-token"))
+            assertEquals(emptyList(), pieceSyncGapsFor(userId, Clock.System.now()))
+        }
+    }
+
+    @Test
+    fun `correcting the pile moves the count, and removing it takes it back`() {
+        transaction {
+            val me = character()
+            val partyId = party(me, "kaling", "HARD")
+            record(me, partyId, "kaling", ownName(me) to 3, "Steve" to 2, "Bob" to 2)
+            assertEquals(3, held(me, "ferocious-beast-ring"))
+
+            record(me, partyId, "kaling", ownName(me) to 5, "Steve" to 2, "Bob" to 0)
+            assertEquals(5, held(me, "ferocious-beast-ring"))
+            assertEquals(mapOf(ownName(me) to 5, "Steve" to 2, "Bob" to 0), takes(partyId))
+
+            remove(me, partyId, "kaling")
+            assertNull(pile(partyId))
+            assertEquals(0, held(me, "ferocious-beast-ring"))
+        }
+    }
+
+    @Test
+    fun `a pile added is a record, so changing the config's mode does not rewrite it`() {
+        transaction {
+            val me = character()
+            val partyId = party(me, "kaling", "HARD")
+            record(me, partyId, "kaling", ownName(me) to 3, "Steve" to 2, "Bob" to 2)
+
+            saveParty(userId, partyId, request(me, "kaling", "NORMAL"), Clock.System.now())
+            assertEquals("HARD", pile(partyId)!!.difficulty)
+            assertEquals(3, held(me, "ferocious-beast-ring"))
+            assertEquals(0, held(me, "ferocious-entanglement-ring-fragment"))
+
+            // The individual config's difficulty is the party's, last writer wins, and still
+            // leaves the recorded week alone.
+            solo(me, "kaling", "EXTREME")
+            assertEquals("EXTREME", findParty(partyId, userId)!!.difficulty)
+            assertEquals(3, held(me, "ferocious-beast-ring"))
+        }
+    }
+
+    @Test
+    fun `a new pile is of the token the config's mode drops`() {
+        transaction {
+            val me = character()
+            val partyId = party(me, "kalos-the-guardian", "NORMAL", members = listOf("Steve"))
+            record(me, partyId, "kalos-the-guardian", ownName(me) to 2, "Steve" to 1)
+            assertEquals(2, held(me, "kalos-residual-determination-fragment"))
             assertEquals(0, held(me, "kalos-token"))
         }
     }
 
     @Test
-    fun `Hard Malefic Star divides in stacks of three`() {
+    fun `unticking the clear keeps the pieces the pile records`() {
         transaction {
             val me = character()
-            val partyId = party(me, "malefic-star", "HARD", members = listOf("Steve", "Bob", "Ann"))
-            tick(me, "malefic-star")
-            // 6 stacks over 4: 2, 2, 1, 1 stacks.
-            assertEquals(mapOf(ownName(me) to 6, "Steve" to 6, "Bob" to 3, "Ann" to 3), takes(partyId))
-            assertEquals(6, held(me, "blissful-fantasy-shard"))
+            val partyId = party(me, "first-adversary", "HARD", members = listOf("Steve"))
+            record(me, partyId, "first-adversary", ownName(me) to 3, "Steve" to 3)
+            tick(me, "first-adversary", cleared = false)
+            assertEquals(3, held(me, "echo-ancient-resolve"))
         }
     }
 
     @Test
-    fun `changing a party's difficulty re-files the pile and swaps the pieces`() {
-        transaction {
-            val me = character()
-            val partyId = party(me, "kaling", "HARD", pieceShares = mapOf(ownName(me) to 2))
-            tick(me, "kaling")
-            // 7 over 2:1:1 is 3.5, 1.75, 1.75: the two larger remainders take the spare stacks, so 3, 2, 2.
-            assertEquals(3, held(me, "ferocious-beast-ring"))
-
-            saveParty(userId, partyId, request(me, "kaling", "NORMAL"), Clock.System.now())
-            // 5 fragments over 2:1:1 is 2, 2, 1 (the ratio sent nothing, so it was kept).
-            assertEquals(0, held(me, "ferocious-beast-ring"))
-            assertEquals(splitStacks(5, listOf(2, 1, 1))[0], held(me, "ferocious-entanglement-ring-fragment"))
-            assertEquals("NORMAL", pile(partyId)!!.difficulty)
-        }
-    }
-
-    @Test
-    fun `the individual config's difficulty is the party's too, last writer wins`() {
-        transaction {
-            val me = character()
-            val partyId = party(me, "kaling", "HARD", members = listOf("Steve"))
-            tick(me, "kaling")
-            assertEquals(4, held(me, "ferocious-beast-ring"))
-
-            solo(me, "kaling", "EXTREME")
-            assertEquals("EXTREME", findParty(partyId, userId)!!.difficulty)
-            assertEquals(9, held(me, "ferocious-beast-ring"))
-
-            saveParty(userId, partyId, request(me, "kaling", "HARD", listOf("Steve")), Clock.System.now())
-            assertEquals(4, held(me, "ferocious-beast-ring"))
-        }
-    }
-
-    @Test
-    fun `a corrected pile is the week's record, and nothing re-files it until reset`() {
-        transaction {
-            val me = character()
-            val partyId = party(me, "kalos-the-guardian", "EXTREME")
-            tick(me, "kalos-the-guardian")
-            assertEquals(5, held(me, "kalos-token"))
-
-            val now = Clock.System.now()
-            val edit =
-                PileEdit(
-                    14,
-                    mapOf(
-                        seat(partyId, ownName(me)) to 10,
-                        seat(partyId, "Steve") to 4,
-                        seat(partyId, "Bob") to 0,
-                    ),
-                )
-            assertNull(editPile(partyId, week(), edit, now))
-            syncSeated(setOf(me), boss("kalos-the-guardian"), week(), now)
-            assertEquals(10, held(me, "kalos-token"))
-
-            // A mode change does not touch it.
-            saveParty(userId, partyId, request(me, "kalos-the-guardian", "CHAOS"), Clock.System.now())
-            assertEquals(10, held(me, "kalos-token"))
-
-            syncSeated(resetPile(partyId, week(), Clock.System.now()), boss("kalos-the-guardian"), week(), now)
-            // Chaos is 5 over three seats: 2, 2, 1.
-            assertEquals(2, held(me, "kalos-token"))
-        }
-    }
-
-    @Test
-    fun `a correction that does not add up, or splits a stack, is refused`() {
+    fun `a pile that splits a stack or does not add up is refused`() {
         transaction {
             val me = character()
             val partyId = party(me, "malefic-star", "HARD", members = listOf("Steve"))
-            tick(me, "malefic-star")
             val mine = seat(partyId, ownName(me))
             val steve = seat(partyId, "Steve")
             val now = Clock.System.now()
 
-            assertNotNull(editPile(partyId, week(), PileEdit(18, mapOf(mine to 9, steve to 6)), now))
             assertNotNull(editPile(partyId, week(), PileEdit(18, mapOf(mine to 10, steve to 8)), now))
+            assertNotNull(editPile(partyId, week(), PileEdit(18, mapOf(mine to 9, steve to 6)), now))
+            assertNull(pile(partyId))
+
+            record(me, partyId, "malefic-star", ownName(me) to 9, "Steve" to 9)
             assertEquals(9, held(me, "blissful-fantasy-shard"))
         }
     }
 
     @Test
-    fun `deleting a party takes its pile and the pieces back`() {
+    fun `deleting a party with pieces added keeps them, the way a drop is kept`() {
         transaction {
             val me = character()
-            val partyId = party(me, "first-adversary", "HARD", members = listOf("Steve"))
-            tick(me, "first-adversary")
-            assertEquals(3, held(me, "echo-ancient-resolve"))
+            val partyId = party(me, "kaling", "EXTREME", members = listOf("Steve"))
+            record(me, partyId, "kaling", ownName(me) to 9, "Steve" to 9)
 
             retireOrDeleteParty(partyId, userId, Clock.System.now())
-            assertEquals(0, held(me, "echo-ancient-resolve"))
-            assertTrue(PartyPiecePile.selectAll().where { PartyPiecePile.partyId eq partyId }.empty())
+            assertNotNull(pile(partyId))
+            assertEquals(9, held(me, "ferocious-beast-ring"))
         }
     }
 
     @Test
-    fun `a temp party over a solo Normal Kalos re-files the week at Chaos`() {
+    fun `deleting a party with nothing added takes back what its clear gave`() {
+        transaction {
+            val me = character(world = WORLD_HEROIC)
+            val partyId = party(me, "kaling", "EXTREME", members = listOf("Steve"))
+            tick(me, "kaling")
+            assertEquals(3, held(me, "ferocious-beast-ring"))
+
+            retireOrDeleteParty(partyId, userId, Clock.System.now())
+            assertEquals(0, held(me, "ferocious-beast-ring"))
+        }
+    }
+
+    @Test
+    fun `a temp party over a solo Normal Kalos takes the solo pieces back until the party adds its own`() {
         transaction {
             val me = character()
             val soloId = solo(me, "kalos-the-guardian", "NORMAL")
@@ -379,69 +403,41 @@ class PiecePileTest {
             val temp = request(me, "kalos-the-guardian", "CHAOS", members = listOf("Steve"), oneOff = true)
             assertTrue(takesOverConfig(soloId, temp, now))
             takeOverParty(userId, soloId, temp, now)
-
             assertEquals(0, held(me, "kalos-residual-determination-fragment"))
-            // Chaos is 5 over two: 3 and 2.
+
+            record(me, soloId, "kalos-the-guardian", ownName(me) to 3, "Steve" to 2)
             assertEquals(3, held(me, "kalos-token"))
         }
     }
 
     @Test
-    fun `a temp party that names no difficulty keeps the individual one`() {
-        transaction {
-            val me = character()
-            val soloId = solo(me, "kaling", "HARD")
-            tick(me, "kaling")
-            assertEquals(7, held(me, "ferocious-beast-ring"))
-
-            val now = Clock.System.now()
-            takeOverParty(userId, soloId, request(me, "kaling", null, members = listOf("Steve"), oneOff = true), now)
-            assertEquals("HARD", findParty(soloId, userId)!!.difficulty)
-            assertEquals(4, held(me, "ferocious-beast-ring"))
-        }
-    }
-
-    @Test
-    fun `whoever ran the week divides the pile`() {
+    fun `a roster change or a skip does not rewrite a recorded week`() {
         transaction {
             val me = character()
             val partyId = party(me, "kalos-the-guardian", "EXTREME", members = listOf("Steve"))
-            tick(me, "kalos-the-guardian")
-            assertEquals(7, held(me, "kalos-token"))
+            record(me, partyId, "kalos-the-guardian", ownName(me) to 7, "Steve" to 7)
 
-            val context = SeatContext(userId, emptyMap(), Clock.System.now())
-            saveWeekRoster(partyId, me, week(), listOf("Steve", "Guest"), context)
-            // 14 over three: 5, 5, 4.
-            assertEquals(5, held(me, "kalos-token"))
-        }
-    }
-
-    @Test
-    fun `a party skipped for the week stops dividing it`() {
-        transaction {
-            val me = character()
-            val partyId = party(me, "kaling", "EXTREME", members = listOf("Steve"))
-            tick(me, "kaling")
-            assertEquals(9, held(me, "ferocious-beast-ring"))
-
+            saveWeekRoster(
+                partyId,
+                me,
+                week(),
+                listOf("Steve", "Guest"),
+                SeatContext(userId, emptyMap(), Clock.System.now()),
+            )
             setRunsInPeriod(partyId, oneOff = false, week(), runs = false, now = Clock.System.now())
-            assertNull(pile(partyId))
-            assertEquals(0, held(me, "ferocious-beast-ring"))
+            assertEquals(7, held(me, "kalos-token"))
         }
     }
 
     @Test
-    fun `your alt seated in the party gets its own take`() {
+    fun `your alt seated in the pile gets its take without its own tick`() {
         transaction {
             val me = character()
             val alt = character(name = "Altling")
             val partyId = party(me, "kalos-the-guardian", "EXTREME", members = listOf("Altling", "Steve"))
-            tick(me, "kalos-the-guardian")
-            tick(alt, "kalos-the-guardian")
-            // 14 over three: 5, 5, 4, the alt second.
+            record(me, partyId, "kalos-the-guardian", ownName(me) to 5, "Altling" to 5, "Steve" to 4)
             assertEquals(5, held(me, "kalos-token"))
             assertEquals(5, held(alt, "kalos-token"))
-            assertEquals(5, takes(partyId)["Altling"])
         }
     }
 
@@ -450,18 +446,17 @@ class PiecePileTest {
         transaction {
             val me = character()
             val partyId = party(me, "kalos-the-guardian", "CHAOS")
-            tick(me, "kalos-the-guardian")
-            assertNotNull(pile(partyId))
+            record(me, partyId, "kalos-the-guardian", ownName(me) to 2, "Steve" to 2, "Bob" to 1)
             assertTrue(PartyLoot.selectAll().where { PartyLoot.partyId eq partyId }.empty())
         }
     }
 
     @Test
-    fun `the pile is filed with the sync off, and the inventory is left alone`() {
+    fun `with the sync off a pile is recorded and the inventory is left alone`() {
         transaction {
             val me = character(sync = false)
             val partyId = party(me, "kalos-the-guardian", "EXTREME")
-            tick(me, "kalos-the-guardian")
+            record(me, partyId, "kalos-the-guardian", ownName(me) to 14, "Steve" to 0, "Bob" to 0)
             assertNotNull(pile(partyId))
             assertEquals(0, held(me, "kalos-token"))
         }
@@ -470,21 +465,13 @@ class PiecePileTest {
     // --- Heroic --------------------------------------------------------------------------------
 
     @Test
-    fun `Heroic has no pile, everybody gets their own count`() {
-        transaction {
-            val me = character(world = WORLD_HEROIC)
-            val partyId = party(me, "kalos-the-guardian", "EXTREME")
-            tick(me, "kalos-the-guardian")
-            assertNull(pile(partyId))
-            assertEquals(3, held(me, "kalos-token"))
-        }
-    }
-
-    @Test
-    fun `a Heroic party cannot be given a pile by hand either`() {
+    fun `Heroic gives everybody their own count, and has no pile to add`() {
         transaction {
             val me = character(world = WORLD_HEROIC)
             val partyId = party(me, "kalos-the-guardian", "EXTREME", members = listOf("Steve"))
+            tick(me, "kalos-the-guardian")
+            assertEquals(3, held(me, "kalos-token"))
+
             val edit = PileEdit(14, mapOf(seat(partyId, ownName(me)) to 14))
             assertNotNull(editPile(partyId, week(), edit, Clock.System.now()))
             assertNull(pile(partyId))

@@ -15,12 +15,11 @@ export type PiecePile = {
   difficulty: string;
   total: number;
   stackSize: number;
-  // Corrected by hand, so the clear and the config no longer re-file it.
-  edited: boolean;
   takes: PieceTake[];
 };
 
-// PUT /api/parties/{id}/pieces. Every seat sent; the takes add up to the total in whole stacks.
+// PUT /api/parties/{id}/pieces adds or corrects a week; DELETE ?week= removes it. Every seat sent,
+// and the takes add up to the total in whole stacks.
 export type SavePiecePileBody = {
   weekStart: string;
   total: number;

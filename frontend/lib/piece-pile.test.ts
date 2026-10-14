@@ -1,5 +1,32 @@
 import { describe, expect, it } from "vitest";
-import { parseCount, pileProblem } from "./piece-pile";
+import { draftPile, parseCount, pileProblem } from "./piece-pile";
+import type { Party, PartyMember } from "@/types/party";
+
+const seat = (id: string, pieceShares?: number): PartyMember =>
+  ({ id, name: id, pieceShares }) as PartyMember;
+
+describe("draftPile", () => {
+  const star = {
+    difficulty: "HARD",
+    world: "INTERACTIVE",
+    tokenName: "Blissful Fantasy Shard",
+    iconUrl: null,
+    quantity: 18,
+    stackSize: 3,
+    pooled: true,
+  };
+
+  it("divides the config's pile by the piece ratio, in whole stacks", () => {
+    const party = { members: [seat("me", 2), seat("a"), seat("b")] } as Party;
+    // 6 stacks over 2:1:1 is 3, 1.5, 1.5: 3, 2, 1 stacks, the tie to the earlier seat.
+    expect(draftPile(party, star)).toEqual({ total: 18, takes: { me: 9, a: 6, b: 3 } });
+  });
+
+  it("reads a seat with no ratio, from a cached party, as taking one", () => {
+    const party = { members: [seat("me"), seat("a")] } as Party;
+    expect(draftPile(party, star).takes).toEqual({ me: 9, a: 9 });
+  });
+});
 
 describe("pileProblem", () => {
   it("passes takes that add up in whole stacks", () => {

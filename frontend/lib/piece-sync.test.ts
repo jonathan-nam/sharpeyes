@@ -12,7 +12,9 @@ const gap = (reason: PieceSyncGap["reason"]): PieceSyncGap => ({
 
 describe("gapLine", () => {
   it("names the character, the boss and why", () => {
-    expect(gapLine(gap("PARTY_LOOT"))).toBe("Husky · Kalos the Guardian: party loot");
+    expect(gapLine(gap("PARTY_LOOT"))).toBe(
+      "Husky · Kalos the Guardian: pieces not added on Party View",
+    );
     expect(gapLine(gap("NO_DIFFICULTY"))).toBe("Husky · Kalos the Guardian: no difficulty set");
     expect(gapLine(gap("BEFORE_SYNC"))).toBe("Husky · Kalos the Guardian: cleared before sync");
   });

@@ -41,7 +41,7 @@ enum class PieceSyncGap {
     // No standing config names the mode this character runs the boss at.
     NO_DIFFICULTY,
 
-    // A pooled drop in a party: the clear says the pile fell, not how much of it this character looted.
+    // A pooled drop in a party whose pieces nobody has added on Party View yet.
     PARTY_LOOT,
 
     // Ticked before the sync was on. Whether the count already includes it is unknown.
@@ -81,10 +81,7 @@ internal fun syncPiecesForClear(
     now: Instant,
     capture: CaptureCounts? = null,
 ) {
-    // The party pile first, whether or not the sync is on: it is what Party View shows for the week.
-    val seated = refilePile(characterId, bossCatalogId, period, now)
     syncOne(characterId, bossCatalogId, period, now, capture)
-    syncSeated(seated - characterId, bossCatalogId, period, now)
 }
 
 /** Brings each of these characters' pieces in line with the pile that seats them. */
@@ -110,8 +107,15 @@ private fun syncOne(
             ?.get(Characters.userId)
     if (userId == null || !syncEnabled(userId)) return
 
-    val cleared = isCleared(characterId, bossCatalogId, period)
-    val owed = if (cleared) owedFor(characterId, bossCatalogId, period) else Owed.None
+    // A party pile that seats this character is a record of what they took, like a logged drop, so it
+    // counts whether or not their own clear is ticked. Everything else follows the clear.
+    val seated = pileTakeFor(characterId, bossCatalogId, period)
+    val owed =
+        when {
+            seated != null -> if (seated.second > 0) Owed.Pieces(seated.first, seated.second) else Owed.None
+            isCleared(characterId, bossCatalogId, period) -> owedFor(characterId, bossCatalogId, period)
+            else -> Owed.None
+        }
     val credit =
         PieceClearCredit
             .selectAll()

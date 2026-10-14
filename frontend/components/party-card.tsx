@@ -4,7 +4,7 @@ import Link from "next/link";
 import { type ReactNode, useState } from "react";
 import { DropPicker } from "@/components/drop-picker";
 import { LootList, type StackAssignment } from "@/components/loot-list";
-import { PiecePileEditor } from "@/components/piece-pile";
+import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
 import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl, failureText } from "@/lib/api";
@@ -16,7 +16,6 @@ import type { Boss } from "@/types/boss";
 import type { BossDrop, DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Party } from "@/types/party";
-import type { PiecePile } from "@/types/piece-pile";
 import { partyHref } from "@/lib/party-path";
 
 // One config: who ran this boss this week, and what its pool is up to.
@@ -54,11 +53,11 @@ export function PartyCard({
   stacks,
   piecePile,
 }: {
-  /** The week's pile of Eternal pieces, where this party has one. See PiecePileEditor. */
+  /** The week's pile of Eternal pieces, added or to add, where this party drops one. */
   piecePile?: {
-    pile: PiecePile;
+    form: PileForm;
     onSave: (total: number, takes: Record<string, number>) => Promise<void>;
-    onReset: () => Promise<void>;
+    onRemove: () => Promise<void>;
   };
   party: Party;
   heading: ReactNode;
@@ -449,18 +448,16 @@ export function PartyCard({
             />
           )}
           {/* The week's pile of Eternal pieces. Never part of the pool above: pieces cannot be sold,
-              so they stay out of the Drop Log, sales and settlement. Keyed on what was filed, so a
-              save or a re-file opens the boxes on the new figures. */}
+              so they stay out of the Drop Log, sales and settlement. Keyed on what is on file, so
+              an add, a save or a remove opens the boxes on the new figures. */}
           {piecePile && (
             <PiecePileEditor
-              key={`${piecePile.pile.weekStart}:${piecePile.pile.total}:${piecePile.pile.takes
-                .map((t) => `${t.memberId}=${t.quantity}`)
-                .join(",")}`}
+              key={`${piecePile.form.added}:${piecePile.form.total}:${piecePile.form.takes.join(",")}`}
               party={party}
-              pile={piecePile.pile}
+              form={piecePile.form}
               busy={busy ?? false}
               onSave={piecePile.onSave}
-              onReset={piecePile.onReset}
+              onRemove={piecePile.onRemove}
             />
           )}
           {/* One press opens the roster, the night's pickup and the split, so one press has to

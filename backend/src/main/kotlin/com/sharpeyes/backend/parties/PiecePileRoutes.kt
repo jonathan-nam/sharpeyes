@@ -12,7 +12,7 @@ import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.tokens.PileEdit
 import com.sharpeyes.backend.tokens.editPile
-import com.sharpeyes.backend.tokens.resetPile
+import com.sharpeyes.backend.tokens.removePile
 import com.sharpeyes.backend.tokens.seatedCharacters
 import com.sharpeyes.backend.tokens.syncSeated
 import com.sharpeyes.backend.users.ensureUser
@@ -50,8 +50,6 @@ data class PiecePileResponse(
     val difficulty: String,
     val total: Int,
     val stackSize: Int,
-    // Corrected by hand, so the clear and the config no longer re-file it.
-    val edited: Boolean,
     val takes: List<PieceTakeResponse>,
 )
 
@@ -79,7 +77,7 @@ internal suspend fun RoutingContext.listPiecePilesRoute() {
     call.respond(piles)
 }
 
-/** Corrects one week's pile. Answers with the pile as written. */
+/** Adds or corrects one week's pile. Answers with the pile as written. */
 internal suspend fun RoutingContext.savePiecePileRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val partyId = call.parseUuidParam("id") ?: return
@@ -104,8 +102,8 @@ internal suspend fun RoutingContext.savePiecePileRoute() {
     respondToPile(outcome)
 }
 
-/** Puts a corrected pile back on what the config files. */
-internal suspend fun RoutingContext.resetPiecePileRoute() {
+/** Takes one week's pile off the party, and its pieces out of every inventory it put them in. */
+internal suspend fun RoutingContext.removePiecePileRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val partyId = call.parseUuidParam("id") ?: return
     val week =
@@ -116,7 +114,9 @@ internal suspend fun RoutingContext.resetPiecePileRoute() {
         dbQuery {
             ensureUser(userId, email)
             if (!ownsParty(partyId, userId)) return@dbQuery null
-            afterPileChanged(partyId, week, resetPile(partyId, week, now), now)
+            val before = seatedCharacters(partyId, week)
+            removePile(partyId, week)
+            afterPileChanged(partyId, week, before, now)
             piecePilesFor(listOf(partyId), week)
         }
     respondToPile(outcome)
@@ -131,15 +131,18 @@ private suspend fun RoutingContext.respondToPile(outcome: Any?) =
 
 private fun weekOrNull(raw: String?): LocalDate? = raw?.let { parseWeekParam(it).getOrNull() }
 
-/** Every character seated before or after a pile write follows it into their inventory. */
+/**
+ * Every character seated before or after a pile write follows it into their inventory, and so does
+ * the config's own character, whose clear adding a pile ticks.
+ */
 private fun afterPileChanged(
     partyId: Uuid,
     week: LocalDate,
     seated: Set<Uuid>,
     now: Instant,
 ) {
-    val bossId = Party.selectAll().where { Party.id eq partyId }.first()[Party.bossCatalogId]
-    syncSeated(seated, bossId, week, now)
+    val config = Party.selectAll().where { Party.id eq partyId }.first()
+    syncSeated(seated + config[Party.characterId], config[Party.bossCatalogId], week, now)
 }
 
 internal fun piecePilesFor(
@@ -169,7 +172,6 @@ internal fun piecePilesFor(
                 difficulty = it[PartyPiecePile.difficulty],
                 total = it[PartyPiecePile.total],
                 stackSize = it[PartyPiecePile.stackSize],
-                edited = it[PartyPiecePile.edited],
                 takes = takes[partyId].orEmpty(),
             )
         }

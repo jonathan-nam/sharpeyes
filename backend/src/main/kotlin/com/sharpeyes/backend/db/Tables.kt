@@ -423,7 +423,6 @@ object PartyPiecePile : Table("party_piece_pile") {
     val difficulty = text("difficulty")
     val total = integer("total")
     val stackSize = integer("stack_size")
-    val edited = bool("edited").default(false)
     val filedAt = timestamp("filed_at")
 
     override val primaryKey = PrimaryKey(partyId, periodStart)

@@ -20,8 +20,8 @@ CREATE TABLE token_clear_amount (
 -- ratio rather than `shares`: who loots pieces is decided apart from who is paid for coupons.
 ALTER TABLE party_member ADD COLUMN piece_shares INT NOT NULL DEFAULT 1 CHECK (piece_shares >= 0);
 
--- One week's pooled pile on a party, filed by the clear from the config's mode and ratio, then
--- correctable by hand. Never party_loot: pieces cannot be traded, so they must stay out of the Drop
+-- One week's pooled pile on a party, added on Party View from the config's mode and ratio, the way
+-- a party adds its coupons. Never party_loot: pieces cannot be traded, so they must stay out of the Drop
 -- Log, sales and settlement, all of which read party_loot.
 CREATE TABLE party_piece_pile (
     party_id         UUID NOT NULL REFERENCES party (id) ON DELETE CASCADE,
@@ -30,8 +30,6 @@ CREATE TABLE party_piece_pile (
     difficulty       TEXT NOT NULL,
     total            INT NOT NULL CHECK (total >= 0),
     stack_size       INT NOT NULL CHECK (stack_size >= 1),
-    -- Somebody corrected it, so a clear or a mode change no longer re-files it.
-    edited           BOOLEAN NOT NULL DEFAULT FALSE,
     filed_at         TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (party_id, period_start)
 );
