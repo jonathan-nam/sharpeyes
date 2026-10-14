@@ -5,9 +5,12 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 
 import { LotSale } from "@/components/lot-sale";
 import { RowSale } from "@/components/row-sale";
+import { SettlementSummary } from "@/components/settlement-summary";
 import { type RunLog, RunPlan } from "@/components/run-plan";
 import { apiFetch, readBack } from "@/lib/api";
+import { progressLabel, progressMark } from "@/lib/boss-clears";
 import { YOU } from "@/lib/boss-night";
+import { weeklyLeft } from "@/lib/bosses-left";
 import { peek, put } from "@/lib/cache";
 import { sectionHref } from "@/lib/drop-sections";
 import {
@@ -17,11 +20,12 @@ import {
   type LotRow,
   type LotSaleBody,
 } from "@/lib/lot-sale";
+import { settlementView } from "@/lib/settlement-view";
 import { soloNight } from "@/lib/solo-night";
 import { useAuth } from "@/lib/use-auth";
 import { useRowWrites } from "@/lib/use-row-writes";
 import { SELF_KEY } from "@/lib/vestige-ledger";
-import type { Boss } from "@/types/boss";
+import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
 import type { PartyLootPool, SellLootBody } from "@/types/loot";
@@ -31,6 +35,8 @@ import type { Party } from "@/types/party";
 // The keys the full pages read and seed, so a widget and its page share one cached copy.
 const PARTIES_KEY = "/api/parties";
 const BOSSES_KEY = "/api/bosses";
+const CLEARS_KEY = "/api/bosses/clears";
+const CHARACTERS_KEY = "/api/characters";
 const DROP_LOG_KEY = "/api/pages/drop-log";
 const POOLS_KEY = "/api/parties/loot";
 
@@ -47,15 +53,23 @@ export function QuickActions({ trades }: { trades: boolean }) {
   return (
     <section className="quick-actions">
       <h2 className="quick-actions-title">Quick Actions</h2>
-      {/* Heroic worlds sell nothing. See lib/world.ts. */}
+      <QuickFold label="Bosses Left">
+        <QuickBossesLeft />
+      </QuickFold>
+      <QuickFold label="Solo Run Order">
+        <QuickRunOrder />
+      </QuickFold>
+      {/* Heroic worlds trade nothing. See lib/world.ts. */}
       {trades && (
         <QuickFold label="Record Sale">
           <QuickSale />
         </QuickFold>
       )}
-      <QuickFold label="Solo Run Order">
-        <QuickRunOrder />
-      </QuickFold>
+      {trades && (
+        <QuickFold label="Settlement">
+          <QuickSettlement />
+        </QuickFold>
+      )}
     </section>
   );
 }
@@ -265,6 +279,113 @@ function QuickRunOrder() {
       )}
       <Link className="quick-action-more" href="/bosses/order">
         Full Run Order
+      </Link>
+    </>
+  );
+}
+
+/** The Settlement stage's three tiles, off the same figures the stage states. */
+function QuickSettlement() {
+  const { getToken, isLoaded } = useAuth();
+  const [page, setPage] = useState<DropLogPage | null>(null);
+  const [state, setState] = useState<LoadState>("loading");
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    let live = true;
+    apiFetch<DropLogPage>(DROP_LOG_KEY, { method: "GET" }, getToken)
+      .then((next) => {
+        if (!live) return;
+        setPage(next);
+        setState("loaded");
+      })
+      .catch(() => live && setState("error"));
+    return () => {
+      live = false;
+    };
+  }, [getToken, isLoaded]);
+
+  const view = useMemo(() => (page ? settlementView(page) : null), [page]);
+
+  return (
+    <>
+      {state === "loading" && <p className="party-hint">Loading...</p>}
+      {state === "error" && (
+        <p className="finder-empty">Couldn&apos;t load your settlements. Reload to try again.</p>
+      )}
+      {view && view.settlement.length === 0 && <p className="party-hint">Nothing to settle.</p>}
+      {view && <SettlementSummary rows={view.settlement} totals={view.totals} />}
+      <Link className="quick-action-more" href={sectionHref("settlement")}>
+        All Settlements
+      </Link>
+    </>
+  );
+}
+
+/** This week's weekly bosses each character still has to clear. See lib/bosses-left.ts. */
+function QuickBossesLeft() {
+  const { getToken, isLoaded } = useAuth();
+  const seededView = peek<BossClearsView>(CLEARS_KEY);
+  const [view, setView] = useState<BossClearsView | null>(seededView ?? null);
+  const [bosses, setBosses] = useState<Boss[]>(peek<Boss[]>(BOSSES_KEY) ?? []);
+  const [characters, setCharacters] = useState<Character[]>(
+    peek<Character[]>(CHARACTERS_KEY) ?? [],
+  );
+  const [state, setState] = useState<LoadState>(seededView ? "loaded" : "loading");
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    let live = true;
+    Promise.all([
+      apiFetch<BossClearsView>(CLEARS_KEY, { method: "GET" }, getToken),
+      apiFetch<Boss[]>(BOSSES_KEY, { method: "GET" }, getToken),
+      apiFetch<Character[]>(CHARACTERS_KEY, { method: "GET" }, getToken),
+    ])
+      .then(([nextView, nextBosses, nextCharacters]) => {
+        if (!live) return;
+        setView(nextView);
+        setBosses(nextBosses);
+        setCharacters(nextCharacters);
+        put(CLEARS_KEY, nextView);
+        put(BOSSES_KEY, nextBosses);
+        put(CHARACTERS_KEY, nextCharacters);
+        setState("loaded");
+      })
+      .catch(() => live && setState((current) => (current === "loaded" ? current : "error")));
+    return () => {
+      live = false;
+    };
+  }, [getToken, isLoaded]);
+
+  const rows = useMemo(
+    () => (view ? weeklyLeft(bosses, characters, view) : []),
+    [bosses, characters, view],
+  );
+
+  return (
+    <>
+      {state === "loading" && <p className="party-hint">Loading...</p>}
+      {state === "error" && (
+        <p className="finder-empty">Couldn&apos;t load your clears. Reload to try again.</p>
+      )}
+      {state === "loaded" && rows.length === 0 && (
+        <p className="party-hint">No weekly bosses to run.</p>
+      )}
+      {rows.length > 0 && (
+        <ul className="quick-left">
+          {rows.map(({ character, progress, left }) => (
+            <li key={character.id} className="quick-left-row">
+              <span className="quick-left-name">{character.name}</span>
+              <span className="quick-left-mark" aria-label={progressLabel(progress)}>
+                {progressMark(progress)}
+              </span>
+              <span className="quick-left-bosses">{left.map((boss) => boss.name).join(", ")}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Link className="quick-action-more" href="/bosses">
+        Individual View
       </Link>
     </>
   );

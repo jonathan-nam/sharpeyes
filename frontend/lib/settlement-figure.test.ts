@@ -19,6 +19,7 @@ const page = readFileSync(join(__dirname, "..", "app", "bosses", "drops", "page.
 const summary = readFileSync(join(__dirname, "..", "components", "settlement-summary.tsx"), "utf8");
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 const settlement = readFileSync(join(__dirname, "settlement.ts"), "utf8");
+const view = readFileSync(join(__dirname, "settlement-view.ts"), "utf8");
 const entry = readFileSync(join(__dirname, "..", "components", "add-settlement.tsx"), "utf8");
 
 describe("what the card says a person owes", () => {
@@ -400,7 +401,7 @@ describe("what the card says a person owes", () => {
     // The one case a blank card is wanted: it is where next week's entry goes. Without it the place
     // you record what somebody owes is somewhere you have to make appear first.
     expect(source).toContain("row.pinned ?");
-    expect(page).toContain("people.filter((p) => p.pinned)");
+    expect(view).toContain("people.filter((p) => p.pinned)");
   });
 
   it("offers the pin only on a PERSON, never on an unclaimed character", () => {

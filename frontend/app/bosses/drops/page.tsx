@@ -29,16 +29,14 @@ import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import {
   type OffsetShare,
-  buildSettlement,
   decidedSales,
   keptOfYours,
-  settlementTotals,
   shareKey,
   splittableDebts,
   yourPiles,
 } from "@/lib/settlement";
 import { heldOfYoursBy, stillAsking, worthDrawing } from "@/lib/ledger-fates";
-import { buildWallet } from "@/lib/wallet";
+import { settlementView } from "@/lib/settlement-view";
 import {
   type DropSectionKey,
   dropSections,
@@ -79,24 +77,11 @@ import {
   type Holder,
   SELF_HOLDER,
   SELF_KEY,
-  alsoHeldByYou,
   couponMoney,
-  answeredByHolder,
-  answeredSalesByPair,
-  boughtByHolder,
-  foldSeats,
   holderKey,
-  holderLedgers,
-  closedByHolder,
-  keptByHolder,
-  outstanding,
-  receivedByHolder,
   paymentsSinceClosing,
-  receivedSinceClosing,
-  saleCredits,
   stillOpen,
   runningBalance,
-  salesByHolder,
   unanswered,
 } from "@/lib/vestige-ledger";
 import { showsMoney } from "@/lib/world";
@@ -465,12 +450,31 @@ export default function DropLogPage() {
   // Roster order, as /api/characters returns it (Characters.position). The same list the party
   // arrangements are ordered by, so one character sits in the same place on both screens.
   const characterOrder = characters.map((c) => c.id);
-  // The catalog's own order, which is what /api/bosses returns, so two bosses cleared in one week
-  // never swap places in the queue and re-price each other.
-  const bossOrder = new Map(bosses.map((b, i) => [b.bossKey, i]));
+  // The ledger reads the WHOLE account, not the filtered log. A pile is one person's, spanning
+  // every boss any of their characters loots for, so showing the part of it that falls in the
+  // chosen month would price those bosses off a fraction of the sales that paid for them.
+  const {
+    closures,
+    settled,
+    ledgers,
+    holderNames,
+    wallet,
+    credits,
+    settlement,
+    totals: owedTotals,
+  } = settlementView({
+    parties,
+    pools,
+    bosses,
+    people,
+    tranches,
+    payments,
+    settlements,
+    debts,
+    disposals,
+  });
   // The whole log is kept alongside the filtered one so the toolbar does not come and go: which
   // controls exist is a property of the account, not of what the filter currently leaves.
-  const closures = closedByHolder(settlements);
   // With the tranches, so a night whose coupons you already sold is not asked for in coupons as
   // well as in money. The same subtraction the Settlement Ledger makes below. See V56.
   const whole = buildDropLog(parties, pools, dropTables, closures.closed);
@@ -490,38 +494,7 @@ export default function DropLogPage() {
   const loggedBosses = new Set(whole.entries.map((e) => e.bossKey));
   const bossesWithDrops = bosses.filter((b) => loggedBosses.has(b.bossKey));
 
-  // The ledger reads the WHOLE account, not the filtered log. A pile is one person's, spanning
-  // every boss any of their characters loots for, so showing the part of it that falls in the
-  // chosen month would price those bosses off a fraction of the sales that paid for them.
   const partyById = new Map(parties.map((p) => [p.id, p]));
-  const settled = outstanding(parties, pools, VESTIGE, bossOrder);
-  // Your own coupons from the nights that owed nobody anything, which the queue above leaves out.
-  // They are yours to sell, so the card that takes a sale has to know you are holding them.
-  const ledgers = holderLedgers(
-    [...settled, ...alsoHeldByYou(parties, pools, VESTIGE, bossOrder, settled)],
-    salesByHolder(tranches),
-    keptByHolder(tranches),
-    boughtByHolder(tranches),
-    receivedByHolder(payments),
-    closures,
-    answeredByHolder(tranches),
-    // The same pieces per creditor, which is what lets a night the sales already answered stay off
-    // the queue when a later one is logged. See foldAnswered.
-    answeredSalesByPair(tranches),
-  );
-  // What other people owe you, in both units it can be owed in: pieces of yours they are holding,
-  // and shares of a sale they made. Off the same two aggregations the ledger and the wallet already
-  // run, so there is no third answer to keep in step.
-  // Somebody a debt can name but no open drop does. Off the seats of every party, folded to their
-  // people, which is the same fold every figure on this page is measured against.
-  const holderNames = new Map<string, string>();
-  // The people list first, so somebody who is owed something is named even after their seat has
-  // left every party. Seats then win, because a seat carries the name as this account spells it.
-  for (const person of people) holderNames.set(`person:${person.id}`, person.name);
-  for (const party of parties) {
-    for (const seat of foldSeats(party.seats)) holderNames.set(seat.key, seat.name);
-  }
-  const wallet = buildWallet(parties, pools);
   // The shares an offset discharged, resolved. Only the drops an offset actually names, because
   // splitting every loot row in every pool to answer for a handful would be a pass over the whole
   // account on every render.
@@ -618,31 +591,6 @@ export default function DropLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splitKey]);
 
-  // What sales of somebody else's coupons came to. Held rather than passed inline: the Sale Ledger's
-  // fold reads the same figures, and two calls is two lists to fall out of step. See decidedSales.
-  const credits = saleCredits(tranches);
-  const settlement = buildSettlement(
-    ledgers,
-    wallet,
-    debts,
-    credits,
-    // Only what no closure has already spoken for. A payment that settled a pile is spent, and
-    // counting it again takes it off the next thing entered against that person. See #350.
-    receivedSinceClosing(payments, settlements),
-    holderNames,
-    new Set(people.filter((p) => p.pinned).map((p) => `person:${p.id}`)),
-    // The pieces a priced tranche already spoke for, per pair. `saleCredits` above is the money the
-    // same rows came to, and passing one without the other is what had this card asking Bro for 130
-    // coupons while the Sale Ledger, subtracting the 70 he had been sold, asked for 60.
-    answeredSalesByPair(tranches),
-    // What has been decided about their money, and nothing more. An empty list means undecided,
-    // which is the honest state for a sale nobody has said anything about. See V61.
-    disposals,
-  );
-  // Nights that did not divide and that nobody has said the arrangement for. Above the ledger,
-  // because until one is answered its pieces are missing from every figure below it.
-  // The three tiles above the cards, off the cards themselves. See settlementTotals.
-  const owedTotals = settlementTotals(settlement);
   // What is finished. Off the WHOLE log rather than the filtered one, for the reason the ledgers
   // above are: this is the account's record, and a month's slice of it is not one.
   const settledRows = buildSettledLog(whole.entries, settlements, holderNames);

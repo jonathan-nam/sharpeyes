@@ -1801,6 +1801,37 @@ img.user-avatar-img {
   align-self: flex-end;
 }
 
+/* Bosses Left: one line per character, its names wrapping under themselves rather than under the
+   name column. */
+.quick-left {
+  display: grid;
+  grid-template-columns: max-content max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Subgrid, not `display: contents`, which drops the item's list role in some screen readers. */
+.quick-left-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+}
+
+.quick-left-name {
+  color: var(--ink-strong);
+}
+
+.quick-left-mark {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.quick-left-bosses {
+  color: var(--ink);
+}
+
 /* --- Sectioned inventory ---------------------------------------------------------------- */
 
 .ms-section {
