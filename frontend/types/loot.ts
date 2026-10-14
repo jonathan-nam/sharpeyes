@@ -55,6 +55,8 @@ export type Loot = {
   // Who took the item, where it cannot be sold. Nothing is owed off it: the item cannot move
   // again, so a seat's tally is how many they have taken and never a share of anything.
   takenByMemberId: string | null;
+  /** It fell on a run with nobody else. Optional: a payload cached before this field lacks it. */
+  solo?: boolean;
   soldAt: string | null;
   // When the drop was LOGGED. Not droppedOn, which is a date the user picks: two drops logged either
   // side of a sale on the same evening are one date and two of these, and telling them apart is the
