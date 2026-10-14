@@ -348,9 +348,10 @@ export function nextSkips(
 // this would need if they ever come back.
 const CADENCE_ORDER = ["MONTHLY", "WEEKLY", "DAILY"];
 
-// Four characters on screen at once, and the rest are scrolled to. A roster of ten split a 730px
-// column into 53px slices, which is narrower than the sprite that has to sit in one.
-export const VISIBLE_COLUMNS = 4;
+// Six characters on screen at once, and the rest are scrolled to. A roster of ten split a 730px
+// column into 53px slices, which is narrower than the sprite that has to sit in one; six in the
+// 1280px column leave each about 177px.
+export const VISIBLE_COLUMNS = 6;
 
 // On a cold load neither the catalog nor the roster has arrived, so the loading state has nothing
 // real to lay out. These stand in: the shape is right (one monthly and a run of weeklies, which is

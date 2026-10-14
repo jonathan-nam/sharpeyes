@@ -95,9 +95,9 @@ export function BossMatrix({
   }
   const skipsBy = indexSkips(skipsByCharacter ?? {});
 
-  // How many screens wide the table is: 1 up to four characters, 2 at eight, and so on. The width
-  // itself is the stylesheet's, which is the only place that knows how much of the column the boss
-  // names take. This is the part it cannot know.
+  // How many screens wide the table is: 1 up to VISIBLE_COLUMNS characters, 2 at twice that, and
+  // so on. The width itself is the stylesheet's, which is the only place that knows how much of the
+  // column the boss names take. This is the part it cannot know.
   const roster = Math.max(columns.length, 1);
   const span = roster / Math.min(roster, VISIBLE_COLUMNS);
 
@@ -258,7 +258,7 @@ export function BossMatrix({
       {/* Three tables, one grid. The names are in a gutter outside the scrolling box (see
           `gutter`), and the marks are split again into heads and rows so the heads can be held at
           the top of the window: a sticky element sticks to the nearest scrolling box, and the
-          marks have to sit in one of those to scroll sideways past four characters.
+          marks have to sit in one of those to scroll sideways past VISIBLE_COLUMNS characters.
 
           The mark tables agree on their columns because they are the same table: same class, same
           fixed layout, and the widths follow from --boss-char-min and the column count, which the
