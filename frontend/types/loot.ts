@@ -30,8 +30,8 @@ export type Loot = {
   // The reset week droppedOn falls in, as that week's Thursday. The server's, so the Drop Log's
   // weeks are the same ones the clears matrix steps through. See BossPeriod.kt.
   weekStart: string;
-  // PENDING, SOLD, PAID_OUT, or TAKEN where a world cannot sell. Derived by the server from the
-  // sale, the payout rows and takenByMemberId.
+  // PENDING, SOLD, PAID_OUT, or TAKEN where nobody sold it (Heroic, or a solo drop kept). Derived
+  // by the server from the sale, the payout rows and takenByMemberId.
   status: string;
   saleAmount: number | null;
   // What it fetched in real money, in cents, when that is what it sold for. Set INSTEAD of
@@ -52,8 +52,8 @@ export type Loot = {
   sellerShares: number | null;
   // Who holds the value and owes the rest: the seller, or the buyer on a BOUGHT basis.
   sellerMemberId: string | null;
-  // Who took the item, where it cannot be sold. Nothing is owed off it: the item cannot move
-  // again, so a seat's tally is how many they have taken and never a share of anything.
+  // Who took the item, where it cannot be sold, or kept a drop they got solo. Nothing is owed off
+  // it, so a seat's tally is how many they have taken and never a share of anything.
   takenByMemberId: string | null;
   /** It fell on a run with nobody else. Optional: a payload cached before this field lacks it. */
   solo?: boolean;

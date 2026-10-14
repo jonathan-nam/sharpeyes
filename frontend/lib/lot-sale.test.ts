@@ -193,6 +193,15 @@ describe("the queue a lot is drawn from", () => {
     expect(lotQueue(parties, sold, STONE, SELF_KEY)).toEqual([]);
   });
 
+  it("leaves out a row somebody kept", () => {
+    const kept = [
+      pool("p1", [
+        drop("l1", STONE, "2026-07-30", ["m1"], { takenByMemberId: "m1", status: "TAKEN" }),
+      ]),
+    ];
+    expect(lotQueue(parties, kept, STONE, SELF_KEY)).toEqual([]);
+  });
+
   it("leaves out another drop entirely", () => {
     expect(lotQueue(parties, pools, BOX, SELF_KEY)).toEqual([]);
   });

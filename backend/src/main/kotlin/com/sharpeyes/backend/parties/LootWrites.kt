@@ -380,6 +380,7 @@ private fun lotRowRefusal(
         !partyCanSell(row.partyId) -> "Heroic worlds do not trade, so this cannot be sold."
         loot.dropKey != dropKey -> "every row of a lot has to be the same drop"
         loot.soldAt != null -> "a drop named here has sold since this list was drawn, so reload it"
+        loot.takenByMemberId != null -> "a drop named here was kept since this list was drawn, so reload it"
         row.amount < 0 -> "amount must be zero or more"
         row.sellerMemberId.toString() !in loot.ranThatWeek ->
             "sellerMemberId must be somebody who ran this boss that week"
