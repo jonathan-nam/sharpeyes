@@ -2580,15 +2580,15 @@ button.link:disabled {
    different page. The cost is real: on a small roster the marks sit far from the boss name, which
    is why the striping and hover band below are not decoration.
 
-   Past four characters it fills a MULTIPLE of the column instead, and the rest is scrolled to.
+   Past VISIBLE_COLUMNS characters it fills a MULTIPLE of the column instead, and the rest is scrolled to.
    --boss-span is that multiple and --boss-cols the roster's size, both set by the component: it is
    the only side that knows them, as this is the only side that knows what the names take. Fixed
    layout is what splits the remainder evenly between the character columns without being told to,
    since they are the ones that declare no width.
 
-   The third term is a floor, and it is what a window too narrow to hold four sprites hits. It
-   fixes the columns at a stride the sprite fits in and shows fewer of them, rather than dividing a
-   phone's width by four and cropping the art down both sides. */
+   The third term is a floor, and it is what a window too narrow to hold VISIBLE_COLUMNS sprites
+   hits. It fixes the columns at a stride the sprite fits in and shows fewer of them, rather than
+   dividing a phone's width by that count and cropping the art down both sides. */
 .boss-table {
   table-layout: fixed;
   border-collapse: collapse;
@@ -2605,16 +2605,16 @@ button.link:disabled {
    and the header's profile icon. Hugging the content instead left a ragged right edge that read as
    a different page.
 
-   Past four characters they fill a MULTIPLE of the pane instead, and the rest is scrolled to.
+   Past VISIBLE_COLUMNS characters they fill a MULTIPLE of the pane instead, and the rest is scrolled to.
    --boss-span is that multiple and --boss-cols the roster's size, both set by the component: it is
    the only side that knows them. Fixed layout is what splits the width evenly between the columns
    without being told to, since none of them declares one.
 
    The second term no longer subtracts the names, because the names are not in this table: the
    pane is already the width the marks have. The third is a floor, and it is what a window too
-   narrow to hold four sprites hits. It fixes the columns at a stride the sprite fits in and shows
-   fewer of them, rather than dividing a phone's width by four and cropping the art down both
-   sides. */
+   narrow to hold VISIBLE_COLUMNS sprites hits. It fixes the columns at a stride the sprite fits in
+   and shows fewer of them, rather than dividing a phone's width by that count and cropping the art
+   down both sides. */
 .boss-table.is-marks {
   width: max(
     100%,
