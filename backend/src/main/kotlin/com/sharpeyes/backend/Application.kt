@@ -10,6 +10,7 @@ import com.sharpeyes.backend.plugins.configureSerialization
 import com.sharpeyes.backend.plugins.configureTiming
 import com.sharpeyes.backend.plugins.primeSigningKeys
 import com.sharpeyes.backend.plugins.warmReadPaths
+import com.sharpeyes.backend.plugins.warmRequestPipeline
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.services.VisionServiceClient
 import com.sharpeyes.backend.services.createNexonHttpClient
@@ -57,6 +58,7 @@ fun Application.module() {
     // next visitor's. See Warmup.kt for the measurement.
     primeSigningKeys(signingKeys)
     warmReadPaths()
+    warmRequestPipeline { configureRouting(nexonLookupService, screenshotParser, spriteCache) }
 
     // An outfit is the player's to change and nothing tells us when they have, so the sprite URL is
     // re-asked for on a clock. See SpriteRefreshJob.

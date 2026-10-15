@@ -86,10 +86,10 @@ fun Application.warmReadPaths() {
     log.info("Warmup: read paths primed in ${elapsed.inWholeMilliseconds}ms")
 }
 
-private fun emailOf(userId: String): String =
+internal fun emailOf(userId: String): String =
     transaction { Users.selectAll().where { Users.id eq userId }.first()[Users.email] }
 
-private fun JdbcTransaction.busiestAccount(): String? {
+internal fun JdbcTransaction.busiestAccount(): String? {
     val parties = Party.id.count()
     return Party
         .select(Party.userId, parties)
