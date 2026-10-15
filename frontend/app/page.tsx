@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { HeroFold } from "@/components/hero-fold";
-import { QuickActions } from "@/components/quick-actions";
 import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
@@ -13,7 +12,6 @@ import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
-import { showsMoney } from "@/lib/world";
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -88,7 +86,6 @@ export default function Home() {
           <SignInButton />
         </section>
       )}
-      {isSignedIn && settings && <QuickActions trades={showsMoney(settings.trades)} />}
     </main>
   );
 }

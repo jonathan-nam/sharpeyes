@@ -163,8 +163,8 @@ export default function DropLogPage() {
     window.history.replaceState(null, "", sectionHref(key));
   }
   const [error, setError] = useState<string | null>(null);
-  // Every write the Sales and Settlement stages make, each patching the lists it moved. Shared with
-  // the home screen's widgets. See lib/use-drop-log-writes.ts.
+  // Every write the Sales and Settlement stages make, each patching the lists it moved. See
+  // lib/use-drop-log-writes.ts.
   const writes = useDropLogWrites(getToken, (patch) => {
     if (patch.pools) setPools(patch.pools);
     if (patch.tranches) setTranches(patch.tranches);

@@ -19,14 +19,13 @@ import type { DropLogPage } from "@/types/page";
 /**
  * The Drop Log's Settlement stage, whole: the tiles, the entry boxes and every card's acts.
  *
- * One component for every screen that offers it, so an Offset pressed on the home screen and one
- * pressed on the Drop Log are the same write with the same figures in front of it.
+ * Any other screen that offers these acts should draw this rather than its own, so an Offset is one
+ * write with one set of figures in front of it wherever it is pressed.
  */
 export function SettlementStage({
   page,
   view,
   writes,
-  heading = true,
 }: {
   page: Pick<
     DropLogPage,
@@ -34,8 +33,6 @@ export function SettlementStage({
   >;
   view: ReturnType<typeof settlementView>;
   writes: DropLogWrites;
-  /** Off where the screen already names the stage, as the home screen's fold does. */
-  heading?: boolean;
 }) {
   const { settlement, totals, wallet, offsetShares } = view;
   const { busy } = writes;
@@ -48,7 +45,7 @@ export function SettlementStage({
 
   return (
     <section className="loot-pool">
-      {heading && <h2 className="loot-pool-title">Settlement Summary</h2>}
+      <h2 className="loot-pool-title">Settlement Summary</h2>
 
       <SettlementSummary rows={settlement} totals={totals} />
 

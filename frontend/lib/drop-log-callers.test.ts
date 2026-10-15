@@ -83,11 +83,9 @@ describe("every caller of buildDropLog hands it the settlements", () => {
 // the figure on the parties that are still on the list. Party View asked for 10 coupons the Drop
 // Log had already washed against a retired config's night.
 //
-// A page may still draw only the standing ones. It has to ASK for all of them. The Drop Log's
-// composite read asks on the server (DropLogPageRoutes.kt), so naming it counts.
+// A page may still draw only the standing ones. It has to ASK for all of them.
 describe("every page that reads a pool as a ledger fetches every config", () => {
   const LEDGERS = ["buildDropLog(", "outstanding(", "settlementView("];
-  const COMPOSITE = "/api/pages/drop-log";
   const pages = [...sources(join(root, "app")), ...sources(join(root, "components"))].flatMap(
     (file) => {
       const text = readFileSync(file, "utf8");
@@ -101,12 +99,12 @@ describe("every page that reads a pool as a ledger fetches every config", () => 
   });
 
   it.each(pages)("asks for the retired configs in $file", ({ text }) => {
-    expect(text.includes(COMPOSITE) || text.includes("retired=include")).toBe(true);
+    expect(text).toContain("retired=include");
   });
 
   // Solo pools for the same reason. A config taken back as one keeps the nights it was a party for,
   // and those weeks have a pinned roster with somebody else in it. See soloAgain.
   it.each(pages)("asks for the solo pools in $file", ({ text }) => {
-    expect(text.includes(COMPOSITE) || text.includes("solo=include")).toBe(true);
+    expect(text).toContain("solo=include");
   });
 });

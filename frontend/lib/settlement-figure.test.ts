@@ -20,7 +20,7 @@ const summary = readFileSync(join(__dirname, "..", "components", "settlement-sum
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 const settlement = readFileSync(join(__dirname, "settlement.ts"), "utf8");
 const view = readFileSync(join(__dirname, "settlement-view.ts"), "utf8");
-// The Settlement tab's body and its writes, which the Drop Log and the home screen both use.
+// The Settlement tab's body and its writes, which moved out of the Drop Log page.
 const stage = readFileSync(join(__dirname, "..", "components", "settlement-stage.tsx"), "utf8");
 const writes = readFileSync(join(__dirname, "use-drop-log-writes.ts"), "utf8");
 const entry = readFileSync(join(__dirname, "..", "components", "add-settlement.tsx"), "utf8");

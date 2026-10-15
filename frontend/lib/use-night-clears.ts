@@ -11,7 +11,7 @@ const PARTIES_KEY = "/api/parties";
 
 /**
  * Answering for a night's runs: ticking a boss off, and keeping a run you have written to in the
- * order. Run Order and the home screen's Solo Run Order both draw a night through this.
+ * order.
  *
  * The tick is the same boss_clear row Party View's boss row writes and a planner capture
  * overwrites, so ticking a boss here and ticking it there are one answer rather than two.
