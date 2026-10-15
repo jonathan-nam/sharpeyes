@@ -13,7 +13,9 @@ const root = join(__dirname, "..");
 const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
 const ledger = read("components", "settlement-ledger.tsx");
-const page = read("app", "bosses", "drops", "page.tsx");
+// The Settlement tab's body, which the Drop Log and the home screen both draw.
+const stage = read("components", "settlement-stage.tsx");
+const view = read("lib", "settlement-view.ts");
 const wallet = read("lib", "wallet.ts");
 const css = read("app", "globals.css");
 
@@ -202,9 +204,10 @@ describe("one section for what is unsettled", () => {
     // spell it, and reading the name off the same drop row as the icon is what stops it drawing one
     // item and naming another.
     expect(ledger).toContain("`${sale.pieces} ${couponName}`");
-    expect(page).toContain(".find((drop) => drop.dropKey === VESTIGE) ?? null;");
-    expect(page).toContain("const vestigeIcon = vestige?.iconUrl ?? null;");
-    expect(page).toContain("couponName={vestige?.name ?? null}");
+    expect(view).toContain(".find((drop) => drop.dropKey === VESTIGE) ?? null");
+    expect(stage).toContain("const vestige = vestigeOf(page.drops);");
+    expect(stage).toContain("iconUrl={vestige?.iconUrl ?? null}");
+    expect(stage).toContain("couponName={vestige?.name ?? null}");
   });
 });
 
@@ -288,12 +291,12 @@ describe("the two entry forms", () => {
   });
 
   it("is drawn above the cards it writes to", () => {
-    const entry = page.indexOf("<AddSettlement");
-    const cards = page.indexOf("<SettlementLedger");
+    const entry = stage.indexOf("<AddSettlement");
+    const cards = stage.indexOf("<SettlementLedger");
     expect(entry, "the entry card is gone").toBeGreaterThan(-1);
     expect(entry).toBeLessThan(cards);
     // And under the totals, which is the section's own heading and its one figure.
-    expect(page.indexOf("<SettlementSummary")).toBeLessThan(entry);
+    expect(stage.indexOf("<SettlementSummary")).toBeLessThan(entry);
   });
 
   it("stacks the label over its box, which is what lets the row hold four controls", () => {

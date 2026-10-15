@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useId, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
+import { HeroFold } from "@/components/hero-fold";
+import { QuickActions } from "@/components/quick-actions";
 import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
@@ -11,6 +13,7 @@ import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
+import { showsMoney } from "@/lib/world";
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -85,6 +88,7 @@ export default function Home() {
           <SignInButton />
         </section>
       )}
+      {isSignedIn && settings && <QuickActions trades={showsMoney(settings.trades)} />}
     </main>
   );
 }
@@ -96,8 +100,6 @@ export default function Home() {
  * works the same way. Its first unfolded link opens that page.
  */
 function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
   const mark = <PageMark href={row.href ?? row.label} />;
 
   if (!children) {
@@ -110,21 +112,16 @@ function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
   }
 
   return (
-    <div className="hero-fold">
-      <button
-        type="button"
-        className="hero-fold-head"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {mark}
-        {row.label}
-        <span className="party-row-chevron hero-fold-caret" aria-hidden="true" />
-      </button>
-      <div id={panelId} className="hero-fold-items" hidden={!open}>
-        {children}
-      </div>
-    </div>
+    <HeroFold
+      head={
+        <>
+          {mark}
+          {row.label}
+        </>
+      }
+      panelClassName="hero-fold-items"
+    >
+      {children}
+    </HeroFold>
   );
 }

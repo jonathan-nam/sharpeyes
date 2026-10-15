@@ -41,7 +41,7 @@ import { preloadRunArt } from "@/lib/preload-boss-art";
 import { controlsKey } from "@/lib/run-order-submit";
 import { useDropIcons } from "@/lib/drop-icons";
 import { useSeatSprites } from "@/lib/seat-sprites";
-import { useRowWrites } from "@/lib/use-row-writes";
+import { useNightClears } from "@/lib/use-night-clears";
 import { useEveryoneOn } from "@/lib/everyone-on";
 import { useShowTimes } from "@/lib/show-times";
 import { useWhoIsOn } from "@/lib/who-is-on";
@@ -148,20 +148,12 @@ export default function RunOrderPage() {
   // A run opens to the drop picker, which draws them. See lib/drop-icons.ts.
   useDropIcons(dropTables);
 
-  // Per row, so ticking one boss does not dim every other row's controls. See lib/use-row-writes.ts.
-  const { isSaving, write } = useRowWrites();
-  // Every config this page has written to this sitting. They stay in the night rather than dropping
-  // out of the filter under the plan somebody is reading. See stillToRun.
-  //
-  // ANY write, not just the tick. Logging a drop clears the boss too (a drop is evidence of a
-  // night, see addLoot), so pinning on the tick alone took the run off the plan the moment the
-  // first drop landed, closing the picker on a boss that had three more things to log.
-  const [answered, setAnswered] = useState<ReadonlySet<string>>(() => new Set());
-
-  /** Pins a config for the sitting. Called BEFORE the write: see toggleClear. */
-  function keepInNight(partyId: string) {
-    setAnswered((current) => (current.has(partyId) ? current : new Set(current).add(partyId)));
-  }
+  // Ticks, row writes, and the runs written to this sitting. Shared with the home screen's Solo Run
+  // Order. See lib/use-night-clears.ts.
+  const { answered, keepInNight, isSaving, write, toggleClear } = useNightClears(
+    getToken,
+    setParties,
+  );
 
   // The budget preset and the plan tab are kept in the URL, so a reload lands on the same night.
   // See lib/url-state.ts. `plan` is "full" or a boss count, never a tab's position: the tabs are
@@ -275,18 +267,6 @@ export default function RunOrderPage() {
   }, [getToken, isLoaded]);
 
   /**
-   * The list again, after a write, so what is on screen is the server's answer and not ours.
-   *
-   * Which period a tick landed in and which of the three counts a drop went to are both the
-   * server's to derive, exactly as they are on Party View.
-   */
-  async function refetchParties() {
-    const refreshed = await apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, getToken);
-    setParties(refreshed);
-    put(PARTIES_KEY, refreshed);
-  }
-
-  /**
    * Both lists a logged drop moves: the counts on each config, and the pools the stack boxes are
    * read off.
    *
@@ -303,30 +283,6 @@ export default function RunOrderPage() {
     put(PARTIES_KEY, refreshed);
     setPools(poolResult);
     put(POOLS_KEY, poolResult);
-  }
-
-  /**
-   * Ticks a run off, or un-ticks it.
-   *
-   * The same boss_clear row Party View's boss row writes and a planner capture overwrites, so
-   * ticking a boss here and ticking it there are one answer rather than two.
-   */
-  async function toggleClear(party: Party, cleared: boolean) {
-    // Marked before the write, not after: the row has to stay in the night whether the tick lands
-    // or not, or a failed save would take the run off the plan on its way to saying it failed.
-    keepInNight(party.id);
-    try {
-      await write(party.id, async () => {
-        await apiFetch<Party>(
-          `${PARTIES_KEY}/${party.id}/clear`,
-          { method: "PUT", body: JSON.stringify({ cleared }) },
-          getToken,
-        );
-        await refetchParties();
-      });
-    } catch {
-      // Leaving the old state up beats showing a tick that did not save.
-    }
   }
 
   /**

@@ -5,14 +5,11 @@ import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { AddSettlement } from "@/components/add-settlement";
-import { SettlementLedger } from "@/components/settlement-ledger";
-import { SettlementSummary } from "@/components/settlement-summary";
 import { LogDrop } from "@/components/log-drop";
-import { LotSale } from "@/components/lot-sale";
 import { PieceLedger } from "@/components/piece-ledger";
-import { RowSale } from "@/components/row-sale";
+import { SaleCards } from "@/components/sale-cards";
 import { SectionMark } from "@/components/section-mark";
+import { SettlementStage } from "@/components/settlement-stage";
 import { StackArrangement } from "@/components/stack-arrangement";
 import { SettledView } from "@/components/settled-view";
 import { buildSettledLog, orphansOf, settledTotals } from "@/lib/settled-log";
@@ -24,21 +21,18 @@ import {
   readBack,
   failureText,
 } from "@/lib/api";
-import { bossLabel } from "@/lib/boss-difficulty";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
-import {
-  type OffsetShare,
-  buildSettlement,
-  decidedSales,
-  keptOfYours,
-  settlementTotals,
-  shareKey,
-  splittableDebts,
-  yourPiles,
-} from "@/lib/settlement";
+import { decidedSales, splittableDebts, yourPiles } from "@/lib/settlement";
 import { heldOfYoursBy, stillAsking, worthDrawing } from "@/lib/ledger-fates";
-import { buildWallet } from "@/lib/wallet";
+import { settlementView, VESTIGE, vestigeOf } from "@/lib/settlement-view";
+import {
+  DEBTS_KEY,
+  PEOPLE_KEY,
+  POOLS_KEY,
+  TRANCHES_KEY,
+  useDropLogWrites,
+} from "@/lib/use-drop-log-writes";
 import {
   type DropSectionKey,
   dropSections,
@@ -64,51 +58,29 @@ import {
   type DropGroup,
   type Grouping,
 } from "@/lib/drop-log";
-import { formatDropped, saleMoney, splitOf } from "@/lib/loot";
-import {
-  type LotRow,
-  type LotSaleBody,
-  fungibleDropKeys,
-  lotDrops,
-  rowSales,
-} from "@/lib/lot-sale";
+import { formatDropped } from "@/lib/loot";
+import { saleQueues } from "@/lib/lot-sale";
 import { useDropIcons } from "@/lib/drop-icons";
 import { useSeatSprites } from "@/lib/seat-sprites";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import {
   type Holder,
-  SELF_HOLDER,
   SELF_KEY,
-  alsoHeldByYou,
   couponMoney,
-  answeredByHolder,
-  answeredSalesByPair,
-  boughtByHolder,
-  foldSeats,
   holderKey,
-  holderLedgers,
-  closedByHolder,
-  keptByHolder,
-  outstanding,
-  receivedByHolder,
   paymentsSinceClosing,
-  receivedSinceClosing,
-  saleCredits,
   stillOpen,
   runningBalance,
-  salesByHolder,
   unanswered,
 } from "@/lib/vestige-ledger";
 import { showsMoney } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
-import type { Loot, LogDropBody, PartyLootPool, SellLootBody, SettleBody } from "@/types/loot";
+import type { Loot, LogDropBody, PartyLootPool } from "@/types/loot";
 import type { DropLogPage } from "@/types/page";
 import type { Party, Person } from "@/types/party";
 import type {
-  CloseSettlementBody,
-  OffsetShares,
   ProceedsDisposal,
   SettlementDebt,
   VestigePayment,
@@ -134,16 +106,9 @@ const noSubscription = () => () => {};
 // be missing them. Every page that reads a pool as a ledger asks the same, Party View included, or
 // the two disagree about one debt. See partiesFor and drop-log-callers.test.ts.
 const PARTIES_KEY = "/api/parties?solo=include&retired=include";
-const POOLS_KEY = "/api/parties/loot";
-// The Wallet's settle, reused rather than reimplemented: one act, one endpoint, one set of rows.
-const SETTLE_KEY = "/api/parties/loot/settle";
 const BOSSES_KEY = "/api/bosses";
 const DROPS_KEY = "/api/bosses/drops";
 const CHARACTERS_KEY = "/api/characters";
-const TRANCHES_KEY = "/api/vestige-tranches";
-const PAYMENTS_KEY = "/api/vestige-payments";
-const SETTLEMENTS_KEY = "/api/vestige-settlements";
-const DEBTS_KEY = "/api/settlement-debts";
 
 /**
  * Offsets this tab has already tried to split, so a remount does not start one again.
@@ -152,12 +117,6 @@ const DEBTS_KEY = "/api/settlement-debts";
  * server refuses a share that is already discharged rather than trusting this.
  */
 const SPLIT_ATTEMPTED = new Set<string>();
-const DISPOSALS_KEY = "/api/proceeds-disposals";
-const PEOPLE_KEY = "/api/people";
-
-// The stacking drop the piece ledger is for. One key, because one item behaves this way: a boss
-// drops it in bundles that do not divide by looting alone. See lib/piece-ledger.ts.
-const VESTIGE = "vestige-of-erion";
 
 export default function DropLogPage() {
   const { getToken, isLoaded } = useAuth();
@@ -203,8 +162,19 @@ export default function DropLogPage() {
     setChosen(key);
     window.history.replaceState(null, "", sectionHref(key));
   }
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Every write the Sales and Settlement stages make, each patching the lists it moved. Shared with
+  // the home screen's widgets. See lib/use-drop-log-writes.ts.
+  const writes = useDropLogWrites(getToken, (patch) => {
+    if (patch.pools) setPools(patch.pools);
+    if (patch.tranches) setTranches(patch.tranches);
+    if (patch.payments) setPayments(patch.payments);
+    if (patch.settlements) setSettlements(patch.settlements);
+    if (patch.debts) setDebts(patch.debts);
+    if (patch.disposals) setDisposals(patch.disposals);
+    if (patch.people) setPeople(patch.people);
+  });
+  const { busy } = writes;
 
   /**
    * Every read this page needs, in one request. See types/page.ts for why it is one.
@@ -262,181 +232,27 @@ export default function DropLogPage() {
    * that config the drop has no seats to be read against and would not appear at all.
    */
   async function logDrop(body: LogDropBody) {
-    setBusy(true);
     setError(null);
-    try {
-      await apiFetch<unknown>(
-        "/api/parties/loot",
-        { method: "POST", body: JSON.stringify(body) },
-        getToken,
-      );
-      // Past the POST the drop is in, whatever the read-back does. See StaleAfterWrite.
-      await readBack(load);
-    } catch (e) {
-      // Not rethrown when the write landed: the throw is what keeps the picker loaded, and a picker
-      // still loaded under the word "didn't save" is how the same drop was logged twice.
-      if (e instanceof StaleAfterWrite) {
-        setError(SAVED_BUT_STALE);
-        return;
+    await writes.track(async () => {
+      try {
+        await apiFetch<unknown>(
+          "/api/parties/loot",
+          { method: "POST", body: JSON.stringify(body) },
+          getToken,
+        );
+        // Past the POST the drop is in, whatever the read-back does. See StaleAfterWrite.
+        await readBack(load);
+      } catch (e) {
+        // Not rethrown when the write landed: the throw is what keeps the picker loaded, and a picker
+        // still loaded under the word "didn't save" is how the same drop was logged twice.
+        if (e instanceof StaleAfterWrite) {
+          setError(SAVED_BUT_STALE);
+          return;
+        }
+        setError(failureText(e, "That didn't save. Try again."));
+        throw e;
       }
-      setError(failureText(e, "That didn't save. Try again."));
-      throw e;
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * Records one tranche, or removes one.
-   *
-   * Both answer with the whole tally rather than the row touched, because the queue is re-spent
-   * from all of it: a sale entered now can be what covers a boss cleared in July, and redrawing
-   * from one row would be guessing at where its pieces landed.
-   */
-  async function saleWrite(path: string, options: RequestInit) {
-    setBusy(true);
-    // Thrown on, not shown here: the card that asked for it is a screen away from this page's
-    // error line, and a refusal nobody is looking at is a refusal that did not happen.
-    try {
-      setTranches(await apiFetch<VestigeTranche[]>(path, options, getToken));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** The same, for closing a pile's books. See V52. */
-  async function settlementWrite(path: string, options: RequestInit) {
-    setBusy(true);
-    try {
-      setSettlements(await apiFetch<VestigeSettlement[]>(path, options, getToken));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * Marks a person's unpaid SHARES paid, which is the other half of a settlement.
-   *
-   * The Wallet's own act, against the same payout rows, rather than a second way to mark a share
-   * paid: two of those would disagree the first time one of them was changed. Answers with the
-   * pools, so the rows redraw from what the server wrote.
-   */
-  async function settleShares(payouts: { lootId: string; memberId: string }[]) {
-    if (payouts.length === 0) return;
-    setBusy(true);
-    try {
-      const body: SettleBody = { payouts };
-      setPools(
-        await apiFetch<PartyLootPool[]>(
-          SETTLE_KEY,
-          { method: "POST", body: JSON.stringify(body) },
-          getToken,
-        ),
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * A closing act, whole: the shares it settles and their coupon money, in one write.
-   *
-   * Not built from the page's other helpers, and it must not be. Each of those draws the moment it
-   * lands, and every list this act moves comes off what they owe you, so two of them in a row is one
-   * button walking one figure down in two steps. All three setStates are in the one tick that
-   * follows the one answer, which is the repaint the endpoint exists for.
-   */
-  async function closeWrite(act: "offset" | "sent", body: CloseSettlementBody) {
-    if (body.parts.length === 0 && body.holding === undefined) return;
-    setBusy(true);
-    try {
-      const done = await apiFetch<OffsetShares>(
-        `${DEBTS_KEY}/${act}`,
-        { method: "POST", body: JSON.stringify(body) },
-        getToken,
-      );
-      setPools(done.pools);
-      setDebts(done.debts);
-      setDisposals(done.disposals);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** The same, for an entered debt. Its own state, because it touches no drop at all. See V56. */
-  async function debtWrite(path: string, options: RequestInit) {
-    setBusy(true);
-    try {
-      setDebts(await apiFetch<SettlementDebt[]>(path, options, getToken));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** The same, for deciding what became of money a sale of their coupons left you holding. See V61. */
-  async function disposalWrite(path: string, options: RequestInit) {
-    setBusy(true);
-    try {
-      setDisposals(await apiFetch<ProceedsDisposal[]>(path, options, getToken));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /** The same, for a receipt. Its own state, because a payment changes no piece. See V51. */
-  async function paymentWrite(path: string, options: RequestInit) {
-    setBusy(true);
-    try {
-      setPayments(await apiFetch<VestigePayment[]>(path, options, getToken));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * Prices a pile of one interchangeable drop across every pool it sits in.
-   *
-   * Answers with the pools, so the rows redraw from what the server actually wrote rather than from
-   * the proposal that was confirmed. All of them or none: see lotSaleRoute.
-   */
-  async function lotSale(body: LotSaleBody) {
-    setBusy(true);
-    // Thrown on rather than shown here, as a tranche is: the card that asked is what the reader
-    // is looking at, and this page's error line is a screen away from it.
-    try {
-      setPools(
-        await apiFetch<PartyLootPool[]>(
-          "/api/parties/loot/lot",
-          { method: "POST", body: JSON.stringify(body) },
-          getToken,
-        ),
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /**
-   * Prices ONE row, where the drop has its own price and no queue could say which copy went.
-   *
-   * The party page's own sale route, so a ring priced here and a ring priced on Party View are one
-   * write and cannot come out differently. Answers with the pools, which is what takes the card off
-   * this list.
-   */
-  async function rowSale(row: LotRow, body: SellLootBody) {
-    setBusy(true);
-    // Thrown on rather than shown here, as a lot is: the card that asked is what the reader is
-    // looking at, and this page's error line is a screen away from it.
-    try {
-      await apiFetch<unknown>(
-        `/api/parties/${row.partyId}/loot/${row.lootId}/sale`,
-        { method: "PUT", body: JSON.stringify(body) },
-        getToken,
-      );
-      setPools(await apiFetch<PartyLootPool[]>(POOLS_KEY, {}, getToken));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
   /**
@@ -447,17 +263,14 @@ export default function DropLogPage() {
    * boss in that holder's queue is re-priced behind it.
    */
   async function bundlesWrite(partyId: string, lootId: string, bundles: Record<string, number>) {
-    setBusy(true);
-    try {
+    await writes.track(async () => {
       await apiFetch<Loot>(
         `/api/parties/${partyId}/loot/${lootId}/bundles`,
         { method: "PUT", body: JSON.stringify({ bundles }) },
         getToken,
       );
       setPools(await apiFetch<PartyLootPool[]>(POOLS_KEY, {}, getToken));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
@@ -465,12 +278,23 @@ export default function DropLogPage() {
   // Roster order, as /api/characters returns it (Characters.position). The same list the party
   // arrangements are ordered by, so one character sits in the same place on both screens.
   const characterOrder = characters.map((c) => c.id);
-  // The catalog's own order, which is what /api/bosses returns, so two bosses cleared in one week
-  // never swap places in the queue and re-price each other.
-  const bossOrder = new Map(bosses.map((b, i) => [b.bossKey, i]));
+  // The ledger reads the WHOLE account, not the filtered log. A pile is one person's, spanning
+  // every boss any of their characters loots for, so showing the part of it that falls in the
+  // chosen month would price those bosses off a fraction of the sales that paid for them.
+  const view = settlementView({
+    parties,
+    pools,
+    bosses,
+    people,
+    tranches,
+    payments,
+    settlements,
+    debts,
+    disposals,
+  });
+  const { closures, settled, ledgers, holderNames, offsetShares, credits } = view;
   // The whole log is kept alongside the filtered one so the toolbar does not come and go: which
   // controls exist is a property of the account, not of what the filter currently leaves.
-  const closures = closedByHolder(settlements);
   // With the tranches, so a night whose coupons you already sold is not asked for in coupons as
   // well as in money. The same subtraction the Settlement Ledger makes below. See V56.
   const whole = buildDropLog(parties, pools, dropTables, closures.closed);
@@ -490,79 +314,7 @@ export default function DropLogPage() {
   const loggedBosses = new Set(whole.entries.map((e) => e.bossKey));
   const bossesWithDrops = bosses.filter((b) => loggedBosses.has(b.bossKey));
 
-  // The ledger reads the WHOLE account, not the filtered log. A pile is one person's, spanning
-  // every boss any of their characters loots for, so showing the part of it that falls in the
-  // chosen month would price those bosses off a fraction of the sales that paid for them.
   const partyById = new Map(parties.map((p) => [p.id, p]));
-  const settled = outstanding(parties, pools, VESTIGE, bossOrder);
-  // Your own coupons from the nights that owed nobody anything, which the queue above leaves out.
-  // They are yours to sell, so the card that takes a sale has to know you are holding them.
-  const ledgers = holderLedgers(
-    [...settled, ...alsoHeldByYou(parties, pools, VESTIGE, bossOrder, settled)],
-    salesByHolder(tranches),
-    keptByHolder(tranches),
-    boughtByHolder(tranches),
-    receivedByHolder(payments),
-    closures,
-    answeredByHolder(tranches),
-    // The same pieces per creditor, which is what lets a night the sales already answered stay off
-    // the queue when a later one is logged. See foldAnswered.
-    answeredSalesByPair(tranches),
-  );
-  // What other people owe you, in both units it can be owed in: pieces of yours they are holding,
-  // and shares of a sale they made. Off the same two aggregations the ledger and the wallet already
-  // run, so there is no third answer to keep in step.
-  // Somebody a debt can name but no open drop does. Off the seats of every party, folded to their
-  // people, which is the same fold every figure on this page is measured against.
-  const holderNames = new Map<string, string>();
-  // The people list first, so somebody who is owed something is named even after their seat has
-  // left every party. Seats then win, because a seat carries the name as this account spells it.
-  for (const person of people) holderNames.set(`person:${person.id}`, person.name);
-  for (const party of parties) {
-    for (const seat of foldSeats(party.seats)) holderNames.set(seat.key, seat.name);
-  }
-  const wallet = buildWallet(parties, pools);
-  // The shares an offset discharged, resolved. Only the drops an offset actually names, because
-  // splitting every loot row in every pool to answer for a handful would be a pass over the whole
-  // account on every render.
-  //
-  // Off the pools, since an offset marks its shares PAID and they leave the wallet. See V58.
-  const offsetShares = new Map<string, OffsetShare>();
-  const wanted = new Set(debts.flatMap((d) => d.payouts.map((s) => s.lootId)));
-  if (wanted.size > 0) {
-    for (const pool of pools) {
-      const party = partyById.get(pool.partyId);
-      if (!party) continue;
-      for (const loot of pool.loot) {
-        if (!wanted.has(loot.id)) continue;
-        const split = splitOf(loot, party.seats);
-        if (split === null) continue;
-        // The sale in its own unit, so the row's "sold for" and the share under it agree. Reading
-        // `saleAmount` alone would print nothing at all for a sale made in real money.
-        const sold = saleMoney(loot);
-        const boss = bossByKey.get(loot.bossKey ?? "");
-        for (const share of split.shares) {
-          offsetShares.set(shareKey(loot.id, share.memberId), {
-            key: shareKey(loot.id, share.memberId),
-            lootId: loot.id,
-            memberId: share.memberId,
-            item: loot.name,
-            iconUrl: loot.iconUrl,
-            boss: boss ? bossLabel(boss.name, party.difficulty) : "–",
-            // Everybody the night paid out to, which is who was in it. Off the same split the share
-            // came from, so the row cannot name a roster the figure was not divided by.
-            members: split.shares.map((s) => s.name),
-            on: loot.droppedOn,
-            weekStart: loot.weekStart,
-            share: share.pay,
-            sale: sold?.amount ?? null,
-            currency: split.currency,
-            partyId: pool.partyId,
-          });
-        }
-      }
-    }
-  }
   /**
    * Offsets written before #514 as one entry over several shares, recorded as the rows they were.
    *
@@ -599,7 +351,7 @@ export default function DropLogPage() {
         // Each row carries the ORIGINAL date, so this does not move a history entry to today. See
         // AddSettlementDebtRequest.incurredAt.
         for (const part of parts) {
-          await debtWrite(DEBTS_KEY, {
+          await writes.debtWrite(DEBTS_KEY, {
             method: "POST",
             body: JSON.stringify({
               holder: debt.holder,
@@ -610,7 +362,7 @@ export default function DropLogPage() {
             }),
           });
         }
-        await debtWrite(`${DEBTS_KEY}/${debt.id}`, { method: "DELETE" });
+        await writes.debtWrite(`${DEBTS_KEY}/${debt.id}`, { method: "DELETE" });
       }
     })();
     // Keyed by WHICH entries are splittable, not by the arrays: `offsetShares` and `pendingSplits`
@@ -618,31 +370,6 @@ export default function DropLogPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [splitKey]);
 
-  // What sales of somebody else's coupons came to. Held rather than passed inline: the Sale Ledger's
-  // fold reads the same figures, and two calls is two lists to fall out of step. See decidedSales.
-  const credits = saleCredits(tranches);
-  const settlement = buildSettlement(
-    ledgers,
-    wallet,
-    debts,
-    credits,
-    // Only what no closure has already spoken for. A payment that settled a pile is spent, and
-    // counting it again takes it off the next thing entered against that person. See #350.
-    receivedSinceClosing(payments, settlements),
-    holderNames,
-    new Set(people.filter((p) => p.pinned).map((p) => `person:${p.id}`)),
-    // The pieces a priced tranche already spoke for, per pair. `saleCredits` above is the money the
-    // same rows came to, and passing one without the other is what had this card asking Bro for 130
-    // coupons while the Sale Ledger, subtracting the 70 he had been sold, asked for 60.
-    answeredSalesByPair(tranches),
-    // What has been decided about their money, and nothing more. An empty list means undecided,
-    // which is the honest state for a sale nobody has said anything about. See V61.
-    disposals,
-  );
-  // Nights that did not divide and that nobody has said the arrangement for. Above the ledger,
-  // because until one is answered its pieces are missing from every figure below it.
-  // The three tiles above the cards, off the cards themselves. See settlementTotals.
-  const owedTotals = settlementTotals(settlement);
   // What is finished. Off the WHOLE log rather than the filtered one, for the reason the ledgers
   // above are: this is the account's record, and a month's slice of it is not one.
   const settledRows = buildSettledLog(whole.entries, settlements, holderNames);
@@ -689,22 +416,13 @@ export default function DropLogPage() {
   // The piles of interchangeable drops waiting to be priced. Yours: a lot is filed against the seat
   // that sold it, and only your own seats are ones you can name as seller. A partner's pile stays on
   // its rows, where each names its own seller.
-  const fungible = fungibleDropKeys(dropTables);
-  const lots = lotDrops(parties, pools, fungible, SELF_KEY);
-  // The drops that price alone: an accessory, a hammer, a ring. Yours for the same reason a lot is,
-  // and one card each, because a queue of them could only guess which copy went. See rowSales.
-  const alone = rowSales(parties, pools, dropTables, fungible, SELF_KEY);
+  const { lots, alone } = saleQueues(parties, pools, dropTables, SELF_KEY);
+  // The drops that price alone (an accessory, a hammer, a ring) come with them: yours for the same
+  // reason a lot is, and one card each, because a queue of them could only guess which copy went.
   // Whether the sale boxes will draw anything, which decides with the coupon piles whether there is
   // an Outstanding Sales section at all. A heading over no cards is a heading over nothing.
   const anythingToPrice = money && (lots.length > 0 || alone.length > 0);
-  // The coupon's own row, off whichever boss table carries it. Every table names the same drop, and
-  // both its sprite and its name come off the one row so a card cannot draw one item and name
-  // another.
-  const vestige =
-    Object.values(dropTables)
-      .flat()
-      .find((drop) => drop.dropKey === VESTIGE) ?? null;
-  const vestigeIcon = vestige?.iconUrl ?? null;
+  const vestigeIcon = vestigeOf(dropTables)?.iconUrl ?? null;
 
   // What fell, and what it was sold for, one at a time. Both halves are entered into rather than
   // read, so they stay on one page: a drop and the sale that prices it are the same evening's work.
@@ -729,14 +447,14 @@ export default function DropLogPage() {
     // fetched lands on the Settlement Ledger. Empty is the whole sale being your own, which is every
     // tranche entered before V56. See saleCredits.
     onAddSale: (holder: Holder, pieces: number, amount: number, shares: VestigeTrancheShare[]) =>
-      saleWrite(TRANCHES_KEY, {
+      writes.saleWrite(TRANCHES_KEY, {
         method: "POST",
         body: JSON.stringify({ holder, pieces, amount, disposition: "SOLD", shares }),
       }),
     // No amount: a redemption realized nothing, where a sale for zero would price those pieces at
     // nothing. The server refuses the two disagreeing. See V46.
     onAddKept: (holder: Holder, pieces: number) =>
-      saleWrite(TRANCHES_KEY, {
+      writes.saleWrite(TRANCHES_KEY, {
         method: "POST",
         body: JSON.stringify({ holder, pieces, disposition: "KEPT" }),
       }),
@@ -746,12 +464,12 @@ export default function DropLogPage() {
     // Shares like a sale too: whose coupons were taken is what puts the agreed price on their card,
     // and without it the pieces left the pile owing nobody. See V56.
     onAddBought: (holder: Holder, pieces: number, amount: number, shares: VestigeTrancheShare[]) =>
-      saleWrite(TRANCHES_KEY, {
+      writes.saleWrite(TRANCHES_KEY, {
         method: "POST",
         body: JSON.stringify({ holder, pieces, amount, disposition: "BOUGHT", shares }),
       }),
     onRemoveSale: (trancheId: string) =>
-      saleWrite(`${TRANCHES_KEY}/${trancheId}`, { method: "DELETE" }),
+      writes.saleWrite(`${TRANCHES_KEY}/${trancheId}`, { method: "DELETE" }),
   };
   // Whether either ledger has anything on it, which is what decides between its cards and one line
   // saying there are none. All three tabs are always offered. See lib/drop-sections.ts.
@@ -903,25 +621,12 @@ export default function DropLogPage() {
                     {/* Only where there is money to talk about. A Heroic-only account trades nothing,
                       and both lists leave those pools out anyway. */}
                     {money && (
-                      <>
-                        <LotSale
-                          drops={lots}
-                          bossByKey={bossByKey}
-                          partyById={partyById}
-                          busy={busy}
-                          onSell={lotSale}
-                        />
-                        {/* After the lots, which are one card per drop however many rows each
-                            covers, so the shorter list is the one on top. */}
-                        <RowSale
-                          rows={alone}
-                          bossByKey={bossByKey}
-                          partyById={partyById}
-                          characterById={characterById}
-                          busy={busy}
-                          onSell={rowSale}
-                        />
-                      </>
+                      <SaleCards
+                        page={{ parties, bosses, characters }}
+                        lots={lots}
+                        alone={alone}
+                        writes={writes}
+                      />
                     )}
 
                     <PieceLedger ledgers={drawn} {...pileCard} />
@@ -946,174 +651,19 @@ export default function DropLogPage() {
             )}
 
             {shown === "settlement" && (
-              <section className="loot-pool">
-                <h2 className="loot-pool-title">Settlement Summary</h2>
-
-                <SettlementSummary rows={settlement} totals={owedTotals} />
-
-                {/* The two boxes, above the cards they write to and out of every one of them. A
-                    card names its person, so the boxes inside one did not have to; out here the
-                    picker does, and it offers the unclaimed characters a card can be keyed by as
-                    well as the people list. */}
-                <AddSettlement
-                  people={people}
-                  holders={settlement.map((row) => ({
-                    key: row.key,
-                    name: row.name,
-                    holder: row.holder,
-                  }))}
-                  busy={busy}
-                  onAddDebt={(holder: Holder, amount, note) =>
-                    debtWrite(DEBTS_KEY, {
-                      method: "POST",
-                      body: JSON.stringify({ holder, amount, note: note || undefined }),
-                    })
-                  }
-                  onAddPayment={(holder: Holder, amount, note) =>
-                    paymentWrite(PAYMENTS_KEY, {
-                      method: "POST",
-                      body: JSON.stringify({ holder, amount, note: note || undefined }),
-                    })
-                  }
-                />
-
-                <SettlementLedger
-                  rows={settlement}
-                  bossByKey={bossByKey}
-                  partyById={partyById}
-                  offsetShares={offsetShares}
-                  iconUrl={vestigeIcon}
-                  couponName={vestige?.name ?? null}
-                  busy={busy}
-                  // Every payment, not only the ones counted since closing: these are the rows as
-                  // typed, and one entered against a closed boss is still one somebody may need back.
-                  payments={paymentsByHolder}
-                  // The two ENTRY boxes are the card above's, keyed by a picker. What stays here is
-                  // taking a row back off, which can only be done where the row is drawn.
-                  onRemovePayment={(paymentId) =>
-                    paymentWrite(`${PAYMENTS_KEY}/${paymentId}`, { method: "DELETE" })
-                  }
-                  onRemoveDebt={(debtId) =>
-                    debtWrite(`${DEBTS_KEY}/${debtId}`, { method: "DELETE" })
-                  }
-                  // Their pile, their purchase: they are keeping coupons that were yours and paying
-                  // for them. V50's act with the sides swapped, which is why it needs no new shape.
-                  // The tranche prices the pieces (they stop being a count) and puts the money on
-                  // this card as `soldOfYours`, which comes off what you owe them.
-                  //
-                  // An ACT and never a netting. Their coupons only come off your debt if they agree
-                  // to that, and they may want the mesos instead.
-                  keptRows={keptOfYours(tranches)}
-                  // What becomes of their money you are holding is decided by the closing acts
-                  // below, in the same write as the shares: see closeWrite. Only taking a decision
-                  // back off is its own request, being its own act. See V61.
-                  onRemoveDisposal={(disposalId) =>
-                    disposalWrite(`${DISPOSALS_KEY}/${disposalId}`, { method: "DELETE" })
-                  }
-                  onKeepPieces={(holder: Holder, pieces, amount) =>
-                    saleWrite(TRANCHES_KEY, {
-                      method: "POST",
-                      body: JSON.stringify({
-                        holder,
-                        pieces,
-                        amount,
-                        disposition: "BOUGHT",
-                        shares: [{ holder: SELF_HOLDER, pieces }],
-                      }),
-                    })
-                  }
-                  onRemoveKeep={(trancheId) =>
-                    saleWrite(`${TRANCHES_KEY}/${trancheId}`, { method: "DELETE" })
-                  }
-                  // Two acts, because a closure is one PILE's decision and the pair has two piles:
-                  // their nights close against them, yours against you. One button, since one
-                  // handover finishes both and closing a single side is what put the figure UP.
-                  //
-                  // Sequential, not parallel: each answers with the whole list and the last answer
-                  // wins, so racing them would redraw the card from whichever landed second.
-                  onSettlePair={async (holder: Holder, theirs, yours) => {
-                    if (theirs.length > 0) {
-                      await settlementWrite(SETTLEMENTS_KEY, {
-                        method: "POST",
-                        // Nothing written off: a piece debt was never priced, so there is no
-                        // shortfall to record. What they sent is on the receipts.
-                        body: JSON.stringify({ holder, lootIds: theirs, unpaid: 0 }),
-                      });
-                    }
-                    if (yours.length > 0) {
-                      await settlementWrite(SETTLEMENTS_KEY, {
-                        method: "POST",
-                        body: JSON.stringify({ holder: SELF_HOLDER, lootIds: yours, unpaid: 0 }),
-                      });
-                    }
-                  }}
-                  onSettleShares={settleShares}
-                  // Answers with the whole people list, like every other write on this page, so the
-                  // pins redraw from what the server actually stored.
-                  onPin={async (row, pinned) => {
-                    if (row.holder.personId === null) return;
-                    setBusy(true);
-                    try {
-                      const next = await apiFetch<Person[]>(
-                        `${PEOPLE_KEY}/${row.holder.personId}/pinned`,
-                        { method: "PUT", body: JSON.stringify({ pinned }) },
-                        getToken,
-                      );
-                      setPeople(next);
-                      put(PEOPLE_KEY, next);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                  // ONE request, and one repaint. It was a settle followed by an entry per share,
-                  // and the halves of an offset cancel: between them the ledger said the shares were
-                  // paid and nothing had come off the debt, which walked Bro's card from 253.86b up
-                  // to 254b and back down over two round trips. A failure in the gap left it there.
-                  //
-                  // The coupon money is in the same request for the same reason one step out. It was
-                  // a disposal of its own after this one, and both come off what they owe you, so a
-                  // press covering the pair took Bro's card down by the shares and then down again
-                  // by the money: one button, one figure, two visible steps.
-                  //
-                  // The server writes all of it in one transaction and answers with every list, so
-                  // there is no order to get right here and no half of the act to leave behind. ONE
-                  // ROW PER SHARE still, so the history reads as the drops it was rather than as a
-                  // figure naming nobody: see writeClose.
-                  onOffsetAll={(holder: Holder, name, parts, holding) =>
-                    // Invisible on the card, which names the drop itself once an entry has one share
-                    // behind it. It is what the debt row says on its own.
-                    closeWrite("offset", { holder, note: `offset against ${name}`, parts, holding })
-                  }
-                  // The same act pointed the other way, and one request for the same reason: the two
-                  // pots it moves are the two the Unsettled Amounts figure is made of.
-                  onSendAll={(holder: Holder, parts, holding) =>
-                    closeWrite("sent", { holder, parts, holding })
-                  }
-                />
-
-                {/* The way in for somebody with no card yet. A card is drawn for a person who already
-                  owes you something, so the first debt of a relationship had nowhere to go. After
-                  the cards, not above them: it is the way to one more of the same, the way Record a
-                  sale is on the other tab. */}
-                {/* What the cards above do NOT cover, from the Wallet this tab replaced. A total that
-                  is short must not read as a total that is complete. */}
-                {(wallet.unreadable > 0 || wallet.betweenMine > 0) && (
-                  <ul className="ledger-notes">
-                    {wallet.unreadable > 0 && (
-                      <li className="loot-warn">
-                        {wallet.unreadable} sold {wallet.unreadable === 1 ? "drop" : "drops"}{" "}
-                        unreadable, not counted above.
-                      </li>
-                    )}
-                    {wallet.betweenMine > 0 && (
-                      <li>
-                        {wallet.betweenMine} {wallet.betweenMine === 1 ? "share" : "shares"} between
-                        your own characters.
-                      </li>
-                    )}
-                  </ul>
-                )}
-              </section>
+              <SettlementStage
+                page={{
+                  parties,
+                  bosses,
+                  people,
+                  tranches,
+                  payments,
+                  settlements,
+                  drops: dropTables,
+                }}
+                view={view}
+                writes={writes}
+              />
             )}
 
             {/* The end of the pipeline, and it only runs one way: nothing here is waiting on
