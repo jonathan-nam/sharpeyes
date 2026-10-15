@@ -12,6 +12,11 @@ import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
+import { useDeadline, useImageReady } from "@/lib/use-image-ready";
+
+// Past this the hero draws without whatever has not arrived. Long enough to cover a cold settings
+// read (the 816ms in lib/use-account-settings.ts) plus the sprite behind it.
+const HERO_WAIT_MS = 3000;
 
 export default function Home() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -20,10 +25,19 @@ export default function Home() {
   const stages = homeSections(settings?.trades);
   // `??` because a tab open across the deploy that added it holds settings without the field.
   const main = settings?.mainCharacterName ?? null;
+  const sprite = settings?.mainCharacterSprite ? spriteUrl(settings.mainCharacterSprite) : null;
+  const spriteReady = useImageReady(sprite);
+  // A failed settings read never answers, so the wait below gives up and draws what it has.
+  const waitedEnough = useDeadline(HERO_WAIT_MS);
 
   // Neither hero until the session is known. Drawing the signed-out one first and swapping it is a
   // returning user being asked to sign in for a frame.
   if (!isLoaded) return <main className="page" />;
+
+  // The signed-in hero in one frame: the name, the fold rows and the sprite all hang off the
+  // settings, and the sprite only starts downloading once they arrive, so drawing as each lands
+  // painted the page in three steps with the sprite popping in last.
+  if (isSignedIn && !waitedEnough && !(settings && spriteReady)) return <main className="page" />;
 
   // Signed in and never asked which world. Not "welcome back" either: they have not been.
   //
@@ -41,11 +55,11 @@ export default function Home() {
     <main className="page">
       {isSignedIn ? (
         <section className="hero">
-          {/* An empty slot while settings load, so the mark never flashes ahead of the sprite. */}
+          {/* An empty slot if the wait gave up, so the mark never flashes ahead of the sprite. */}
           {!settings ? (
             <span className="hero-sprite" aria-hidden="true" />
-          ) : settings.mainCharacterSprite ? (
-            <img className="hero-sprite" src={spriteUrl(settings.mainCharacterSprite)} alt="" />
+          ) : sprite ? (
+            <img className="hero-sprite" src={sprite} alt="" />
           ) : (
             <SharpEyesMark size={64} />
           )}
