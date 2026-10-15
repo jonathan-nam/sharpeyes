@@ -3125,17 +3125,12 @@ button.link:disabled {
   pointer-events: none;
 }
 
-/* The other kind of run while a Solo or Party chip is on, kept in place so the table keeps its
-   shape. Dimming alone cannot mark a not-cleared cell, which draws nothing, so the cell is hatched
-   and only its mark dims, on the numbers a finished portrait or sprite uses. An image rather than
-   the shorthand, so the column band's background-color still paints under it. */
-.boss-table .boss-cell.is-filtered-out {
-  background-image: repeating-linear-gradient(135deg, var(--line) 0 1px, transparent 1px 5px);
-}
-
-.boss-cell.is-filtered-out > span,
-.boss-cell.is-filtered-out .boss-mark {
-  opacity: 0.5;
+/* The cells a Solo or Party chip leaves out keep their place with their marks faded well below
+   the quietest live mark (--muted-2), so a left-out tick cannot pass for a live dash. Fainter than
+   a finished portrait or sprite on purpose: those sit beside full-weight neighbours, and these sit
+   among marks that are already grey. */
+.boss-cell.is-filtered-out > span {
+  opacity: 0.2;
   filter: saturate(0.3);
   transition:
     opacity 0.12s ease,
