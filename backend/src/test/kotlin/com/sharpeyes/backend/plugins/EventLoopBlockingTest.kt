@@ -32,6 +32,8 @@ class EventLoopBlockingTest {
             // Runs on the boot thread before /health can answer, so there is no request to block
             // and no event loop serving one yet. Blocking is the point: see Warmup.kt.
             "Warmup.kt" to "runs at boot, before the server serves",
+            // Same boot thread. Its one transaction picks the account, outside any request.
+            "RequestWarmup.kt" to "runs at boot, before the server serves",
         )
 
     private fun kotlinSources(): List<File> =

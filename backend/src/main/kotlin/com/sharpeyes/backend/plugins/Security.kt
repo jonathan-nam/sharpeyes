@@ -66,14 +66,13 @@ fun Application.configureSecurity(
     jwksUrl: String = Env.authJwksUrl,
     issuer: String = Env.authIssuer,
     audience: String = Env.authAudience,
-): JwkProvider {
-    val jwksUri = URI(jwksUrl).toURL()
-    val jwkProvider =
-        JwkProviderBuilder(jwksUri)
+    // Only the boot warmup's loopback server passes its own. See RequestWarmup.kt.
+    jwkProvider: JwkProvider =
+        JwkProviderBuilder(URI(jwksUrl).toURL())
             .cached(JWK_CACHE_SIZE, JWK_CACHE_EXPIRY_HOURS, TimeUnit.HOURS)
             .rateLimited(JWK_RATE_LIMIT_BUCKET_SIZE, JWK_RATE_LIMIT_REFILL_MINUTES, TimeUnit.MINUTES)
-            .build()
-
+            .build(),
+): JwkProvider {
     install(Authentication) {
         jwt(SESSION_AUTH) {
             // Issuer and audience both, not just the signature. A signature alone says the auth
