@@ -18,6 +18,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
 import kotlin.time.Clock
 import kotlin.time.Duration
+import kotlin.time.Instant
 import kotlin.time.measureTimedValue
 
 /**
@@ -36,18 +37,7 @@ internal suspend fun RoutingContext.partiesPage() {
     val page =
         dbQuery {
             ensureUser(userId, email)
-            // Solo and retired included, as the page asks for them: both hold pools a ledger needs.
-            // See the note on PARTY_LIST_KEY in app/bosses/parties/page.tsx.
-            val parties =
-                measureTimedValue {
-                    partiesFor(userId, week = null, includeSolo = true, includeRetired = true)
-                }
-            stages += "parties" to parties.duration
-            PartiesPageResponse(
-                parties = parties.value,
-                bosses = bossCatalog(),
-                characters = charactersInActiveWorld(userId),
-            )
+            partiesPageFor(userId) { name, elapsed -> stages += name to elapsed }
         }
     for ((name, elapsed) in stages) call.addSpan(name, elapsed)
 
@@ -62,24 +52,52 @@ internal suspend fun RoutingContext.partiesExtras() {
     val extras =
         dbQuery {
             ensureUser(userId, email)
-            val pools = measureTimedValue { allLootFor(userId) }
-            stages += "pools" to pools.duration
-
-            val rest =
-                measureTimedValue {
-                    PartiesExtrasResponse(
-                        clears = clearsView(userId, week = null, now = now),
-                        drops = dropTables(),
-                        people = peopleFor(userId),
-                        pools = pools.value,
-                        settlements = settlementsFor(userId),
-                        seated = partiesSeatedIn(userId),
-                    )
-                }
-            stages += "rest" to rest.duration
-            rest.value
+            partiesExtrasFor(userId, now) { name, elapsed -> stages += name to elapsed }
         }
     for ((name, elapsed) in stages) call.addSpan(name, elapsed)
 
     call.respond(extras)
+}
+
+/** The reads behind [partiesPage], shared with the boot warmup the way [dropLogPageFor] is. */
+internal fun partiesPageFor(
+    userId: String,
+    onStage: (String, Duration) -> Unit = { _, _ -> },
+): PartiesPageResponse {
+    // Solo and retired included, as the page asks for them: both hold pools a ledger needs.
+    // See the note on PARTY_LIST_KEY in app/bosses/parties/page.tsx.
+    val parties =
+        measureTimedValue {
+            partiesFor(userId, week = null, includeSolo = true, includeRetired = true)
+        }
+    onStage("parties", parties.duration)
+    return PartiesPageResponse(
+        parties = parties.value,
+        bosses = bossCatalog(),
+        characters = charactersInActiveWorld(userId),
+    )
+}
+
+/** The reads behind [partiesExtras], shared with the boot warmup. */
+internal fun partiesExtrasFor(
+    userId: String,
+    now: Instant,
+    onStage: (String, Duration) -> Unit = { _, _ -> },
+): PartiesExtrasResponse {
+    val pools = measureTimedValue { allLootFor(userId) }
+    onStage("pools", pools.duration)
+
+    val rest =
+        measureTimedValue {
+            PartiesExtrasResponse(
+                clears = clearsView(userId, week = null, now = now),
+                drops = dropTables(),
+                people = peopleFor(userId),
+                pools = pools.value,
+                settlements = settlementsFor(userId),
+                seated = partiesSeatedIn(userId),
+            )
+        }
+    onStage("rest", rest.duration)
+    return rest.value
 }

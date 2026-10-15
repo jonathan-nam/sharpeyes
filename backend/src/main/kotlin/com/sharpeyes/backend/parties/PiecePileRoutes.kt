@@ -71,11 +71,17 @@ internal suspend fun RoutingContext.listPiecePilesRoute() {
     val piles =
         dbQuery {
             ensureUser(userId, email)
-            val mine = Party.selectAll().where { Party.userId eq userId }.map { it[Party.id] }
-            piecePilesFor(mine, week)
+            piecePilesOf(userId, week)
         }
     call.respond(piles)
 }
+
+/** Every pile across the user's parties for one week. Shared with the boot warmup. */
+internal fun piecePilesOf(
+    userId: String,
+    week: LocalDate,
+): List<PiecePileResponse> =
+    piecePilesFor(Party.selectAll().where { Party.userId eq userId }.map { it[Party.id] }, week)
 
 /** Adds or corrects one week's pile. Answers with the pile as written. */
 internal suspend fun RoutingContext.savePiecePileRoute() {
