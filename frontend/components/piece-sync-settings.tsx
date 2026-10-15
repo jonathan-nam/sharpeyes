@@ -70,9 +70,10 @@ export function PieceSyncSettings() {
               In Interactive, Kalos, Kaling, First Adversary and Malefic Star drop one pooled pile
               for the party.
             </li>
-            <li>Run solo, the whole pile is added when the boss is ticked cleared.</li>
             <li>
-              In a party, add the pile on Party View. It is split by the party&apos;s piece ratio.
+              For party bosses with pooled loot, set the piece split under Edit Parties, then add
+              each week&apos;s pieces on Party View. Pieces will be added to the inventory according
+              to the split.
             </li>
           </ul>
         </InfoBubble>
