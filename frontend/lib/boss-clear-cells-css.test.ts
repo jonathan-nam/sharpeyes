@@ -102,21 +102,19 @@ describe("a finished character's head dims", () => {
 });
 
 describe("a filtered-out cell", () => {
-  const dim = (block: string) => [
-    block.match(/opacity:\s*([\d.]+)/)?.[1],
-    block.match(/filter:\s*(saturate\([\d.]+\))/)?.[1],
-  ];
+  const grey = (token: string) => {
+    const hex = css.match(new RegExp(`--${token}:\\s*#([0-9a-f]+);`))?.[1] ?? "";
+    expect(hex, `--${token} is missing`).not.toBe("");
+    return parseInt(hex.length === 3 ? hex[0]!.repeat(2) : hex.slice(0, 2), 16);
+  };
 
-  it("is marked by more than opacity, since a not-cleared cell has nothing to dim", () => {
-    expect(rule(".boss-table .boss-cell.is-filtered-out")).toMatch(/background-image:/);
-  });
-
-  it("dims its mark on the numbers a finished row's portrait and a finished character's sprite use", () => {
-    const mark = dim(rule(".boss-cell.is-filtered-out .boss-mark"));
-    expect(mark).toEqual(dim(rule(".boss-table tr.is-row-unrun .boss-portrait")));
-    expect(mark).toEqual([
-      dim(rule(".boss-table .boss-char-head.is-col-cleared"))[0],
-      dim(rule(".boss-table .boss-char-head.is-col-cleared .boss-char-sprite"))[1],
-    ]);
+  it("fades a left-out tick well below the quietest live mark", () => {
+    // Nearer the background than halfway to a live dash, so the two cannot be mistaken.
+    const opacity = Number(
+      rule(".boss-cell.is-filtered-out > span").match(/opacity:\s*([\d.]+)/)?.[1],
+    );
+    const bg = grey("bg");
+    const fadedTick = bg + opacity * (grey("ink") - bg);
+    expect(fadedTick).toBeLessThan((bg + grey("muted-2")) / 2);
   });
 });

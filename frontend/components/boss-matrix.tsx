@@ -390,14 +390,17 @@ export function BossMatrix({
                           // A boss this character does not run has no clear to tick, so the cell is a
                           // mark and not a control. Which bosses they run is answered on the routine
                           // page, where the whole set is visible at once.
-                          const clickable = !!onToggle && state !== "skipped";
+                          // A cell the run filter leaves out is a mark too, so a tick cannot land
+                          // on a run the figures above are not counting.
+                          const counted = counts(character.id, boss.bossKey);
+                          const clickable = !!onToggle && state !== "skipped" && counted;
                           const title = state === "cleared" ? "Mark not cleared" : "Mark cleared";
                           return (
                             <td
                               key={character.id}
                               // is-editable moves the cell's padding onto the button, so the click
                               // target is the whole cell rather than the glyph in the middle of it.
-                              className={`boss-cell is-${state}${party ? " is-party" : ""}${counts(character.id, boss.bossKey) ? "" : " is-filtered-out"}${clickable ? " is-editable" : ""}${colClass(character.id)}`}
+                              className={`boss-cell is-${state}${party ? " is-party" : ""}${counted ? "" : " is-filtered-out"}${clickable ? " is-editable" : ""}${colClass(character.id)}`}
                               onMouseEnter={() => setHoveredColumn(character.id)}
                             >
                               {clickable ? (
