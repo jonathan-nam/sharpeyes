@@ -3126,9 +3126,13 @@ button.link:disabled {
 }
 
 /* The other kind of run while a Solo or Party chip is on. Dimmed in place, so the table keeps its
-   shape. */
+   shape, on the same numbers as a finished row's portrait and a finished character's sprite. */
 .boss-cell.is-filtered-out {
-  opacity: 0.25;
+  opacity: 0.5;
+  filter: saturate(0.3);
+  transition:
+    opacity 0.12s ease,
+    filter 0.12s ease;
 }
 
 /* Nothing left to do on this boss, so the row goes quiet: the name mutes and the portrait

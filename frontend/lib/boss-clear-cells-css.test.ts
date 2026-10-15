@@ -100,3 +100,19 @@ describe("a finished character's head dims", () => {
     expect(rule(".char-tile:hover")).toMatch(/opacity:\s*1/);
   });
 });
+
+describe("a filtered-out cell", () => {
+  const dim = (block: string) => [
+    block.match(/opacity:\s*([\d.]+)/)?.[1],
+    block.match(/filter:\s*(saturate\([\d.]+\))/)?.[1],
+  ];
+
+  it("dims on the numbers a finished row's portrait and a finished character's sprite use", () => {
+    const cell = dim(rule(".boss-cell.is-filtered-out"));
+    expect(cell).toEqual(dim(rule(".boss-table tr.is-row-unrun .boss-portrait")));
+    expect(cell).toEqual([
+      dim(rule(".boss-table .boss-char-head.is-col-cleared"))[0],
+      dim(rule(".boss-table .boss-char-head.is-col-cleared .boss-char-sprite"))[1],
+    ]);
+  });
+});
