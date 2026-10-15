@@ -142,40 +142,23 @@ export function existedInWeek(parties: Party[], weekStart: string): Party[] {
 }
 
 /**
- * Which bosses each character ran with a party in the week shown, as character id to boss keys.
- *
- * Both lists must have been asked for that week, so `skippedThisPeriod` answers for it: a one-off
- * counts in the week it ran and no other. `weekStart` is null for the live view; on a past week it
- * also drops configs set up after it, which is existedInWeek. Solo and retired configs never count,
- * the same list Party View draws. Seated parties file under your character, not the owner's.
+ * Which bosses each character ran with a party in the week both lists were asked for, as character
+ * id to boss keys. The backend decides each one (ranAsPartyIn); a seated party files under your
+ * character rather than the owner's.
  */
 export function partyRunsByCharacter(
   parties: Party[],
   seated: SeatedParty[],
-  weekStart: string | null,
 ): Map<string, Set<string>> {
-  const rows: [string, Party][] = [
-    ...parties.map((party): [string, Party] => [party.characterId, party]),
-    ...seated
-      .filter((row) => row.party)
-      .map((row): [string, Party] => [row.yourCharacterId, row.party]),
-  ];
-  const ran = rows.filter(([, party]) => !party.solo && !party.retired && !party.skippedThisPeriod);
-  const existed = new Set(
-    weekStart
-      ? existedInWeek(
-          ran.map(([, p]) => p),
-          weekStart,
-        )
-      : ran.map(([, p]) => p),
-  );
   const runs = new Map<string, Set<string>>();
-  for (const [characterId, party] of ran) {
-    if (!existed.has(party)) continue;
+  const add = (characterId: string, party: Party) => {
+    if (party.ranAsParty !== true) return;
     const keys = runs.get(characterId) ?? new Set<string>();
     keys.add(party.bossKey);
     runs.set(characterId, keys);
-  }
+  };
+  for (const party of parties) add(party.characterId, party);
+  for (const row of seated) if (row.party) add(row.yourCharacterId, row.party);
   return runs;
 }
 

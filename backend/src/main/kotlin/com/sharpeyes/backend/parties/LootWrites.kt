@@ -72,7 +72,10 @@ internal fun addLoot(
     // over the config's arrangement would lose a real count to a bookkeeping rule. The pool simply
     // stays retired, which the Drop Log and the wallet both still read.
     if (revivesCleanly(partyId, now)) {
-        Party.update({ (Party.id eq partyId) and (Party.standing eq false) }) { it[standing] = true }
+        Party.update({ (Party.id eq partyId) and (Party.standing eq false) }) {
+            it[standing] = true
+            it[partySince] = now
+        }
     }
     // A drop with no boss names nothing to clear. The pickers always send one, so this is the
     // API-only case rather than an ordinary one.

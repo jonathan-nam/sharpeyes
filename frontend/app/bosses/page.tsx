@@ -23,18 +23,20 @@ type LoadState = "loading" | "loaded" | "error";
 const BOSSES_KEY = "/api/bosses";
 const CLEARS_KEY = "/api/bosses/clears";
 const CHARACTERS_KEY = "/api/characters";
-// Which cells are run with a party. Same keys as the People page, so the two share one cached copy.
-const PARTIES_KEY = "/api/parties";
+// Which cells were run with a party. Solo pools included: one that was a party once still answers
+// for those weeks. Never painted from the cache, because Party View and the edit page write their own
+// copies of these lists and not this one, so a cached copy can predate the party you just changed.
+const PARTIES_KEY = "/api/parties?solo=include";
 const SEATED_KEY = "/api/parties/seated";
 
 // Only the current view is cached. A past week is reached by a deliberate click and is worth a
 // round-trip; caching every week stepped through would grow without bound for no visible gain.
 const clearsUrl = (week: string | null) => (week ? `${CLEARS_KEY}?week=${week}` : CLEARS_KEY);
-const weekUrl = (key: string, week: string | null) => (week ? `${key}?week=${week}` : key);
+const weekUrl = (key: string, week: string | null) =>
+  week ? `${key}${key.includes("?") ? "&" : "?"}week=${week}` : key;
 
 // Both lists for one week, or null if either failed: half of them would leave a party run as a solo.
-// Carries its own week: the label moves a render later, and the lists must not be read against it.
-type PartyLists = { parties: Party[]; seated: SeatedParty[]; week: string | null };
+type PartyLists = { parties: Party[]; seated: SeatedParty[] };
 
 export default function BossesPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -49,11 +51,7 @@ export default function BossesPage() {
 
   const [bosses, setBosses] = useState<Boss[]>(seededBosses ?? []);
   const [characters, setCharacters] = useState<Character[]>(seededCharacters ?? []);
-  const [partyLists, setPartyLists] = useState<PartyLists | null>(() => {
-    const parties = peek<Party[]>(PARTIES_KEY);
-    const seated = peek<SeatedParty[]>(SEATED_KEY);
-    return parties && seated ? { parties, seated, week: null } : null;
-  });
+  const [partyLists, setPartyLists] = useState<PartyLists | null>(null);
   const [view, setView] = useState<BossClearsView | null>(peek<BossClearsView>(CLEARS_KEY) ?? null);
   // When the view was received, so the countdown can correct for a browser clock that disagrees
   // with the server's. A seeded view arrived with the request that cached it, not now: see
@@ -88,12 +86,8 @@ export default function BossesPage() {
     if (ticket !== latestRequest.current) return false;
     setView(result);
     setReceivedAt(Date.now());
-    setPartyLists(parties && seated ? { parties, seated, week: target } : null);
-    if (target === null) {
-      put(CLEARS_KEY, result);
-      if (parties) put(PARTIES_KEY, parties);
-      if (seated) put(SEATED_KEY, seated);
-    }
+    setPartyLists(parties && seated ? { parties, seated } : null);
+    if (target === null) put(CLEARS_KEY, result);
     return true;
   }
 
@@ -181,8 +175,7 @@ export default function BossesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
-  const partyRuns =
-    partyLists && partyRunsByCharacter(partyLists.parties, partyLists.seated, partyLists.week);
+  const partyRuns = partyLists && partyRunsByCharacter(partyLists.parties, partyLists.seated);
 
   // Not "characters.length === 0": that is also true while the roster is still loading, when the
   // answer is "not yet" rather than "nobody".
