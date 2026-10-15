@@ -3137,6 +3137,20 @@ button.link:disabled {
     filter 0.12s ease;
 }
 
+/* And the cells it counts brighten a step, each mark keeping its place relative to the others. */
+.is-filtering .boss-cell.is-cleared:not(.is-filtered-out) {
+  color: var(--ink-strong);
+}
+
+.is-filtering .boss-cell.is-unseen:not(.is-filtered-out),
+.is-filtering .boss-cell.is-skipped:not(.is-filtered-out) {
+  color: var(--ink);
+}
+
+.is-filtering .boss-cell.is-party:not(.is-filtered-out)::after {
+  border-top-color: color-mix(in srgb, var(--accent) 60%, var(--ink-strong));
+}
+
 /* Nothing left to do on this boss, so the row goes quiet: the name mutes and the portrait
    desaturates. A row with work left keeps its full weight, so the table reads as the list of what
    is left.

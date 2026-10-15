@@ -117,4 +117,15 @@ describe("a filtered-out cell", () => {
     const fadedTick = bg + opacity * (grey("ink") - bg);
     expect(fadedTick).toBeLessThan((bg + grey("muted-2")) / 2);
   });
+
+  it("brightens the marks of the cells it counts, a step above their resting colour", () => {
+    expect(rule(".is-filtering .boss-cell.is-cleared:not(.is-filtered-out)")).toMatch(
+      /color:\s*var\(--ink-strong\)/,
+    );
+    expect(
+      rule(
+        ".is-filtering .boss-cell.is-unseen:not(.is-filtered-out),\n.is-filtering .boss-cell.is-skipped:not(.is-filtered-out)",
+      ),
+    ).toMatch(/color:\s*var\(--ink\)/);
+  });
 });
