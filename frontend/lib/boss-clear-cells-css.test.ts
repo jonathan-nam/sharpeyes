@@ -107,10 +107,14 @@ describe("a filtered-out cell", () => {
     block.match(/filter:\s*(saturate\([\d.]+\))/)?.[1],
   ];
 
-  it("dims on the numbers a finished row's portrait and a finished character's sprite use", () => {
-    const cell = dim(rule(".boss-cell.is-filtered-out"));
-    expect(cell).toEqual(dim(rule(".boss-table tr.is-row-unrun .boss-portrait")));
-    expect(cell).toEqual([
+  it("is marked by more than opacity, since a not-cleared cell has nothing to dim", () => {
+    expect(rule(".boss-table .boss-cell.is-filtered-out")).toMatch(/background-image:/);
+  });
+
+  it("dims its mark on the numbers a finished row's portrait and a finished character's sprite use", () => {
+    const mark = dim(rule(".boss-cell.is-filtered-out .boss-mark"));
+    expect(mark).toEqual(dim(rule(".boss-table tr.is-row-unrun .boss-portrait")));
+    expect(mark).toEqual([
       dim(rule(".boss-table .boss-char-head.is-col-cleared"))[0],
       dim(rule(".boss-table .boss-char-head.is-col-cleared .boss-char-sprite"))[1],
     ]);

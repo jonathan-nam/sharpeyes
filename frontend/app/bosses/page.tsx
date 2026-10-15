@@ -232,7 +232,10 @@ export default function BossesPage() {
                   <div className="boss-controls">
                     <WeekStepper view={view} onSelect={selectWeek} busy={stepping} />
                     {filterable && (
-                      <div className="run-filters" role="group" aria-label="Filter">
+                      <div className="run-filters" role="group" aria-labelledby="run-filters-label">
+                        <span id="run-filters-label" className="run-filters-label">
+                          Filter
+                        </span>
                         {(["solo", "party"] as const).map((kind) => (
                           <button
                             key={kind}
