@@ -5,13 +5,16 @@ import com.sharpeyes.backend.bosses.periodOf
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.CharacterBossSkip
+import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.PartyPiecePile
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.PersonCharacter
+import com.sharpeyes.backend.db.PieceClearCredit
 import com.sharpeyes.backend.tokens.syncPiecesForClear
+import com.sharpeyes.backend.tokens.syncSeated
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -85,6 +88,23 @@ internal fun syncPiecesForParty(
     val bossId = config[Party.bossCatalogId]
     val week = period ?: periodStartFor(bossResetOf(bossId) ?: return, now)
     syncPiecesForClear(config[Party.characterId], bossId, week, now)
+    // Your other characters with a seat read this party's mode too (see seatedParty), and one taken
+    // off the roster has to lose what it gave them. Credited ones as well as seated ones: a seat
+    // nothing points at is deleted on the way out, and it takes the only record of who sat in it.
+    val seated =
+        PartyMember
+            .selectAll()
+            .where { PartyMember.partyId eq partyId }
+            .mapNotNull { it[PartyMember.characterId] }
+    val credited =
+        PieceClearCredit
+            .innerJoin(Characters)
+            .selectAll()
+            .where {
+                (Characters.userId eq config[Party.userId]) and (PieceClearCredit.bossCatalogId eq bossId) and
+                    (PieceClearCredit.periodStart eq week)
+            }.map { it[PieceClearCredit.characterId] }
+    syncSeated((seated + credited).toSet() - config[Party.characterId], bossId, week, now)
 }
 
 /**

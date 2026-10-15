@@ -218,7 +218,14 @@ private fun configFor(
             ?.takeIf { it[Party.standing] }
     val runs = held != null && runsInPeriod(held[Party.id], held[Party.oneOff], period)
     val aloneAfterTemp = held != null && held[Party.oneOff] && !runs
-    val config = held?.takeIf { runs || aloneAfterTemp }
+    // A character with no config of its own for the boss reads the party of yours it sat in that
+    // week, so an alt in your main's party needs nothing set up to be counted.
+    val config =
+        if (held == null) {
+            seatedParty(characterId, bossCatalogId, period)
+        } else {
+            held.takeIf { runs || aloneAfterTemp }
+        }
     return ConfigRead(
         config = config,
         alone = config?.get(Party.solo) == true || aloneAfterTemp,

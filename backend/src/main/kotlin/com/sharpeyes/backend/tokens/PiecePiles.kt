@@ -8,6 +8,8 @@ import com.sharpeyes.backend.db.PartyPieceTake
 import com.sharpeyes.backend.db.TokenClearAmount
 import com.sharpeyes.backend.parties.bossResetOf
 import com.sharpeyes.backend.parties.clearFromDrop
+import com.sharpeyes.backend.parties.rosterFor
+import com.sharpeyes.backend.parties.runsInPeriod
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -77,6 +79,26 @@ internal fun pileTakeFor(
         }.sortedByDescending { it[Party.characterId] == characterId }
         .firstOrNull()
         ?.let { it[PartyPiecePile.tokenCatalogId] to it[PartyPieceTake.quantity] }
+
+/**
+ * A standing party of another character's that seats this one in [period]'s roster, for this boss.
+ * What an alt's clear is read against when the alt has no config of its own.
+ */
+internal fun seatedParty(
+    characterId: Uuid,
+    bossCatalogId: Uuid,
+    period: LocalDate,
+): ResultRow? =
+    Party
+        .join(PartyMember, JoinType.INNER, Party.id, PartyMember.partyId)
+        .selectAll()
+        .where {
+            (PartyMember.characterId eq characterId) and (Party.bossCatalogId eq bossCatalogId) and
+                (Party.standing eq true) and (Party.solo eq false)
+        }.firstOrNull { row ->
+            runsInPeriod(row[Party.id], row[Party.oneOff], period) &&
+                row[PartyMember.id] in rosterFor(row[Party.id], period)
+        }
 
 /** A pile as Party View sends it: what fell, and what each seat took. */
 internal data class PileEdit(

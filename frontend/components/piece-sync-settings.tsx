@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/use-auth";
 import { apiFetch } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
+import { InfoBubble } from "@/components/info-bubble";
 import { gapLine, shownGaps } from "@/lib/piece-sync";
 import type { PieceSync, SavePieceSyncBody } from "@/types/piece-sync";
 
@@ -52,15 +53,31 @@ export function PieceSyncSettings() {
   return (
     <section className="inventory-settings">
       <h2 className="night-heading">Settings</h2>
-      <label className="night-toggle">
-        <input
-          type="checkbox"
-          checked={sync.enabled}
-          disabled={saving}
-          onChange={(e) => void save(e.target.checked)}
-        />
-        <span>Auto Sync Eternal Pieces with Boss Clears</span>
-      </label>
+      <div className="inventory-sync-row">
+        <label className="night-toggle">
+          <input
+            type="checkbox"
+            checked={sync.enabled}
+            disabled={saving}
+            onChange={(e) => void save(e.target.checked)}
+          />
+          <span>Auto Sync Eternal Pieces with Boss Clears</span>
+        </label>
+        {/* Outside the label, so pressing it cannot tick the box. */}
+        <InfoBubble label="Pooled pieces">
+          <ul className="info-bubble-list">
+            <li>
+              In Interactive, Kalos, Kaling, First Adversary and Malefic Star drop one pooled pile
+              for the party.
+            </li>
+            <li>
+              For party bosses with pooled loot, set the piece split under Edit Parties, then add
+              each week&apos;s pieces on Party View. Pieces will be added to the inventory according
+              to the split.
+            </li>
+          </ul>
+        </InfoBubble>
+      </div>
       {shownGaps(sync.gaps).length > 0 && (
         <div className="inventory-sync-gaps">
           <p className="inventory-sync-gaps-title">Not synced</p>
