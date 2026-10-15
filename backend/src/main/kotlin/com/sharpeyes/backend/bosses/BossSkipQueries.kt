@@ -4,12 +4,15 @@ import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.CharacterBossSkip
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.parties.isSpentOneOff
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.notInList
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -165,7 +168,21 @@ private fun partiedNames(
             }.filterNot { isSpentOneOff(it[Party.id], now) }
             .map { it[Party.bossCatalogId] }
             .toSet()
-    return bosses.filter { it.id in partied }.map { it.name }
+    // A seat in somebody's standing roster is the same claim. See clearSkipsOfSeats.
+    val seated =
+        Party
+            .join(PartyMember, JoinType.INNER, Party.id, PartyMember.partyId)
+            .selectAll()
+            .where {
+                ((PartyMember.characterId eq characterId) or (PartyMember.linkedCharacterId eq characterId)) and
+                    (PartyMember.standing eq true) and
+                    (Party.bossCatalogId inList ids) and
+                    (Party.solo eq false) and
+                    (Party.oneOff eq false) and
+                    (Party.standing eq true)
+            }.map { it[Party.bossCatalogId] }
+            .toSet()
+    return bosses.filter { it.id in partied || it.id in seated }.map { it.name }
 }
 
 /**
@@ -192,5 +209,31 @@ private fun replaceSkips(
         this[CharacterBossSkip.characterId] = characterId
         this[CharacterBossSkip.bossCatalogId] = bossCatalogId
         this[CharacterBossSkip.createdAt] = now
+    }
+}
+
+/**
+ * Clears the "doesn't run" mark on this boss for every character seated in the standing roster,
+ * yours or a linked person's. A seat says the same as the lead's config does, so the routine
+ * follows it the way createParty makes it follow the lead.
+ *
+ * Standing configs only. A solo pool is not a claim (partiedNames), and a one-off's guests are one
+ * night, not a routine.
+ */
+internal fun clearSkipsOfSeats(partyId: Uuid) {
+    val config =
+        Party
+            .selectAll()
+            .where {
+                (Party.id eq partyId) and (Party.solo eq false) and (Party.oneOff eq false) and (Party.standing eq true)
+            }.firstOrNull() ?: return
+    val seated =
+        PartyMember
+            .selectAll()
+            .where { (PartyMember.partyId eq partyId) and (PartyMember.standing eq true) }
+            .flatMap { listOfNotNull(it[PartyMember.characterId], it[PartyMember.linkedCharacterId]) }
+    CharacterBossSkip.deleteWhere {
+        (CharacterBossSkip.characterId inList seated) and
+            (CharacterBossSkip.bossCatalogId eq config[Party.bossCatalogId])
     }
 }

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.bosses.clearSkipsOfSeats
 import com.sharpeyes.backend.bosses.periodOf
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.BossCatalog
@@ -214,6 +215,7 @@ internal fun takeOverParty(
         }
     }
     syncPiecesForParty(partyId, now, period)
+    clearSkipsOfSeats(partyId)
 }
 
 /**

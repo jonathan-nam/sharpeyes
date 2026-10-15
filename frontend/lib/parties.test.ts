@@ -433,6 +433,36 @@ describe("partiedBossKeys", () => {
     expect(Array.from(partiedBossKeys([party], "char-2"))).toEqual([]);
   });
 
+  it("locks a boss another config seats this character in", () => {
+    // Seated as a member rather than as the lead: the same claim, so the routine cannot deny it.
+    const party = {
+      ...config("p1", "char-1", "malefic", []),
+      members: [seat("mine", "char-1"), seat("Alt", "char-2")],
+    };
+    const linked = { ...seat("Friend"), linkedCharacterId: "char-3" };
+    const theirs = {
+      ...config("p2", "char-1", "limbo", []),
+      members: [seat("mine", "char-1"), linked],
+    };
+
+    expect(Array.from(partiedBossKeys([party, theirs], "char-2"))).toEqual(["malefic"]);
+    expect(Array.from(partiedBossKeys([party, theirs], "char-3"))).toEqual(["limbo"]);
+  });
+
+  it("does not lock a seat that is only a guest this week", () => {
+    const party = {
+      ...config("p1", "char-1", "malefic", []),
+      members: [seat("mine", "char-1"), { ...seat("Alt", "char-2"), guest: true }],
+    };
+    const oneOff = {
+      ...config("p2", "char-1", "limbo", []),
+      oneOff: true,
+      members: [seat("mine", "char-1"), seat("Alt", "char-2")],
+    };
+
+    expect(Array.from(partiedBossKeys([party, oneOff], "char-2"))).toEqual([]);
+  });
+
   it("does not lock a solo pool", () => {
     // A pool holding what fell on a boss run alone is not a party, and there would be nothing to
     // remove first: the box would never come back.

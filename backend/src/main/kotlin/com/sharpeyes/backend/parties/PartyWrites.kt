@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.bosses.clearSkipsOfSeats
 import com.sharpeyes.backend.bosses.periodAfter
 import com.sharpeyes.backend.bosses.periodOf
 import com.sharpeyes.backend.bosses.periodStartFor
@@ -73,6 +74,7 @@ internal fun createParty(
     writeMembers(partyId, characterId, request.members, context, request.shares, request.pieceShares)
     if (request.oneOff) writeNightRoster(partyId, characterId, request.members, now, context)
     syncPiecesForParty(partyId, now)
+    clearSkipsOfSeats(partyId)
     return partyId
 }
 
@@ -155,6 +157,7 @@ internal fun saveParty(
         )
     }
     syncPiecesForParty(partyId, now)
+    clearSkipsOfSeats(partyId)
 }
 
 /**
