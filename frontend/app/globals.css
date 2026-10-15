@@ -3125,9 +3125,16 @@ button.link:disabled {
   pointer-events: none;
 }
 
-/* The other kind of run while a Solo or Party chip is on. Dimmed in place, so the table keeps its
-   shape, on the same numbers as a finished row's portrait and a finished character's sprite. */
-.boss-cell.is-filtered-out {
+/* The other kind of run while a Solo or Party chip is on, kept in place so the table keeps its
+   shape. Dimming alone cannot mark a not-cleared cell, which draws nothing, so the cell is hatched
+   and only its mark dims, on the numbers a finished portrait or sprite uses. An image rather than
+   the shorthand, so the column band's background-color still paints under it. */
+.boss-table .boss-cell.is-filtered-out {
+  background-image: repeating-linear-gradient(135deg, var(--line) 0 1px, transparent 1px 5px);
+}
+
+.boss-cell.is-filtered-out > span,
+.boss-cell.is-filtered-out .boss-mark {
   opacity: 0.5;
   filter: saturate(0.3);
   transition:
@@ -5128,7 +5135,12 @@ button.link:disabled {
 
 .run-filters {
   display: flex;
+  align-items: center;
   gap: 6px;
+}
+
+.run-filters-label {
+  color: var(--muted);
 }
 
 .run-chip {
