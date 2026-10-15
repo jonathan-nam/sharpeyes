@@ -198,8 +198,11 @@ export function LootList({
       />
       {/* The standing deal, when there is no drop for it to hang under. What the boss gives is a
           fact about the boss, so the split can be agreed in a week nobody has run it yet, and a
-          week that HAS one carries this under the row instead: see LootGroup. */}
-      {stacks && !splitElsewhere && coupons.length === 0 && (
+          week that HAS one carries this under the row instead: see LootGroup.
+
+          Not on Party View's panel, where it comes with adding the coupons as a drop instead, and
+          Edit Parties is where it is set. */}
+      {stacks && !splitElsewhere && !panel && coupons.length === 0 && (
         <div className="loot-config-card">
           <h3 className="loot-group-title is-config">{stacks.entitledTitle}</h3>
           <StackAssign

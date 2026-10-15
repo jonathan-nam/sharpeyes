@@ -48,7 +48,8 @@ describe("the week's coupons are drops, not configuration", () => {
   it("keeps the deal on screen in a week nothing fell in, and frames it there", () => {
     // Off the catalog, so it can be agreed before the boss is ever run. There is no row to hang it
     // under then, so it takes the frame instead of floating between the picker and the roster.
-    expect(list).toContain("{stacks && !splitElsewhere && coupons.length === 0 && (");
+    // Not on Party View's panel, where it comes with adding the coupons as a drop.
+    expect(list).toContain("{stacks && !splitElsewhere && !panel && coupons.length === 0 && (");
     expect(list).toContain(
       '<div className="loot-config-card"> <h3 className="loot-group-title is-config">' +
         "{stacks.entitledTitle}</h3> <StackAssign",
