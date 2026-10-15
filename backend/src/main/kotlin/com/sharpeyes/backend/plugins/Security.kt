@@ -1,6 +1,10 @@
 package com.sharpeyes.backend.plugins
 
+import com.auth0.jwk.JwkProvider
 import com.auth0.jwk.JwkProviderBuilder
+import com.auth0.jwk.UrlJwkProvider
+import com.auth0.jwt.JWT
+import com.auth0.jwt.algorithms.Algorithm
 import com.auth0.jwt.interfaces.Verification
 import com.sharpeyes.backend.config.Env
 import io.ktor.http.HttpHeaders
@@ -12,16 +16,23 @@ import io.ktor.server.auth.UnauthorizedResponse
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.response.respond
+import org.slf4j.LoggerFactory
 import java.net.URI
+import java.security.interfaces.ECPublicKey
+import java.util.Base64
 import java.util.concurrent.TimeUnit
 
 const val SESSION_AUTH = "session-jwt"
+
+private val log = LoggerFactory.getLogger("Security")
 
 private const val MILLIS_PER_SECOND = 1000L
 private const val JWK_CACHE_SIZE = 10L
 private const val JWK_CACHE_EXPIRY_HOURS = 24L
 private const val JWK_RATE_LIMIT_BUCKET_SIZE = 10L
 private const val JWK_RATE_LIMIT_REFILL_MINUTES = 1L
+private const val PRIME_TIMEOUT_MS = 2000
+private const val ES256_SIGNATURE_BYTES = 64
 
 // Tolerance on `exp`, because our clock and the auth service's are never quite identical. Zero of
 // it turned a host running 50s fast into a wall of `expired-token` 401s on tokens that were still
@@ -55,7 +66,7 @@ fun Application.configureSecurity(
     jwksUrl: String = Env.authJwksUrl,
     issuer: String = Env.authIssuer,
     audience: String = Env.authAudience,
-) {
+): JwkProvider {
     val jwksUri = URI(jwksUrl).toURL()
     val jwkProvider =
         JwkProviderBuilder(jwksUri)
@@ -96,4 +107,29 @@ fun Application.configureSecurity(
             }
         }
     }
+    return jwkProvider
+}
+
+/**
+ * Fetch the signing keys and run one verification at boot, so the first request does not.
+ *
+ * A freshly booted replica answered its first authenticated request in ~110ms against ~12ms warm,
+ * locally on 2 cores (2026-10-15), and that cost lands on every read a page sends at once. Never
+ * fatal: a replica that cannot reach the auth service yet fetches the keys on first use, as before.
+ */
+fun primeSigningKeys(
+    jwkProvider: JwkProvider,
+    jwksUrl: String = Env.authJwksUrl,
+) {
+    runCatching {
+        val keys = UrlJwkProvider(URI(jwksUrl).toURL(), PRIME_TIMEOUT_MS, PRIME_TIMEOUT_MS).all
+        for (key in keys) {
+            val publicKey = jwkProvider.get(key.id).publicKey as? ECPublicKey ?: continue
+            // A signature that cannot match. Checking it is the point, so the failure is expected.
+            val unsigned = JWT.create().withKeyId(key.id).sign(Algorithm.none())
+            val signature = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(ES256_SIGNATURE_BYTES))
+            val forged = unsigned + signature
+            runCatching { Algorithm.ECDSA256(publicKey, null).verify(JWT.decode(forged)) }
+        }
+    }.onFailure { log.warn("Signing keys not primed, the first request will fetch them", it) }
 }

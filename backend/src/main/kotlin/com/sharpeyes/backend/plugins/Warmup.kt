@@ -1,12 +1,25 @@
 package com.sharpeyes.backend.plugins
 
+import com.sharpeyes.backend.bosses.WEEKLY_CADENCE
+import com.sharpeyes.backend.bosses.periodStartFor
+import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.Users
 import com.sharpeyes.backend.pages.dropLogPageFor
+import com.sharpeyes.backend.pages.partiesExtrasFor
+import com.sharpeyes.backend.pages.partiesPageFor
+import com.sharpeyes.backend.parties.piecePilesOf
+import com.sharpeyes.backend.users.ensureUser
 import io.ktor.server.application.Application
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.count
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
+import kotlin.time.Clock
 import kotlin.time.measureTime
 
 private val log = LoggerFactory.getLogger("Warmup")
@@ -33,19 +46,10 @@ private const val WARMUP_PASSES = 3
 fun Application.warmReadPaths() {
     val elapsed =
         measureTime {
-            // Any existing account will do. The warmup is for the code path, not the rows: the user
-            // measured above had two parties and one loot row and still bought the full 1071 -> 200ms.
-            // Reads only, and the results are discarded.
-            val someone =
-                runCatching {
-                    transaction {
-                        Users
-                            .selectAll()
-                            .limit(1)
-                            .firstOrNull()
-                            ?.get(Users.id)
-                    }
-                }.getOrNull()
+            // The account with the most parties, not any account: one with none returns early from
+            // every batched read and compiles none of the paths behind them. Reads only, and the
+            // results are discarded, apart from ensureUser below.
+            val someone = runCatching { transaction { busiestAccount() } }.getOrNull()
 
             if (someone == null) {
                 log.info("Warmup skipped: no accounts yet")
@@ -66,11 +70,37 @@ fun Application.warmReadPaths() {
             // boot over it would be down, and deploy.sh reads a failed health check as a bad deploy.
             runCatching {
                 repeat(WARMUP_PASSES) {
-                    val page = transaction { dropLogPageFor(someone) }
-                    // Discarded. Encoding it is the point, not the string.
-                    Json.encodeToString(page)
+                    // Every request runs this first. A no-op here, since the account already exists.
+                    transaction { ensureUser(someone, emailOf(someone)) }
+                    // Discarded. Encoding each is the point, not the string.
+                    Json.encodeToString(transaction { dropLogPageFor(someone) })
+                    // Party View's three reads, which a cold replica answered in 463-887ms on prod
+                    // (2026-10-15) against 25ms warm for the same request.
+                    val now = Clock.System.now()
+                    Json.encodeToString(transaction { partiesPageFor(someone) })
+                    Json.encodeToString(transaction { partiesExtrasFor(someone, now) })
+                    Json.encodeToString(transaction { piecePilesOf(someone, periodStartFor(WEEKLY_CADENCE, now)) })
                 }
             }.onFailure { log.warn("Warmup failed, first request will pay for it", it) }
         }
     log.info("Warmup: read paths primed in ${elapsed.inWholeMilliseconds}ms")
+}
+
+private fun emailOf(userId: String): String =
+    transaction { Users.selectAll().where { Users.id eq userId }.first()[Users.email] }
+
+private fun JdbcTransaction.busiestAccount(): String? {
+    val parties = Party.id.count()
+    return Party
+        .select(Party.userId, parties)
+        .groupBy(Party.userId)
+        .orderBy(parties, SortOrder.DESC)
+        .limit(1)
+        .firstOrNull()
+        ?.get(Party.userId)
+        ?: Users
+            .selectAll()
+            .limit(1)
+            .firstOrNull()
+            ?.get(Users.id)
 }
