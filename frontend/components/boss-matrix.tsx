@@ -260,7 +260,7 @@ export function BossMatrix({
 
   return (
     <div
-      className="boss-matrix-wrap"
+      className={`boss-matrix-wrap${runFilter === null ? "" : " is-filtering"}`}
       style={{ "--boss-span": span, "--boss-cols": roster } as CSSProperties}
       role="status"
       aria-label={loading ? "Loading boss clears" : undefined}
