@@ -3,6 +3,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Field } from "@/components/add-field";
 import { DropSelect } from "@/components/drop-select";
+import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
 import { StackAssign } from "@/components/stack-assign";
 import { StackPickupDraft } from "@/components/stack-pickup";
 import { OTHER, addDropBody, defaultQuantity, pickableDrops } from "@/lib/drop-picker";
@@ -37,6 +38,21 @@ export type StackDraft = {
   onSaveShares?: (shares: Map<string, number>) => Promise<void>;
 };
 
+/**
+ * A party's pooled pile of Eternal pieces for the week, offered as one more drop in the list.
+ *
+ * Picking it opens the pile's own form rather than this one's count: a pile is saved apart from
+ * party_loot (see PiecePileEditor), so it never reaches the Drop Log, a sale or a settlement.
+ */
+export type PieceDraft = {
+  party: Party;
+  form: PileForm;
+  onAdd: (total: number, takes: Record<string, number>) => Promise<void>;
+};
+
+/** The pile's place in the list. Underscores, which build.py refuses in a real drop key. */
+const PIECE = "__pieces__";
+
 // Log a drop. Carried by the party's loot pool, by a row on Party View and by the Drop Log's own
 // form, the same component in all three so no two can offer different drops for the same boss.
 //
@@ -58,9 +74,12 @@ export function DropPicker({
   card,
   difficulty,
   draft,
+  piece,
   onPick,
   onAdd,
 }: {
+  /** The week's pooled pile, where the party drops one and has not added it yet. */
+  piece?: PieceDraft;
   /** Which boss this drop is for. Empty until a caller that asks has an answer. */
   bossKey: string;
   /**
@@ -115,10 +134,28 @@ export function DropPicker({
   const [boxes, setBoxes] = useState<Record<string, string>>({});
 
   const drops = pickableDrops(table, worldType, difficulty);
+  const offered: BossDrop[] = piece
+    ? [
+        ...drops,
+        {
+          dropKey: PIECE,
+          name: piece.form.tokenName,
+          iconUrl: piece.form.iconUrl,
+          perMember: null,
+          worlds: null,
+          quantity: 1,
+          fungible: false,
+          pieces: {},
+          bundles: {},
+        },
+      ]
+    : drops;
   // A boss with no table has only "something else" to offer, so it starts there.
   const noTable = (table?.length ?? 0) === 0 && bossKey !== "";
   const chosen = noTable && dropKey === "" ? OTHER : dropKey;
-  const body = addDropBody(bossKey, chosen, customName, quantity);
+  const pickedPiece = piece !== undefined && chosen === PIECE;
+  // Never a loot row: the pile is saved through its own form below.
+  const body = pickedPiece ? null : addDropBody(bossKey, chosen, customName, quantity);
 
   // The night about to be logged, when the picked drop is the one that stacks. Rebuilt from the
   // count as typed, so changing it re-reads the stacks against what actually fell.
@@ -170,7 +207,7 @@ export function DropPicker({
 
       <Field on={Boolean(card)} label="Drop" cls="is-drop">
         <DropSelect
-          drops={drops}
+          drops={offered}
           worldType={worldType}
           value={chosen}
           label="Which drop"
@@ -210,7 +247,7 @@ export function DropPicker({
         </Field>
       )}
 
-      {chosen !== "" && (
+      {chosen !== "" && !pickedPiece && (
         <Field on={Boolean(card)} label="How many" cls="is-narrow">
           <input
             className="split-input loot-count-input"
@@ -226,7 +263,7 @@ export function DropPicker({
 
       {blocks}
 
-      {card ? (
+      {pickedPiece ? null : card ? (
         <button
           type="submit"
           className="party-save add-plus"
@@ -244,6 +281,25 @@ export function DropPicker({
     </>
   );
 
+  const unpick = () => {
+    setDropKey("");
+    onPick?.("");
+  };
+
+  // Outside the form, so Enter in one of its boxes cannot submit a drop.
+  const pile = pickedPiece && piece && (
+    <PiecePileEditor
+      party={piece.party}
+      form={piece.form}
+      busy={busy}
+      onSave={async (total, takes) => {
+        await piece.onAdd(total, takes);
+        unpick();
+      }}
+      onCancel={unpick}
+    />
+  );
+
   return (
     <>
       {card ? (
@@ -255,6 +311,7 @@ export function DropPicker({
           {fields}
         </form>
       )}
+      {pile}
     </>
   );
 }

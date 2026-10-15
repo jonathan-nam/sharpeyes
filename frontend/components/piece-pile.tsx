@@ -15,15 +15,15 @@ export type PileForm = {
   total: number;
   // Seat id to pieces, in the order the seats are drawn.
   takes: [string, number][];
-  // False for one nobody has added yet, which opens behind an Add button.
+  // False for one being added from the Add Drop list.
   added: boolean;
 };
 
 /**
  * One week's pile of Eternal pieces on a party, and what each seat took of it.
  *
- * Added by hand, as a party's coupons are: the Add form opens on what the config says falls and how
- * it divides, and the party corrects it to what actually happened.
+ * Added by hand from the Add Drop list, as a party's coupons are: it opens on what the config says falls
+ * and how it divides, and the party corrects it to what actually happened.
  */
 export function PiecePileEditor({
   party,
@@ -31,16 +31,19 @@ export function PiecePileEditor({
   busy,
   onSave,
   onRemove,
+  onCancel,
 }: {
   party: Party;
   form: PileForm;
   busy: boolean;
   onSave: (total: number, takes: Record<string, number>) => Promise<void>;
-  onRemove: () => Promise<void>;
+  /** For a pile already added. */
+  onRemove?: () => Promise<void>;
+  /** For one being added from the Add Drop list, which puts the list back. */
+  onCancel?: () => void;
 }) {
   const nameOf = new Map(party.seats.map((s) => [s.id, s.name]));
   const saved = Object.fromEntries(form.takes.map(([id, n]) => [id, String(n)]));
-  const [open, setOpen] = useState(form.added);
   const [total, setTotal] = useState(String(form.total));
   const [takes, setTakes] = useState<Record<string, string>>(saved);
   const [error, setError] = useState<string | null>(null);
@@ -69,16 +72,6 @@ export function PiecePileEditor({
         Object.fromEntries(form.takes.map(([id]) => [id, parseCount(takes[id] ?? "")!])),
       ),
     );
-
-  if (!open) {
-    return (
-      <div className="loot-actions">
-        <button type="button" className="party-save" disabled={busy} onClick={() => setOpen(true)}>
-          {`Add ${form.tokenName}`}
-        </button>
-      </div>
-    );
-  }
 
   return (
     <section className="config-section config-panel piece-pile">
@@ -141,14 +134,16 @@ export function PiecePileEditor({
                 Revert
               </button>
             )}
-            <button
-              type="button"
-              className="party-delete"
-              disabled={busy}
-              onClick={() => run(onRemove)}
-            >
-              Remove
-            </button>
+            {onRemove && (
+              <button
+                type="button"
+                className="party-delete"
+                disabled={busy}
+                onClick={() => run(onRemove)}
+              >
+                Remove
+              </button>
+            )}
           </>
         ) : (
           <>
@@ -160,12 +155,7 @@ export function PiecePileEditor({
             >
               Add
             </button>
-            <button
-              type="button"
-              className="party-cancel"
-              disabled={busy}
-              onClick={() => setOpen(false)}
-            >
+            <button type="button" className="party-cancel" disabled={busy} onClick={onCancel}>
               Cancel
             </button>
           </>

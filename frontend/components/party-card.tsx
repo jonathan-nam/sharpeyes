@@ -383,6 +383,11 @@ export function PartyCard({
                 table={dropTable}
                 difficulty={party.difficulty}
                 busy={busy ?? false}
+                piece={
+                  piecePile && !piecePile.form.added
+                    ? { party, form: piecePile.form, onAdd: piecePile.onSave }
+                    : undefined
+                }
                 draft={
                   stacks && {
                     dropKey: stacks.dropKey,
@@ -443,10 +448,10 @@ export function PartyCard({
               onDelete={pool.onDelete}
             />
           )}
-          {/* The week's pile of Eternal pieces. Never part of the pool above: pieces cannot be sold,
-              so they stay out of the Drop Log, sales and settlement. Keyed on what is on file, so
-              an add, a save or a remove opens the boxes on the new figures. */}
-          {piecePile && (
+          {/* The week's pile of Eternal pieces, once added from the Add Drop list. Never part of the
+              pool above: pieces cannot be sold, so they stay out of the Drop Log, sales and
+              settlement. Keyed on what is on file, so a save opens the boxes on the new figures. */}
+          {piecePile?.form.added && (
             <PiecePileEditor
               key={`${piecePile.form.added}:${piecePile.form.total}:${piecePile.form.takes.join(",")}`}
               party={party}
