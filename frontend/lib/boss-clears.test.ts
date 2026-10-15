@@ -18,6 +18,7 @@ import {
   nextClear,
   nextSkips,
   bossBands,
+  inRunFilter,
   progressLabel,
   progressMark,
   weekEndExclusive,
@@ -614,5 +615,58 @@ describe("bossBands, over a past week", () => {
     for (const band of bands) {
       expect(band.progress.total).not.toBeNull();
     }
+  });
+});
+
+describe("bossBands, under a run filter", () => {
+  const boss = (bossKey: string, reset: string) => ({
+    bossKey,
+    name: bossKey,
+    reset,
+    iconUrl: null,
+    difficulties: [],
+  });
+  const bosses = [boss("bm", "MONTHLY"), boss("lotus", "WEEKLY"), boss("will", "WEEKLY")];
+  const characters = [
+    { id: "c1", name: "Aria", spriteImgUrl: null },
+    { id: "c2", name: "Bea", spriteImgUrl: null },
+  ];
+  const cleared = (bossKey: string) => ({
+    bossKey,
+    cleared: true,
+    periodStart: "2026-10-08",
+    capturedAt: "2026-10-09",
+  });
+  const clearsByCharacter = { c1: [cleared("lotus"), cleared("bm")], c2: [cleared("will")] };
+  // c1 runs Lotus and Black Mage with a party; everything else is solo.
+  const party = new Set(["c1:lotus", "c1:bm"]);
+  const bandsFor = (filter: "solo" | "party" | null) =>
+    bossBands({
+      bosses,
+      characters,
+      clearsByCharacter,
+      historyWeek: null,
+      counts: (c, b) => inRunFilter(filter, party.has(`${c}:${b}`)),
+    }).bands.map((band) => [band.cadence, band.progress]);
+
+  it("counts every cell with no chip on", () => {
+    expect(bandsFor(null)).toEqual([
+      ["MONTHLY", { cleared: 1, total: 2 }],
+      ["WEEKLY", { cleared: 2, total: 4 }],
+    ]);
+  });
+
+  it("counts only party runs under Party", () => {
+    expect(bandsFor("party")).toEqual([
+      ["MONTHLY", { cleared: 1, total: 1 }],
+      ["WEEKLY", { cleared: 1, total: 1 }],
+    ]);
+  });
+
+  it("counts only solo runs under Solo, and the two add up to the whole", () => {
+    expect(bandsFor("solo")).toEqual([
+      ["MONTHLY", { cleared: 0, total: 1 }],
+      ["WEEKLY", { cleared: 1, total: 3 }],
+    ]);
   });
 });

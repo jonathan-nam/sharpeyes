@@ -3125,6 +3125,12 @@ button.link:disabled {
   pointer-events: none;
 }
 
+/* The other kind of run while a Solo or Party chip is on. Dimmed in place, so the table keeps its
+   shape. */
+.boss-cell.is-filtered-out {
+  opacity: 0.25;
+}
+
 /* Nothing left to do on this boss, so the row goes quiet: the name mutes and the portrait
    desaturates. A row with work left keeps its full weight, so the table reads as the list of what
    is left.
@@ -5116,26 +5122,22 @@ button.link:disabled {
   margin-bottom: 8px;
 }
 
-/* The two splits, as chips that can both be on. Not tabs: they are independent, and tabs would say
-   you have to choose. */
-.party-splits {
+.run-filters {
   display: flex;
   gap: 6px;
 }
 
-.party-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+.run-chip {
+  padding: 4px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
+  background: none;
   font-size: var(--text-base);
   color: var(--muted);
   cursor: pointer;
 }
 
-.party-chip.is-on {
+.run-chip.is-on {
   border-color: var(--accent);
   color: var(--ink-strong);
 }
