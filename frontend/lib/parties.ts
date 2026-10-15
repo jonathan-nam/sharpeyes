@@ -279,16 +279,23 @@ export function hasStandingRoster(party: Party): boolean {
 
 /**
  * The bosses whose routine box cannot be un-ticked, because a party config already says this
- * character runs them.
+ * character runs them: as its lead, or seated in a standing party's usual roster.
  *
  * Two kinds of config are not that claim. A solo pool holds what fell on a boss run alone, and a
  * spent one-off holds one night that is over. Locking a row over either would leave nothing to
- * "remove first", so the box would never come back. Same line partiedNames draws on the server.
+ * "remove first", so the box would never come back. A one-off's other seats are that night's
+ * guests, not a routine. Same line partiedNames draws on the server.
  */
 export function partiedBossKeys(parties: Party[], characterId: string): Set<string> {
+  const seated = (p: Party) =>
+    !p.oneOff &&
+    p.members.some(
+      (m) => !m.guest && (m.characterId === characterId || m.linkedCharacterId === characterId),
+    );
   return new Set(
     parties
-      .filter((p) => p.characterId === characterId && !p.solo && !isSpentOneOff(p))
+      .filter((p) => !p.solo && !isSpentOneOff(p))
+      .filter((p) => p.characterId === characterId || seated(p))
       .map((p) => p.bossKey),
   );
 }

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.invites
 
+import com.sharpeyes.backend.bosses.clearSkipsOfSeats
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
@@ -247,6 +248,7 @@ private fun bindSeats(
             if (changed > 0) bound = true
         }
     }
+    if (bound) clearSkipsOfSeats(sourceId)
     return bound
 }
 

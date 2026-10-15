@@ -240,6 +240,28 @@ class BossRoutineTest {
         }
 
     @Test
+    fun `a seat in another character's party ticks the boss and holds it ticked`() =
+        transaction {
+            // Seated as a member rather than as the lead. Only the lead's mark used to be cleared,
+            // so the seat said "runs it" and the routine said "doesn't".
+            val lead = addCharacter(userOneId, "Lead")
+            val seated = addCharacter(userOneId, "Seated")
+            setBossRoutine(userOneId, seated, listOf("jupiter"), midWeek)
+
+            createParty(
+                userOneId,
+                lead,
+                bossId("jupiter"),
+                SavePartyRequest(characterId = lead.toString(), bossKey = "jupiter", members = listOf("Seated")),
+                midWeek,
+            )
+
+            assertEquals(emptyList(), skipsOf(userOneId, seated))
+            assertIs<RoutineRefusal.HasParty>(setBossRoutine(userOneId, seated, listOf("jupiter"), midWeek))
+            assertEquals(emptyList(), skipsOf(userOneId, seated))
+        }
+
+    @Test
     fun `lets a boss be unticked once its one-off period has passed`() =
         transaction {
             // A night with two friends is not who this character runs Baldrix with. The config stays
