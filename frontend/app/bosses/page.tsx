@@ -9,22 +9,34 @@ import { OtherWorld } from "@/components/other-world";
 import { ResetTimer } from "@/components/reset-timer";
 import { WeekStepper } from "@/components/week-stepper";
 import { apiFetch } from "@/lib/api";
+import { partyRunsByCharacter } from "@/lib/parties";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { type CrossedReset, WEEKLY_CADENCE } from "@/lib/reset-countdown";
 import { peek, put, storedAt } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
+import type { Party, SeatedParty } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
 const BOSSES_KEY = "/api/bosses";
 const CLEARS_KEY = "/api/bosses/clears";
 const CHARACTERS_KEY = "/api/characters";
+// Which cells were run with a party. Solo pools included: one that was a party once still answers
+// for those weeks. Never painted from the cache, because Party View and the edit page write their own
+// copies of these lists and not this one, so a cached copy can predate the party you just changed.
+const PARTIES_KEY = "/api/parties?solo=include";
+const SEATED_KEY = "/api/parties/seated";
 
 // Only the current view is cached. A past week is reached by a deliberate click and is worth a
 // round-trip; caching every week stepped through would grow without bound for no visible gain.
 const clearsUrl = (week: string | null) => (week ? `${CLEARS_KEY}?week=${week}` : CLEARS_KEY);
+const weekUrl = (key: string, week: string | null) =>
+  week ? `${key}${key.includes("?") ? "&" : "?"}week=${week}` : key;
+
+// Both lists for one week, or null if either failed: half of them would leave a party run as a solo.
+type PartyLists = { parties: Party[]; seated: SeatedParty[] };
 
 export default function BossesPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -39,6 +51,7 @@ export default function BossesPage() {
 
   const [bosses, setBosses] = useState<Boss[]>(seededBosses ?? []);
   const [characters, setCharacters] = useState<Character[]>(seededCharacters ?? []);
+  const [partyLists, setPartyLists] = useState<PartyLists | null>(null);
   const [view, setView] = useState<BossClearsView | null>(peek<BossClearsView>(CLEARS_KEY) ?? null);
   // When the view was received, so the countdown can correct for a browser clock that disagrees
   // with the server's. A seeded view arrived with the request that cached it, not now: see
@@ -60,14 +73,20 @@ export default function BossesPage() {
   // label anyway would put this week's date over that week's marks.
   async function loadClears(target: string | null, token?: string | null): Promise<boolean> {
     const ticket = ++latestRequest.current;
-    const result = await apiFetch<BossClearsView>(
-      clearsUrl(target),
-      { method: "GET" },
-      token !== undefined ? () => Promise.resolve(token) : getToken,
-    );
+    const auth = token !== undefined ? () => Promise.resolve(token) : getToken;
+    // The party marks load with the clears, for the same week, so the two cannot disagree. Allowed
+    // to fail: losing them costs the marks, never the matrix.
+    const [result, parties, seated] = await Promise.all([
+      apiFetch<BossClearsView>(clearsUrl(target), { method: "GET" }, auth),
+      apiFetch<Party[]>(weekUrl(PARTIES_KEY, target), { method: "GET" }, auth).catch(() => null),
+      apiFetch<SeatedParty[]>(weekUrl(SEATED_KEY, target), { method: "GET" }, auth).catch(
+        () => null,
+      ),
+    ]);
     if (ticket !== latestRequest.current) return false;
     setView(result);
     setReceivedAt(Date.now());
+    setPartyLists(parties && seated ? { parties, seated } : null);
     if (target === null) put(CLEARS_KEY, result);
     return true;
   }
@@ -156,6 +175,8 @@ export default function BossesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
+  const partyRuns = partyLists && partyRunsByCharacter(partyLists.parties, partyLists.seated);
+
   // Not "characters.length === 0": that is also true while the roster is still loading, when the
   // answer is "not yet" rather than "nobody".
 
@@ -225,6 +246,7 @@ export default function BossesPage() {
                   historyWeek={view?.weekStart ?? null}
                   onToggle={week === null ? toggleClear : undefined}
                   busy={ticking || stepping}
+                  partyRuns={partyRuns ?? undefined}
                 />
               </>
             )}

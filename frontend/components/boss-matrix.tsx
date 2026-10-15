@@ -40,6 +40,7 @@ export function BossMatrix({
   historyWeek,
   onToggle,
   busy,
+  partyRuns,
 }: {
   bosses: Boss[];
   characters: Pick<Character, "id" | "name" | "spriteImgUrl">[];
@@ -60,6 +61,8 @@ export function BossMatrix({
   onToggle?: (characterId: string, bossKey: string, cleared: boolean) => void;
   /** A tick is in flight. Ticks serialise, so the matrix always draws what the server last said. */
   busy?: boolean;
+  /** Boss keys each character ran with a party this week, from partyRunsByCharacter. Omitted, no cell is marked. */
+  partyRuns?: Map<string, Set<string>>;
 }) {
   // Rows, columns and band figures all come from one place, shared with the totals BossBands
   // draws in the corner of the heads. Two counts of the same clears is the disagreement this
@@ -363,10 +366,15 @@ export function BossMatrix({
                                 : state === "skipped"
                                   ? "·"
                                   : "";
+                          // A boss they do not run has no party to run it with.
+                          const party =
+                            state !== "skipped" &&
+                            !!partyRuns?.get(character.id)?.has(boss.bossKey);
                           const said =
-                            state === "cleared" || state === "pending"
+                            (state === "cleared" || state === "pending"
                               ? `${boss.name} ${cellStateLabel(state)} by ${character.name}`
-                              : `${boss.name}, ${character.name} ${cellStateLabel(state)}`;
+                              : `${boss.name}, ${character.name} ${cellStateLabel(state)}`) +
+                            (party ? ", with a party" : "");
 
                           // A boss this character does not run has no clear to tick, so the cell is a
                           // mark and not a control. Which bosses they run is answered on the routine
@@ -378,7 +386,7 @@ export function BossMatrix({
                               key={character.id}
                               // is-editable moves the cell's padding onto the button, so the click
                               // target is the whole cell rather than the glyph in the middle of it.
-                              className={`boss-cell is-${state}${clickable ? " is-editable" : ""}${colClass(character.id)}`}
+                              className={`boss-cell is-${state}${party ? " is-party" : ""}${clickable ? " is-editable" : ""}${colClass(character.id)}`}
                               onMouseEnter={() => setHoveredColumn(character.id)}
                             >
                               {clickable ? (
@@ -461,6 +469,11 @@ export function BossMatrix({
             <span className="boss-key is-unseen">–</span> {cellStateLabel("unseen")}: no capture
             this period
             <span className="boss-key is-skipped">·</span> {cellStateLabel("skipped")}
+            {partyRuns && partyRuns.size > 0 && (
+              <>
+                <span className="boss-key is-party" /> Party
+              </>
+            )}
           </p>
           {/* Said, not left as an absence: a reader who knows Zakum is in the catalog should not
               read its missing row as the week having lost it. Why only weekly is answerable is in

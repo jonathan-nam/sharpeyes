@@ -8,7 +8,7 @@
 import { weekEndExclusive } from "@/lib/boss-clears";
 import type { Boss } from "@/types/boss";
 import type { BossDrop } from "@/types/drop";
-import type { Party } from "@/types/party";
+import type { Party, SeatedParty } from "@/types/party";
 
 /** Six seats, the game's own party limit. Mirrors MAX_PARTY_SIZE in PartyQueries.kt. */
 export const MAX_PARTY = 6;
@@ -139,6 +139,27 @@ export function filterByClear(
 export function existedInWeek(parties: Party[], weekStart: string): Party[] {
   const end = weekEndExclusive(weekStart);
   return parties.filter((party) => party.createdAt.slice(0, 10) < end);
+}
+
+/**
+ * Which bosses each character ran with a party in the week both lists were asked for, as character
+ * id to boss keys. The backend decides each one (ranAsPartyIn); a seated party files under your
+ * character rather than the owner's.
+ */
+export function partyRunsByCharacter(
+  parties: Party[],
+  seated: SeatedParty[],
+): Map<string, Set<string>> {
+  const runs = new Map<string, Set<string>>();
+  const add = (characterId: string, party: Party) => {
+    if (party.ranAsParty !== true) return;
+    const keys = runs.get(characterId) ?? new Set<string>();
+    keys.add(party.bossKey);
+    runs.set(characterId, keys);
+  };
+  for (const party of parties) add(party.characterId, party);
+  for (const row of seated) if (row.party) add(row.yourCharacterId, row.party);
+  return runs;
 }
 
 export type PartyGroup<T> = {

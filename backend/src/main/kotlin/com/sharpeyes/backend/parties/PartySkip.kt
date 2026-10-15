@@ -181,7 +181,10 @@ internal fun takeOverParty(
     } else {
         if (isRetiredParty(partyId)) {
             pinWeeksAlreadyDropped(partyId)
-            Party.update({ Party.id eq partyId }) { it[standing] = true }
+            Party.update({ Party.id eq partyId }) {
+                it[standing] = true
+                it[partySince] = now
+            }
         }
         saveParty(userId, partyId, request, now, sprites)
     }
@@ -203,7 +206,12 @@ internal fun takeOverParty(
         // A one-off asked for as a standing party, which is what "we are doing this every week now"
         // looks like, whether or not its own week is still on. Its armed periods are left alone:
         // they are what a past week is drawn from, and a standing config does not read them.
-        Party.update({ Party.id eq partyId }) { it[oneOff] = false }
+        // Only from a one-off: re-saving a standing party is not it becoming one.
+        val becomesStanding = isOneOff(partyId)
+        Party.update({ Party.id eq partyId }) {
+            if (becomesStanding) it[partySince] = now
+            it[oneOff] = false
+        }
     }
     syncPiecesForParty(partyId, now, period)
 }

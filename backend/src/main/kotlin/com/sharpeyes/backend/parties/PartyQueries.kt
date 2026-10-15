@@ -121,14 +121,16 @@ internal fun partiesFromRows(
     return rows.map { row ->
         val id = row[Party.id]
         val seats = seatsByParty[id].orEmpty()
+        val members = ranIn(seats, rosters[id].orEmpty())
+        val ranAsParty = ranAsPartyIn(row, shown, members.size, spelledOut = id in spelledOut, off = id in off)
         val party =
             row.toPartyResponse(
                 slug = partySlug(id, characterSlugs[row[Party.characterId]], row[BossCatalog.bossKey]),
-                members = ranIn(seats, rosters[id].orEmpty()),
+                members = members,
                 seats = seats,
                 loot = counts[id] ?: LootCounts(0, 0, 0),
                 clear = clears[id] ?: ClearState(null, false),
-                week = WeekState(usualRoster = id !in spelledOut, skippedThisPeriod = id in off),
+                week = WeekState(usualRoster = id !in spelledOut, skippedThisPeriod = id in off, ranAsParty),
             )
         if (id in asCharacter) party.copy(yours = false) else party
     }
@@ -316,6 +318,7 @@ internal data class WeekState(
     val usualRoster: Boolean,
     // Not running its boss in the period being shown, whichever way it got there.
     val skippedThisPeriod: Boolean,
+    val ranAsParty: Boolean = false,
 )
 
 /**
@@ -411,6 +414,7 @@ private fun ResultRow.toPartyResponse(
     seats = seats,
     usualRoster = week.usualRoster,
     skippedThisPeriod = week.skippedThisPeriod,
+    ranAsParty = week.ranAsParty,
     pendingLoot = loot.pending,
     awaitingPayout = loot.awaitingPayout,
     settledLoot = loot.settled,

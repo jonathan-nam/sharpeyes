@@ -59,6 +59,7 @@ internal fun createParty(
         it[difficulty] = request.difficulty
         it[minutes] = request.minutes
         it[oneOff] = request.oneOff
+        it[partySince] = now
         it[createdAt] = now
         it[updatedAt] = now
     }

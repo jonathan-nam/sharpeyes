@@ -4,6 +4,7 @@ import com.sharpeyes.backend.sprites.SPRITE_KEY_LENGTH
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import org.jetbrains.exposed.v1.core.Table
+import org.jetbrains.exposed.v1.datetime.CurrentTimestamp
 import org.jetbrains.exposed.v1.datetime.date
 import org.jetbrains.exposed.v1.datetime.timestamp
 import org.jetbrains.exposed.v1.json.jsonb
@@ -234,6 +235,9 @@ object Party : Table("party") {
     // is what deleting one that has ever held a drop does instead. Same word as PartyMember's, for
     // the same reason. See V33__party_standing.sql.
     val standing = bool("standing")
+
+    // When the standing roster started standing for weeks nobody wrote down. See V80__party_since.sql.
+    val partySince = timestamp("party_since").defaultExpression(CurrentTimestamp)
 
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")

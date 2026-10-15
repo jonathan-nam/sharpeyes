@@ -70,6 +70,7 @@ internal fun createSoloParty(
         it[Party.characterId] = characterId
         it[Party.bossCatalogId] = bossCatalogId
         it[solo] = true
+        it[partySince] = now
         it[createdAt] = now
         it[updatedAt] = now
     }
@@ -202,7 +203,10 @@ internal fun adoptSoloParty(
     sprites: Map<String, String?> = emptyMap(),
 ) {
     pinWeeksAlreadyDropped(partyId)
-    Party.update({ Party.id eq partyId }) { it[solo] = false }
+    Party.update({ Party.id eq partyId }) {
+        it[solo] = false
+        it[partySince] = now
+    }
     saveParty(userId, partyId, request, now, sprites)
 }
 
@@ -235,6 +239,7 @@ internal fun openSoloParty(
     Party.update({ Party.id eq partyId }) {
         it[solo] = false
         it[oneOff] = true
+        it[partySince] = now
         it[updatedAt] = now
     }
     setRunsInPeriod(

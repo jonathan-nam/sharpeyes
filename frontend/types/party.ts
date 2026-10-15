@@ -74,6 +74,9 @@ export type Party = {
   // taken off the week, or a one-off whose week has passed. Answers for the week the list was asked
   // for, unlike `cleared` below, which always answers for now.
   skippedThisPeriod: boolean;
+  // Somebody besides you ran it in the week the list was asked for, as the backend's ranAsPartyIn
+  // reads it. Optional for a cached payload from before the field, which reads as no.
+  ranAsParty?: boolean;
   // The pool at a glance: dropped but unsold, sold with somebody still unpaid, and sold with
   // nothing left to do. The last one is carried so a fully settled pool is still visible from the
   // list rather than reading as a party that never dropped anything.
