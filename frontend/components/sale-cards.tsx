@@ -8,7 +8,7 @@ import type { DropLogPage } from "@/types/page";
 
 /**
  * Every sale card for your drops: the piles of interchangeable drops, then the drops that price
- * alone. The Sales tab and the home screen both draw this, against the same two writes.
+ * alone, against the two writes in useDropLogWrites.
  *
  * Cards only. A heading over these belongs to whatever else is drawn under it.
  */

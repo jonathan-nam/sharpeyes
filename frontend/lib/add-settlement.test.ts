@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 const root = join(__dirname, "..");
 const component = readFileSync(join(root, "components", "add-settlement.tsx"), "utf8");
 const page = readFileSync(join(root, "app", "bosses", "drops", "page.tsx"), "utf8");
-// The Settlement tab's body, which the Drop Log and the home screen both draw.
+// The Settlement tab's body. See components/settlement-stage.tsx.
 const stage = readFileSync(join(root, "components", "settlement-stage.tsx"), "utf8");
 
 describe("the way in for somebody with no card", () => {

@@ -13,7 +13,7 @@ const root = join(__dirname, "..");
 const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
 const ledger = read("components", "settlement-ledger.tsx");
-// The Settlement tab's body, which the Drop Log and the home screen both draw.
+// The Settlement tab's body. See components/settlement-stage.tsx.
 const stage = read("components", "settlement-stage.tsx");
 const view = read("lib", "settlement-view.ts");
 const wallet = read("lib", "wallet.ts");

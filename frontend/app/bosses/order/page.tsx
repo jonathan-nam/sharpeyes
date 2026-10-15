@@ -148,8 +148,7 @@ export default function RunOrderPage() {
   // A run opens to the drop picker, which draws them. See lib/drop-icons.ts.
   useDropIcons(dropTables);
 
-  // Ticks, row writes, and the runs written to this sitting. Shared with the home screen's Solo Run
-  // Order. See lib/use-night-clears.ts.
+  // Ticks, row writes, and the runs written to this sitting. See lib/use-night-clears.ts.
   const { answered, keepInNight, isSaving, write, toggleClear } = useNightClears(
     getToken,
     setParties,

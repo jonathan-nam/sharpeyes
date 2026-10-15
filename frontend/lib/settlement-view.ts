@@ -39,9 +39,9 @@ export function vestigeOf(dropTables: DropTables) {
 /**
  * The Settlement stage's figures off the Drop Log payload.
  *
- * One function for every screen that states them, so the home widget and the Drop Log cannot
- * disagree about what somebody owes. The intermediates are returned because the Drop Log reads
- * them for its other stages.
+ * The intermediates are returned because the Drop Log reads them for its other stages. Any other
+ * screen that states these figures must call this rather than rebuild the chain, or the two will
+ * disagree about what somebody owes.
  */
 export function settlementView(
   page: Pick<
