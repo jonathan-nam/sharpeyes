@@ -377,6 +377,13 @@ const SKELETON_CHARACTERS = Array.from({ length: VISIBLE_COLUMNS }, (_, i) => ({
 
 export type BossBand = { cadence: string; inCadence: Boss[]; progress: ClearProgress };
 
+/** The Solo and Party chips on the Individual View. Null is neither, which counts every cell. */
+export type RunFilter = "solo" | "party";
+
+export function inRunFilter(filter: RunFilter | null, party: boolean): boolean {
+  return filter === null || (filter === "party") === party;
+}
+
 /**
  * The rows, the columns, and each cadence's figure, worked out once.
  *
@@ -390,6 +397,7 @@ export function bossBands({
   skipsByCharacter,
   historyWeek,
   loading,
+  counts,
 }: {
   bosses: Boss[];
   characters: Pick<Character, "id" | "name" | "spriteImgUrl">[];
@@ -397,6 +405,8 @@ export function bossBands({
   skipsByCharacter?: BossSkipsByCharacter;
   historyWeek?: string | null;
   loading?: boolean;
+  /** Which cells the figures count, for a run filter. Omitted, every cell. */
+  counts?: (characterId: string, bossKey: string) => boolean;
 }): {
   rows: Boss[];
   columns: Pick<Character, "id" | "name" | "spriteImgUrl">[];
@@ -441,9 +451,11 @@ export function bossBands({
       // them.
       progress: clearProgress(
         columns.flatMap((character) =>
-          inCadence.map((boss) =>
-            cellState(byCharacter.get(character.id), boss.bossKey, skipsBy.get(character.id)),
-          ),
+          inCadence
+            .filter((boss) => counts?.(character.id, boss.bossKey) ?? true)
+            .map((boss) =>
+              cellState(byCharacter.get(character.id), boss.bossKey, skipsBy.get(character.id)),
+            ),
         ),
         routineKnown,
       ),

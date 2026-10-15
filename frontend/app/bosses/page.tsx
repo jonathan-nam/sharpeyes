@@ -9,6 +9,7 @@ import { OtherWorld } from "@/components/other-world";
 import { ResetTimer } from "@/components/reset-timer";
 import { WeekStepper } from "@/components/week-stepper";
 import { apiFetch } from "@/lib/api";
+import type { RunFilter } from "@/lib/boss-clears";
 import { partyRunsByCharacter } from "@/lib/parties";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { type CrossedReset, WEEKLY_CADENCE } from "@/lib/reset-countdown";
@@ -52,6 +53,7 @@ export default function BossesPage() {
   const [bosses, setBosses] = useState<Boss[]>(seededBosses ?? []);
   const [characters, setCharacters] = useState<Character[]>(seededCharacters ?? []);
   const [partyLists, setPartyLists] = useState<PartyLists | null>(null);
+  const [runFilter, setRunFilter] = useState<RunFilter | null>(null);
   const [view, setView] = useState<BossClearsView | null>(peek<BossClearsView>(CLEARS_KEY) ?? null);
   // When the view was received, so the countdown can correct for a browser clock that disagrees
   // with the server's. A seeded view arrived with the request that cached it, not now: see
@@ -176,6 +178,8 @@ export default function BossesPage() {
   }, [isLoaded]);
 
   const partyRuns = partyLists && partyRunsByCharacter(partyLists.parties, partyLists.seated);
+  // No chips without the party lists: every cell would read as solo, and Solo would count them all.
+  const filterable = !!partyRuns && partyRuns.size > 0;
 
   // Not "characters.length === 0": that is also true while the roster is still loading, when the
   // answer is "not yet" rather than "nobody".
@@ -227,6 +231,21 @@ export default function BossesPage() {
                 {view && (
                   <div className="boss-controls">
                     <WeekStepper view={view} onSelect={selectWeek} busy={stepping} />
+                    {filterable && (
+                      <div className="run-filters" role="group" aria-label="Filter">
+                        {(["solo", "party"] as const).map((kind) => (
+                          <button
+                            key={kind}
+                            type="button"
+                            className={`run-chip${runFilter === kind ? " is-on" : ""}`}
+                            aria-pressed={runFilter === kind}
+                            onClick={() => setRunFilter(runFilter === kind ? null : kind)}
+                          >
+                            {kind === "solo" ? "Solo" : "Party"}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <ResetTimer
                       nextResets={view.nextResets}
                       serverNow={view.now}
@@ -247,6 +266,7 @@ export default function BossesPage() {
                   onToggle={week === null ? toggleClear : undefined}
                   busy={ticking || stepping}
                   partyRuns={partyRuns ?? undefined}
+                  runFilter={filterable ? runFilter : null}
                 />
               </>
             )}

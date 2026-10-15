@@ -15,11 +15,13 @@ import {
   columnFullyCleared,
   indexClears,
   indexSkips,
+  inRunFilter,
   nextClear,
   progressLabel,
   progressMark,
   rowFullyCleared,
   rowNobodyRuns,
+  type RunFilter,
 } from "@/lib/boss-clears";
 import type { Boss, BossClearsByCharacter, BossSkipsByCharacter } from "@/types/boss";
 import type { Character } from "@/types/character";
@@ -41,6 +43,7 @@ export function BossMatrix({
   onToggle,
   busy,
   partyRuns,
+  runFilter = null,
 }: {
   bosses: Boss[];
   characters: Pick<Character, "id" | "name" | "spriteImgUrl">[];
@@ -63,7 +66,14 @@ export function BossMatrix({
   busy?: boolean;
   /** Boss keys each character ran with a party this week, from partyRunsByCharacter. Omitted, no cell is marked. */
   partyRuns?: Map<string, Set<string>>;
+  /** Dims the other kind's cells in place and counts only this kind in every figure. */
+  runFilter?: RunFilter | null;
 }) {
+  const isParty = (characterId: string, bossKey: string) =>
+    !!partyRuns?.get(characterId)?.has(bossKey);
+  const counts = (characterId: string, bossKey: string) =>
+    inRunFilter(runFilter, isParty(characterId, bossKey));
+
   // Rows, columns and band figures all come from one place, shared with the totals BossBands
   // draws in the corner of the heads. Two counts of the same clears is the disagreement this
   // avoids.
@@ -74,6 +84,7 @@ export function BossMatrix({
     skipsByCharacter,
     historyWeek,
     loading,
+    counts,
   });
 
   // The row band alone answers "which boss", but not "which character": the header sits up to 17
@@ -121,9 +132,11 @@ export function BossMatrix({
       : "";
 
   const statesOf = (characterId: string, list: Boss[]) =>
-    list.map((boss) =>
-      cellState(byCharacter.get(characterId), boss.bossKey, skipsBy.get(characterId)),
-    );
+    list
+      .filter((boss) => counts(characterId, boss.bossKey))
+      .map((boss) =>
+        cellState(byCharacter.get(characterId), boss.bossKey, skipsBy.get(characterId)),
+      );
 
   // Both mark tables lay their columns out from this rather than from their first row, which is
   // what keeps the split head over the marks it heads. A fixed layout reads its widths off the
@@ -367,9 +380,7 @@ export function BossMatrix({
                                   ? "·"
                                   : "";
                           // A boss they do not run has no party to run it with.
-                          const party =
-                            state !== "skipped" &&
-                            !!partyRuns?.get(character.id)?.has(boss.bossKey);
+                          const party = state !== "skipped" && isParty(character.id, boss.bossKey);
                           const said =
                             (state === "cleared" || state === "pending"
                               ? `${boss.name} ${cellStateLabel(state)} by ${character.name}`
@@ -386,7 +397,7 @@ export function BossMatrix({
                               key={character.id}
                               // is-editable moves the cell's padding onto the button, so the click
                               // target is the whole cell rather than the glyph in the middle of it.
-                              className={`boss-cell is-${state}${party ? " is-party" : ""}${clickable ? " is-editable" : ""}${colClass(character.id)}`}
+                              className={`boss-cell is-${state}${party ? " is-party" : ""}${counts(character.id, boss.bossKey) ? "" : " is-filtered-out"}${clickable ? " is-editable" : ""}${colClass(character.id)}`}
                               onMouseEnter={() => setHoveredColumn(character.id)}
                             >
                               {clickable ? (
