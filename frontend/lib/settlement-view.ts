@@ -1,4 +1,6 @@
-import { buildSettlement, settlementTotals } from "@/lib/settlement";
+import { bossLabel } from "@/lib/boss-difficulty";
+import { saleMoney, splitOf } from "@/lib/loot";
+import { buildSettlement, type OffsetShare, settlementTotals, shareKey } from "@/lib/settlement";
 import {
   alsoHeldByYou,
   answeredByHolder,
@@ -15,10 +17,24 @@ import {
   salesByHolder,
 } from "@/lib/vestige-ledger";
 import { buildWallet } from "@/lib/wallet";
+import type { DropTables } from "@/types/drop";
 import type { DropLogPage } from "@/types/page";
 
 // The stacking drop the piece ledger is for. See lib/piece-ledger.ts.
-const VESTIGE = "vestige-of-erion";
+export const VESTIGE = "vestige-of-erion";
+
+/**
+ * The coupon's own row, off whichever boss table carries it. Every table names the same drop, and
+ * both its sprite and its name come off the one row so a card cannot draw one item and name
+ * another.
+ */
+export function vestigeOf(dropTables: DropTables) {
+  return (
+    Object.values(dropTables)
+      .flat()
+      .find((drop) => drop.dropKey === VESTIGE) ?? null
+  );
+}
 
 /**
  * The Settlement stage's figures off the Drop Log payload.
@@ -72,6 +88,49 @@ export function settlementView(
     for (const seat of foldSeats(party.seats)) holderNames.set(seat.key, seat.name);
   }
   const wallet = buildWallet(parties, pools);
+  // The shares an offset discharged, resolved. Only the drops an offset actually names, because
+  // splitting every loot row in every pool to answer for a handful would be a pass over the whole
+  // account on every render.
+  //
+  // Off the pools, since an offset marks its shares PAID and they leave the wallet. See V58.
+  const partyById = new Map(parties.map((p) => [p.id, p]));
+  const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
+  const offsetShares = new Map<string, OffsetShare>();
+  const wanted = new Set(debts.flatMap((d) => d.payouts.map((s) => s.lootId)));
+  if (wanted.size > 0) {
+    for (const pool of pools) {
+      const party = partyById.get(pool.partyId);
+      if (!party) continue;
+      for (const loot of pool.loot) {
+        if (!wanted.has(loot.id)) continue;
+        const split = splitOf(loot, party.seats);
+        if (split === null) continue;
+        // The sale in its own unit, so the row's "sold for" and the share under it agree. Reading
+        // `saleAmount` alone would print nothing at all for a sale made in real money.
+        const sold = saleMoney(loot);
+        const boss = bossByKey.get(loot.bossKey ?? "");
+        for (const share of split.shares) {
+          offsetShares.set(shareKey(loot.id, share.memberId), {
+            key: shareKey(loot.id, share.memberId),
+            lootId: loot.id,
+            memberId: share.memberId,
+            item: loot.name,
+            iconUrl: loot.iconUrl,
+            boss: boss ? bossLabel(boss.name, party.difficulty) : "–",
+            // Everybody the night paid out to, which is who was in it. Off the same split the share
+            // came from, so the row cannot name a roster the figure was not divided by.
+            members: split.shares.map((s) => s.name),
+            on: loot.droppedOn,
+            weekStart: loot.weekStart,
+            share: share.pay,
+            sale: sold?.amount ?? null,
+            currency: split.currency,
+            partyId: pool.partyId,
+          });
+        }
+      }
+    }
+  }
   // What sales of somebody else's coupons came to. Held rather than passed inline: the Sale Ledger's
   // fold reads the same figures, and two calls is two lists to fall out of step. See decidedSales.
   const credits = saleCredits(tranches);
@@ -101,6 +160,7 @@ export function settlementView(
     ledgers,
     holderNames,
     wallet,
+    offsetShares,
     credits,
     settlement,
     // The three tiles above the cards, off the cards themselves. See settlementTotals.

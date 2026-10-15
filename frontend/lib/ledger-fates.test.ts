@@ -752,7 +752,9 @@ describe("the piles the ledger holds back", () => {
       "utf8",
     );
     expect(settlement).toContain("onRemovePayment");
-    expect(page).toMatch(/onRemovePayment=\{\(paymentId\) =>/);
+    // Wired where the ledger is drawn, which is the Settlement tab's body. See settlement-stage.tsx.
+    const stage = readFileSync(join(__dirname, "..", "components", "settlement-stage.tsx"), "utf8");
+    expect(stage).toMatch(/onRemovePayment=\{\(paymentId\) =>/);
   });
 
   it("counts only what draws, so the empty line is not held off by a card nobody sees", () => {

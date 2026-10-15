@@ -13,16 +13,19 @@ import { describe, expect, it } from "vitest";
 const root = join(__dirname, "..");
 const component = readFileSync(join(root, "components", "add-settlement.tsx"), "utf8");
 const page = readFileSync(join(root, "app", "bosses", "drops", "page.tsx"), "utf8");
+// The Settlement tab's body, which the Drop Log and the home screen both draw.
+const stage = readFileSync(join(root, "components", "settlement-stage.tsx"), "utf8");
 
 describe("the way in for somebody with no card", () => {
   it("is drawn on the settlement tab", () => {
-    expect(page).toContain("<AddSettlement");
+    expect(page).toContain("<SettlementStage");
+    expect(stage).toContain("<AddSettlement");
   });
 
   it("writes to the endpoints the cards read back", () => {
     // The rows it makes are removable from the card they land on, so they have to be that card's
     // own shape: one endpoint each, and no second shape of debt row.
-    const wiring = page.slice(page.indexOf("<AddSettlement"), page.indexOf("<SettlementLedger"));
+    const wiring = stage.slice(stage.indexOf("<AddSettlement"), stage.indexOf("<SettlementLedger"));
     expect(wiring).toContain("debtWrite(DEBTS_KEY");
     expect(wiring).toContain("paymentWrite(PAYMENTS_KEY");
   });
@@ -54,7 +57,7 @@ describe("the way in for somebody with no card", () => {
     // box inside that card was the only place a payment from them could be entered. A people-only
     // picker out here would have dropped the act, silently.
     expect(component).toContain('one.holder.kind !== "PERSON"');
-    expect(page).toContain("holders={settlement.map((row) => ({");
+    expect(stage).toContain("holders={settlement.map((row) => ({");
     // A debt is still against a PERSON: that is what the holder fold has meant since V39.
     expect(component).toContain("const debtors: Payer[] = people.map((person) => ({");
   });

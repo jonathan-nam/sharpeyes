@@ -387,3 +387,20 @@ export function rowSales(
     (loot, party) => !fungible.has(loot.dropKey ?? "") && !isPieceDrop(loot, party, dropTables),
   );
 }
+
+/**
+ * Your drops waiting on a price, as the Sales tab lists them: the piles of interchangeable drops
+ * first, then the drops that price alone. One call for every screen that offers a sale.
+ */
+export function saleQueues(
+  parties: Party[],
+  pools: PartyLootPool[],
+  dropTables: DropTables,
+  holder: string,
+): { lots: LotDrop[]; alone: LotRow[] } {
+  const fungible = fungibleDropKeys(dropTables);
+  return {
+    lots: lotDrops(parties, pools, fungible, holder),
+    alone: rowSales(parties, pools, dropTables, fungible, holder),
+  };
+}

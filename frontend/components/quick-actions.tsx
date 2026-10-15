@@ -1,34 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { LotSale } from "@/components/lot-sale";
-import { RowSale } from "@/components/row-sale";
-import { SettlementSummary } from "@/components/settlement-summary";
+import { HeroFold } from "@/components/hero-fold";
 import { type RunLog, RunPlan } from "@/components/run-plan";
-import { apiFetch, readBack } from "@/lib/api";
+import { SaleCards } from "@/components/sale-cards";
+import { SettlementStage } from "@/components/settlement-stage";
+import { apiFetch } from "@/lib/api";
 import { progressLabel, progressMark } from "@/lib/boss-clears";
 import { YOU } from "@/lib/boss-night";
 import { weeklyLeft } from "@/lib/bosses-left";
 import { peek, put } from "@/lib/cache";
 import { sectionHref } from "@/lib/drop-sections";
-import {
-  fungibleDropKeys,
-  lotDrops,
-  rowSales,
-  type LotRow,
-  type LotSaleBody,
-} from "@/lib/lot-sale";
+import { saleQueues } from "@/lib/lot-sale";
 import { settlementView } from "@/lib/settlement-view";
 import { soloNight } from "@/lib/solo-night";
 import { useAuth } from "@/lib/use-auth";
-import { useRowWrites } from "@/lib/use-row-writes";
+import { type DropLogPatch, useDropLogWrites } from "@/lib/use-drop-log-writes";
+import { useNightClears } from "@/lib/use-night-clears";
 import { SELF_KEY } from "@/lib/vestige-ledger";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
-import type { DropTables } from "@/types/drop";
-import type { PartyLootPool, SellLootBody } from "@/types/loot";
 import type { DropLogPage } from "@/types/page";
 import type { Party } from "@/types/party";
 
@@ -38,14 +31,14 @@ const BOSSES_KEY = "/api/bosses";
 const CLEARS_KEY = "/api/bosses/clears";
 const CHARACTERS_KEY = "/api/characters";
 const DROP_LOG_KEY = "/api/pages/drop-log";
-const POOLS_KEY = "/api/parties/loot";
 
 type LoadState = "loading" | "loaded" | "error";
 
 const SOLO: { id: string; name: string }[] = [{ id: YOU, name: "You" }];
 
 /**
- * A slice of a page, answerable from the home screen.
+ * A slice of a page, answerable from the home screen. Each draws the page's own components, so
+ * an act taken here is the act taken there.
  *
  * Each body mounts on first open, so the home screen fetches nothing for a widget nobody opened.
  */
@@ -53,60 +46,36 @@ export function QuickActions({ trades }: { trades: boolean }) {
   return (
     <section className="quick-actions">
       <h2 className="quick-actions-title">Quick Actions</h2>
-      <QuickFold label="Bosses Left">
+      <HeroFold head="Bosses Left" panelClassName="quick-action-body" lazy>
         <QuickBossesLeft />
-      </QuickFold>
-      <QuickFold label="Solo Run Order">
+      </HeroFold>
+      <HeroFold head="Solo Run Order" panelClassName="quick-action-body" lazy>
         <QuickRunOrder />
-      </QuickFold>
+      </HeroFold>
       {/* Heroic worlds trade nothing. See lib/world.ts. */}
       {trades && (
-        <QuickFold label="Record Sale">
+        <HeroFold head="Record Sale" panelClassName="quick-action-body" lazy>
           <QuickSale />
-        </QuickFold>
+        </HeroFold>
       )}
       {trades && (
-        <QuickFold label="Settlement">
+        <HeroFold head="Settlement" panelClassName="quick-action-body" lazy>
           <QuickSettlement />
-        </QuickFold>
+        </HeroFold>
       )}
     </section>
   );
 }
 
-function QuickFold({ label, children }: { label: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  // Kept mounted once opened, so folding it away does not throw out a half-typed price.
-  const [opened, setOpened] = useState(false);
-  const panelId = useId();
-  return (
-    <div className="hero-fold">
-      <button
-        type="button"
-        className="hero-fold-head"
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => {
-          setOpen((o) => !o);
-          setOpened(true);
-        }}
-      >
-        {label}
-        <span className="party-row-chevron hero-fold-caret" aria-hidden="true" />
-      </button>
-      <div id={panelId} className="quick-action-body" hidden={!open}>
-        {opened && children}
-      </div>
-    </div>
-  );
-}
-
-/** The Drop Log's Sales tab without the coupon piles, which stay on the tab. */
-function QuickSale() {
+/**
+ * The Drop Log's composite read, and the writes that patch it.
+ *
+ * Not cached, as on the Drop Log: the pools are never cached there either.
+ */
+function useDropLog() {
   const { getToken, isLoaded } = useAuth();
   const [page, setPage] = useState<DropLogPage | null>(null);
   const [state, setState] = useState<LoadState>("loading");
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
@@ -124,49 +93,22 @@ function QuickSale() {
     };
   }, [getToken, isLoaded]);
 
-  async function refreshPools() {
-    const pools = await apiFetch<PartyLootPool[]>(POOLS_KEY, {}, getToken);
-    setPage((current) => (current ? { ...current, pools } : current));
-  }
+  const apply = useCallback(
+    (patch: DropLogPatch) => setPage((current) => (current ? { ...current, ...patch } : current)),
+    [],
+  );
+  const writes = useDropLogWrites(getToken, apply);
 
-  // Thrown on rather than shown here, as on the Drop Log: the card that asked shows the reason.
-  async function lotSale(body: LotSaleBody) {
-    setBusy(true);
-    try {
-      const pools = await apiFetch<PartyLootPool[]>(
-        "/api/parties/loot/lot",
-        { method: "POST", body: JSON.stringify(body) },
-        getToken,
-      );
-      setPage((current) => (current ? { ...current, pools } : current));
-    } finally {
-      setBusy(false);
-    }
-  }
+  return { page, state, writes };
+}
 
-  async function rowSale(row: LotRow, body: SellLootBody) {
-    setBusy(true);
-    try {
-      await apiFetch<unknown>(
-        `/api/parties/${row.partyId}/loot/${row.lootId}/sale`,
-        { method: "PUT", body: JSON.stringify(body) },
-        getToken,
-      );
-      await readBack(refreshPools);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const parties = page?.parties ?? [];
-  const pools = page?.pools ?? [];
-  const dropTables: DropTables = page?.drops ?? {};
-  const fungible = fungibleDropKeys(dropTables);
-  const lots = lotDrops(parties, pools, fungible, SELF_KEY);
-  const alone = rowSales(parties, pools, dropTables, fungible, SELF_KEY);
-  const bossByKey = new Map<string, Boss>((page?.bosses ?? []).map((b) => [b.bossKey, b]));
-  const partyById = new Map<string, Party>(parties.map((p) => [p.id, p]));
-  const characterById = new Map<string, Character>((page?.characters ?? []).map((c) => [c.id, c]));
+/** The Drop Log's sale cards, without the coupon piles, which stay on the Sales tab. */
+function QuickSale() {
+  const { page, state, writes } = useDropLog();
+  const queues = useMemo(
+    () => (page ? saleQueues(page.parties, page.pools, page.drops, SELF_KEY) : null),
+    [page],
+  );
 
   return (
     <>
@@ -174,26 +116,33 @@ function QuickSale() {
       {state === "error" && (
         <p className="finder-empty">Couldn&apos;t load your drops. Reload to try again.</p>
       )}
-      {state === "loaded" && lots.length + alone.length === 0 && (
+      {queues && queues.lots.length + queues.alone.length === 0 && (
         <p className="party-hint">No drops to sell.</p>
       )}
-      <LotSale
-        drops={lots}
-        bossByKey={bossByKey}
-        partyById={partyById}
-        busy={busy}
-        onSell={lotSale}
-      />
-      <RowSale
-        rows={alone}
-        bossByKey={bossByKey}
-        partyById={partyById}
-        characterById={characterById}
-        busy={busy}
-        onSell={rowSale}
-      />
+      {page && queues && (
+        <SaleCards page={page} lots={queues.lots} alone={queues.alone} writes={writes} />
+      )}
       <Link className="quick-action-more" href={sectionHref("sales")}>
         All Sales
+      </Link>
+    </>
+  );
+}
+
+/** The Drop Log's Settlement stage, whole. */
+function QuickSettlement() {
+  const { page, state, writes } = useDropLog();
+  const view = useMemo(() => (page ? settlementView(page) : null), [page]);
+
+  return (
+    <>
+      {state === "loading" && <p className="party-hint">Loading...</p>}
+      {state === "error" && (
+        <p className="finder-empty">Couldn&apos;t load your settlements. Reload to try again.</p>
+      )}
+      {page && view && <SettlementStage page={page} view={view} writes={writes} heading={false} />}
+      <Link className="quick-action-more" href={sectionHref("settlement")}>
+        All Settlements
       </Link>
     </>
   );
@@ -206,9 +155,7 @@ function QuickRunOrder() {
   const [parties, setParties] = useState<Party[]>(seeded ?? []);
   const [bosses, setBosses] = useState<Boss[]>(peek<Boss[]>(BOSSES_KEY) ?? []);
   const [state, setState] = useState<LoadState>(seeded ? "loaded" : "loading");
-  const { isSaving, write } = useRowWrites();
-  // Runs ticked here stay in the order. See stillToRun.
-  const [answered, setAnswered] = useState<ReadonlySet<string>>(() => new Set());
+  const { answered, isSaving, toggleClear } = useNightClears(getToken, setParties);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -237,25 +184,6 @@ function QuickRunOrder() {
   );
   const partyById = useMemo(() => new Map(parties.map((p) => [p.id, p])), [parties]);
 
-  // The same clear Run Order and Party View write.
-  async function toggleClear(party: Party, cleared: boolean) {
-    setAnswered((current) => (current.has(party.id) ? current : new Set(current).add(party.id)));
-    try {
-      await write(party.id, async () => {
-        await apiFetch<Party>(
-          `${PARTIES_KEY}/${party.id}/clear`,
-          { method: "PUT", body: JSON.stringify({ cleared }) },
-          getToken,
-        );
-        const refreshed = await apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, getToken);
-        setParties(refreshed);
-        put(PARTIES_KEY, refreshed);
-      });
-    } catch {
-      // Leaving the old state up beats showing a tick that did not save.
-    }
-  }
-
   const log: RunLog = {
     partyOf: (runId) => partyById.get(runId),
     dropTable: () => undefined,
@@ -279,44 +207,6 @@ function QuickRunOrder() {
       )}
       <Link className="quick-action-more" href="/bosses/order">
         Full Run Order
-      </Link>
-    </>
-  );
-}
-
-/** The Settlement stage's three tiles, off the same figures the stage states. */
-function QuickSettlement() {
-  const { getToken, isLoaded } = useAuth();
-  const [page, setPage] = useState<DropLogPage | null>(null);
-  const [state, setState] = useState<LoadState>("loading");
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    let live = true;
-    apiFetch<DropLogPage>(DROP_LOG_KEY, { method: "GET" }, getToken)
-      .then((next) => {
-        if (!live) return;
-        setPage(next);
-        setState("loaded");
-      })
-      .catch(() => live && setState("error"));
-    return () => {
-      live = false;
-    };
-  }, [getToken, isLoaded]);
-
-  const view = useMemo(() => (page ? settlementView(page) : null), [page]);
-
-  return (
-    <>
-      {state === "loading" && <p className="party-hint">Loading...</p>}
-      {state === "error" && (
-        <p className="finder-empty">Couldn&apos;t load your settlements. Reload to try again.</p>
-      )}
-      {view && view.settlement.length === 0 && <p className="party-hint">Nothing to settle.</p>}
-      {view && <SettlementSummary rows={view.settlement} totals={view.totals} />}
-      <Link className="quick-action-more" href={sectionHref("settlement")}>
-        All Settlements
       </Link>
     </>
   );

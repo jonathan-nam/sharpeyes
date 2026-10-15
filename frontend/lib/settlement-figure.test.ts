@@ -20,6 +20,9 @@ const summary = readFileSync(join(__dirname, "..", "components", "settlement-sum
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 const settlement = readFileSync(join(__dirname, "settlement.ts"), "utf8");
 const view = readFileSync(join(__dirname, "settlement-view.ts"), "utf8");
+// The Settlement tab's body and its writes, which the Drop Log and the home screen both use.
+const stage = readFileSync(join(__dirname, "..", "components", "settlement-stage.tsx"), "utf8");
+const writes = readFileSync(join(__dirname, "use-drop-log-writes.ts"), "utf8");
 const entry = readFileSync(join(__dirname, "..", "components", "add-settlement.tsx"), "utf8");
 
 describe("what the card says a person owes", () => {
@@ -125,7 +128,7 @@ describe("what the card says a person owes", () => {
     //
     // The parts go on the wire as the card built them, `amount` and all, rather than being rebuilt
     // here: a second spelling of one figure is how the rows come to a different sum from the total.
-    expect(page).toContain(
+    expect(stage).toContain(
       'closeWrite("offset", { holder, note: `offset against ${name}`, parts, holding })',
     );
     // Off the same parts the button quoted a total from, so the rows cannot come to a different sum.
@@ -143,9 +146,9 @@ describe("what the card says a person owes", () => {
     // The coupon money was the same failure one step out, and the one that got reported: it was a
     // disposal AFTER the offset, both come off what they owe you, so one press drew the figure down
     // by the shares and then down again by the money.
-    const handler = page.slice(
-      page.indexOf("async function closeWrite("),
-      page.indexOf("/** The same, for an entered debt."),
+    const handler = writes.slice(
+      writes.indexOf("async function closeWrite("),
+      writes.indexOf("/** Answers with the whole people list"),
     );
     expect(handler).toContain("`${DEBTS_KEY}/${act}`");
     // None of the page's other write helpers: each draws the moment it lands, and this act has
@@ -154,9 +157,9 @@ describe("what the card says a person owes", () => {
     expect(handler).not.toContain("debtWrite(");
     expect(handler).not.toContain("disposalWrite(");
     // Every list off the one answer, in the one tick, so there is no repaint between them.
-    expect(handler).toContain("setPools(done.pools);");
-    expect(handler).toContain("setDebts(done.debts);");
-    expect(handler).toContain("setDisposals(done.disposals);");
+    expect(handler).toContain(
+      "apply({ pools: done.pools, debts: done.debts, disposals: done.disposals });",
+    );
   });
 
   it("promises the figures the headline actually moves by", () => {
@@ -192,7 +195,7 @@ describe("what the card says a person owes", () => {
     // The rows first, the entry they replace last. See the comment there for which way fails safely.
     const posts = page.indexOf("incurredAt: debt.incurredAt");
     const del = page.indexOf(
-      `await debtWrite(\`\${DEBTS_KEY}/\${debt.id}\`, { method: "DELETE" })`,
+      `await writes.debtWrite(\`\${DEBTS_KEY}/\${debt.id}\`, { method: "DELETE" })`,
     );
     expect(posts).toBeGreaterThan(-1);
     expect(del).toBeGreaterThan(posts);
@@ -315,21 +318,21 @@ describe("what the card says a person owes", () => {
   });
 
   it("resolves a share off the POOLS, since an offset's shares are paid and gone from the wallet", () => {
-    expect(page).toContain("const offsetShares = new Map<string, OffsetShare>()");
-    expect(page).toContain("item: loot.name");
-    expect(page).toContain("on: loot.droppedOn");
+    expect(view).toContain("const offsetShares = new Map<string, OffsetShare>()");
+    expect(view).toContain("item: loot.name");
+    expect(view).toContain("on: loot.droppedOn");
     // In the sale's own unit, not off `saleAmount`: that column is null for a sale made in real
     // money, so reading it directly would print no price at all on the row meant to let the share
     // be checked against one. See saleMoney.
-    expect(page).toContain("sale: sold?.amount ?? null");
-    expect(page).toContain("currency: split.currency");
+    expect(view).toContain("sale: sold?.amount ?? null");
+    expect(view).toContain("currency: split.currency");
   });
 
   it("splits only the drops an offset actually names", () => {
     // Splitting every loot row in every pool to answer for a handful would be a pass over the whole
     // account on every render.
-    expect(page).toContain("const wanted = new Set(debts.flatMap");
-    expect(page).toContain("if (!wanted.has(loot.id)) continue;");
+    expect(view).toContain("const wanted = new Set(debts.flatMap");
+    expect(view).toContain("if (!wanted.has(loot.id)) continue;");
   });
 
   it("says so when a drop behind an offset has been deleted", () => {
@@ -348,7 +351,7 @@ describe("what the card says a person owes", () => {
     // A line per person went here and came straight back out: the cards below say the same thing, at
     // more length and with something to do about it, so it was a second list of the same names half
     // a screen above the first.
-    expect(page).toContain("<SettlementSummary rows={settlement} totals={owedTotals} />");
+    expect(stage).toContain("<SettlementSummary rows={settlement} totals={totals} />");
     expect(summary).not.toContain("settlement-strip");
     expect(css).not.toContain(".settlement-strip");
   });
@@ -390,7 +393,7 @@ describe("what the card says a person owes", () => {
     // Its own state. One box shared between the two forms would clear a half-typed note in the
     // other the moment either saved.
     expect(entry).not.toContain("setGotNote(note)");
-    expect(page).toContain("body: JSON.stringify({ holder, amount, note: note || undefined })");
+    expect(stage).toContain("body: JSON.stringify({ holder, amount, note: note || undefined })");
   });
 
   it("says what a receipt was for where it has one, and stays plain where it does not", () => {
