@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
@@ -8,8 +9,10 @@ import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.inActiveWorld
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
+import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.alias
@@ -38,8 +41,13 @@ import kotlin.uuid.Uuid
  *
  * Narrowed to the world being shown, like every account-wide read, and to standing seats: a seat
  * you have been retired out of is a party you have left.
+ *
+ * [week] is partiesFor's: the week-scoped fields (roster, skippedThisPeriod) answer for it.
  */
-internal fun partiesSeatedIn(userId: String): List<SeatedPartyResponse> {
+internal fun partiesSeatedIn(
+    userId: String,
+    week: LocalDate? = null,
+): List<SeatedPartyResponse> {
     val myCharacters =
         Characters
             .selectAll()
@@ -83,6 +91,7 @@ internal fun partiesSeatedIn(userId: String): List<SeatedPartyResponse> {
         partiesFromRows(
             rows,
             userId,
+            week,
             asCharacter = seatsByParty.mapValues { (_, seats) -> seats.first().characterId },
         )
 
@@ -162,10 +171,14 @@ internal fun seatedCharacterIn(
  */
 internal suspend fun RoutingContext.listSeatedParties() {
     val (userId, email) = call.principalIdAndEmail()
+    val week =
+        parseWeekParam(call.request.queryParameters["week"]).getOrElse {
+            return call.respond(HttpStatusCode.BadRequest, it.message.orEmpty())
+        }
     val parties =
         dbQuery {
             ensureUser(userId, email)
-            partiesSeatedIn(userId)
+            partiesSeatedIn(userId, week)
         }
     call.respond(parties)
 }

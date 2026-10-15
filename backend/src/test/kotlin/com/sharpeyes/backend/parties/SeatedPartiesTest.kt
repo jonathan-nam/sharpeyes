@@ -7,11 +7,14 @@ import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.db.PartyPeriodSkip
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -443,6 +446,26 @@ class SeatedPartiesTest {
             assertTrue(unlinkPerson(owner, dwight))
             // Not yours, so not found, rather than a quiet no-op that reads as having worked.
             assertFalse(unlinkPerson(stranger, dwight))
+        }
+    }
+
+    @Test
+    fun `a seated party answers for the week asked about`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton"))
+            val lastWeek = currentWeek().minus(DatePeriod(days = 7))
+            PartyPeriodSkip.insert {
+                it[partyId] = Uuid.parse(party.id)
+                it[periodStart] = lastWeek
+                it[createdAt] = Clock.System.now()
+            }
+
+            // Off last week, on this one. The Individual View marks each week's cells from this.
+            assertTrue(partiesSeatedIn(member, lastWeek).single().party.skippedThisPeriod)
+            assertFalse(partiesSeatedIn(member).single().party.skippedThisPeriod)
         }
     }
 }

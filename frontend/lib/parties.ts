@@ -8,7 +8,7 @@
 import { weekEndExclusive } from "@/lib/boss-clears";
 import type { Boss } from "@/types/boss";
 import type { BossDrop } from "@/types/drop";
-import type { Party } from "@/types/party";
+import type { Party, SeatedParty } from "@/types/party";
 
 /** Six seats, the game's own party limit. Mirrors MAX_PARTY_SIZE in PartyQueries.kt. */
 export const MAX_PARTY = 6;
@@ -139,6 +139,44 @@ export function filterByClear(
 export function existedInWeek(parties: Party[], weekStart: string): Party[] {
   const end = weekEndExclusive(weekStart);
   return parties.filter((party) => party.createdAt.slice(0, 10) < end);
+}
+
+/**
+ * Which bosses each character ran with a party in the week shown, as character id to boss keys.
+ *
+ * Both lists must have been asked for that week, so `skippedThisPeriod` answers for it: a one-off
+ * counts in the week it ran and no other. `weekStart` is null for the live view; on a past week it
+ * also drops configs set up after it, which is existedInWeek. Solo and retired configs never count,
+ * the same list Party View draws. Seated parties file under your character, not the owner's.
+ */
+export function partyRunsByCharacter(
+  parties: Party[],
+  seated: SeatedParty[],
+  weekStart: string | null,
+): Map<string, Set<string>> {
+  const rows: [string, Party][] = [
+    ...parties.map((party): [string, Party] => [party.characterId, party]),
+    ...seated
+      .filter((row) => row.party)
+      .map((row): [string, Party] => [row.yourCharacterId, row.party]),
+  ];
+  const ran = rows.filter(([, party]) => !party.solo && !party.retired && !party.skippedThisPeriod);
+  const existed = new Set(
+    weekStart
+      ? existedInWeek(
+          ran.map(([, p]) => p),
+          weekStart,
+        )
+      : ran.map(([, p]) => p),
+  );
+  const runs = new Map<string, Set<string>>();
+  for (const [characterId, party] of ran) {
+    if (!existed.has(party)) continue;
+    const keys = runs.get(characterId) ?? new Set<string>();
+    keys.add(party.bossKey);
+    runs.set(characterId, keys);
+  }
+  return runs;
 }
 
 export type PartyGroup<T> = {

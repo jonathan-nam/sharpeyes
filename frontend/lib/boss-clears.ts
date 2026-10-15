@@ -6,7 +6,6 @@ import type {
   BossSkipsByCharacter,
 } from "@/types/boss";
 import type { Character } from "@/types/character";
-import type { Party, SeatedParty } from "@/types/party";
 
 // Four states, and the last two are both kinds of empty.
 //
@@ -172,29 +171,6 @@ export function columnFullyCleared(
 /** One character's skipped boss keys, for lookup, the way indexClears does for clears. */
 export function indexSkips(skips: Record<string, string[]>): Map<string, Set<string>> {
   return new Map(Object.entries(skips).map(([characterId, keys]) => [characterId, new Set(keys)]));
-}
-
-/**
- * Which bosses each character runs with a party this period, as character id to boss keys.
- *
- * Your own configs and the ones somebody else keeps that a character of yours sits in. A solo config
- * is not a party, and a party off this period (skipped, or a one-off whose week has passed) is not
- * one this week's cell is run with.
- */
-export function partyRunsByCharacter(
-  parties: Party[],
-  seated: SeatedParty[],
-): Map<string, Set<string>> {
-  const runs = new Map<string, Set<string>>();
-  const add = (characterId: string, party: Party) => {
-    if (party.solo || party.retired || party.skippedThisPeriod) return;
-    const keys = runs.get(characterId) ?? new Set<string>();
-    keys.add(party.bossKey);
-    runs.set(characterId, keys);
-  };
-  for (const party of parties) add(party.characterId, party);
-  for (const row of seated) if (row.party) add(row.yourCharacterId, row.party);
-  return runs;
 }
 
 /**

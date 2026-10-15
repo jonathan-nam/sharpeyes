@@ -61,7 +61,7 @@ export function BossMatrix({
   onToggle?: (characterId: string, bossKey: string, cleared: boolean) => void;
   /** A tick is in flight. Ticks serialise, so the matrix always draws what the server last said. */
   busy?: boolean;
-  /** Boss keys each character runs with a party, from partyRunsByCharacter. Omitted, no cell is marked. */
+  /** Boss keys each character ran with a party this week, from partyRunsByCharacter. Omitted, no cell is marked. */
   partyRuns?: Map<string, Set<string>>;
 }) {
   // Rows, columns and band figures all come from one place, shared with the totals BossBands
