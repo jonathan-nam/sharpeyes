@@ -8,6 +8,7 @@ import com.sharpeyes.backend.db.PartyPieceTake
 import com.sharpeyes.backend.db.TokenClearAmount
 import com.sharpeyes.backend.parties.bossResetOf
 import com.sharpeyes.backend.parties.clearFromDrop
+import com.sharpeyes.backend.parties.difficultyIn
 import com.sharpeyes.backend.parties.rosterFor
 import com.sharpeyes.backend.parties.runsInPeriod
 import kotlinx.datetime.LocalDate
@@ -120,7 +121,7 @@ internal fun editPile(
     now: Instant,
 ): String? {
     val config = Party.selectAll().where { Party.id eq partyId }.first()
-    val shape = if (config[Party.solo]) null else pileShape(config, pileRow(partyId, period))
+    val shape = if (config[Party.solo]) null else pileShape(config, period, pileRow(partyId, period))
     val seats =
         PartyMember
             .selectAll()
@@ -191,6 +192,7 @@ private fun writePile(
  */
 private fun pileShape(
     config: ResultRow,
+    period: LocalDate,
     existing: ResultRow?,
 ): FiledPile? {
     if (existing != null) {
@@ -205,7 +207,7 @@ private fun pileShape(
             .selectAll()
             .where { Characters.id eq config[Party.characterId] }
             .first()[Characters.worldType]
-    val mode = config[Party.difficulty]
+    val mode = difficultyIn(config, period)
     return TokenClearAmount
         .selectAll()
         .where {

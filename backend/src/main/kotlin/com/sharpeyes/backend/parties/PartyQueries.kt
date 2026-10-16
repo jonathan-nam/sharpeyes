@@ -115,7 +115,10 @@ internal fun partiesFromRows(
     val spelledOut = weeksSpelledOut(partyIds, shown)
     // Against the week being SHOWN, not against now, so stepping back says what was said about that
     // week rather than what is true today. The trap `cleared` falls into: see clearStateFor.
-    val off = notRunningIn(rows, week, Clock.System.now())
+    val now = Clock.System.now()
+    val off = notRunningIn(rows, week, now)
+    val resets = rows.associate { it[Party.id] to it[BossCatalog.reset] }
+    val modes = periodDifficulties(partyIds) { periodShown(resets.getValue(it), week, now) }
     val characterSlugs = characterSlugsFor(userId)
 
     return rows.map { row ->
@@ -130,7 +133,7 @@ internal fun partiesFromRows(
                 seats = seats,
                 loot = counts[id] ?: LootCounts(0, 0, 0),
                 clear = clears[id] ?: ClearState(null, false),
-                week = WeekState(usualRoster = id !in spelledOut, skippedThisPeriod = id in off, ranAsParty),
+                week = WeekState(id !in spelledOut, skippedThisPeriod = id in off, ranAsParty, modes[id]),
             )
         if (id in asCharacter) party.copy(yours = false) else party
     }
@@ -158,12 +161,14 @@ internal fun findParty(
     val seats = seatsFor(listOf(partyId), userId)[partyId].orEmpty()
     val asCharacter = viewer.asCharacter?.let { mapOf(partyId to it) }.orEmpty()
     val clears = clearStateFor(listOf(row), asCharacter)
+    val livePeriod = periodShown(row[BossCatalog.reset], week = null, now = Clock.System.now())
     val state =
         WeekState(
             usualRoster = partyId !in weeksSpelledOut(listOf(partyId), week),
             // The live view, which is the only one this reads: the period the boss is in now, which
             // for a monthly boss is not the month `week` started in. See periodShown.
             skippedThisPeriod = partyId in notRunningIn(listOf(row), week = null, now = Clock.System.now()),
+            difficulty = periodDifficulties(listOf(partyId)) { livePeriod }[partyId],
         )
     val party =
         row.toPartyResponse(
@@ -319,6 +324,8 @@ internal data class WeekState(
     // Not running its boss in the period being shown, whichever way it got there.
     val skippedThisPeriod: Boolean,
     val ranAsParty: Boolean = false,
+    // The period's own mode, when it is not the config's. See PartyWeekDifficulty.kt.
+    val difficulty: String? = null,
 )
 
 /**
@@ -406,6 +413,7 @@ private fun ResultRow.toPartyResponse(
     worldType = this[Characters.worldType],
     bossKey = this[BossCatalog.bossKey],
     difficulty = this[Party.difficulty],
+    weekDifficulty = week.difficulty,
     minutes = this[Party.minutes],
     solo = this[Party.solo],
     oneOff = this[Party.oneOff],

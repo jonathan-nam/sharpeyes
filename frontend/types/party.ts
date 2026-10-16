@@ -58,6 +58,9 @@ export type Party = {
   // Which mode this party runs, one of the boss's own difficulties. Null is not NORMAL, it is
   // nobody having said yet, and nothing draws a difficulty for it.
   difficulty: string | null;
+  // The mode it ran at in the week being shown, when that was not `difficulty`. Optional because a
+  // tab open across the deploy holds lists without it. Read through modeThisWeek.
+  weekDifficulty?: string | null;
   // How long this party takes on this boss, door to door. Null is nobody having timed it, which
   // Run Order fills with a flat estimate and says so. See lib/boss-minutes.ts.
   minutes: number | null;

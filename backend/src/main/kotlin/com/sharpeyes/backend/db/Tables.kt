@@ -266,6 +266,16 @@ object PartyPeriodRun : Table("party_period_run") {
     override val primaryKey = PrimaryKey(partyId, periodStart)
 }
 
+// The mode a party ran at in one period, when not its usual one. No row is the config's own
+// difficulty. See V82__party_period_difficulty.sql and PartyWeekDifficulty.kt.
+object PartyPeriodDifficulty : Table("party_period_difficulty") {
+    val partyId = reference("party_id", Party.id)
+    val periodStart = date("period_start")
+    val difficulty = text("difficulty")
+
+    override val primaryKey = PrimaryKey(partyId, periodStart)
+}
+
 // The people you run with. See V21__person.sql.
 object Person : Table("person") {
     val id = uuid("id")

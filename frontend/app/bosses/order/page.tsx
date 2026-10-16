@@ -34,7 +34,7 @@ import {
 } from "@/lib/boss-run-plan";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
-import { runningThisPeriod } from "@/lib/parties";
+import { modeThisWeek, runningThisPeriod } from "@/lib/parties";
 import { closedByHolder, outstanding, runningBalance, stillOpen } from "@/lib/vestige-ledger";
 import { shareConfig } from "@/lib/vestige-stacks";
 import { preloadRunArt } from "@/lib/preload-boss-art";
@@ -582,7 +582,7 @@ export default function RunOrderPage() {
   const stacksFor = (party: Party): StackDraft | undefined => {
     const config = shareConfig(
       dropTables[party.bossKey],
-      party.difficulty,
+      modeThisWeek(party),
       party.worldType,
       VESTIGE,
       party.members,

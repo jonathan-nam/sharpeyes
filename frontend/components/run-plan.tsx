@@ -19,6 +19,7 @@ import {
 } from "@/lib/boss-night";
 import type { Plan } from "@/lib/boss-run-plan";
 import { poolSize } from "@/lib/loot";
+import { modeThisWeek } from "@/lib/parties";
 import type { BossDrop } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
 import type { Party } from "@/types/party";
@@ -420,7 +421,7 @@ export function RunPlan({
                         bossKey={party.bossKey}
                         worldType={party.worldType}
                         table={log.dropTable(party.bossKey)}
-                        difficulty={party.difficulty}
+                        difficulty={modeThisWeek(party)}
                         busy={log.busy(party.id)}
                         draft={log.stacksOf?.(party)}
                         piece={pieceDraft(party, log.pieceOf?.(party))}

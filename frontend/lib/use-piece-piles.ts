@@ -4,6 +4,7 @@ import { type DependencyList, useEffect, useState } from "react";
 
 import type { PileForm } from "@/components/piece-pile";
 import { apiFetch } from "@/lib/api";
+import { modeThisWeek } from "@/lib/parties";
 import { draftPile } from "@/lib/piece-pile";
 import { pooledPieceAt } from "@/lib/piece-stacks";
 import type { Boss } from "@/types/boss";
@@ -81,7 +82,7 @@ export function usePiecePiles({
     const pile = piles.find((p) => p.partyId === party.id);
     const piece = pooledPieceAt(
       bosses.find((b) => b.bossKey === party.bossKey) ?? null,
-      party.difficulty ?? "",
+      modeThisWeek(party) ?? "",
       party.worldType,
     );
     if (weekStart === null || (!pile && !piece)) return undefined;
@@ -99,7 +100,7 @@ export function usePiecePiles({
       : {
           tokenName: piece!.tokenName,
           iconUrl: piece!.iconUrl,
-          difficulty: party.difficulty!,
+          difficulty: modeThisWeek(party)!,
           stackSize: piece!.stackSize,
           total: draft!.total,
           takes: Object.entries(draft!.takes),

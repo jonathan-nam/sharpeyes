@@ -10,9 +10,10 @@ import {
   guaranteedDrop,
   hasGuaranteedDrop,
   hasStandingRoster,
+  heldDifficulty,
   isCleared,
   knownCharacterNames,
-  lockedDifficulty,
+  modeThisWeek,
   namedSeats,
   otherMembers,
   partiedBossKeys,
@@ -318,8 +319,8 @@ describe("bossesWithoutConfig", () => {
       "limbo",
       "baldrix",
     ]);
-    expect(lockedDifficulty([off], "char-1", "limbo")).toBe("HARD");
-    expect(lockedDifficulty([off], "char-1", "baldrix")).toBeNull();
+    expect(heldDifficulty([off], "char-1", "limbo")).toBe("HARD");
+    expect(heldDifficulty([off], "char-1", "baldrix")).toBeNull();
   });
 
   it("leaves a spent one-off's difficulty open, since adding it saves over it", () => {
@@ -330,7 +331,15 @@ describe("bossesWithoutConfig", () => {
       skippedThisPeriod: true,
     };
 
-    expect(lockedDifficulty([spent], "char-1", "limbo")).toBeNull();
+    expect(heldDifficulty([spent], "char-1", "limbo")).toBeNull();
+  });
+
+  it("reads a week's own mode before the party's usual one", () => {
+    const usual = { ...config("p1", "char-1", "kalos", ["X"]), difficulty: "CHAOS" };
+
+    expect(modeThisWeek(usual)).toBe("CHAOS");
+    expect(modeThisWeek({ ...usual, weekDifficulty: "NORMAL" })).toBe("NORMAL");
+    expect(modeThisWeek({ ...usual, weekDifficulty: null })).toBe("CHAOS");
   });
 
   it("still hides a one-off that is on this period", () => {

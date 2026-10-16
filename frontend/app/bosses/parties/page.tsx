@@ -31,6 +31,7 @@ import {
   existedInWeek,
   filterByClear,
   knownCharacterNames,
+  modeThisWeek,
   runningThisPeriod,
 } from "@/lib/parties";
 import { preloadBossArt } from "@/lib/preload-boss-art";
@@ -602,7 +603,7 @@ export default function PartiesPage() {
     if (history) return undefined;
     const config = shareConfig(
       dropTables[party.bossKey],
-      party.difficulty,
+      modeThisWeek(party),
       party.worldType,
       VESTIGE,
       party.members,
@@ -792,7 +793,7 @@ export default function PartiesPage() {
               <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />
             )}
             <h3 className="party-row-name">
-              {bossLabel(boss?.name ?? party.bossKey, party.difficulty)}
+              {bossLabel(boss?.name ?? party.bossKey, modeThisWeek(party))}
             </h3>
           </>
         }
@@ -1050,9 +1051,9 @@ export default function PartiesPage() {
                             </h3>
                             {/* Beside the character, not folded into the heading: filed by boss,
                               two of your characters can run the same boss at different modes. */}
-                            {party.difficulty && (
+                            {modeThisWeek(party) && (
                               <span className="party-difficulty">
-                                {difficultyLabel(party.difficulty)}
+                                {difficultyLabel(modeThisWeek(party)!)}
                               </span>
                             )}
                           </>
