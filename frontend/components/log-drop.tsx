@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { DropPicker } from "@/components/drop-picker";
-import { configFor } from "@/lib/parties";
+import { configFor, modeThisWeek } from "@/lib/parties";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
@@ -69,7 +69,7 @@ export function LogDrop({
         bossKey={chosen}
         worldType={character.worldType}
         table={dropTables[chosen]}
-        difficulty={pool?.difficulty}
+        difficulty={pool ? modeThisWeek(pool) : undefined}
         busy={busy}
         card
         lead={

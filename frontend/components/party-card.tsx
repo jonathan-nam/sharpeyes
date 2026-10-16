@@ -12,7 +12,13 @@ import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl, failureText } from "@/li
 import { clearClass, clearStateLabel, nextClear } from "@/lib/boss-clears";
 import type { PieceStatus } from "@/lib/drop-log";
 import { type CouponsOutstanding, poolLabel } from "@/lib/loot";
-import { guaranteedDrop, hasStandingRoster, otherMembers, partySizeLabel } from "@/lib/parties";
+import {
+  guaranteedDrop,
+  hasStandingRoster,
+  modeThisWeek,
+  otherMembers,
+  partySizeLabel,
+} from "@/lib/parties";
 import type { Boss } from "@/types/boss";
 import type { BossDrop, DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
@@ -156,7 +162,7 @@ export function PartyCard({
   // The badge, named as the party page names it: `pool` is the pool itself here.
   const poolLine = poolLabel(party, coupons);
   // The coupon this boss drops for certain at the mode this party runs, or null.
-  const guaranteed = guaranteedDrop(dropTable, party.difficulty, party.worldType);
+  const guaranteed = guaranteedDrop(dropTable, modeThisWeek(party), party.worldType);
   const panelId = `party-panel-${party.id}`;
   const others = otherMembers(party);
   // A solo party has no roster, but it does have a pool, so it opens too now.
@@ -378,7 +384,7 @@ export function PartyCard({
                 bossKey={party.bossKey}
                 worldType={party.worldType}
                 table={dropTable}
-                difficulty={party.difficulty}
+                difficulty={modeThisWeek(party)}
                 busy={busy ?? false}
                 piece={pieceDraft(party, piecePile)}
                 draft={

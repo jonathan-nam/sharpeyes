@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.tokens
 
+import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.bosses.setBossClearByHand
 import com.sharpeyes.backend.bosses.upsertBossClears
 import com.sharpeyes.backend.characters.writeTokenCount
@@ -17,8 +18,10 @@ import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.bossIdForKey
 import com.sharpeyes.backend.parties.createParty
 import com.sharpeyes.backend.parties.findParty
+import com.sharpeyes.backend.parties.putBackForWeek
 import com.sharpeyes.backend.parties.saveParty
 import com.sharpeyes.backend.parties.setPartyClear
+import com.sharpeyes.backend.parties.setRunsInPeriod
 import com.sharpeyes.backend.parties.setSoloDifficulty
 import com.sharpeyes.backend.services.DetectedBossClear
 import com.sharpeyes.backend.users.WORLD_HEROIC
@@ -355,6 +358,29 @@ class PieceSyncTest {
 
             setPartyClear(findParty(partyId, userId)!!, bossIdForKey("kaling")!!, "WEEKLY", false, Clock.System.now())
             assertEquals(0, held(me, "ferocious-entanglement-ring-fragment"))
+        }
+    }
+
+    @Test
+    fun `a week run at another difficulty files that week's pieces, and leaves the party's mode`() {
+        transaction {
+            val me = character(world = WORLD_HEROIC)
+            val partyId = party(me, "kaling", "HARD")
+            val period = periodStartFor("WEEKLY", Clock.System.now())
+            setRunsInPeriod(partyId, oneOff = false, period, runs = false, now = Clock.System.now())
+            // Hard Kaling run on Normal for one week, a member away.
+            putBackForWeek(
+                userId,
+                partyId,
+                SavePartyRequest(me.toString(), "kaling", listOf("Cara"), difficulty = "NORMAL", oneOff = true),
+                Clock.System.now(),
+                emptyMap(),
+            )
+
+            setPartyClear(findParty(partyId, userId)!!, bossIdForKey("kaling")!!, "WEEKLY", true, Clock.System.now())
+            assertEquals(0, held(me, "ferocious-beast-ring"))
+            assertEquals(2, held(me, "ferocious-entanglement-ring-fragment"))
+            assertEquals("HARD", findParty(partyId, userId)!!.difficulty)
         }
     }
 

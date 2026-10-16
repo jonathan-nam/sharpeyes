@@ -72,7 +72,7 @@ internal fun lootFromClear(
                 .where { Party.id eq it }
                 .firstOrNull()
         }
-    val difficulty = config?.get(Party.difficulty)
+    val difficulty = config?.let { difficultyOn(it, on) }
     // A pool this may file into at all: one seat, and still being run.
     //
     // One seat, because a party's stacks have to be handed out by whoever was there. Still being run,

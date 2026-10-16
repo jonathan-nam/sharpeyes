@@ -7,6 +7,7 @@ import { StackAssign } from "@/components/stack-assign";
 import { nightLabel, poolNights, ranAtThisMode } from "@/lib/pool-nights";
 import type { PieceStatus } from "@/lib/drop-log";
 import { takenTally } from "@/lib/loot";
+import { modeThisWeek } from "@/lib/parties";
 import { canTrade } from "@/lib/world";
 import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Boss } from "@/types/boss";
@@ -112,7 +113,7 @@ export function LootPool({
           bossKey={party.bossKey}
           worldType={party.worldType}
           table={dropTables[party.bossKey]}
-          difficulty={party.difficulty}
+          difficulty={modeThisWeek(party)}
           busy={adding}
           onAdd={onAdd}
         />

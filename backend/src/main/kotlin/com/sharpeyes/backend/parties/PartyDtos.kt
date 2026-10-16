@@ -66,6 +66,9 @@ data class PartyResponse(
     // Which mode this party runs, one of the boss's own difficulties. Null is not NORMAL, it is
     // nobody having said yet, so nothing draws a difficulty for it.
     val difficulty: String? = null,
+    // The mode it ran at in the period being shown, when that was not `difficulty`. Null is the
+    // usual one. Anything about one week reads this first; an edit of the config never writes it.
+    val weekDifficulty: String? = null,
     // How long this party takes on this boss, door to door. Null is nobody having timed it, not
     // the flat estimate Run Order falls back to, so the two can be told apart on screen.
     val minutes: Int? = null,

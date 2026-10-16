@@ -13,7 +13,7 @@ import type { Party, PartyMember } from "@/types/party";
 import { BOSS_SHORT_NAMES } from "./boss-art";
 import { bossLabel } from "./boss-difficulty";
 import { runMinutes } from "./boss-minutes";
-import { isCleared } from "./parties";
+import { isCleared, modeThisWeek } from "./parties";
 
 import type { CandidateRun, Plan, PlannedRun } from "./boss-run-plan";
 
@@ -83,7 +83,7 @@ export function runsFromParties(parties: Party[], bosses: Boss[]): CandidateRun[
     id: party.id,
     bossKey: party.bossKey,
     bossName: nameFor.get(party.bossKey) ?? party.bossKey,
-    difficulty: party.difficulty,
+    difficulty: modeThisWeek(party),
     // The config's own time, or the flat fallback said out loud. A party that has been timed and
     // one that happens to fall on thirty minutes are not the same claim, so the night marks which
     // is which rather than presenting both as measured.

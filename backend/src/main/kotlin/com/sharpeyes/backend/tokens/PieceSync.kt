@@ -9,6 +9,7 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PieceClearCredit
 import com.sharpeyes.backend.db.TokenClearAmount
+import com.sharpeyes.backend.parties.difficultyIn
 import com.sharpeyes.backend.parties.runsInPeriod
 import com.sharpeyes.backend.users.inActiveWorld
 import kotlinx.datetime.LocalDate
@@ -177,7 +178,7 @@ private fun owedFor(
     val read = configFor(characterId, bossCatalogId, period)
     // build.py refuses a boss with a mode nobody counted, so a miss on a boss that has rows is the
     // catalog and the config disagreeing about which modes exist. Refused rather than read as none.
-    val amount = read.config?.get(Party.difficulty)?.let { amounts[it] }
+    val amount = read.config?.let { difficultyIn(it, period) }?.let { amounts[it] }
     return when {
         // A boss that drops no Eternal pieces at any mode.
         amounts.isEmpty() -> Owed.None

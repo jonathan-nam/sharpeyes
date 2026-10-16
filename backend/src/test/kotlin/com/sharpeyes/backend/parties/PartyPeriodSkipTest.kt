@@ -6,6 +6,7 @@ import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
@@ -443,7 +444,7 @@ class PartyPeriodSkipTest {
     }
 
     @Test
-    fun `putting a standing party back refuses a difficulty it does not run`() {
+    fun `putting a standing party back at another difficulty is that week's mode alone`() {
         transaction {
             val character = mine()
             val request =
@@ -451,13 +452,34 @@ class PartyPeriodSkipTest {
             val id = createParty(userId, character, bossIdForKey("limbo")!!, request, Clock.System.now())
             takeOff(findParty(id, userId)!!)
 
+            // Hard Limbo run on Normal for one week, a member away.
             val night =
                 SavePartyRequest(character.toString(), "limbo", listOf("Cara"), difficulty = "NORMAL", oneOff = true)
+            assertNull(validatePutBack(userId, id, night))
+            putBackForWeek(userId, id, night, Clock.System.now(), emptyMap())
+
+            val back = findParty(id, userId)!!
+            assertEquals("HARD", back.difficulty)
+            assertEquals("NORMAL", back.weekDifficulty)
+            assertEquals("NORMAL", partiesFor(userId).first { it.id == back.id }.weekDifficulty)
+
+            // A drop that week is stamped with the mode it fell at, not the config's.
+            val lootId = grindstoneOn(back, todayUtc())
             assertEquals(
-                Refusal("This party runs on Hard. Change it on the edit page."),
-                validatePutBack(userId, id, night),
+                "NORMAL",
+                PartyLoot.selectAll().where { PartyLoot.id eq lootId }.first()[PartyLoot.difficulty],
             )
-            assertNull(validatePutBack(userId, id, night.copy(difficulty = "HARD")))
+
+            // Next week is the usual mode again with nobody saying so.
+            val next = partiesFor(userId, thisWeek().plus(DAYS_IN_WEEK, DateTimeUnit.DAY))
+            assertNull(next.first { it.id == back.id }.weekDifficulty)
+
+            // Put back at the usual mode, the week says nothing of its own.
+            setPeriodDifficulty(id, periodOfBoss("limbo"), "HARD")
+            assertNull(findParty(id, userId)!!.weekDifficulty)
+
+            // A mode the boss does not have is refused.
+            assertNotNull(validatePutBack(userId, id, night.copy(difficulty = "EXTREME")))
         }
     }
 
