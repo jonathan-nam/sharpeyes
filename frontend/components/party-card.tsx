@@ -138,9 +138,9 @@ export function PartyCard({
    * Takes this boss off the period, leaving the config standing.
    *
    * Labelled Delete, which is what it does to the ROW: the config, its seats and its pool all
-   * survive, and the boss is back next period. Nothing puts it back before then, so the row is off
-   * the page until the reset. Omitted on a past week, which is shown and not edited. Must reject
-   * when it fails, so the row can say the boss is still on.
+   * survive, and the boss is back next period. Add Party is the only way back before then. Omitted
+   * on a past week, which is shown and not edited. Must reject when it fails, so the row can say
+   * the boss is still on.
    */
   onTakeOff?: () => Promise<void>;
 }) {

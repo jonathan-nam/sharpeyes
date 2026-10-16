@@ -412,6 +412,56 @@ class PartyPeriodSkipTest {
     }
 
     @Test
+    fun `a one-off on a standing party taken off this week puts it back with that week's roster`() {
+        transaction {
+            val character = mine()
+            val party = partyOn(character, "limbo", members = listOf("Steve", "Bob"))
+            val id = Uuid.parse(party.id)
+            val night = SavePartyRequest(character.toString(), "limbo", listOf("Cara"), oneOff = true)
+
+            // On, it is not this door: Add Party does not offer the boss, and a stale list is refused.
+            assertFalse(isSkippedStanding(id, Clock.System.now()))
+            takeOff(party)
+            assertTrue(isSkippedStanding(id, Clock.System.now()))
+            // Reported 2026-10-16: Add Party left the boss out, and the server would have refused it,
+            // so a night with other people was impossible once the party had been taken off.
+            assertFalse(takesOverConfig(id, night, Clock.System.now()))
+
+            assertNull(validatePutBack(userId, id, night))
+            putBackForWeek(userId, id, night, Clock.System.now(), emptyMap())
+
+            val back = findParty(id, userId)!!
+            assertFalse(back.skippedThisPeriod)
+            assertFalse(back.oneOff)
+            assertFalse(back.usualRoster)
+            assertEquals(listOf("Rune", "Cara"), back.members.map { it.name })
+            assertEquals(1, partiesFor(userId).count { it.bossKey == "limbo" })
+
+            // The standing roster is untouched, so next week is the usual party again.
+            assertEquals(listOf("Rune", "Steve", "Bob"), standingRosterOf(id))
+        }
+    }
+
+    @Test
+    fun `putting a standing party back refuses a difficulty it does not run`() {
+        transaction {
+            val character = mine()
+            val request =
+                SavePartyRequest(character.toString(), "limbo", listOf("Steve"), difficulty = "HARD")
+            val id = createParty(userId, character, bossIdForKey("limbo")!!, request, Clock.System.now())
+            takeOff(findParty(id, userId)!!)
+
+            val night =
+                SavePartyRequest(character.toString(), "limbo", listOf("Cara"), difficulty = "NORMAL", oneOff = true)
+            assertEquals(
+                Refusal("This party runs on Hard. Change it on the edit page."),
+                validatePutBack(userId, id, night),
+            )
+            assertNull(validatePutBack(userId, id, night.copy(difficulty = "HARD")))
+        }
+    }
+
+    @Test
     fun `running the same boss again arms the config it already has, rather than a second one`() {
         transaction {
             val character = mine()
