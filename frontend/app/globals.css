@@ -3108,23 +3108,6 @@ button.link:disabled {
   color: var(--muted-2);
 }
 
-/* Run with a party. A corner flag rather than a fill or a fifth glyph, so it sits beside the state
-   instead of in its channel (see the no-fills note above). */
-.boss-cell.is-party {
-  position: relative;
-}
-
-.boss-cell.is-party::after,
-.boss-key.is-party::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  border-top: 7px solid var(--accent);
-  border-left: 7px solid transparent;
-  pointer-events: none;
-}
-
 /* The cells a Solo or Party chip leaves out keep their place with their marks faded well below
    the quietest live mark (--muted-2), so a left-out tick cannot pass for a live dash. Fainter than
    a finished portrait or sprite on purpose: those sit beside full-weight neighbours, and these sit
@@ -3145,10 +3128,6 @@ button.link:disabled {
 .is-filtering .boss-cell.is-unseen:not(.is-filtered-out),
 .is-filtering .boss-cell.is-skipped:not(.is-filtered-out) {
   color: var(--ink);
-}
-
-.is-filtering .boss-cell.is-party:not(.is-filtered-out)::after {
-  border-top-color: color-mix(in srgb, var(--accent) 60%, var(--ink-strong));
 }
 
 /* Nothing left to do on this boss, so the row goes quiet: the name mutes and the portrait
@@ -3206,15 +3185,6 @@ button.link:disabled {
 .boss-key.is-unseen,
 .boss-key.is-skipped {
   color: var(--muted-2);
-}
-
-/* The flag alone would float in the sentence, so the key draws the cell corner it sits in. */
-.boss-key.is-party {
-  position: relative;
-  height: 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
 }
 
 /* One character's routine: a checklist of the catalog, grouped by cadence like the matrix. */
