@@ -10,9 +10,9 @@ import {
   guaranteedDrop,
   hasGuaranteedDrop,
   hasStandingRoster,
+  heldDifficulty,
   isCleared,
   knownCharacterNames,
-  lockedDifficulty,
   namedSeats,
   otherMembers,
   partiedBossKeys,
@@ -304,7 +304,7 @@ describe("bossesWithoutConfig", () => {
     ]);
   });
 
-  it("offers a standing party that is off this week, at the mode it runs", () => {
+  it("offers a standing party that is off this week, opening on the mode it runs", () => {
     // Reported 2026-10-16: a party taken off this week left its boss unaddable until the reset, so
     // a night with other people could not be recorded. Adding it puts the party back instead.
     const catalog = [boss("limbo", "Limbo"), boss("baldrix", "Baldrix")];
@@ -318,11 +318,11 @@ describe("bossesWithoutConfig", () => {
       "limbo",
       "baldrix",
     ]);
-    expect(lockedDifficulty([off], "char-1", "limbo")).toBe("HARD");
-    expect(lockedDifficulty([off], "char-1", "baldrix")).toBeNull();
+    expect(heldDifficulty([off], "char-1", "limbo")).toBe("HARD");
+    expect(heldDifficulty([off], "char-1", "baldrix")).toBeNull();
   });
 
-  it("leaves a spent one-off's difficulty open, since adding it saves over it", () => {
+  it("opens a spent one-off on no difficulty, since adding it saves over it", () => {
     const spent = {
       ...config("p1", "char-1", "limbo", ["X"]),
       difficulty: "HARD",
@@ -330,7 +330,7 @@ describe("bossesWithoutConfig", () => {
       skippedThisPeriod: true,
     };
 
-    expect(lockedDifficulty([spent], "char-1", "limbo")).toBeNull();
+    expect(heldDifficulty([spent], "char-1", "limbo")).toBeNull();
   });
 
   it("still hides a one-off that is on this period", () => {

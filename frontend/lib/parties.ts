@@ -308,8 +308,7 @@ export function partiedBossKeys(parties: Party[], characterId: string): Set<stri
  * one, so offering them offers something that works.
  *
  * A STANDING party taken off the period is offered too. Adding it puts that party back on with the
- * names as this week's roster, leaving its standing roster and difficulty alone (PartyPutBack.kt),
- * so the difficulty is the config's: see lockedDifficulty.
+ * names as this week's roster and the difficulty as the config's own (PartyPutBack.kt).
  *
  * A RETIRED one is offered, and has to be: it holds the pair's slot too, so the boss would
  * otherwise be unaddable forever. Adding it revives that config, pool and all. See takeOverParty.
@@ -323,13 +322,8 @@ export function bossesWithoutConfig(parties: Party[], bosses: Boss[], characterI
   return bosses.filter((boss) => !taken.has(boss.bossKey));
 }
 
-/**
- * The difficulty Add Party must use for this pair, or null when it is the user's to pick.
- *
- * Set for a standing party taken off the period, which Add Party puts back rather than overwrites,
- * and the server refuses a night at another mode. Nothing stores a difficulty per week.
- */
-export function lockedDifficulty(
+/** The difficulty Add Party opens on for this pair: a standing party's own, or null. */
+export function heldDifficulty(
   parties: Party[],
   characterId: string,
   bossKey: string,

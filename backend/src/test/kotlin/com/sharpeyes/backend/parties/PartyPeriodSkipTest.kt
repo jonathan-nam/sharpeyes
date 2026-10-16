@@ -443,7 +443,7 @@ class PartyPeriodSkipTest {
     }
 
     @Test
-    fun `putting a standing party back refuses a difficulty it does not run`() {
+    fun `putting a standing party back at another difficulty edits the config's`() {
         transaction {
             val character = mine()
             val request =
@@ -451,13 +451,15 @@ class PartyPeriodSkipTest {
             val id = createParty(userId, character, bossIdForKey("limbo")!!, request, Clock.System.now())
             takeOff(findParty(id, userId)!!)
 
+            // The config is a template, so the night's mode is the party's from here on.
             val night =
                 SavePartyRequest(character.toString(), "limbo", listOf("Cara"), difficulty = "NORMAL", oneOff = true)
-            assertEquals(
-                Refusal("This party runs on Hard. Change it on the edit page."),
-                validatePutBack(userId, id, night),
-            )
-            assertNull(validatePutBack(userId, id, night.copy(difficulty = "HARD")))
+            assertNull(validatePutBack(userId, id, night))
+            putBackForWeek(userId, id, night, Clock.System.now(), emptyMap())
+            assertEquals("NORMAL", findParty(id, userId)!!.difficulty)
+
+            // A mode the boss does not have is still refused.
+            assertNotNull(validatePutBack(userId, id, night.copy(difficulty = "EXTREME")))
         }
     }
 
