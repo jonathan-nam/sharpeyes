@@ -22,8 +22,8 @@ export type PileForm = {
 /**
  * One week's pile of Eternal pieces on a party, and what each seat took of it.
  *
- * Added by hand from the Add Drop list, as a party's coupons are: it opens on what the config says falls
- * and how it divides, and the party corrects it to what actually happened.
+ * Added by hand from the Add Drop list, as a party's coupons are. How many fall is fixed by the boss and
+ * mode, so only the split is edited: it opens on the config's piece ratio.
  */
 export function PiecePileEditor({
   party,
@@ -44,14 +44,12 @@ export function PiecePileEditor({
 }) {
   const nameOf = new Map(party.seats.map((s) => [s.id, s.name]));
   const saved = Object.fromEntries(form.takes.map(([id, n]) => [id, String(n)]));
-  const [total, setTotal] = useState(String(form.total));
   const [takes, setTakes] = useState<Record<string, string>>(saved);
   const [error, setError] = useState<string | null>(null);
 
-  const dirty =
-    total !== String(form.total) || form.takes.some(([id, n]) => takes[id] !== String(n));
+  const dirty = form.takes.some(([id, n]) => takes[id] !== String(n));
   const problem = pileProblem(
-    parseCount(total),
+    form.total,
     form.takes.map(([id]) => parseCount(takes[id] ?? "")),
     form.stackSize,
   );
@@ -68,7 +66,7 @@ export function PiecePileEditor({
   const save = () =>
     run(() =>
       onSave(
-        parseCount(total)!,
+        form.total,
         Object.fromEntries(form.takes.map(([id]) => [id, parseCount(takes[id] ?? "")!])),
       ),
     );
@@ -81,17 +79,6 @@ export function PiecePileEditor({
         <span className="piece-pile-mode">{difficultyLabel(form.difficulty)}</span>
       </div>
       <div className="config-shares">
-        <label className="config-share">
-          Dropped
-          <input
-            className="split-input"
-            value={total}
-            inputMode="numeric"
-            onChange={(e) => setTotal(e.target.value)}
-            aria-label={`${form.tokenName} dropped`}
-            disabled={busy}
-          />
-        </label>
         {form.takes.map(([id]) => (
           <label className="config-share" key={id}>
             {nameOf.get(id) ?? "?"}
@@ -126,10 +113,7 @@ export function PiecePileEditor({
                 type="button"
                 className="party-cancel"
                 disabled={busy}
-                onClick={() => {
-                  setTotal(String(form.total));
-                  setTakes(saved);
-                }}
+                onClick={() => setTakes(saved)}
               >
                 Revert
               </button>
