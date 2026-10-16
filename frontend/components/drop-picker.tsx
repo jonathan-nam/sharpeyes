@@ -9,6 +9,7 @@ import { StackPickupDraft } from "@/components/stack-pickup";
 import { OTHER, addDropBody, defaultQuantity, pickableDrops } from "@/lib/drop-picker";
 import { draftBoxes, draftDrop, draftStacks } from "@/lib/vestige-pickup";
 import type { ShareConfig } from "@/lib/vestige-stacks";
+import type { PiecePileSlot } from "@/lib/use-piece-piles";
 import type { WorldType } from "@/lib/world";
 import type { BossDrop } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
@@ -50,11 +51,17 @@ export type PieceDraft = {
   onAdd: (total: number, takes: Record<string, number>) => Promise<void>;
 };
 
+/** What a caller's pile becomes in the list: offered only until it has been added. */
+export function pieceDraft(party: Party, slot: PiecePileSlot | undefined): PieceDraft | undefined {
+  return slot && !slot.form.added ? { party, form: slot.form, onAdd: slot.onSave } : undefined;
+}
+
 /** The pile's place in the list. Underscores, which build.py refuses in a real drop key. */
 const PIECE = "__pieces__";
 
-// Log a drop. Carried by the party's loot pool, by a row on Party View and by the Drop Log's own
-// form, the same component in all three so no two can offer different drops for the same boss.
+// Log a drop. Carried by the party's loot pool, by a row on Party View, by a run on Run Order and by
+// the Drop Log's own form, the same component everywhere so no two can offer different drops for the
+// same boss.
 //
 // The item comes from the boss's own drop table (catalog/drops.yaml) rather than a text box,
 // because a pool full of "grindstone", "Grindstone" and "grindstone of faith" is a pool you cannot

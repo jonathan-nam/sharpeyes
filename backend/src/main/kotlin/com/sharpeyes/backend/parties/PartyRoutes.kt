@@ -50,7 +50,8 @@ fun Route.partyRoutes(
     post("/loot/lot") { lotSaleRoute() }
     // Which mode a boss run alone is run at, by character and boss. Constant, so ahead of /{id}.
     put("/solo") { setSoloDifficultyRoute() }
-    // Every party's pile of Eternal pieces for a week, for Party View. Constant, so ahead of /{id}.
+    // Every party's pile of Eternal pieces for a week, for Party View and Run Order. Constant, so
+    // ahead of /{id}.
     get("/pieces") { listPiecePilesRoute() }
     // A config by its readable name rather than its id. Constant first segment, so it is matched
     // ahead of /{id} and no character name can shadow a route. See PartySlug.kt.
