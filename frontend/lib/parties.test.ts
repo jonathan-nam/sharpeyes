@@ -12,6 +12,7 @@ import {
   hasStandingRoster,
   isCleared,
   knownCharacterNames,
+  lockedDifficulty,
   namedSeats,
   otherMembers,
   partiedBossKeys,
@@ -303,15 +304,33 @@ describe("bossesWithoutConfig", () => {
     ]);
   });
 
-  it("does NOT offer a standing party that is merely off this week", () => {
-    // It has a roster and a difficulty and is on again next period. Adding over it would overwrite
-    // both, so the way back to it is the put-back button rather than the dropdown.
+  it("offers a standing party that is off this week, at the mode it runs", () => {
+    // Reported 2026-10-16: a party taken off this week left its boss unaddable until the reset, so
+    // a night with other people could not be recorded. Adding it puts the party back instead.
     const catalog = [boss("limbo", "Limbo"), boss("baldrix", "Baldrix")];
-    const off = { ...config("p1", "char-1", "limbo", ["X"]), skippedThisPeriod: true };
+    const off = {
+      ...config("p1", "char-1", "limbo", ["X"]),
+      difficulty: "HARD",
+      skippedThisPeriod: true,
+    };
 
     expect(bossesWithoutConfig([off], catalog, "char-1").map((b) => b.bossKey)).toEqual([
+      "limbo",
       "baldrix",
     ]);
+    expect(lockedDifficulty([off], "char-1", "limbo")).toBe("HARD");
+    expect(lockedDifficulty([off], "char-1", "baldrix")).toBeNull();
+  });
+
+  it("leaves a spent one-off's difficulty open, since adding it saves over it", () => {
+    const spent = {
+      ...config("p1", "char-1", "limbo", ["X"]),
+      difficulty: "HARD",
+      oneOff: true,
+      skippedThisPeriod: true,
+    };
+
+    expect(lockedDifficulty([spent], "char-1", "limbo")).toBeNull();
   });
 
   it("still hides a one-off that is on this period", () => {

@@ -307,18 +307,35 @@ export function partiedBossKeys(parties: Party[], characterId: string): Set<stri
  * slot (idx_party_character_boss), and the server takes the config over rather than making a second
  * one, so offering them offers something that works.
  *
- * A STANDING party taken off the period is not here. It has a config, it is on again next period,
- * and adding over it would overwrite the roster and difficulty it already carries. Nothing puts it
- * back sooner, which is what taking it off means.
+ * A STANDING party taken off the period is offered too. Adding it puts that party back on with the
+ * names as this week's roster, leaving its standing roster and difficulty alone (PartyPutBack.kt),
+ * so the difficulty is the config's: see lockedDifficulty.
  *
  * A RETIRED one is offered, and has to be: it holds the pair's slot too, so the boss would
  * otherwise be unaddable forever. Adding it revives that config, pool and all. See takeOverParty.
  */
 export function bossesWithoutConfig(parties: Party[], bosses: Boss[], characterId: string): Boss[] {
   const taken = new Set(
-    parties.filter((p) => p.characterId === characterId && !isSpentOneOff(p)).map((p) => p.bossKey),
+    parties
+      .filter((p) => p.characterId === characterId && !p.skippedThisPeriod)
+      .map((p) => p.bossKey),
   );
   return bosses.filter((boss) => !taken.has(boss.bossKey));
+}
+
+/**
+ * The difficulty Add Party must use for this pair, or null when it is the user's to pick.
+ *
+ * Set for a standing party taken off the period, which Add Party puts back rather than overwrites,
+ * and the server refuses a night at another mode. Nothing stores a difficulty per week.
+ */
+export function lockedDifficulty(
+  parties: Party[],
+  characterId: string,
+  bossKey: string,
+): string | null {
+  const held = configFor(parties, characterId, bossKey);
+  return held && !held.oneOff ? held.difficulty : null;
 }
 
 /**

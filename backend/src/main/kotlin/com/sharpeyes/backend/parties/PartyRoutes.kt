@@ -141,6 +141,8 @@ private suspend fun RoutingContext.getParty() {
  *
  * A one-off run again in a later period is armed for that period rather than duplicated, which is
  * what keeps idx_party_character_boss and partyIdFor answering with one config.
+ *
+ * A one-off on a standing party taken off this period puts that party back on. See PartyPutBack.kt.
  */
 private suspend fun RoutingContext.createPartyRoute(
     nexonLookupService: NexonLookupService,
@@ -163,8 +165,17 @@ private suspend fun RoutingContext.createPartyRoute(
                 } else {
                     partyIdFor(characterId, bossId)
                 }
+            val putBack = held?.takeIf { request.oneOff && request.members.isNotEmpty() && isSkippedStanding(it, now) }
             val takeOver = held?.takeIf { takesOverConfig(it, request, now) }
-            if (takeOver != null) {
+            if (putBack != null) {
+                val problem = validatePutBack(userId, putBack, request)
+                if (problem != null) {
+                    problem
+                } else {
+                    putBackForWeek(userId, putBack, request, now, sprites)
+                    findParty(putBack, userId)!!
+                }
+            } else if (takeOver != null) {
                 // The request's kind, not the row's: takeOverParty writes request.oneOff over it.
                 val problem = validateSavedParty(userId, takeOver, request, now, request.oneOff)
                 if (problem != null) {

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { RosterInputs } from "@/components/roster-inputs";
 import { difficultyLabel } from "@/lib/boss-difficulty";
-import { bossesWithoutConfig, namedSeats } from "@/lib/parties";
+import { bossesWithoutConfig, lockedDifficulty, namedSeats } from "@/lib/parties";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { Party, SavePartyBody } from "@/types/party";
@@ -54,6 +54,8 @@ export function AddForWeek({
   const chosen = characterId || characters[0]?.id || "";
   const available = chosen ? bossesWithoutConfig(parties, bosses, chosen) : [];
   const difficulties = bosses.find((b) => b.bossKey === bossKey)?.difficulties ?? [];
+  // A standing party taken off this week comes back at its own mode. See lockedDifficulty.
+  const locked = bossKey ? lockedDifficulty(parties, chosen, bossKey) : null;
   const named = namedSeats(members);
 
   // Every box answered, since the + says nothing about what is missing. A boss that offers no
@@ -123,7 +125,7 @@ export function AddForWeek({
               disabled={busy || available.length === 0}
               onChange={(e) => {
                 setBossKey(e.target.value);
-                setDifficulty("");
+                setDifficulty(lockedDifficulty(parties, chosen, e.target.value) ?? "");
               }}
             >
               <option value="">
@@ -144,7 +146,7 @@ export function AddForWeek({
             <select
               className="split-input"
               value={difficulty}
-              disabled={busy || difficulties.length === 0}
+              disabled={busy || difficulties.length === 0 || locked !== null}
               onChange={(e) => setDifficulty(e.target.value)}
             >
               <option value="">choose...</option>
