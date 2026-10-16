@@ -44,10 +44,7 @@ import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody, PartyLootPool, SellLootBody } from "@/types/loot";
 import type { PartiesExtras, PartiesPage } from "@/types/parties-page";
-import type { PiecePile, SavePiecePileBody } from "@/types/piece-pile";
-import type { PileForm } from "@/components/piece-pile";
-import { draftPile } from "@/lib/piece-pile";
-import { pooledPieceAt } from "@/lib/piece-stacks";
+import { usePiecePiles } from "@/lib/use-piece-piles";
 import type { VestigeSettlement } from "@/types/vestige";
 import type {
   Party,
@@ -79,7 +76,6 @@ const PARTIES_KEY = "/api/parties";
 // What the page DRAWS is filtered back down: see `parties`. Same key as the Drop Log, so the badge
 // and the log cannot disagree. See partiesFor.
 const PARTY_LIST_KEY = "/api/parties?solo=include&retired=include";
-const PILES_KEY = "/api/parties/pieces";
 const BOSSES_KEY = "/api/bosses";
 // The parties somebody ELSE owns that a character of yours sits in. See SeatedParties.kt.
 const SEATED_KEY = "/api/parties/seated";
@@ -201,79 +197,14 @@ export default function PartiesPage() {
    */
   // The week's piles of Eternal pieces. Re-read whenever the parties or the clears are, which is
   // after every write here that could re-file one: a tick, a roster, a skip, a config.
-  const [piles, setPiles] = useState<PiecePile[]>([]);
-  useEffect(() => {
-    if (!isLoaded) return;
-    let cancelled = false;
-    apiFetch<PiecePile[]>(
-      week ? `${PILES_KEY}?week=${week}` : PILES_KEY,
-      { method: "GET" },
-      getToken,
-    )
-      .then((result) => {
-        if (!cancelled) setPiles(result);
-      })
-      .catch(() => {
-        /* keep what we have */
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [everyParty, view, week, isLoaded]);
-
-  async function writePile(party: Party, init: RequestInit, query = "") {
-    const result = await apiFetch<PiecePile | PiecePile[]>(
-      `/api/parties/${party.id}/pieces${query}`,
-      init,
-      getToken,
-    );
-    const fresh = Array.isArray(result) ? result : [result];
-    setPiles((current) => current.filter((p) => p.partyId !== party.id).concat(fresh));
-  }
-
-  /**
-   * The week's pile on this party: the one added, or an Add form opened on what the config's mode
-   * drops and its piece ratio, where the party drops a pooled pile at all.
-   */
-  const piecePileFor = (party: Party) => {
-    const weekStart = week ?? view?.currentWeekStart ?? null;
-    const pile = piles.find((p) => p.partyId === party.id);
-    const piece = pooledPieceAt(
-      bossByKey.get(party.bossKey) ?? null,
-      party.difficulty ?? "",
-      party.worldType,
-    );
-    if (weekStart === null || (!pile && !piece)) return undefined;
-    const draft = piece ? draftPile(party, piece) : null;
-    const form: PileForm = pile
-      ? {
-          tokenName: pile.tokenName,
-          iconUrl: pile.iconUrl,
-          difficulty: pile.difficulty,
-          stackSize: pile.stackSize,
-          total: pile.total,
-          takes: pile.takes.map((t) => [t.memberId, t.quantity]),
-          added: true,
-        }
-      : {
-          tokenName: piece!.tokenName,
-          iconUrl: piece!.iconUrl,
-          difficulty: party.difficulty!,
-          stackSize: piece!.stackSize,
-          total: draft!.total,
-          takes: Object.entries(draft!.takes),
-          added: false,
-        };
-    return {
-      form,
-      onSave: (total: number, takes: Record<string, number>) => {
-        const body: SavePiecePileBody = { weekStart, total, takes };
-        return writePile(party, { method: "PUT", body: JSON.stringify(body) });
-      },
-      onRemove: () => writePile(party, { method: "DELETE" }, `?week=${weekStart}`),
-    };
-  };
+  const { piecePileFor } = usePiecePiles({
+    getToken,
+    isLoaded,
+    week,
+    weekStart: week ?? view?.currentWeekStart ?? null,
+    bosses,
+    reload: [everyParty, view],
+  });
 
   async function loadWeek(
     target: string | null,

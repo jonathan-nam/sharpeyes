@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
-import { DropPicker } from "@/components/drop-picker";
+import { DropPicker, pieceDraft } from "@/components/drop-picker";
+import type { PiecePileSlot } from "@/lib/use-piece-piles";
 import { LootList, type StackAssignment } from "@/components/loot-list";
-import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
+import { PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
 import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl, failureText } from "@/lib/api";
@@ -54,11 +55,7 @@ export function PartyCard({
   piecePile,
 }: {
   /** The week's pile of Eternal pieces, added or to add, where this party drops one. */
-  piecePile?: {
-    form: PileForm;
-    onSave: (total: number, takes: Record<string, number>) => Promise<void>;
-    onRemove: () => Promise<void>;
-  };
+  piecePile?: PiecePileSlot;
   party: Party;
   heading: ReactNode;
   /** THIS row's write. Fed the page's, it dimmed every row at once: the page appeared to flicker. */
@@ -383,11 +380,7 @@ export function PartyCard({
                 table={dropTable}
                 difficulty={party.difficulty}
                 busy={busy ?? false}
-                piece={
-                  piecePile && !piecePile.form.added
-                    ? { party, form: piecePile.form, onAdd: piecePile.onSave }
-                    : undefined
-                }
+                piece={pieceDraft(party, piecePile)}
                 draft={
                   stacks && {
                     dropKey: stacks.dropKey,

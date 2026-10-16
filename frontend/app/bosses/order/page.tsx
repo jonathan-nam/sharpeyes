@@ -40,13 +40,14 @@ import { shareConfig } from "@/lib/vestige-stacks";
 import { preloadRunArt } from "@/lib/preload-boss-art";
 import { controlsKey } from "@/lib/run-order-submit";
 import { useDropIcons } from "@/lib/drop-icons";
+import { usePiecePiles } from "@/lib/use-piece-piles";
 import { useSeatSprites } from "@/lib/seat-sprites";
 import { useNightClears } from "@/lib/use-night-clears";
 import { useEveryoneOn } from "@/lib/everyone-on";
 import { useShowTimes } from "@/lib/show-times";
 import { useWhoIsOn } from "@/lib/who-is-on";
 import { queryParam, replaceQuery, useQueryString } from "@/lib/url-state";
-import type { Boss } from "@/types/boss";
+import type { Boss, BossClearsView } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
 import type { Party, SavePartyBody } from "@/types/party";
@@ -65,6 +66,8 @@ const POOLS_KEY = "/api/parties/loot";
 const LEDGER_PARTIES_KEY = "/api/parties?solo=include&retired=include";
 // What stops that balance counting a night somebody has already closed. See V52.
 const SETTLEMENTS_KEY = "/api/vestige-settlements";
+// Only for the week a pile of Eternal pieces is written to.
+const CLEARS_KEY = "/api/bosses/clears";
 
 // The stacking drop the picker's two blocks are for. One key, because one item behaves this way: a
 // boss drops it in bundles that do not divide by looting alone. See lib/piece-ledger.ts.
@@ -141,6 +144,8 @@ export default function RunOrderPage() {
   const [settlements, setSettlements] = useState<VestigeSettlement[]>(
     peek<VestigeSettlement[]>(SETTLEMENTS_KEY) ?? [],
   );
+  // Never seeded from the cache: a copy from before a reset would file a pile under last week.
+  const [weekStart, setWeekStart] = useState<string | null>(null);
   const [state, setState] = useState<LoadState>(seededParties ? "loaded" : "loading");
 
   // A run in the night links to its party, which draws its seats. See lib/seat-sprites.ts.
@@ -228,33 +233,38 @@ export default function RunOrderPage() {
           apiFetch<VestigeSettlement[]>(SETTLEMENTS_KEY, { method: "GET" }, withToken).catch(
             () => null,
           ),
+          // Optional: losing it costs the picker its Eternal pieces and nothing else.
+          apiFetch<BossClearsView>(CLEARS_KEY, { method: "GET" }, withToken).catch(() => null),
         ]);
       })
-      .then(([nextParties, nextBosses, nextDrops, nextPools, nextLedger, nextSettlements]) => {
-        if (!live) return;
-        setParties(nextParties);
-        setBosses(nextBosses);
-        put(PARTIES_KEY, nextParties);
-        put(BOSSES_KEY, nextBosses);
-        if (nextDrops) {
-          setDropTables(nextDrops);
-          put(DROPS_KEY, nextDrops);
-        }
-        if (nextPools) {
-          setPools(nextPools);
-          put(POOLS_KEY, nextPools);
-        }
-        if (nextLedger) {
-          setLedgerParties(nextLedger);
-          put(LEDGER_PARTIES_KEY, nextLedger);
-        }
-        if (nextSettlements) {
-          setSettlements(nextSettlements);
-          put(SETTLEMENTS_KEY, nextSettlements);
-        }
-        setState("loaded");
-        reportDataReady();
-      })
+      .then(
+        ([nextParties, nextBosses, nextDrops, nextPools, nextLedger, nextSettlements, clears]) => {
+          if (!live) return;
+          if (clears) setWeekStart(clears.currentWeekStart);
+          setParties(nextParties);
+          setBosses(nextBosses);
+          put(PARTIES_KEY, nextParties);
+          put(BOSSES_KEY, nextBosses);
+          if (nextDrops) {
+            setDropTables(nextDrops);
+            put(DROPS_KEY, nextDrops);
+          }
+          if (nextPools) {
+            setPools(nextPools);
+            put(POOLS_KEY, nextPools);
+          }
+          if (nextLedger) {
+            setLedgerParties(nextLedger);
+            put(LEDGER_PARTIES_KEY, nextLedger);
+          }
+          if (nextSettlements) {
+            setSettlements(nextSettlements);
+            put(SETTLEMENTS_KEY, nextSettlements);
+          }
+          setState("loaded");
+          reportDataReady();
+        },
+      )
       .catch(() => {
         // Signed out lands here too, and that is not a failure: it is the standalone tool. The
         // parties tab says so and offers the other one.
@@ -589,6 +599,16 @@ export default function RunOrderPage() {
     };
   };
 
+  // Re-read after every write that could re-file a pile: a tick, a drop, a roster.
+  const { piecePileFor } = usePiecePiles({
+    getToken,
+    isLoaded,
+    week: null,
+    weekStart,
+    bosses,
+    reload: [parties],
+  });
+
   const log: RunLog = {
     partyOf: (runId) => partyById.get(runId),
     dropTable: (bossKey) => dropTables[bossKey],
@@ -596,6 +616,7 @@ export default function RunOrderPage() {
     onToggleClear: toggleClear,
     onAddDrop: haveDropTables ? addDrop : undefined,
     stacksOf: haveDropTables ? stacksFor : undefined,
+    pieceOf: piecePileFor,
   };
 
   const left = plan.runs.filter((planned) => partyById.get(planned.run.id)?.cleared !== true);

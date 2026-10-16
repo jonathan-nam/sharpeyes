@@ -2,7 +2,8 @@
 
 import { Fragment, type RefObject, useEffect, useRef, useState } from "react";
 
-import { DropPicker, type StackDraft } from "@/components/drop-picker";
+import { DropPicker, pieceDraft, type StackDraft } from "@/components/drop-picker";
+import type { PiecePileSlot } from "@/lib/use-piece-piles";
 import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl } from "@/lib/api";
 import { BOSS_ART_2X } from "@/lib/boss-art";
 import { clearStateLabel, nextClear } from "@/lib/boss-clears";
@@ -68,6 +69,8 @@ export type RunLog = {
    * are one arrangement.
    */
   stacksOf?: (party: Party) => StackDraft | undefined;
+  /** The week's pile of Eternal pieces, where this config drops one. See usePiecePiles. */
+  pieceOf?: (party: Party) => PiecePileSlot | undefined;
 };
 
 /**
@@ -420,6 +423,7 @@ export function RunPlan({
                         difficulty={party.difficulty}
                         busy={log.busy(party.id)}
                         draft={log.stacksOf?.(party)}
+                        piece={pieceDraft(party, log.pieceOf?.(party))}
                         onAdd={async (body) => {
                           setAddError(null);
                           try {
