@@ -198,7 +198,7 @@ export default function CharactersPage() {
             {groups.map((group) => (
               <section className="character-group" key={group.world ?? "unplaced"}>
                 <h2 className="character-world">{group.world ?? "World not looked up"}</h2>
-                <ul className="character-list">
+                <ul className="character-cards">
                   {group.characters.map((character) => {
                     // Against the group, not the page: an arrow at a group's edge has nowhere to go,
                     // because the character on the other side of it plays somewhere else.

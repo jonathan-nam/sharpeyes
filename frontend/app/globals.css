@@ -1585,48 +1585,43 @@ img.user-avatar-img {
   margin-top: 8px;
 }
 
-/* One character per row, read down the page. */
-.character-list {
+/* Characters as their sprites, a card each, wrapping. /characters and onboarding share these. */
+.character-cards {
   list-style: none;
-  margin: 0;
+  margin: 0 0 12px;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.character-row {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--line);
 }
 
-/* 96px for the reason .tile-sprite gives: it is the avatar endpoint's own size, so this is 1:1 and
-   there is nothing bigger to grow into. It was 48, which is the only other ratio available that
-   does not resample, and this page is where you look AT your characters rather than pick one. */
-.character-row-sprite {
-  width: 96px;
-  height: 96px;
-  flex: none;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-/* Takes the slack, so the world toggle and the actions line up down the column whatever the
-   names are. */
-.character-row-name {
-  flex: 1 1 12ch;
+.character-card {
+  position: relative;
+  /* Against the grid item's `auto` minimum, or a long name widens its track. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  align-items: center;
+  padding: 14px 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
 }
 
-.character-row-actions {
-  display: inline-flex;
+.character-card-star {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+.character-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 6px;
+  margin-top: 10px;
 }
 
 .add-character {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
+import { CharacterCard } from "@/components/character-card";
 import { WorldChoice } from "@/components/world-choice";
 import { apiFetch } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
@@ -135,27 +136,16 @@ export default function Welcome() {
       {step === 1 && characters && (
         <>
           {characters.length > 0 && (
-            <ul className="welcome-list">
-              {characters.map((c) => {
-                const isMain = settings.mainCharacterId === c.id;
-                return (
-                  <li key={c.id} className="welcome-character">
-                    {/* The Characters page's own star, on the same setting. */}
-                    <button
-                      type="button"
-                      className={`tile-star${isMain ? " is-main" : ""}`}
-                      aria-label={isMain ? `${c.name} is your main` : `Make ${c.name} your main`}
-                      aria-pressed={isMain}
-                      title={isMain ? "Your Main" : "Set as Main"}
-                      disabled={settingMain}
-                      onClick={() => void setMain(c.id)}
-                    >
-                      {isMain ? "\u2605" : "\u2606"}
-                    </button>
-                    {c.name}
-                  </li>
-                );
-              })}
+            <ul className="character-cards">
+              {characters.map((c) => (
+                <CharacterCard
+                  key={c.id}
+                  character={c}
+                  isMain={settings.mainCharacterId === c.id}
+                  onStar={() => void setMain(c.id)}
+                  starBusy={settingMain}
+                />
+              ))}
             </ul>
           )}
           <AddCharacter onAdded={(c) => setCharacters([...characters, c])} />
