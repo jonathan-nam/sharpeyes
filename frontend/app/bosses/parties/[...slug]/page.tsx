@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
-import { MemberRoles } from "@/components/member-roles";
+import { SeatInvites } from "@/components/seat-invites";
 import { InviteLink } from "@/components/invite-link";
 import { fileUnder, peopleBody, toDraft } from "@/lib/people-board";
 import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
@@ -42,7 +42,7 @@ import type { DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, PartyLootPool, SellLootBody } from "@/types/loot";
 import type { VestigeSettlement } from "@/types/vestige";
 import type { Invite } from "@/types/invite";
-import type { MemberRole, Party, PartyMember, Person } from "@/types/party";
+import type { Party, PartyMember, Person } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -62,7 +62,6 @@ const VESTIGE = "vestige-of-erion";
 const ADD_DROP = "add-drop";
 // Not a row either, and the only write on this page that is a member's. See leave().
 const LEAVE = "leave";
-const ROLE = "role";
 
 export default function PartyPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -233,24 +232,6 @@ export default function PartyPage() {
       router.push("/bosses/parties");
     } catch (e) {
       setError(failureText(e, "Couldn't leave that party. Try again."));
-    }
-  }
-
-  /** Makes a member who has joined a Viewer or an Editor. The owner's act. */
-  async function setRole(memberId: string, role: MemberRole) {
-    if (!party) return;
-    setError(null);
-    try {
-      const saved = await write(ROLE, () =>
-        apiFetch<Party>(
-          `/api/parties/${party.id}/members/${memberId}/role`,
-          { method: "PUT", body: JSON.stringify({ role }) },
-          getToken,
-        ),
-      );
-      setParty(saved);
-    } catch (e) {
-      setError(failureText(e, "Couldn't change that. Try again."));
     }
   }
 
@@ -479,12 +460,11 @@ export default function PartyPage() {
             />
 
             {!readOnly && (
-              <MemberRoles
+              <SeatInvites
                 seats={party.seats}
                 people={people.map((p) => p.name)}
-                busy={isSaving(ROLE)}
+                busy={inviting !== null}
                 inviting={inviting}
-                onSet={(id, role) => void setRole(id, role)}
                 onInvite={(seat, name) => void inviteSeat(seat, name)}
               />
             )}

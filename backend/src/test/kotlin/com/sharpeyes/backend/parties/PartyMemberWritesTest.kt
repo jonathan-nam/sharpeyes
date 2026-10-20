@@ -32,8 +32,8 @@ import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
-/** What an Editor may write into a pool they do not own, and the guard against logging a night twice. */
-class PartyEditorsTest {
+/** What a member may write into a pool they do not own, and the guard against logging a night twice. */
+class PartyMemberWritesTest {
     private val owner = "user_test_editors_owner"
     private val member = "user_test_editors_member"
     private val stranger = "user_test_editors_stranger"
@@ -162,13 +162,12 @@ class PartyEditorsTest {
         )
     }
 
-    /** The owner, Chris on [member]'s account as CreedBratton and made an Editor, and Baldrix unclaimed. */
-    private fun shared(editor: Boolean = true): PartyResponse {
+    /** The owner, Chris on [member]'s account as CreedBratton, and Baldrix unclaimed. */
+    private fun shared(): PartyResponse {
         val theirs = character(owner, "mechyfechy")
         character(member, "CreedBratton")
         link(owner, "Chris", member)
         val party = config(theirs, listOf("CreedBratton", "Baldrix"))
-        if (editor) setMemberRole(owner, id(party), seatId(party, "CreedBratton"), ROLE_EDITOR, now)
         return party
     }
 
@@ -195,7 +194,7 @@ class PartyEditorsTest {
     }
 
     @Test
-    fun `an Editor sells as themselves and never as somebody else`() {
+    fun `a member sells as themselves and never as somebody else`() {
         transaction {
             val party = shared()
             val lootId = drop(party, by = member)
@@ -208,7 +207,7 @@ class PartyEditorsTest {
     }
 
     @Test
-    fun `an Editor cannot correct or undo a sale that was not theirs`() {
+    fun `a member cannot correct or undo a sale that was not theirs`() {
         transaction {
             val party = shared()
             val lootId = drop(party)
@@ -221,7 +220,7 @@ class PartyEditorsTest {
     }
 
     @Test
-    fun `an Editor undoes their own sale`() {
+    fun `a member undoes their own sale`() {
         transaction {
             val party = shared()
             val lootId = drop(party, by = member)
@@ -231,7 +230,7 @@ class PartyEditorsTest {
     }
 
     @Test
-    fun `an Editor marks a drop kept by themselves only, and puts back only their own`() {
+    fun `a member marks a drop kept by themselves only, and puts back only their own`() {
         transaction {
             val party = shared()
             val lootId = drop(party)
@@ -244,7 +243,7 @@ class PartyEditorsTest {
     }
 
     @Test
-    fun `an Editor deletes only an unsold drop they logged`() {
+    fun `a member deletes only an unsold drop they logged`() {
         transaction {
             val party = shared()
             val theirs = drop(party, by = member)
@@ -256,16 +255,6 @@ class PartyEditorsTest {
             assertTrue(mayDeleteLoot(id(party), owner, loot(party, theirs, owner)))
             sell(party, theirs, "CreedBratton")
             assertFalse(mayDeleteLoot(id(party), member, loot(party, theirs)))
-        }
-    }
-
-    @Test
-    fun `a Viewer writes nothing`() {
-        transaction {
-            val party = shared(editor = false)
-            val lootId = drop(party)
-            assertFalse(canEditParty(id(party), member))
-            assertFalse(mayDeleteLoot(id(party), member, loot(party, lootId)))
         }
     }
 }

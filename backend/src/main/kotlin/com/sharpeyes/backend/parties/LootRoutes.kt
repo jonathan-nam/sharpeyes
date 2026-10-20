@@ -24,7 +24,7 @@ import kotlin.uuid.Uuid
 // the one handler here that is NOT under a party (see settleRoute), registered by PartyRoutes.kt.
 //
 // Every handler starts by proving the caller may write here: the owner, or for logging, selling and
-// keeping, an Editor acting as their own seat (PartyRoles.kt). Payouts and bundles stay the owner's.
+// keeping, a member acting as their own seat (PartyAccess.kt). Payouts and bundles stay the owner's.
 // Nothing here trusts a loot id on its own, since a loot row's owner is its party's owner.
 
 fun Route.lootRoutes() {

@@ -85,7 +85,6 @@ internal fun leaveParty(
     // by hand. Leaving it bound would leave the party readable by the person who just left it,
     // which is the same failure unlinkPerson exists to avoid from the other end.
     PartyMember.update({ PartyMember.id inList seatIds }) { it[linkedCharacterId] = null }
-    dropRole(partyId, userId)
     Party.update({ Party.id eq partyId }) { it[updatedAt] = now }
     syncPiecesForParty(partyId, now)
     return true
