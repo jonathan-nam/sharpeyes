@@ -93,6 +93,7 @@ BOSS_ICONS = ROOT / "backend" / "src" / "main" / "resources" / "seed-assets" / "
 # fetching the portraits at first render instead of after a token and an /api/bosses call.
 # Generated, so adding a boss is still one edit to bosses.yaml.
 BOSS_ART_OUT = ROOT / "frontend" / "lib" / "boss-art.ts"
+BOSS_HP_OUT = ROOT / "frontend" / "lib" / "boss-hp.ts"
 
 # The boss drop tables. What a boss can drop, and the art the loot pool draws beside it. Unlike
 # items, a drop has no vision template: nothing reads these off a screenshot, they are picked from
@@ -238,7 +239,39 @@ def load_bosses() -> list[dict]:
                 f"{key}: max_party must be a positive integer or absent, got {b['max_party']!r}"
             )
         check_difficulties(b)
+        check_hp(b)
     return bosses
+
+
+HP_UNITS = {"T": 1, "Q": 1000}
+
+
+def hp_trillions(text: str) -> float:
+    """ "1.57T" or "54.59Q", the way the source writes it, as trillions."""
+    m = re.fullmatch(r"(\d+(?:\.\d+)?)([TQ])", str(text))
+    if not m:
+        raise ValueError(text)
+    return round(float(m.group(1)) * HP_UNITS[m.group(2)], 2)
+
+
+def check_hp(boss: dict) -> None:
+    """One HP per difficulty and no other, for every tracked boss. See `hp` in bosses.yaml.
+
+    Exactly the difficulties, so a mode added without its HP fails here instead of sorting last.
+    """
+    key = boss["key"]
+    if not boss.get("tracked", True):
+        return
+    hp = boss.get("hp")
+    if not isinstance(hp, dict):
+        sys.exit(f"{key}: needs hp, one figure per difficulty, it orders bosses hardest first")
+    if set(hp) != set(boss["difficulties"]):
+        sys.exit(f"{key}: hp must name exactly its difficulties {boss['difficulties']}, got {sorted(hp)}")
+    for mode, text in hp.items():
+        try:
+            hp_trillions(text)
+        except ValueError:
+            sys.exit(f"{key}: hp {mode} must read like 1.57T or 54.59Q, got {text!r}")
 
 
 def check_difficulties(boss: dict) -> None:
@@ -850,6 +883,34 @@ export const BOSS_SHORT_NAMES: Record<string, string> = {{
 """
 
 
+def boss_hp_ts(bosses: list[dict]) -> str:
+    """Each tracked boss's total HP per difficulty, in trillions, for ordering hardest first."""
+
+    def prop(key: str) -> str:
+        return key if re.fullmatch(r"[A-Za-z_$][A-Za-z0-9_$]*", key) else f'"{key}"'
+
+    def num(value: float) -> str:
+        return f"{value:g}" if value < 1e6 else str(value)
+
+    rows = "\n".join(
+        f"  {prop(b['key'])}: {{ "
+        + ", ".join(f"{m}: {num(hp_trillions(b['hp'][m]))}" for m in b["difficulties"])
+        + " },"
+        for b in bosses
+        if b.get("tracked", True)
+    )
+    return f"""// GENERATED FROM catalog/bosses.yaml. DO NOT EDIT BY HAND.
+// Regenerate with:  python catalog/build.py
+//
+// Total HP per boss and difficulty, in trillions, which is what orders bosses hardest first. The
+// figures and where they come from are `hp` in bosses.yaml.
+
+export const BOSS_HP: Record<string, Record<string, number>> = {{
+{rows}
+}};
+"""
+
+
 def check_boss_art(bosses: list[dict]) -> list[str]:
     """Every tracked boss needs its portrait, named from its key. Untracked ones are drawn nowhere."""
     problems = []
@@ -962,6 +1023,7 @@ def main() -> None:
         (BOSS_SQL_OUT, boss_sql(bosses)),
         (DROP_SQL_OUT, drop_sql(drops, drop_tables)),
         (BOSS_ART_OUT, boss_art_ts(bosses)),
+        (BOSS_HP_OUT, boss_hp_ts(bosses)),
     ]
 
     if args.check:
