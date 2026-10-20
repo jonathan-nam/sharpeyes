@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
 import { MemberRoles } from "@/components/member-roles";
+import { InviteLink } from "@/components/invite-link";
 import {
   apiAssetUrl,
   apiFetch,
@@ -38,7 +39,8 @@ import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, PartyLootPool, SellLootBody } from "@/types/loot";
 import type { VestigeSettlement } from "@/types/vestige";
-import type { MemberRole, Party } from "@/types/party";
+import type { Invite } from "@/types/invite";
+import type { MemberRole, Party, PartyMember, Person } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -59,6 +61,7 @@ const ADD_DROP = "add-drop";
 // Not a row either, and the only write on this page that is a member's. See leave().
 const LEAVE = "leave";
 const ROLE = "role";
+const PEOPLE_KEY = "/api/people";
 
 export default function PartyPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -250,6 +253,71 @@ export default function PartyPage() {
     }
   }
 
+  const [people, setPeople] = useState<Person[]>([]);
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [invite, setInvite] = useState<Invite | null>(null);
+
+  // The People page's names, for the box that asks who plays an unclaimed seat. Owner only.
+  useEffect(() => {
+    // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
+    if (!isLoaded) return;
+    if (!party || party.yours === false) return;
+    apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, getToken)
+      .then(setPeople)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, party?.id]);
+
+  /**
+   * The invite link for whoever plays [seat]. An invite is a person's and carries every party they
+   * are in, so a seat whose character is nobody's yet is first filed under [personName] on the
+   * People page, the whole list going back the way that page saves it.
+   */
+  async function inviteSeat(seat: PartyMember, personName: string | null) {
+    setInviting(seat.id);
+    setError(null);
+    try {
+      let personId = seat.personId;
+      if (!personId && personName) {
+        const named = people.find((p) => p.name.toLowerCase() === personName.toLowerCase());
+        const body = {
+          people: [
+            ...people
+              .filter((p) => p !== named)
+              .map((p) => ({ id: p.id, name: p.name, characters: p.characters })),
+            {
+              id: named?.id,
+              name: named?.name ?? personName,
+              characters: [...(named?.characters ?? []), seat.name],
+            },
+          ],
+        };
+        const saved = await apiFetch<Person[]>(
+          PEOPLE_KEY,
+          { method: "PUT", body: JSON.stringify(body) },
+          getToken,
+        );
+        setPeople(saved);
+        put(PEOPLE_KEY, saved);
+        personId =
+          saved.find((p) => p.name.toLowerCase() === (named?.name ?? personName).toLowerCase())
+            ?.id ?? null;
+      }
+      if (!personId) throw new Error("no person");
+      setInvite(
+        await apiFetch<Invite>(
+          "/api/invites",
+          { method: "POST", body: JSON.stringify({ personId }) },
+          getToken,
+        ),
+      );
+    } catch (e) {
+      setError(failureText(e, "Couldn't make a link. Try again."));
+    } finally {
+      setInviting(null);
+    }
+  }
+
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
   // Counted from the rows on screen rather than from the party's stored counters, which were read
   // one request earlier and go stale the moment something here is marked paid.
@@ -434,8 +502,18 @@ export default function PartyPage() {
             {!readOnly && (
               <MemberRoles
                 seats={party.seats}
+                people={people.map((p) => p.name)}
                 busy={isSaving(ROLE)}
+                inviting={inviting}
                 onSet={(id, role) => void setRole(id, role)}
+                onInvite={(seat, name) => void inviteSeat(seat, name)}
+              />
+            )}
+            {invite !== null && (
+              <InviteLink
+                person={invite.personName}
+                invite={invite}
+                onClose={() => setInvite(null)}
               />
             )}
 

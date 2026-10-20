@@ -7,7 +7,7 @@ import { PageSwap } from "@/components/page-swap";
 import { SignInButton } from "@/components/sign-in-button";
 import { ApiError, apiFetch, failureText } from "@/lib/api";
 import { reportDataReady } from "@/lib/rum";
-import { SETTINGS_KEY, setAccountSettings } from "@/lib/use-account-settings";
+import { SETTINGS_KEY, setAccountSettings, useAccountSettings } from "@/lib/use-account-settings";
 import {
   invitedSummary,
   joinCallbackPath,
@@ -36,6 +36,7 @@ export default function JoinPage() {
   const token = String(useParams().token ?? "");
   const router = useRouter();
   const { getToken, isSignedIn, isLoaded } = useAuth();
+  const settings = useAccountSettings();
 
   const [preview, setPreview] = useState<InvitePreview | null>(null);
   // The route cannot match without a segment, so the empty case is only reachable by a hand-typed
@@ -67,6 +68,9 @@ export default function JoinPage() {
   }, [token]);
 
   async function accept() {
+    // Read before accepting, which may set the account up: an account that already had a main has
+    // done onboarding, and goes to the parties it just joined instead.
+    const setUp = Boolean(settings?.mainCharacterId);
     setBusy(true);
     setProblem(null);
     try {
@@ -80,7 +84,7 @@ export default function JoinPage() {
       setAccountSettings(await apiFetch<Settings>(SETTINGS_KEY, { method: "GET" }, getToken));
       // Replace, not push: the token is spent, so the back button must not return to a page
       // offering to spend it.
-      router.replace("/welcome?invited");
+      router.replace(setUp ? "/bosses/parties" : "/welcome?invited");
     } catch (e) {
       // The backend refuses with the reason: an account that already has characters, your own
       // link, or one made before the payload changed shape. Each is worth reading.
