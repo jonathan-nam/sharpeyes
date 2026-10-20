@@ -7812,13 +7812,6 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   margin: 0;
 }
 
-/* The slot a starred character moves into, held open while there is none. */
-.character-card.is-empty {
-  min-height: 150px;
-  border-style: dashed;
-  background: none;
-}
-
 /* Back at the bottom left, the way forward at the bottom right. */
 .welcome-nav {
   display: flex;
@@ -7880,4 +7873,24 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+/* The brand at the head of onboarding, standing in for the site header it hides. */
+.welcome-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 0 24px;
+}
+
+.welcome-brand-name {
+  color: var(--ink-strong);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* A line under a step's heading, set off from the cards below it. */
+.welcome-hint {
+  margin: 0 0 12px;
 }
