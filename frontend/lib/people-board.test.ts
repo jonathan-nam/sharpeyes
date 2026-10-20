@@ -7,6 +7,8 @@ import {
   stillAttributed,
   toDraft,
   fileUnder,
+  characterNote,
+  contestedOffCard,
   unclaimed,
 } from "./people-board";
 import type { Party, PartyMember } from "@/types/party";
@@ -209,7 +211,15 @@ describe("toDraft", () => {
       },
     ];
     expect(toDraft(rows)).toEqual([
-      { id: "p1", name: "Chris", characters: ["OldAlt"], owned: ["Creed"], linked: true },
+      {
+        id: "p1",
+        name: "Chris",
+        characters: ["OldAlt"],
+        owned: ["Creed"],
+        linked: true,
+        notOnAccount: [],
+        contested: [],
+      },
     ]);
   });
 
@@ -220,7 +230,15 @@ describe("toDraft", () => {
   it("survives a payload cached before the field existed", () => {
     const cached = [{ id: "p1", name: "Chris", characters: ["Creed"], pinned: false }];
     expect(toDraft(cached as unknown as Parameters<typeof toDraft>[0])).toEqual([
-      { id: "p1", name: "Chris", characters: ["Creed"], owned: [], linked: false },
+      {
+        id: "p1",
+        name: "Chris",
+        characters: ["Creed"],
+        owned: [],
+        linked: false,
+        notOnAccount: [],
+        contested: [],
+      },
     ]);
   });
 
@@ -265,5 +283,25 @@ describe("fileUnder", () => {
     const filed = fileUnder(people, "Bro", "CourseLair");
     expect(filed[1]!.characters).toEqual([]);
     expect(filed[0]!.characters).toContain("CourseLair");
+  });
+});
+
+describe("what a linked person's row says about a character", () => {
+  const row = {
+    name: "Chris",
+    characters: ["GhostAlt", "TwinChar"],
+    owned: ["CreedBratton"],
+    notOnAccount: ["GhostAlt"],
+    contested: ["TwinChar", "OtherClash"],
+  };
+
+  it("names a character their account does not hold, and one two accounts hold", () => {
+    expect(characterNote(row, "GhostAlt")).toBe("Not on their account");
+    expect(characterNote(row, "twinChar")).toBe("On two accounts");
+    expect(characterNote(row, "CreedBratton")).toBeNull();
+  });
+
+  it("still shows a clash that is not on the row's card", () => {
+    expect(contestedOffCard(row)).toEqual(["OtherClash"]);
   });
 });

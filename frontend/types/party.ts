@@ -120,6 +120,10 @@ export type Person = {
   linked: boolean;
   // Their Settlement Ledger card is drawn with nothing outstanding. Set by hand. See V59.
   pinned: boolean;
+  // Characters you filed under them that their own account does not hold, and characters of theirs
+  // another account you are linked to also holds. Absent on a cached payload.
+  notOnAccount?: string[];
+  contested?: string[];
 };
 
 // What POST /api/parties and PUT /api/parties/{id} take. `members` is the OTHER characters: the

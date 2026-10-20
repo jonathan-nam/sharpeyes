@@ -205,14 +205,25 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
     if (people.isEmpty()) return emptyList()
 
     val characters = personCharacters(userId)
+    val roster = linkedRosterFor(userId)
+    val seated =
+        PartyMember
+            .innerJoin(Party)
+            .selectAll()
+            .where { Party.userId eq userId }
+            .mapTo(mutableSetOf()) { it[PartyMember.name].lowercase() }
 
     return people.map {
+        val attributed = characters.attributed[it[Person.id]].orEmpty()
+        val account = it[Person.linkedUserId]
         PersonResponse(
             id = it[Person.id].toString(),
             name = it[Person.name],
             characters = characters.attributed[it[Person.id]].orEmpty(),
             ownedCharacters = characters.owned[it[Person.id]].orEmpty(),
             linked = it[Person.linkedUserId] != null,
+            notOnAccount = roster.notOnAccount(account, attributed),
+            contested = roster.contestedFor(account, attributed, seated),
             pinned = it[Person.pinned],
         )
     }

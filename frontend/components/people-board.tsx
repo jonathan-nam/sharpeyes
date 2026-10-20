@@ -5,7 +5,14 @@ import { CarouselFrame } from "@/components/carousel-frame";
 import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-characters";
 import { spriteUrl } from "@/lib/api";
 import { useCarousel } from "@/lib/use-carousel";
-import { type PersonDraft, claim, plays, stillAttributed } from "@/lib/people-board";
+import {
+  type PersonDraft,
+  characterNote,
+  claim,
+  contestedOffCard,
+  plays,
+  stillAttributed,
+} from "@/lib/people-board";
 
 // Only our own chips are accepted, so text dragged in from anywhere else is not read as a name.
 const DRAG_TYPE = "application/x-character";
@@ -174,11 +181,22 @@ export function PeopleBoard({
               {row.owned.map((name) => (
                 <LinkedChip key={name} name={name} sprite={spriteFor(name)} />
               ))}
+              {/* On their account and another linked one too, so it is nobody's: shown so the clash
+                  is not a character quietly missing from the row. */}
+              {contestedOffCard(row).map((name) => (
+                <LinkedChip
+                  key={name}
+                  name={name}
+                  sprite={spriteFor(name)}
+                  note={characterNote(row, name)}
+                />
+              ))}
               {stillAttributed(row).map((name) => (
                 <Chip
                   key={name}
                   name={name}
                   sprite={spriteFor(name)}
+                  note={characterNote(row, name)}
                   picked={picked === name}
                   busy={busy}
                   onPick={() => pick(name)}
@@ -260,9 +278,12 @@ function Chip({
   picked,
   busy,
   onPick,
+  note = null,
 }: {
   name: string;
   sprite: string | null;
+  /** What is wrong with this character, said under its name. */
+  note?: string | null;
   picked: boolean;
   busy: boolean;
   onPick: () => void;
@@ -292,6 +313,7 @@ function Chip({
           <span className="roster-sprite is-empty" aria-hidden="true" />
         )}
         <span className="roster-name">{name}</span>
+        {note && <span className="person-note">{note}</span>}
       </button>
     </div>
   );
@@ -304,7 +326,15 @@ function Chip({
  * nothing that looks pressable. What it is doing here is not explained, because the row it sits in
  * already says whose it is and no other card on the page explains itself either.
  */
-function LinkedChip({ name, sprite }: { name: string; sprite: string | null }) {
+function LinkedChip({
+  name,
+  sprite,
+  note = null,
+}: {
+  name: string;
+  sprite: string | null;
+  note?: string | null;
+}) {
   return (
     <div className="roster-tile">
       <div className="person-card person-linked">
@@ -316,6 +346,7 @@ function LinkedChip({ name, sprite }: { name: string; sprite: string | null }) {
           <span className="roster-sprite is-empty" aria-hidden="true" />
         )}
         <span className="roster-name">{name}</span>
+        {note && <span className="person-note">{note}</span>}
       </div>
     </div>
   );

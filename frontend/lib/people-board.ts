@@ -13,6 +13,10 @@ export type PersonDraft = {
   characters: string[];
   owned: string[];
   linked?: boolean;
+  /** Filed under them, not on their account. Read-only, from the server. See PersonResponse. */
+  notOnAccount?: string[];
+  /** Theirs, and also on another account you are linked to. */
+  contested?: string[];
 };
 
 // The backend claims a character case-insensitively (see validatePeople), so every comparison here
@@ -141,6 +145,8 @@ export function toDraft(rows: Person[]): PersonDraft[] {
     characters: [...(person.characters ?? [])],
     owned: [...(person.ownedCharacters ?? [])],
     linked: person.linked ?? false,
+    notOnAccount: [...(person.notOnAccount ?? [])],
+    contested: [...(person.contested ?? [])],
   }));
 }
 
@@ -171,4 +177,17 @@ export function fileUnder(
   const rows =
     at >= 0 ? people : [...people, { name: personName.trim(), characters: [], owned: [] }];
   return claim(rows, character, at >= 0 ? at : rows.length - 1);
+}
+
+/** What a character on [row] needs said about it, if anything: see notOnAccount and contested. */
+export function characterNote(row: PersonDraft, name: string): string | null {
+  if (row.contested?.some((n) => key(n) === key(name))) return "On two accounts";
+  if (row.notOnAccount?.some((n) => key(n) === key(name))) return "Not on their account";
+  return null;
+}
+
+/** [row]'s contested names that are not on its card already, so the clash is still shown. */
+export function contestedOffCard(row: PersonDraft): string[] {
+  const shown = new Set([...row.characters, ...row.owned].map(key));
+  return (row.contested ?? []).filter((name) => !shown.has(key(name)));
 }

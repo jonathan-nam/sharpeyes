@@ -5,6 +5,7 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.parties.linkedRosterFor
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -36,11 +37,15 @@ internal fun seatInLinkedParties(
             .map { it[Person.userId] }
             .filter { it != userId }
     if (owners.isEmpty()) return
+    // An owner who is also linked to another account holding this name cannot know which of the two
+    // it is, so their seats are left for them to settle. See LinkedRoster.
+    val clear = owners.filter { linkedRosterFor(it).soleCharacter(name) == characterId }
+    if (clear.isEmpty()) return
     val parties =
         Party
             .join(Characters, JoinType.INNER, Party.characterId, Characters.id)
             .selectAll()
-            .where { (Party.userId inList owners) and (Characters.worldType eq worldType) }
+            .where { (Party.userId inList clear) and (Characters.worldType eq worldType) }
             .map { it[Party.id] }
     for (partyId in parties) {
         val bound =

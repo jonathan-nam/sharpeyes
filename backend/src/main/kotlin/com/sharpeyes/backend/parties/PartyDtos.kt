@@ -141,6 +141,10 @@ data class PersonResponse(
      * empty one and would read as unlinked. Which account it is stays unsent.
      */
     val linked: Boolean = false,
+    /** Characters you filed under them that their own account does not hold. Theirs to explain. */
+    val notOnAccount: List<String> = emptyList(),
+    /** Characters of theirs that another account you are linked to also holds: nobody's, until fixed. */
+    val contested: List<String> = emptyList(),
     /** Their Settlement Ledger card stays drawn with nothing outstanding. See V59. */
     val pinned: Boolean = false,
 )
