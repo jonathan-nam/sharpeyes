@@ -396,3 +396,14 @@ export function hasGuaranteedDrop(table: BossDrop[] | undefined): boolean {
 export function memberSeats(party: Party): Set<string> | null {
   return party.yours === false ? new Set(party.yourSeats ?? []) : null;
 }
+
+/**
+ * A roster as the account looking at it should see it: in a party somebody else owns, the response
+ * is the owner's, so its `characterId`s are the owner's characters. Re-marked against the seats
+ * this account acts as, so the roster highlights yours and not theirs.
+ */
+export function asSeenBy(party: Party): Party["members"] {
+  if (party.yours !== false) return party.members;
+  const mine = new Set(party.yourSeats ?? []);
+  return party.members.map((m) => ({ ...m, characterId: mine.has(m.id) ? m.id : null }));
+}

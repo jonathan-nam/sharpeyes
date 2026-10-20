@@ -146,6 +146,8 @@ export type SavePartyBody = {
   // decides how every later period reads, so flipping it afterwards would rewrite weeks it has
   // already answered for.
   oneOff?: boolean;
+  // Add it even though somebody you are linked to already keeps this boss with you.
+  separate?: boolean;
 };
 
 /**

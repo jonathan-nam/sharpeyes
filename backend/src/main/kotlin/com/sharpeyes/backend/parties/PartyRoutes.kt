@@ -187,7 +187,11 @@ private suspend fun RoutingContext.createPartyRoute(
                     findParty(takeOver, userId)!!
                 }
             } else {
-                val problem = validateNewParty(request, userId, characterId, bossId, now)
+                val problem =
+                    validateNewParty(request, userId, characterId, bossId, now)
+                        ?: request.separate.takeIf { !it }?.let {
+                            sharedDuplicateOf(userId, characterId!!, bossId!!, request.members)
+                        }
                 if (problem != null) {
                     problem
                 } else {
@@ -358,6 +362,7 @@ internal suspend fun RoutingContext.respondToSave(
         null -> call.respond(HttpStatusCode.NotFound)
         is String -> call.respond(HttpStatusCode.BadRequest, outcome)
         is Refusal -> call.refuse(HttpStatusCode.BadRequest, outcome)
+        is DuplicateParty -> call.respond(HttpStatusCode.Conflict, outcome)
         is PartyResponse -> call.respond(onSuccess, outcome)
         else -> call.respond(HttpStatusCode.InternalServerError)
     }

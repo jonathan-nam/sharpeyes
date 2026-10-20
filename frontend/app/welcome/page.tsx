@@ -9,7 +9,7 @@ import { RosterStrip } from "@/components/roster-strip";
 import { CharacterCard } from "@/components/character-card";
 import { INVITED_STEPS, SETUP_STEPS, WelcomeHeader } from "@/components/welcome-header";
 import { WorldChoice } from "@/components/world-choice";
-import { apiAssetUrl, apiFetch, failureText } from "@/lib/api";
+import { apiAssetUrl, apiFetch, failureText, duplicatePartyIn } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { hardestFirst } from "@/lib/hardest-first";
@@ -73,6 +73,7 @@ function Welcome() {
       );
       setOwnParties(await apiFetch<Party[]>("/api/parties", { method: "GET" }, getToken));
     } catch (e) {
+      if (duplicatePartyIn(e)) throw e;
       setAddError(failureText(e, "Couldn't add that party. Try again."));
     } finally {
       setAdding(false);

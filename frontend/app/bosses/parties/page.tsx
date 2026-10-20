@@ -10,7 +10,16 @@ import { PartyCard } from "@/components/party-card";
 import { ResetTimer } from "@/components/reset-timer";
 import { RosterStrip } from "@/components/roster-strip";
 import { WeekStepper } from "@/components/week-stepper";
-import { apiAssetUrl, apiFetch, readBack, spriteUrl, failureText } from "@/lib/api";
+import {
+  apiAssetUrl,
+  apiFetch,
+  readBack,
+  spriteUrl,
+  failureText,
+  duplicatePartyIn,
+  StaleAfterWrite,
+  SAVED_BUT_STALE,
+} from "@/lib/api";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
 import { asYourRow } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
@@ -481,6 +490,12 @@ export default function PartiesPage() {
         put(PARTY_LIST_KEY, refreshed);
       });
     } catch (e) {
+      // The party landed and only the list behind it failed to load, so it is not a duplicate.
+      if (e instanceof StaleAfterWrite) {
+        setAddError(SAVED_BUT_STALE);
+        return;
+      }
+      if (duplicatePartyIn(e)) throw e;
       setAddError(failureText(e, "Couldn't add that boss. Try again."));
     }
   }

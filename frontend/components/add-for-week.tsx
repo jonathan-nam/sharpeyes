@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { DuplicateParty } from "@/components/duplicate-party";
 import { RosterInputs } from "@/components/roster-inputs";
+import { duplicatePartyIn } from "@/lib/api";
 import { difficultyLabel } from "@/lib/boss-difficulty";
 import { bossesWithoutConfig, heldDifficulty, namedSeats } from "@/lib/parties";
 import type { Boss } from "@/types/boss";
@@ -40,7 +42,12 @@ export function AddForWeek({
 }: {
   characters: Character[];
   bosses: Boss[];
-  /** The period's configs, so a boss already on it is not offered twice. */
+  /**
+   * The period's configs, so a boss already on it is not offered twice.
+   *
+   * onAdd throws a duplicate party back (see duplicatePartyIn), which this answers itself, and
+   * handles every other failure by its own `error`.
+   */
   parties: Party[];
   busy: boolean;
   error: string | null;
@@ -74,15 +81,33 @@ export function AddForWeek({
     setMembers([""]);
   }
 
-  async function add() {
-    await onAdd({
+  // A party somebody you are linked to already keeps with you, held with the body that hit it so
+  // Add Anyway sends the same one.
+  const [duplicate, setDuplicate] = useState<{
+    refusal: string;
+    partyId: string;
+    body: SavePartyBody;
+  } | null>(null);
+
+  async function send(body: SavePartyBody) {
+    setDuplicate(null);
+    try {
+      await onAdd(body);
+      reset();
+    } catch (e) {
+      const found = duplicatePartyIn(e);
+      if (found) setDuplicate({ ...found, body });
+    }
+  }
+
+  function add() {
+    return send({
       characterId: chosen,
       bossKey,
       members: named,
       difficulty: difficulty === "" ? null : difficulty,
       oneOff: !standing,
     });
-    reset();
   }
 
   return (
@@ -185,6 +210,14 @@ export function AddForWeek({
         </div>
 
         {error && <p className="split-error">{error}</p>}
+        {duplicate && (
+          <DuplicateParty
+            refusal={duplicate.refusal}
+            partyId={duplicate.partyId}
+            busy={busy}
+            onAddAnyway={() => void send({ ...duplicate.body, separate: true })}
+          />
+        )}
       </form>
     </section>
   );

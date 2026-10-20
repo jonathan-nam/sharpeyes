@@ -44,6 +44,22 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * A new party somebody you are linked to already keeps with you: the backend's 409 names it, so the
+ * form can open it or add this one anyway. See the backend's sharedDuplicateOf.
+ */
+export function duplicatePartyIn(e: unknown): { refusal: string; partyId: string } | null {
+  if (!(e instanceof ApiError) || e.status !== 409) return null;
+  try {
+    const parsed = JSON.parse(e.body) as { refusal?: unknown; partyId?: unknown };
+    return typeof parsed.refusal === "string" && typeof parsed.partyId === "string"
+      ? { refusal: parsed.refusal, partyId: parsed.partyId }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A refusal the backend wrote for users arrives as `{"refusal": "..."}`. Anything else is not one. */
 function refusalIn(body: string): string | null {
   try {

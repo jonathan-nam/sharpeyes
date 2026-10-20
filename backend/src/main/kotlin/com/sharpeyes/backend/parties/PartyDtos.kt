@@ -204,6 +204,9 @@ data class SavePartyRequest(
     // it is decides how every later period reads, so turning a standing party into a one-off after
     // the fact would rewrite weeks it has already answered for.
     val oneOff: Boolean = false,
+    // Add it even though somebody you are linked to already keeps this boss with you. See
+    // sharedDuplicateOf.
+    val separate: Boolean = false,
 )
 
 /**
@@ -275,4 +278,11 @@ data class SetSoloDifficultyRequest(
     val characterId: String,
     val bossKey: String,
     val difficulty: String? = null,
+)
+
+/** A 409's body: the refusal, and the party it would duplicate, so the form can open it. */
+@Serializable
+data class DuplicateParty(
+    val refusal: String,
+    val partyId: String,
 )
