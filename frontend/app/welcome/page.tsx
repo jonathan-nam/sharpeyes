@@ -9,11 +9,12 @@ import { apiFetch } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { ownMember } from "@/lib/parties";
-import { useAccountSettings } from "@/lib/use-account-settings";
+import { SETTINGS_KEY, setAccountSettings, useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { SeatedParty } from "@/types/party";
+import type { Settings } from "@/types/settings";
 
 // A new account's first three steps: the world, the characters, the parties they are already in.
 //
@@ -26,11 +27,36 @@ export default function Welcome() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const settings = useAccountSettings();
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [step, setShown] = useState(0);
+  // The furthest step reached, so going back to correct one leaves the later ones a click away.
+  const [reached, setReached] = useState(0);
+  const setStep = (next: number) => {
+    setShown(next);
+    setReached((furthest) => Math.max(furthest, next));
+  };
   const [characters, setCharacters] = useState<Character[] | null>(null);
   const [seated, setSeated] = useState<SeatedParty[] | null>(null);
   const [bosses, setBosses] = useState<Boss[]>([]);
   const [failed, setFailed] = useState(false);
+  const [settingMain, setSettingMain] = useState(false);
+
+  /** Stars [characterId] as the account's main, through the route the Characters page uses. */
+  async function setMain(characterId: string) {
+    setSettingMain(true);
+    try {
+      setAccountSettings(
+        await apiFetch<Settings>(
+          `${SETTINGS_KEY}/main-character`,
+          { method: "PUT", body: JSON.stringify({ characterId }) },
+          getToken,
+        ),
+      );
+    } catch {
+      setFailed(true);
+    } finally {
+      setSettingMain(false);
+    }
+  }
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) router.replace("/");
@@ -66,31 +92,30 @@ export default function Welcome() {
       <nav aria-label="Onboarding progress">
         <ol className="welcome-steps">
           {STEPS.map((label, i) => {
-            const state = i < step ? "is-done" : i === step ? "is-current" : "is-todo";
+            const state = i === step ? "is-current" : i <= reached ? "is-done" : "is-todo";
             return (
               <Fragment key={label}>
                 {i > 0 && (
                   <li
-                    className={i <= step ? "welcome-step-arrow is-reached" : "welcome-step-arrow"}
+                    className={
+                      i <= reached ? "welcome-step-arrow is-reached" : "welcome-step-arrow"
+                    }
                     aria-hidden="true"
                   >
                     {"\u2192"}
                   </li>
                 )}
                 <li className={`welcome-step ${state}`}>
-                  {/* A finished step can be gone back to; the ones ahead wait on this one. */}
-                  {i < step ? (
-                    <button type="button" className="welcome-step-link" onClick={() => setStep(i)}>
-                      {`\u2713 ${label}`}
-                    </button>
-                  ) : (
-                    <span
-                      className="welcome-step-link"
-                      aria-current={i === step ? "step" : undefined}
-                    >
-                      {label}
-                    </span>
-                  )}
+                  {/* Any step reached can be gone to; the ones past it wait on this one. */}
+                  <button
+                    type="button"
+                    className="welcome-step-link"
+                    aria-current={i === step ? "step" : undefined}
+                    disabled={i > reached}
+                    onClick={() => setStep(i)}
+                  >
+                    {state === "is-done" ? `\u2713 ${label}` : label}
+                  </button>
                 </li>
               </Fragment>
             );
@@ -111,9 +136,26 @@ export default function Welcome() {
         <>
           {characters.length > 0 && (
             <ul className="welcome-list">
-              {characters.map((c) => (
-                <li key={c.id}>{c.name}</li>
-              ))}
+              {characters.map((c) => {
+                const isMain = settings.mainCharacterId === c.id;
+                return (
+                  <li key={c.id} className="welcome-character">
+                    {/* The Characters page's own star, on the same setting. */}
+                    <button
+                      type="button"
+                      className={`tile-star${isMain ? " is-main" : ""}`}
+                      aria-label={isMain ? `${c.name} is your main` : `Make ${c.name} your main`}
+                      aria-pressed={isMain}
+                      title={isMain ? "Your Main" : "Set as Main"}
+                      disabled={settingMain}
+                      onClick={() => void setMain(c.id)}
+                    >
+                      {isMain ? "\u2605" : "\u2606"}
+                    </button>
+                    {c.name}
+                  </li>
+                );
+              })}
             </ul>
           )}
           <AddCharacter onAdded={(c) => setCharacters([...characters, c])} />
@@ -124,7 +166,7 @@ export default function Welcome() {
             <button
               type="button"
               className="party-save"
-              disabled={characters.length === 0}
+              disabled={!characters.some((c) => c.id === settings.mainCharacterId)}
               onClick={() => setStep(2)}
             >
               Next

@@ -7781,24 +7781,31 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 }
 
 .welcome-step-link {
-  padding: 0;
-  border: 0;
-  background: none;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
   color: var(--ink);
   font: inherit;
   font-size: var(--text-lg);
-}
-
-button.welcome-step-link {
   cursor: pointer;
 }
 
+.welcome-step-link:disabled {
+  cursor: default;
+}
+
 .welcome-step.is-current .welcome-step-link {
+  border-color: var(--accent);
   font-weight: 600;
 }
 
 .welcome-step.is-done .welcome-step-link {
   color: var(--ink-strong);
+}
+
+.welcome-step.is-done .welcome-step-link:hover {
+  border-color: var(--ink-strong);
 }
 
 .welcome-step.is-todo,
@@ -7819,6 +7826,9 @@ button.welcome-step-link {
 }
 
 .welcome-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid var(--line);
 }
