@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { INVITED_STEPS, WelcomeHeader } from "@/components/welcome-header";
 import { PageSwap } from "@/components/page-swap";
 import { SignInButton } from "@/components/sign-in-button";
 import { ApiError, apiFetch, failureText } from "@/lib/api";
@@ -79,7 +80,7 @@ export default function JoinPage() {
       setAccountSettings(await apiFetch<Settings>(SETTINGS_KEY, { method: "GET" }, getToken));
       // Replace, not push: the token is spent, so the back button must not return to a page
       // offering to spend it.
-      router.replace("/welcome");
+      router.replace("/welcome?invited");
     } catch (e) {
       // The backend refuses with the reason: an account that already has characters, your own
       // link, or one made before the payload changed shape. Each is worth reading.
@@ -90,6 +91,8 @@ export default function JoinPage() {
 
   return (
     <main className="page">
+      {/* The first of the steps /welcome carries on with, so the two read as one flow. */}
+      <WelcomeHeader main={null} steps={INVITED_STEPS} step={0} reached={0} />
       <section className="auth-panel">
         {/* Unknown, expired and already used are one answer from the backend on purpose, so this
             claims none of the three and says the only thing that helps either way. The lifetime is
@@ -97,11 +100,11 @@ export default function JoinPage() {
             is a number that goes wrong when the constant moves. */}
         {state === "gone" && (
           <>
-            <h1>This link doesn&apos;t work.</h1>
+            <h2>This link doesn&apos;t work.</h2>
             <p className="party-hint">Ask for a new one.</p>
           </>
         )}
-        {state === "error" && <h1>Couldn&apos;t open this link. Reload to try again.</h1>}
+        {state === "error" && <h2>Couldn&apos;t open this link. Reload to try again.</h2>}
 
         <PageSwap
           waiting={state === "loading"}
@@ -109,7 +112,7 @@ export default function JoinPage() {
         >
           {state === "loaded" && preview && (
             <>
-              <h1>{preview.senderName} set up your parties</h1>
+              <h2>{preview.senderName} set up your parties</h2>
 
               {/* Ticked, because it is the one thing on a link that has to be right. These names
                   are the SENDER'S spelling of your characters, and one taken by mistake is a

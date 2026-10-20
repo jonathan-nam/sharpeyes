@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Fragment, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
 import { CharacterCard } from "@/components/character-card";
+import { INVITED_STEPS, SETUP_STEPS, WelcomeHeader } from "@/components/welcome-header";
 import { WorldChoice } from "@/components/world-choice";
-import { apiFetch, spriteUrl } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { ownMember } from "@/lib/parties";
@@ -24,14 +25,27 @@ import type { Settings } from "@/types/settings";
 // Reached from an invite's accept and from the home page while no world is set. Every control is
 // the one the rest of the app uses, so there is nothing here to keep in step with those pages.
 
-const STEPS = ["World", "Characters", "Parties"] as const;
 // A taste of the parties, not the list: Party View holds every one, and the line under says so.
 const PARTIES_SHOWN = 5;
 
-export default function Welcome() {
+// useSearchParams needs a Suspense boundary above it, or the build cannot prerender the route.
+export default function WelcomePage() {
+  return (
+    <Suspense fallback={<main className="page" />}>
+      <Welcome />
+    </Suspense>
+  );
+}
+
+function Welcome() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
   const settings = useAccountSettings();
   const router = useRouter();
+  // Arrived by accepting an invite, which is a step of its own in front of these. A query flag so
+  // it survives a reload, and read through the router: on a client navigation the address bar still
+  // holds the page being left when this one first renders.
+  const invited = useSearchParams().has("invited");
+  const lead = invited ? 1 : 0;
   const [step, setShown] = useState(0);
   // The furthest step reached, so going back to correct one leaves the later ones a click away.
   const [reached, setReached] = useState(0);
@@ -138,49 +152,17 @@ export default function Welcome() {
 
   return (
     <main className="page">
-      {main ? (
-        <div className="welcome-hero">
-          {main.sprite && <img className="hero-sprite" src={spriteUrl(main.sprite)} alt="" />}
-          <h1 className="page-title">Welcome, {main.name}</h1>
-        </div>
-      ) : (
-        <h1 className="page-title">Welcome</h1>
-      )}
-      <nav aria-label="Setup progress">
-        <ol className="welcome-steps">
-          {STEPS.map((label, i) => {
-            const state = i === step ? "is-current" : i <= reached ? "is-done" : "is-todo";
-            return (
-              <Fragment key={label}>
-                {i > 0 && (
-                  <li
-                    className={
-                      i <= reached ? "welcome-step-arrow is-reached" : "welcome-step-arrow"
-                    }
-                    aria-hidden="true"
-                  >
-                    {"\u2192"}
-                  </li>
-                )}
-                <li className={`welcome-step ${state}`}>
-                  {/* Any step reached can be gone to; the ones past it wait on this one. */}
-                  <button
-                    type="button"
-                    className="welcome-step-link"
-                    aria-current={i === step ? "step" : undefined}
-                    disabled={i > reached}
-                    onClick={() => setStep(i)}
-                  >
-                    {state === "is-done" ? `\u2713 ${label}` : label}
-                  </button>
-                </li>
-              </Fragment>
-            );
-          })}
-        </ol>
-      </nav>
+      <WelcomeHeader
+        main={main}
+        steps={invited ? INVITED_STEPS : SETUP_STEPS}
+        step={step + lead}
+        reached={reached + lead}
+        locked={lead}
+        onStep={(i) => setStep(i - lead)}
+      />
 
-      {step === 0 && (
+      {/* Held until the characters are in: the world they are in is the card drawn as picked. */}
+      {step === 0 && characters && (
         <WorldChoice
           chosen={chosenWorld}
           busy={savingWorld}
