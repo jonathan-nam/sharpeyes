@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { type ReactNode, useEffect } from "react";
 import { HeroFold } from "@/components/hero-fold";
 import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { SignInButton } from "@/components/sign-in-button";
-import { WorldChoice } from "@/components/world-choice";
 import { spriteUrl } from "@/lib/api";
 import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
@@ -43,13 +43,7 @@ export default function Home() {
   //
   // Held until the settings arrive for the same reason the hero is held until the session does. The
   // answer decides which of two screens this is, and drawing one and swapping it is the flicker.
-  if (isSignedIn && settings && settings.worldType === null) {
-    return (
-      <main className="page">
-        <WorldChoice />
-      </main>
-    );
-  }
+  if (isSignedIn && settings && settings.worldType === null) return <WelcomeRedirect />;
 
   return (
     <main className="page">
@@ -135,4 +129,11 @@ function HomeRowView({ row, children }: { row: HomeRow; children: ReactNode }) {
       {children}
     </HeroFold>
   );
+}
+
+/** An account that has never said which world goes to the setup steps, which start there. */
+function WelcomeRedirect() {
+  const router = useRouter();
+  useEffect(() => router.replace("/welcome"), [router]);
+  return <main className="page" />;
 }

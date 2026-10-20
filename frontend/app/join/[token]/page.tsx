@@ -74,7 +74,7 @@ export default function JoinPage() {
       );
       // Replace, not push: the token is spent, so the back button must not return to a page
       // offering to spend it.
-      router.replace("/bosses/people");
+      router.replace("/welcome");
     } catch (e) {
       // The backend refuses with the reason: an account that already has characters, your own
       // link, or one made before the payload changed shape. Each is worth reading.

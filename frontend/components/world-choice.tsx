@@ -20,13 +20,25 @@ import type { Settings } from "@/types/settings";
  * The card names the worlds it covers rather than explaining the categories. A player knows they
  * log into Kronos; whether Nexon files that under "Heroic" is our word for it, not theirs.
  */
-export function WorldChoice() {
+export function WorldChoice({
+  chosen = null,
+  onChosen,
+}: {
+  /** The world already on the account, drawn as picked. Picking it again saves nothing. */
+  chosen?: WorldType | null;
+  /** After the choice is saved, or the one already chosen is picked again. */
+  onChosen?: () => void;
+} = {}) {
   const { getToken } = useAuth();
   const [busy, setBusy] = useState<WorldType | null>(null);
   const [failed, setFailed] = useState(false);
 
   async function choose(world: WorldType) {
     if (busy) return;
+    if (world === chosen) {
+      onChosen?.();
+      return;
+    }
     setBusy(world);
     setFailed(false);
     try {
@@ -39,6 +51,8 @@ export function WorldChoice() {
       // it was narrowed by the world it is leaving, and this screen has no world behind it: setting
       // the store is the whole of the change, and the page it reveals fetches on mount anyway.
       setAccountSettings(saved);
+      setBusy(null);
+      onChosen?.();
     } catch {
       setFailed(true);
       setBusy(null);
@@ -54,7 +68,7 @@ export function WorldChoice() {
           <button
             key={world}
             type="button"
-            className="world-choice-card"
+            className={world === chosen ? "world-choice-card is-chosen" : "world-choice-card"}
             disabled={busy !== null}
             onClick={() => choose(world)}
           >

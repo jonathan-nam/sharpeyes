@@ -1424,6 +1424,7 @@ html.switching-world .world-veil {
   cursor: pointer;
 }
 
+.world-choice-card.is-chosen,
 .world-choice-card:hover:not(:disabled) {
   border-color: var(--ink-strong);
 }
@@ -7764,4 +7765,32 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* --- Setting up an account ----------------------------------------------------------------- */
+
+/* The three steps of /welcome, the current one in ink. See app/welcome/page.tsx. */
+.welcome-steps {
+  display: flex;
+  gap: 16px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+}
+
+.welcome-steps .is-current {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+
+.welcome-list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.welcome-list li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
 }
