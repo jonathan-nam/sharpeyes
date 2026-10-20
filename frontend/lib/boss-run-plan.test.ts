@@ -866,3 +866,40 @@ describe("planNight's prefer", () => {
     expect(order(kept)).not.toEqual(costly);
   });
 });
+
+describe("withoutRuns' switch marks", () => {
+  it("marks against the row above on screen, not the hidden runs between", () => {
+    // A real night (2026-10-20), in the order it was planned, the two cleared trios in the middle.
+    const night = [
+      eligible("adv-a", "adversary", 15, [
+        ["onetwothreeo", "you"],
+        ["iPhone69C", "bro"],
+        ["CourseLair", "jared"],
+      ]),
+      eligible("limbo-b", "limbo", 20, [
+        ["onetwothreeo", "you"],
+        ["Freeballynn", "bro"],
+        ["CourseLair", "jared"],
+      ]),
+      eligible("adv-b", "adversary", 15, [
+        ["warrior2020", "you"],
+        ["Freeballynn", "bro"],
+        ["DemonSlays20", "jared"],
+      ]),
+      eligible("limbo-a", "limbo", 20, [
+        ["warrior2020", "you"],
+        ["iPhone69C", "bro"],
+        ["Challynnger", "jared"],
+      ]),
+    ];
+    const planned: Plan = {
+      runs: night.map((run) => ({ run, switched: ["planned"], startsAt: 0, waitingFor: [] })),
+      switches: 4,
+      minutes: 0,
+    };
+
+    const shown = withoutRuns(planned, new Set(["limbo-b", "adv-b"]), { minutes: Infinity });
+    expect(shown.runs.map((r) => r.switched)).toEqual([[], ["you", "jared"]]);
+    expect(shown.switches).toBe(2);
+  });
+});
