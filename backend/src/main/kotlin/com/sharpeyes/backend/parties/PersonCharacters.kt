@@ -90,6 +90,8 @@ internal fun personCharacters(userId: String): PersonCharacters {
  * so the other world's characters cannot be the seat in front of you.
  */
 private fun ownedByLinkedAccounts(userId: String): List<LinkedCharacter> {
+    // A name two linked accounts hold is nobody's: see LinkedRoster.
+    val contested = linkedRosterFor(userId).contested
     val personByAccount =
         Person
             .selectAll()
@@ -115,7 +117,7 @@ private fun ownedByLinkedAccounts(userId: String): List<LinkedCharacter> {
             }.mapNotNull { row ->
                 val personId = personByAccount[row[Characters.userId]] ?: return@mapNotNull null
                 val name = row[Characters.name]
-                if (name.lowercase() !in seated) {
+                if (name.lowercase() !in seated || name.lowercase() in contested) {
                     null
                 } else {
                     LinkedCharacter(
@@ -141,17 +143,73 @@ private fun ownedByLinkedAccounts(userId: String): List<LinkedCharacter> {
  * Nothing this returns is ever sent anywhere. It answers "is the name in front of me a real
  * character of theirs", and the caller already knew the name.
  */
-internal fun linkedCharactersFor(userId: String): Map<String, Uuid> {
+internal fun linkedCharactersFor(userId: String): Map<String, Uuid> = linkedRosterFor(userId).sole()
+
+/**
+ * Every character on the accounts [userId]'s people are linked to, in the world being shown.
+ *
+ * Nothing stops two accounts adding the same character, and nothing can prove which is its player.
+ * So a name more than one of them holds belongs to none: see [contested].
+ */
+internal class LinkedRoster(
+    /** Lowercased name to every (account, character) holding it. */
+    private val holders: Map<String, List<Pair<String, Uuid>>>,
+    /** Lowercased name to the game's own spelling of it. */
+    private val spelled: Map<String, String> = emptyMap(),
+) {
+    /** Names held by more than one linked account. No seat binds to these and no row owns them. */
+    val contested: Set<String> = holders.filterValues { held -> held.map { it.first }.toSet().size > 1 }.keys
+
+    /** The one character a name is, when exactly one linked account holds it. */
+    fun soleCharacter(name: String): Uuid? =
+        holders[name.lowercase()]?.takeIf { name.lowercase() !in contested }?.first()?.second
+
+    /** Every name exactly one linked account holds, to the character it is. */
+    fun sole(): Map<String, Uuid> =
+        holders.filterKeys { it !in contested }.mapValues { (_, held) -> held.first().second }
+
+    /** What you filed under a person linked to [account] that the account does not hold. */
+    fun notOnAccount(
+        account: String?,
+        attributed: List<String>,
+    ): List<String> {
+        val theirs = account?.let { namesOf(it) } ?: return emptyList()
+        return attributed.filter { it.lowercase() !in theirs }
+    }
+
+    /** [account]'s contested characters that you seat or filed under them, as the game spells them. */
+    fun contestedFor(
+        account: String?,
+        attributed: List<String>,
+        seated: Set<String>,
+    ): List<String> {
+        val yours = seated + attributed.map { it.lowercase() }
+        return account
+            ?.let { namesOf(it) }
+            .orEmpty()
+            .filter { it in contested && it in yours }
+            .map { spelled[it] ?: it }
+            .sorted()
+    }
+
+    /** The lowercased names [account] holds. */
+    fun namesOf(account: String): Set<String> = holders.filterValues { held -> held.any { it.first == account } }.keys
+}
+
+internal fun linkedRosterFor(userId: String): LinkedRoster {
     val accounts =
         Person
             .selectAll()
             .where { (Person.userId eq userId) and Person.linkedUserId.isNotNull() }
             .mapNotNull { it[Person.linkedUserId] }
-    if (accounts.isEmpty()) return emptyMap()
-
-    return Characters
-        .selectAll()
-        .where {
-            (Characters.userId inList accounts) and inActiveWorld(userId)
-        }.associate { it[Characters.name].lowercase() to it[Characters.id] }
+    if (accounts.isEmpty()) return LinkedRoster(emptyMap())
+    val rows =
+        Characters
+            .selectAll()
+            .where { (Characters.userId inList accounts) and inActiveWorld(userId) }
+            .toList()
+    return LinkedRoster(
+        rows.groupBy({ it[Characters.name].lowercase() }) { it[Characters.userId] to it[Characters.id] },
+        rows.associate { it[Characters.name].lowercase() to it[Characters.name] },
+    )
 }
