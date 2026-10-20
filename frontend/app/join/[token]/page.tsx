@@ -6,6 +6,7 @@ import { PageSwap } from "@/components/page-swap";
 import { SignInButton } from "@/components/sign-in-button";
 import { ApiError, apiFetch, failureText } from "@/lib/api";
 import { reportDataReady } from "@/lib/rum";
+import { SETTINGS_KEY, setAccountSettings } from "@/lib/use-account-settings";
 import {
   invitedSummary,
   joinCallbackPath,
@@ -15,6 +16,7 @@ import {
   partyLabel,
 } from "@/lib/invite-link";
 import { useAuth } from "@/lib/use-auth";
+import type { Settings } from "@/types/settings";
 import type { AcceptedInvite, InvitePreview } from "@/types/invite";
 
 // The other end of a sign-on link. Reachable signed out, which is the whole point: it has to say
@@ -72,6 +74,9 @@ export default function JoinPage() {
         { method: "POST", body: JSON.stringify({ characters: mine ?? [] }) },
         getToken,
       );
+      // Accepting can set the account's world, and the settings this tab already holds were read
+      // before it did. Without this, /welcome drew no world as chosen.
+      setAccountSettings(await apiFetch<Settings>(SETTINGS_KEY, { method: "GET" }, getToken));
       // Replace, not push: the token is spent, so the back button must not return to a page
       // offering to spend it.
       router.replace("/welcome");
