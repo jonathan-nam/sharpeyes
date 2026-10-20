@@ -3,7 +3,7 @@
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AddForWeek } from "@/components/add-for-week";
 import { KnownCharacters } from "@/components/known-characters";
 import { PartyCard } from "@/components/party-card";
@@ -12,7 +12,7 @@ import { RosterStrip } from "@/components/roster-strip";
 import { WeekStepper } from "@/components/week-stepper";
 import { apiAssetUrl, apiFetch, readBack, spriteUrl, failureText } from "@/lib/api";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
-import { SharedParties } from "@/components/shared-parties";
+import { asYourRow } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { peek, put, storedAt } from "@/lib/cache";
 import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
@@ -144,15 +144,21 @@ export default function PartiesPage() {
   const asked = partyViewFromQuery(useQueryString());
   const [chosenGrouping, setChosenGrouping] = useState<Grouping | null>(null);
   const [chosenFilter, setChosenFilter] = useState<ClearFilter | null>(null);
+  const [chosenShared, setChosenShared] = useState<boolean | null>(null);
   const grouping = chosenGrouping ?? asked.grouping;
   const clearFilter = chosenFilter ?? asked.filter;
+  const sharedOnly = chosenShared ?? asked.sharedOnly;
   function setGrouping(next: Grouping) {
     setChosenGrouping(next);
-    replaceQuery(partyViewQuery({ grouping: next, filter: clearFilter }));
+    replaceQuery(partyViewQuery({ grouping: next, filter: clearFilter, sharedOnly }));
   }
   function setClearFilter(next: ClearFilter) {
     setChosenFilter(next);
-    replaceQuery(partyViewQuery({ grouping, filter: next }));
+    replaceQuery(partyViewQuery({ grouping, filter: next, sharedOnly }));
+  }
+  function setSharedOnly(next: boolean) {
+    setChosenShared(next);
+    replaceQuery(partyViewQuery({ grouping, filter: clearFilter, sharedOnly: next }));
   }
   // Per row, so a tick on one boss does not grey out every other row's controls. One write at a
   // time still, because each one refetches the list. See lib/use-row-writes.ts.
@@ -693,12 +699,18 @@ export default function PartiesPage() {
   // Cadence first: the server returns weekly rows alone for a history view, so a monthly config in
   // a past week has no row and would draw as "not reported" when the truth is that nobody asked.
   // Dropping those configs is what the matrix does with its monthly and daily bands.
+  //
+  // Parties somebody else owns go through the same rules as your own, filed under your character in
+  // them, so the tabs and the counts are one list's. See asYourRow.
+  const sharedRows = seated.map(asYourRow);
+  const sharedIds = new Set(sharedRows.map((p) => p.id));
+  const listed = sharedOnly ? sharedRows : [...parties, ...sharedRows];
   const weekly = history
-    ? parties.filter((p) => bossByKey.get(p.bossKey)?.reset === WEEKLY_CADENCE)
-    : parties;
+    ? listed.filter((p) => bossByKey.get(p.bossKey)?.reset === WEEKLY_CADENCE)
+    : listed;
   // Then age, which is existedInWeek's job: today's configs are not last week's parties.
   const shown = week !== null ? existedInWeek(weekly, week) : weekly;
-  const hiddenByCadence = parties.length - weekly.length;
+  const hiddenByCadence = listed.length - weekly.length;
   const hiddenByAge = weekly.length - shown.length;
   // Last, what was taken off this period by hand. Held apart from the two rules above because those
   // are about the week and this is about the boss: a config taken off is in the week, it is just not
@@ -764,6 +776,24 @@ export default function PartiesPage() {
   );
 
   /**
+   * A party somebody else owns, as a row among yours: the same card, with none of its writes. The
+   * pool, the clear and the roster are its owner's, and the party's own page is where a member
+   * records into it. Coupons owed are reckoned over your own pools, which this is not one of, so
+   * the badge is absent rather than claiming none are out.
+   */
+  function sharedCard(party: Party, heading: ReactNode) {
+    return (
+      <PartyCard
+        key={party.id}
+        party={party}
+        clear={clearOf(party)}
+        coupons={NOTHING_OUTSTANDING}
+        heading={heading}
+      />
+    );
+  }
+
+  /**
    * One config as a row under a boss heading.
    *
    * Shared by the by-character and by-party lists, which ask different questions of the same rows:
@@ -772,6 +802,15 @@ export default function PartiesPage() {
    */
   function bossRow(party: Party) {
     const boss = bossByKey.get(party.bossKey);
+    const heading = (
+      <>
+        {boss?.iconUrl && <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />}
+        <h3 className="party-row-name">
+          {bossLabel(boss?.name ?? party.bossKey, modeThisWeek(party))}
+        </h3>
+      </>
+    );
+    if (sharedIds.has(party.id)) return sharedCard(party, heading);
     return (
       <PartyCard
         key={party.id}
@@ -798,6 +837,48 @@ export default function PartiesPage() {
           </>
         }
       />
+    );
+  }
+
+  /** One config under a boss heading, named by its character, since a boss is the group here. */
+  function bossGroupRow(party: Party) {
+    if (sharedIds.has(party.id)) return sharedCard(party, bossGroupHeading(party));
+    return (
+      <PartyCard
+        key={party.id}
+        party={party}
+        busy={isSaving(party.id)}
+        clear={clearOf(party)}
+        coupons={couponsOut.get(party.id) ?? NOTHING_OUTSTANDING}
+        onToggleClear={history ? undefined : (cleared) => toggleClear(party, cleared)}
+        dropTable={dropTables[party.bossKey]}
+        onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
+        pool={poolFor(party)}
+        stacks={stacksFor(party)}
+        piecePile={piecePileFor(party)}
+        onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
+        onTakeOff={history ? undefined : () => takeOff(party)}
+        heading={bossGroupHeading(party)}
+      />
+    );
+  }
+
+  /** The by-boss row's heading: the character, and its mode when two of them run the boss. */
+  function bossGroupHeading(party: Party) {
+    return (
+      <>
+        {characterById.get(party.characterId)?.spriteImgUrl && (
+          <img
+            className="seat-sprite"
+            src={spriteUrl(characterById.get(party.characterId)!.spriteImgUrl!)}
+            alt=""
+          />
+        )}
+        <h3 className="party-row-name">{characterById.get(party.characterId)?.name ?? "–"}</h3>
+        {modeThisWeek(party) && (
+          <span className="party-difficulty">{difficultyLabel(modeThisWeek(party)!)}</span>
+        )}
+      </>
     );
   }
 
@@ -912,13 +993,24 @@ export default function PartiesPage() {
                       <span className="tab-count">{tab.count}</span>
                     </button>
                   ))}
+                  {/* Narrows to parties somebody else owns. Only where there are some. */}
+                  {sharedRows.length > 0 && (
+                    <button
+                      type="button"
+                      className={sharedOnly ? "basis-tab active" : "basis-tab"}
+                      aria-pressed={sharedOnly}
+                      onClick={() => setSharedOnly(!sharedOnly)}
+                    >
+                      Shared
+                      <span className="tab-count">{sharedRows.length}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </section>
 
-            {/* "No parties YET" is about parties of your own, and a member of somebody else's has
-                none by design: the section below is theirs. Saying it above that section read as
-                the page contradicting itself. */}
+            {/* "No parties YET" is said only when there are none of anybody's, since parties shared
+                with you are listed beside your own. */}
             {parties.length === 0 && seated.length === 0 && (
               <>
                 <p className="finder-empty">
@@ -932,7 +1024,7 @@ export default function PartiesPage() {
 
             {/* Not "nothing cleared": that week's clears are real and the Individual View has them.
               These parties just were not around for it. */}
-            {parties.length > 0 && shown.length === 0 && (
+            {listed.length > 0 && shown.length === 0 && (
               <p className="finder-empty">No parties in this week. {emptyWeekReason}</p>
             )}
 
@@ -1019,52 +1111,9 @@ export default function PartiesPage() {
                     )}
                     <h2 className="party-group-name">{group.key.name}</h2>
                   </header>
-                  <div className="party-list">
-                    {group.parties.map((party) => (
-                      <PartyCard
-                        key={party.id}
-                        party={party}
-                        busy={isSaving(party.id)}
-                        clear={clearOf(party)}
-                        coupons={couponsOut.get(party.id) ?? NOTHING_OUTSTANDING}
-                        onToggleClear={
-                          history ? undefined : (cleared) => toggleClear(party, cleared)
-                        }
-                        dropTable={dropTables[party.bossKey]}
-                        onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
-                        pool={poolFor(party)}
-                        stacks={stacksFor(party)}
-                        piecePile={piecePileFor(party)}
-                        onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
-                        onTakeOff={history ? undefined : () => takeOff(party)}
-                        heading={
-                          <>
-                            {characterById.get(party.characterId)?.spriteImgUrl && (
-                              <img
-                                className="seat-sprite"
-                                src={spriteUrl(characterById.get(party.characterId)!.spriteImgUrl!)}
-                                alt=""
-                              />
-                            )}
-                            <h3 className="party-row-name">
-                              {characterById.get(party.characterId)?.name ?? "–"}
-                            </h3>
-                            {/* Beside the character, not folded into the heading: filed by boss,
-                              two of your characters can run the same boss at different modes. */}
-                            {modeThisWeek(party) && (
-                              <span className="party-difficulty">
-                                {difficultyLabel(modeThisWeek(party)!)}
-                              </span>
-                            )}
-                          </>
-                        }
-                      />
-                    ))}
-                  </div>
+                  <div className="party-list">{group.parties.map(bossGroupRow)}</div>
                 </section>
               ))}
-
-            <SharedParties parties={seated} bosses={bosses} characters={characters} />
           </>
         )}
       </PageSwap>

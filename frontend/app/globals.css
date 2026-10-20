@@ -1295,12 +1295,6 @@ html.switching-world .world-veil {
 
 /* --- Shared with you -------------------------------------------------------------------- */
 
-/* One character of yours, and the parties of somebody else's they sit in. Between groups only:
-   the first sits under the section banner, which carries its own gap. */
-.shared-group + .shared-group {
-  margin-top: 22px;
-}
-
 /* A party somebody else keeps the book for. No controls, so no hit targets and no hover. */
 .shared-party {
   margin: 12px 8px 0;
