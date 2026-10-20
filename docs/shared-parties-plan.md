@@ -101,14 +101,13 @@ settlement card updates from them without Jonathan entering anything.
 
 ### Phase 3. The member's view of the book
 
-- A read that returns the owner's settlement rows for one pair, flipped to the member's point of
-  view. Built on the same `buildSettlement`, not a second implementation.
-- Bro's Settlement page shows a card for Jonathan from Jonathan's book, read-only, with the
-  Offset and Mark Sent acts he is allowed (his own sent payouts).
-- Recording a payment received from the other person in the pair, from either account, written to
-  the owner's book.
-- Verify by sum: for Jonathan and Bro, the two views must state the same figure in opposite
-  directions. Pin it with a test over real dumped rows.
+- `GET /api/pages/shared-books`: for each person row linked to your account, the owner's book read
+  AS the owner and cut to the pair. Parties with a seat the owner files under your person row,
+  their pools, and the debts, payments, disposals and closures that name you. Their own pile's
+  sales stay whole (a sale re-prices the pile), with shares naming anybody else stripped.
+- The client runs the same `settlementView` over it, takes `person:<you>`, and swaps it
+  (`lib/shared-book.ts`). Read-only cards under Shared Parties on the Settlement tab.
+- Not yet: recording a payment from the member's side, and the Sales tab for shared pools.
 
 ## Not in scope
 

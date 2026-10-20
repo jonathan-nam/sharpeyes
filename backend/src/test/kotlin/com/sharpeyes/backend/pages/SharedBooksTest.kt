@@ -1,0 +1,183 @@
+package com.sharpeyes.backend.pages
+
+import com.sharpeyes.backend.config.Env
+import com.sharpeyes.backend.db.Characters
+import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.db.SettlementDebt
+import com.sharpeyes.backend.parties.PartyResponse
+import com.sharpeyes.backend.parties.PersonRequest
+import com.sharpeyes.backend.parties.SavePartyRequest
+import com.sharpeyes.backend.parties.SavePeopleRequest
+import com.sharpeyes.backend.parties.bossIdForKey
+import com.sharpeyes.backend.parties.createParty
+import com.sharpeyes.backend.parties.findParty
+import com.sharpeyes.backend.parties.savePeople
+import com.sharpeyes.backend.users.WORLD_INTERACTIVE
+import com.sharpeyes.backend.users.ensureUser
+import com.sharpeyes.backend.users.setActiveWorld
+import org.flywaydb.core.Flyway
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.time.Clock
+import kotlin.uuid.Uuid
+
+/** Somebody else's book, cut to what it says about you. */
+class SharedBooksTest {
+    private val owner = "user_test_books_owner"
+    private val member = "user_test_books_member"
+    private val stranger = "user_test_books_stranger"
+    private val everyone = listOf(owner, member, stranger)
+
+    @BeforeTest
+    fun migrate() {
+        val jdbcUrl = "jdbc:postgresql://${Env.dbHost}:${Env.dbPort}/${Env.dbName}"
+        Flyway
+            .configure()
+            .dataSource(jdbcUrl, Env.dbUsername, Env.dbPassword)
+            .load()
+            .migrate()
+        Database.connect(
+            url = jdbcUrl,
+            driver = "org.postgresql.Driver",
+            user = Env.dbUsername,
+            password = Env.dbPassword,
+        )
+    }
+
+    @AfterTest
+    fun cleanUp() {
+        val owners = everyone
+        transaction {
+            SettlementDebt.deleteWhere { SettlementDebt.userId inList owners }
+            Party.deleteWhere { Party.userId inList owners }
+            Person.deleteWhere { Person.userId inList owners }
+            Characters.deleteWhere { Characters.userId inList owners }
+        }
+    }
+
+    private fun character(
+        userId: String,
+        name: String,
+        position: Int = 0,
+    ): Uuid {
+        ensureUser(userId, "$userId@example.com")
+        setActiveWorld(userId, WORLD_INTERACTIVE)
+        val id = Uuid.random()
+        val now = Clock.System.now()
+        Characters.insert {
+            it[Characters.id] = id
+            it[Characters.userId] = userId
+            it[Characters.name] = name
+            it[Characters.worldType] = WORLD_INTERACTIVE
+            it[createdAt] = now
+            it[updatedAt] = now
+            it[Characters.position] = position
+        }
+        return id
+    }
+
+    /** A person on [of]'s list, signing in as [account]. What accepting an invite writes. */
+    private fun link(
+        of: String,
+        name: String,
+        account: String,
+    ) {
+        savePeople(of, SavePeopleRequest(listOf(PersonRequest(null, name, emptyList()))), Clock.System.now())
+        val id = Person.selectAll().where { Person.userId eq of }.single()[Person.id]
+        Person.update({ Person.id eq id }) { it[linkedUserId] = account }
+    }
+
+    /** The owner's config, seating [members] beside their own character. */
+    private fun config(
+        ownCharacter: Uuid,
+        members: List<String>,
+        shares: Map<String, Int> = emptyMap(),
+    ): PartyResponse {
+        val request = SavePartyRequest(ownCharacter.toString(), "kalos-the-guardian", members, shares)
+        val id = createParty(owner, ownCharacter, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
+        return findParty(id, owner)!!
+    }
+
+    private fun debt(
+        personName: String,
+        amount: Long,
+    ) {
+        val person = Person.selectAll().where { (Person.userId eq owner) and (Person.name eq personName) }.single()
+        val now = Clock.System.now()
+        SettlementDebt.insert {
+            it[id] = Uuid.random()
+            it[userId] = owner
+            it[holderKind] = "PERSON"
+            it[personId] = person[Person.id]
+            it[characterName] = null
+            it[SettlementDebt.amount] = amount
+            it[incurredAt] = now
+            it[createdAt] = now
+        }
+    }
+
+    @Test
+    fun `a member reads the owner's parties with them in it, and the debts that name them`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(owner, "Baldrix", position = 1)
+            character(member, "CreedBratton")
+            link(owner, "Chris", member)
+            savePeople(
+                owner,
+                SavePeopleRequest(
+                    listOf(
+                        PersonRequest(
+                            Person
+                                .selectAll()
+                                .where { Person.userId eq owner }
+                                .single()[Person.id]
+                                .toString(),
+                            "Chris",
+                            emptyList(),
+                        ),
+                        PersonRequest(null, "Jared", listOf("Jaredchar")),
+                    ),
+                ),
+                Clock.System.now(),
+            )
+            val withChris = config(theirs, listOf("CreedBratton"))
+            val ownOther = character(owner, "Altchar", position = 2)
+            config(ownOther, listOf("Jaredchar"))
+            debt("Chris", 48_000_000_000)
+            debt("Jared", 7)
+
+            val books = sharedBooksFor(member)
+
+            val book = books.single()
+            assertEquals(listOf(withChris.id), book.parties.map { it.id })
+            assertEquals(listOf(48_000_000_000), book.debts.map { it.amount })
+            assertEquals("mechyfechy", book.ownerName)
+        }
+    }
+
+    @Test
+    fun `nobody else reads it`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            character(stranger, "Nobody")
+            link(owner, "Chris", member)
+            config(theirs, listOf("CreedBratton"))
+            assertEquals(emptyList(), sharedBooksFor(stranger))
+            assertEquals(emptyList(), sharedBooksFor(owner))
+        }
+    }
+}
