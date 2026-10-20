@@ -160,16 +160,28 @@ function Welcome() {
   //
   // A seated party is the owner's row, so its `characterId`s are the OWNER'S characters and the
   // roster would mark them as yours. Re-marked here against the seats that are this account's.
+  const mainId = settings.mainCharacterId;
+  // Whether the main runs it: their own party run on the main, or a seat of theirs that is the main.
+  const runsMain = (party: Party) =>
+    party.characterId === mainId || party.members.some((m) => m.linkedCharacterId === mainId);
   const listed = [
-    ...ownParties.filter((p) => !p.solo && !p.retired),
+    ...ownParties
+      .filter((p) => !p.solo && !p.retired)
+      .map((party) => ({ party, main: runsMain(party) })),
     ...(seated ?? []).map(({ party, mySeatIds }) => ({
-      ...party,
-      members: party.members.map((m) => ({
-        ...m,
-        characterId: mySeatIds.includes(m.id) ? m.id : null,
-      })),
+      party: {
+        ...party,
+        members: party.members.map((m) => ({
+          ...m,
+          characterId: mySeatIds.includes(m.id) ? m.id : null,
+        })),
+      },
+      main: runsMain(party),
     })),
-  ];
+  ]
+    // The main's bosses first, otherwise as they came. sort is stable.
+    .sort((x, y) => Number(y.main) - Number(x.main))
+    .map(({ party }) => party);
   const mainCharacter = characters?.find((c) => c.id === settings.mainCharacterId) ?? null;
   const others = characters?.filter((c) => c !== mainCharacter) ?? [];
   const card = (c: Character) => (
