@@ -7817,20 +7817,6 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   font-size: var(--text-lg);
 }
 
-.welcome-list {
-  margin: 0 0 12px;
-  padding: 0;
-  list-style: none;
-}
-
-.welcome-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--line);
-}
-
 /* "Welcome, IGN" beside the main's sprite once one is starred. */
 .welcome-hero {
   display: flex;
@@ -7860,4 +7846,36 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 .welcome-nav-end {
   display: flex;
   gap: 8px;
+}
+
+/* A party on onboarding's last step: the boss's portrait, its name and mode, and who runs it. */
+.welcome-parties {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.welcome-party {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.welcome-party:hover {
+  border-color: var(--ink-strong);
+}
+
+/* One width for every row, so the rosters start in a column whatever the boss is called. */
+.welcome-party-name {
+  flex: 0 0 220px;
+  font-weight: 600;
 }

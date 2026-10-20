@@ -33,8 +33,8 @@ export function WelcomeHeader({
     <>
       {main ? (
         <div className="welcome-hero">
-          {main.sprite && <img className="hero-sprite" src={spriteUrl(main.sprite)} alt="" />}
           <h1 className="page-title">Welcome, {main.name}</h1>
+          {main.sprite && <img className="hero-sprite" src={spriteUrl(main.sprite)} alt="" />}
         </div>
       ) : (
         <h1 className="page-title">Welcome</h1>

@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
+import { AddForWeek } from "@/components/add-for-week";
+import { RosterStrip } from "@/components/roster-strip";
 import { CharacterCard } from "@/components/character-card";
 import { INVITED_STEPS, SETUP_STEPS, WelcomeHeader } from "@/components/welcome-header";
 import { WorldChoice } from "@/components/world-choice";
-import { apiFetch } from "@/lib/api";
+import { apiAssetUrl, apiFetch, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { ownMember } from "@/lib/parties";
@@ -17,7 +19,7 @@ import { WORLDS_IN } from "@/lib/world-names";
 import type { WorldType } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
-import type { SeatedParty } from "@/types/party";
+import type { Party, SavePartyBody, SeatedParty } from "@/types/party";
 import type { Settings } from "@/types/settings";
 
 // A new account's first three steps: the world, the characters, the parties they are already in.
@@ -55,6 +57,27 @@ function Welcome() {
   };
   const [characters, setCharacters] = useState<Character[] | null>(null);
   const [seated, setSeated] = useState<SeatedParty[] | null>(null);
+  const [ownParties, setOwnParties] = useState<Party[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  /** A standing party of their own, through the route Party View's Add Party uses. */
+  async function addParty(body: SavePartyBody) {
+    setAdding(true);
+    setAddError(null);
+    try {
+      await apiFetch<Party>(
+        "/api/parties",
+        { method: "POST", body: JSON.stringify(body) },
+        getToken,
+      );
+      setOwnParties(await apiFetch<Party[]>("/api/parties", { method: "GET" }, getToken));
+    } catch (e) {
+      setAddError(failureText(e, "Couldn't add that party. Try again."));
+    } finally {
+      setAdding(false);
+    }
+  }
   const [bosses, setBosses] = useState<Boss[]>([]);
   const [failed, setFailed] = useState(false);
   const [settingMain, setSettingMain] = useState(false);
@@ -118,9 +141,13 @@ function Welcome() {
         : Promise.all([
             apiFetch<SeatedParty[]>("/api/parties/seated", { method: "GET" }, getToken),
             apiFetch<Boss[]>("/api/bosses", { method: "GET" }, getToken),
-          ]).then(([parties, catalog]) => {
+            apiFetch<Party[]>("/api/parties", { method: "GET" }, getToken),
+            apiFetch<Character[]>("/api/characters", { method: "GET" }, getToken),
+          ]).then(([parties, catalog, own, mine]) => {
             setSeated(parties);
             setBosses(catalog);
+            setOwnParties(own);
+            setCharacters(mine);
           });
     read.then(() => setFailed(false)).catch(() => setFailed(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -129,6 +156,20 @@ function Welcome() {
   if (!isLoaded || !isSignedIn || !settings) return <main className="page" />;
 
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
+  // Their own parties first, then the ones they are seated in. Solo pools are not parties.
+  //
+  // A seated party is the owner's row, so its `characterId`s are the OWNER'S characters and the
+  // roster would mark them as yours. Re-marked here against the seats that are this account's.
+  const listed = [
+    ...ownParties.filter((p) => !p.solo && !p.retired),
+    ...(seated ?? []).map(({ party, mySeatIds }) => ({
+      ...party,
+      members: party.members.map((m) => ({
+        ...m,
+        characterId: mySeatIds.includes(m.id) ? m.id : null,
+      })),
+    })),
+  ];
   const mainCharacter = characters?.find((c) => c.id === settings.mainCharacterId) ?? null;
   const others = characters?.filter((c) => c !== mainCharacter) ?? [];
   const card = (c: Character) => (
@@ -199,31 +240,45 @@ function Welcome() {
       {step === 2 && seated && (
         <>
           <h2 className="welcome-step-title">Parties</h2>
-          {seated.length > 0 ? (
-            <ul className="welcome-list">
-              {seated.slice(0, PARTIES_SHOWN).map(({ party }) => (
-                <li key={party.id}>
-                  <Link href={partyHref(party)}>
-                    {[
-                      ownMember(party)?.name,
-                      bossLabel(
-                        bossByKey.get(party.bossKey)?.name ?? party.bossKey,
-                        party.difficulty,
-                      ),
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </Link>
-                </li>
-              ))}
+          {listed.length > 0 ? (
+            <ul className="welcome-parties">
+              {listed.slice(0, PARTIES_SHOWN).map((party) => {
+                const boss = bossByKey.get(party.bossKey);
+                return (
+                  <li key={party.id}>
+                    <Link className="welcome-party" href={partyHref(party)}>
+                      {boss?.iconUrl ? (
+                        <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />
+                      ) : (
+                        <span className="boss-portrait is-empty" aria-hidden="true" />
+                      )}
+                      <span className="welcome-party-name">
+                        {bossLabel(boss?.name ?? party.bossKey, party.difficulty)}
+                      </span>
+                      <RosterStrip members={party.members} />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
             <p className="party-hint">No parties yet.</p>
           )}
           <p className="party-hint">
-            {seated.length > PARTIES_SHOWN && `${seated.length - PARTIES_SHOWN} more. `}
+            {listed.length > PARTIES_SHOWN && `${listed.length - PARTIES_SHOWN} more. `}
             Parties can be modified under <Link href="/bosses/parties">Party View</Link>.
           </p>
+          {characters && characters.length > 0 && (
+            <AddForWeek
+              characters={characters}
+              bosses={bosses}
+              parties={ownParties}
+              busy={adding}
+              error={addError}
+              standing
+              onAdd={addParty}
+            />
+          )}
         </>
       )}
 
@@ -247,9 +302,6 @@ function Welcome() {
             </button>
           ) : (
             <>
-              <Link className="party-cancel" href="/bosses/parties/edit">
-                Set Up a Party
-              </Link>
               <button
                 type="button"
                 className="party-save"

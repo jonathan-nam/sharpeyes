@@ -35,6 +35,7 @@ export function AddForWeek({
   parties,
   busy,
   error,
+  standing = false,
   onAdd,
 }: {
   characters: Character[];
@@ -43,6 +44,8 @@ export function AddForWeek({
   parties: Party[];
   busy: boolean;
   error: string | null;
+  /** A party run every week rather than this one only. Onboarding sets up the standing ones. */
+  standing?: boolean;
   onAdd: (body: SavePartyBody) => Promise<void>;
 }) {
   const [characterId, setCharacterId] = useState("");
@@ -77,7 +80,7 @@ export function AddForWeek({
       bossKey,
       members: named,
       difficulty: difficulty === "" ? null : difficulty,
-      oneOff: true,
+      oneOff: !standing,
     });
     reset();
   }
@@ -127,7 +130,11 @@ export function AddForWeek({
               }}
             >
               <option value="">
-                {available.length === 0 ? "every boss is on this week" : "choose..."}
+                {available.length === 0
+                  ? standing
+                    ? "every boss has a party"
+                    : "every boss is on this week"
+                  : "choose..."}
               </option>
               {available.map((boss) => (
                 <option key={boss.bossKey} value={boss.bossKey}>
@@ -169,8 +176,8 @@ export function AddForWeek({
           <button
             type="submit"
             className="party-save add-plus"
-            title="Add for This Week"
-            aria-label="Add for This Week"
+            title={standing ? "Add Party" : "Add for This Week"}
+            aria-label={standing ? "Add Party" : "Add for This Week"}
             disabled={busy || !ready}
           >
             <span aria-hidden="true">+</span>
