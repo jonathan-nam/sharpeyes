@@ -23,11 +23,14 @@ import type { Settings } from "@/types/settings";
 export function WorldChoice({
   chosen = null,
   onChosen,
+  embedded = false,
 }: {
   /** The world already on the account, drawn as picked. Picking it again saves nothing. */
   chosen?: WorldType | null;
   /** After the choice is saved, or the one already chosen is picked again. */
   onChosen?: () => void;
+  /** Inside a page that has its own heading and mark: the question becomes a subheading. */
+  embedded?: boolean;
 } = {}) {
   const { getToken } = useAuth();
   const [busy, setBusy] = useState<WorldType | null>(null);
@@ -60,9 +63,15 @@ export function WorldChoice({
   }
 
   return (
-    <section className="hero world-choice">
-      <SharpEyesMark size={64} />
-      <h1>Which world do you play in?</h1>
+    <section className={embedded ? "world-choice" : "hero world-choice"}>
+      {embedded ? (
+        <h2 className="welcome-step-title">Which world do you play in?</h2>
+      ) : (
+        <>
+          <SharpEyesMark size={64} />
+          <h1>Which world do you play in?</h1>
+        </>
+      )}
       <div className="world-choice-cards">
         {WORLD_TYPES.map((world) => (
           <button

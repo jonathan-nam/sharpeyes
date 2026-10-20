@@ -7769,19 +7769,47 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 
 /* --- Setting up an account ----------------------------------------------------------------- */
 
-/* The three steps of /welcome, the current one in ink. See app/welcome/page.tsx. */
+/* Where a new account is in /welcome, one row with arrows between. The Individual View's filter
+   reading: what is still ahead fades the way a left-out mark does, and what is done brightens. */
 .welcome-steps {
   display: flex;
-  gap: 16px;
-  margin: 0 0 16px;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 24px;
   padding: 0;
   list-style: none;
-  color: var(--muted);
 }
 
-.welcome-steps .is-current {
-  color: var(--ink-strong);
+.welcome-step-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-lg);
+}
+
+button.welcome-step-link {
+  cursor: pointer;
+}
+
+.welcome-step.is-current .welcome-step-link {
   font-weight: 600;
+}
+
+.welcome-step.is-done .welcome-step-link {
+  color: var(--ink-strong);
+}
+
+.welcome-step.is-todo,
+.welcome-step-arrow:not(.is-reached) {
+  opacity: 0.2;
+  filter: saturate(0.3);
+}
+
+.welcome-step-title {
+  margin: 0 0 12px;
+  font-size: var(--text-lg);
 }
 
 .welcome-list {

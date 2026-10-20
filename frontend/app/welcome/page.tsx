@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
 import { WorldChoice } from "@/components/world-choice";
 import { apiFetch } from "@/lib/api";
@@ -62,17 +62,47 @@ export default function Welcome() {
 
   return (
     <main className="page">
-      <ol className="welcome-steps">
-        {STEPS.map((label, i) => (
-          <li key={label} className={i === step ? "is-current" : undefined}>
-            {label}
-          </li>
-        ))}
-      </ol>
+      <h1 className="page-title">Onboarding</h1>
+      <nav aria-label="Onboarding progress">
+        <ol className="welcome-steps">
+          {STEPS.map((label, i) => {
+            const state = i < step ? "is-done" : i === step ? "is-current" : "is-todo";
+            return (
+              <Fragment key={label}>
+                {i > 0 && (
+                  <li
+                    className={i <= step ? "welcome-step-arrow is-reached" : "welcome-step-arrow"}
+                    aria-hidden="true"
+                  >
+                    {"\u2192"}
+                  </li>
+                )}
+                <li className={`welcome-step ${state}`}>
+                  {/* A finished step can be gone back to; the ones ahead wait on this one. */}
+                  {i < step ? (
+                    <button type="button" className="welcome-step-link" onClick={() => setStep(i)}>
+                      {`\u2713 ${label}`}
+                    </button>
+                  ) : (
+                    <span
+                      className="welcome-step-link"
+                      aria-current={i === step ? "step" : undefined}
+                    >
+                      {label}
+                    </span>
+                  )}
+                </li>
+              </Fragment>
+            );
+          })}
+        </ol>
+      </nav>
 
-      {step === 0 && <WorldChoice chosen={settings.worldType} onChosen={() => setStep(1)} />}
+      {step === 0 && (
+        <WorldChoice chosen={settings.worldType} onChosen={() => setStep(1)} embedded />
+      )}
 
-      {step > 0 && <h1 className="page-title">{STEPS[step]}</h1>}
+      {step > 0 && <h2 className="welcome-step-title">{STEPS[step]}</h2>}
       {failed && (
         <p className="routine-error">Couldn&apos;t load this step. Reload to try again.</p>
       )}
