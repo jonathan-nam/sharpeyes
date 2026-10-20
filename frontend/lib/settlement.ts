@@ -179,26 +179,18 @@ export type Settlement = {
     /** Your coupons sold out of a pile filed as theirs. Positive, and rare: see saleCredits. */
     soldOfYours: number;
     /**
-     * Mesos that have arrived from them, as far as there was a priced debt to put them against.
+     * Mesos that have arrived from them. Negative: a payment is a debt going away.
      *
-     * Negative: a payment is a debt going away. While they hold coupons of yours it stops at what the
-     * parts above come to, and anything past that is `receivedOnPieces` (V51). Otherwise the excess
-     * was an overpayment, and lands in `owedByYou`.
+     * All of it, even past what they owe: the excess is an overpayment and lands in `owedByYou`. It
+     * used to be held apart as payment for their unpriced coupons of yours, which hid 48b Jonathan
+     * owed Bro. A coupon of yours they sell is priced by its sale (`soldOfYours`), so no payment has
+     * to stand in for it.
      *
      * How much of the money LANDED, which is not what the card draws: the receipts themselves are
      * acts in its history, each under the note it was entered with. See moneyRows.
      */
     received: number;
   };
-  /**
-   * Mesos received beyond anything priced, which is a payment for the PIECES they are holding. Only
-   * while they hold some: with none, the excess is an overpayment and is in `owedByYou` instead.
-   *
-   * Outside the net and deliberately so. A piece debt has no price, so there is nothing for this to
-   * count down; netting it anyway would read as "you owe them 400m" the moment somebody paid you for
-   * coupons you cannot value. Stated on its own, which is where it was before V56.
-   */
-  receivedOnPieces: number;
   /**
    * Mesos of THEIRS you are holding that nobody has decided about yet. See V61.
    *
@@ -264,7 +256,6 @@ const blank = (key: string, name: string): Settlement => ({
   sharesYouOwe: 0,
   usd: { owe: 0, owed: 0, net: 0 },
   parts: { shares: 0, entered: 0, soldOfTheirs: 0, soldOfYours: 0, received: 0 },
-  receivedOnPieces: 0,
   holding: 0,
   sales: [],
   disposals: [],
@@ -489,22 +480,11 @@ export function buildSettlement(
 
   for (const [key, paid] of received) {
     if (key === SELF_KEY || paid === 0) continue;
-    rowFor(key).receivedOnPieces += paid;
+    rowFor(key).parts.received -= paid;
   }
 
   for (const row of out.values()) {
-    // Everything with a price, before the money that has arrived against it.
-    const priced = Object.values(row.parts).reduce((sum, part) => sum + part, 0);
-    // A payment pays down what they owe you. Past that, while they hold coupons of yours, it is money
-    // against the PIECES, which have no price for it to count down. See receivedOnPieces. With no
-    // pieces for it to be for, it can only be an overpayment, which is a debt of yours.
-    const applied =
-      row.pieces > 0 ? Math.min(row.receivedOnPieces, Math.max(0, priced)) : row.receivedOnPieces;
-    // Not `-applied`, which is -0 when nothing was applied and formats as "-0" on the row.
-    row.parts.received = applied > 0 ? -applied : 0;
-    row.receivedOnPieces -= applied;
-
-    const net = priced - applied;
+    const net = Object.values(row.parts).reduce((sum, part) => sum + part, 0);
     row.mesos = Math.max(0, net);
     row.owedByYou = Math.max(0, -net);
   }
@@ -548,7 +528,6 @@ export function buildSettlement(
         // Coupons of theirs you are holding are exactly the thing this ledger is for now: they come
         // off what that person owes you. A card kept only for the other direction hid them.
         row.piecesYouOwe > 0 ||
-        row.receivedOnPieces > 0 ||
         // Money of theirs you are sitting on with nothing decided about it. The one thing on this
         // card somebody still has to act on, so a card dropped for lack of a net would be the act
         // going missing along with it.
