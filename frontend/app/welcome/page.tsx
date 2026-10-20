@@ -25,6 +25,8 @@ import type { Settings } from "@/types/settings";
 // the one the rest of the app uses, so there is nothing here to keep in step with those pages.
 
 const STEPS = ["World", "Characters", "Parties"] as const;
+// A taste of the parties, not the list: Party View holds every one, and the line under says so.
+const PARTIES_SHOWN = 5;
 
 export default function Welcome() {
   const { getToken, isLoaded, isSignedIn } = useAuth();
@@ -217,7 +219,7 @@ export default function Welcome() {
           <h2 className="welcome-step-title">Parties</h2>
           {seated.length > 0 ? (
             <ul className="welcome-list">
-              {seated.map(({ party }) => (
+              {seated.slice(0, PARTIES_SHOWN).map(({ party }) => (
                 <li key={party.id}>
                   <Link href={partyHref(party)}>
                     {[
@@ -236,6 +238,10 @@ export default function Welcome() {
           ) : (
             <p className="party-hint">No parties yet.</p>
           )}
+          <p className="party-hint">
+            {seated.length > PARTIES_SHOWN && `${seated.length - PARTIES_SHOWN} more. `}
+            Parties can be modified under <Link href="/bosses/parties">Party View</Link>.
+          </p>
         </>
       )}
 
