@@ -79,20 +79,25 @@ both cards side by side and does not net them, the same rule as the per-party wa
 
 ### Phase 2. Editor writes
 
-- `party_loot.recorded_by_user_id` and `party_loot.sale_recorded_by_user_id`, nullable, so every
-  row says whose keyboard it came from. Old rows stay null (owner).
-- Swap `ownsParty` for `canEditParty` on: add loot, delete loot (own rows only), sell / unsell
-  (seller must be the caller's seat), lot sale, taken, and payouts the caller owes. Config, roster,
-  skip, pieces, clear and delete party stay on `ownsParty`.
-- **Duplicate guard, before this ships.** Two keyboards on one pool is how one night gets logged
-  twice. Adding a drop that matches an existing row (same party, boss, drop, week) is refused
-  unless the request says it is a second copy. Not a unique index, because two copies of one drop
-  in one night are real. Applies to the owner too.
-- Party View for an Editor: the drop form, and the sale form with only their own seats in Sold By.
-- The Sales tab on the Drop Log lists rows in shared pools where the caller's seat holds them.
+- V84: `party_loot.recorded_by_user_id`, nullable. Null is the owner, which every older row is.
+  The sale needs no column of its own: its seller is the seat that recorded it.
+- `canEditParty` instead of `ownsParty` on: add loot, sell / unsell, taken, and delete. An Editor
+  acts only as their own seats (`mayActAs`): sells as themselves, corrects or undoes only their own
+  sale, marks kept or puts back only as themselves, and deletes only an unsold drop they logged
+  (`LootPermissions.kt`). Config, roster, skip, pieces, clear, bundles, lot sale and delete party
+  stay on `ownsParty`.
+- **Payouts stay the owner's.** "Mark payouts they owe as sent" contradicts "a payment counts when
+  the receiver records it", so it was left out. Revisit with phase 3's payments.
+- **Duplicate guard.** Adding a drop that matches an existing row (same party, drop, and period of
+  its boss) is a 409 unless the request says `again`. Not a unique index, because two copies of one
+  drop in one period are real. Applies to the owner too. The picker offers Add Again.
+- Party View for an Editor: the drop picker, Mark Sold with only their own seats in Sold By, Undo
+  Sale on their own sales, Remove on their own unsold drops.
+- **Deferred to phase 3:** the Drop Log's Sales tab listing shared pools. It is built from the
+  caller's own ledgers, and a member's pool there means reading the owner's book.
 
-At the end of phase 2 Bro can record his own sales, and Jonathan's settlement card updates from
-them without Jonathan entering anything.
+At the end of phase 2 Bro can record his own sales on the shared party's page, and Jonathan's
+settlement card updates from them without Jonathan entering anything.
 
 ### Phase 3. The member's view of the book
 
