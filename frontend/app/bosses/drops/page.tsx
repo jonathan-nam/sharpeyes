@@ -78,7 +78,9 @@ import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
 import type { Loot, LogDropBody, PartyLootPool } from "@/types/loot";
-import type { DropLogPage } from "@/types/page";
+import type { DropLogPage, SharedBook } from "@/types/page";
+import { SharedCards } from "@/components/shared-cards";
+import { sharedCard } from "@/lib/shared-book";
 import type { Party, Person } from "@/types/party";
 import type {
   ProceedsDisposal,
@@ -97,6 +99,8 @@ type LoadState = "loading" | "loaded" | "error";
 // Every read below, in one request. The individual keys stay: they name the cache entries other
 // pages seed from, and the resources this composes. See types/page.ts.
 const PAGE_KEY = "/api/pages/drop-log";
+// Other owners' books, cut to what they say about you. See lib/shared-book.ts.
+const SHARED_KEY = "/api/pages/shared-books";
 
 /** The query is read once per render and never changes under the page, so nothing to listen to. */
 const noSubscription = () => () => {};
@@ -138,6 +142,7 @@ export default function DropLogPage() {
   const [settlements, setSettlements] = useState<VestigeSettlement[]>([]);
   const [debts, setDebts] = useState<SettlementDebt[]>([]);
   const [disposals, setDisposals] = useState<ProceedsDisposal[]>([]);
+  const [sharedBooks, setSharedBooks] = useState<SharedBook[]>([]);
   const [people, setPeople] = useState<Person[]>(peek<Person[]>(PEOPLE_KEY) ?? []);
 
   // A drop names the party it fell in and links to it, which draws its seats. See
@@ -185,7 +190,12 @@ export default function DropLogPage() {
    */
   async function load(token?: string | null) {
     const withToken = token !== undefined ? () => Promise.resolve(token) : getToken;
-    const page = await apiFetch<DropLogPage>(PAGE_KEY, { method: "GET" }, withToken);
+    const [page, books] = await Promise.all([
+      apiFetch<DropLogPage>(PAGE_KEY, { method: "GET" }, withToken),
+      // Additive: a failure leaves out the other owners' cards and nothing of your own.
+      apiFetch<SharedBook[]>(SHARED_KEY, { method: "GET" }, withToken).catch(() => []),
+    ]);
+    setSharedBooks(books);
 
     setParties(page.parties);
     setPools(page.pools);
@@ -664,6 +674,10 @@ export default function DropLogPage() {
                 view={view}
                 writes={writes}
               />
+            )}
+
+            {shown === "settlement" && (
+              <SharedCards cards={sharedBooks.flatMap((book) => sharedCard(book, bosses) ?? [])} />
             )}
 
             {/* The end of the pipeline, and it only runs one way: nothing here is waiting on

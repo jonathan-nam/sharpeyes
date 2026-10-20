@@ -33,6 +33,8 @@ import kotlin.time.measureTimedValue
  */
 fun Route.pageRoutes() {
     get("/drop-log") { dropLogPage() }
+    // Other owners' books, cut to what they say about you. See SharedBooks.kt.
+    get("/shared-books") { sharedBooksPage() }
 
     // Party View takes two rather than one, and PartiesPageResponse.kt says why: six of its nine
     // reads are ones the page is built to survive losing.
