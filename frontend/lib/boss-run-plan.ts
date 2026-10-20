@@ -215,6 +215,12 @@ export type PlanOptions = {
   beamWidth?: number;
   /** By person id. Anybody not in here is free for the whole night. */
   available?: Record<string, Availability>;
+  /**
+   * Run ids in the order another plan put them, to break ties toward. Run Order passes the plan
+   * without `everyoneOn`, so ticking it keeps the order wherever dropping the smaller parties makes
+   * no order cheaper. Without it, a tie falls to the run ids, which are random UUIDs.
+   */
+  prefer?: readonly string[];
 };
 
 export type PlannedRun = {
@@ -316,6 +322,8 @@ type State = {
   switches: number;
   /** Filled in by planKey on first use, which only happens on a tie. */
   orderKey: string | null;
+  /** The same for preferKey. */
+  preferKey: string | null;
 };
 
 // 30 bits to the word, so a word stays a small signed integer and the shifts stay in range.
@@ -409,14 +417,14 @@ function swap<T>(items: T[], a: number, b: number): void {
  * pruned. That is what put a person's last two runs behind nine they sat out. `owed` is the same
  * gap counted as it opens rather than when it closes, which is what makes the two comparable.
  */
-function betterState(a: State, b: State): number {
+function betterState(a: State, b: State, tie: Tie): number {
   // Bigger parties earlier. Greater string, not lesser, so this is descending.
   if (a.parties !== b.parties) return a.parties < b.parties ? 1 : -1;
   if (a.waiting + a.owed !== b.waiting + b.owed) return a.waiting + a.owed - (b.waiting + b.owed);
   if (a.switches !== b.switches) return a.switches - b.switches;
   if (a.minutes !== b.minutes) return a.minutes - b.minutes;
   // Deterministic last resort, so the same input always gives the same plan back.
-  return planKey(a).localeCompare(planKey(b));
+  return tie(a, b);
 }
 
 /**
@@ -427,12 +435,41 @@ function betterState(a: State, b: State): number {
  * imaginary one, which is the ordering this file promises not to do. So the estimate steers the
  * search and the tally decides between what it found.
  */
-function betterPlanned(a: State, b: State): number {
+function betterPlanned(a: State, b: State, tie: Tie): number {
   if (a.parties !== b.parties) return a.parties < b.parties ? 1 : -1;
   if (a.waiting !== b.waiting) return a.waiting - b.waiting;
   if (a.switches !== b.switches) return a.switches - b.switches;
   if (a.minutes !== b.minutes) return a.minutes - b.minutes;
-  return planKey(a).localeCompare(planKey(b));
+  return tie(a, b);
+}
+
+/** The last comparison, between two states every rule above calls equal. Must be total. */
+type Tie = (a: State, b: State) => number;
+
+const byRunId: Tie = (a, b) => planKey(a).localeCompare(planKey(b));
+
+/**
+ * Ties broken toward `prefer`: the order whose runs sit earliest in it wins, and runs it does not
+ * name rank equal behind all of them, so byRunId still decides between those.
+ */
+function preferring(prefer: readonly string[]): Tie {
+  const width = String(prefer.length).length;
+  const rankOf = new Map(prefer.map((id, at) => [id, String(at).padStart(width, "0")]));
+  const unranked = String(prefer.length).padStart(width, "0");
+  const keyOf = (state: State) => {
+    if (state.preferKey === null) {
+      state.preferKey = orderOf(state)
+        .map((planned) => rankOf.get(planned.run.id) ?? unranked)
+        .join();
+    }
+    return state.preferKey;
+  };
+  return (a, b) => {
+    const left = keyOf(a);
+    const right = keyOf(b);
+    if (left !== right) return left < right ? -1 : 1;
+    return byRunId(a, b);
+  };
 }
 
 /** The chain read back into schedule order, which is the order it was built in reversed. */
@@ -476,6 +513,9 @@ export function planNight(
 ): { best: Plan; byCount: Plan[] } {
   const beamWidth = options.beamWidth ?? 1000;
   const available = options.available ?? {};
+  const tie = options.prefer === undefined ? byRunId : preferring(options.prefer);
+  const steer = (a: State, b: State) => betterState(a, b, tie);
+  const pick = (a: State, b: State) => betterPlanned(a, b, tie);
 
   // Everything a run needs during the search, numbered once. The inner loop then never touches an
   // IGN or a boss key, only indices into these.
@@ -544,6 +584,7 @@ export function planNight(
     minutes: 0,
     switches: 0,
     orderKey: null,
+    preferKey: null,
   };
 
   const byCount: Plan[] = [];
@@ -650,10 +691,11 @@ export function planNight(
           minutes,
           switches: state.switches + switched.length,
           orderKey: null,
+          preferKey: null,
         };
 
         const held = next.get(key);
-        if (!held || betterState(candidate, held) < 0) next.set(key, candidate);
+        if (!held || steer(candidate, held) < 0) next.set(key, candidate);
       }
     }
 
@@ -664,8 +706,8 @@ export function planNight(
     // thing ranked above waiting. Splitting one width between the two was far worse again (38 of
     // the two thousand), so the count is bought with width and not with the ranking.
     const pool = [...next.values()];
-    const steered = bestOf(pool.slice(), beamWidth, betterState);
-    const plain = bestOf(pool, beamWidth, betterPlanned);
+    const steered = bestOf(pool.slice(), beamWidth, steer);
+    const plain = bestOf(pool, beamWidth, pick);
 
     const kept = new Set(steered);
     beam = steered;
@@ -680,7 +722,7 @@ export function planNight(
     // The beam is cut on the estimate, the plan of this length is picked off what survived.
     let leader = beam[0] as State;
     for (let i = 1; i < beam.length; i++) {
-      if (betterPlanned(beam[i] as State, leader) < 0) leader = beam[i] as State;
+      if (pick(beam[i] as State, leader) < 0) leader = beam[i] as State;
     }
     byCount.push(toPlan(leader));
   }

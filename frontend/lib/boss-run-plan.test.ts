@@ -814,3 +814,55 @@ describe("withoutRuns", () => {
     expect(lengths.at(-1)).toBe(4);
   });
 });
+
+describe("planNight's prefer", () => {
+  // A real night (2026-10-20), ids shortened from the configs' UUIDs, whose order is what decided
+  // the tie. The trios cost five switches in any of the best orders; the duos after them are what
+  // picked one with "Exclude Party Member Subsets" off.
+  const trios = [
+    eligible("48f7-adv-a", "adversary", 15, [
+      ["onetwothreeo", "you"],
+      ["CourseLair", "jared"],
+      ["iPhone69C", "bro"],
+    ]),
+    eligible("911f-adv-b", "adversary", 15, [
+      ["warrior2020", "you"],
+      ["DemonSlays20", "jared"],
+      ["Freeballynn", "bro"],
+    ]),
+    eligible("65b7-limbo-b", "limbo", 20, [
+      ["onetwothreeo", "you"],
+      ["Freeballynn", "bro"],
+      ["CourseLair", "jared"],
+    ]),
+    eligible("505d-limbo-a", "limbo", 20, [
+      ["warrior2020", "you"],
+      ["iPhone69C", "bro"],
+      ["Challynnger", "jared"],
+    ]),
+    eligible("de93-star-a", "star", 20, [
+      ["warrior2020", "you"],
+      ["iPhone69C", "bro"],
+      ["Challynnger", "jared"],
+    ]),
+  ];
+  const offOrder = ["505d-limbo-a", "de93-star-a", "48f7-adv-a", "65b7-limbo-b", "911f-adv-b"];
+
+  it("keeps the preferred order when it costs no more", () => {
+    const alone = planNight(trios, { minutes: Infinity }).best;
+    expect(order(alone)).not.toEqual(offOrder);
+
+    const kept = planNight(trios, { minutes: Infinity, prefer: offOrder }).best;
+    expect(order(kept)).toEqual(offOrder);
+    expect(kept.switches).toBe(alone.switches);
+  });
+
+  it("never pays a switch for it", () => {
+    // Every run here changes characters from the one before it: eleven switches against five.
+    const costly = ["505d-limbo-a", "65b7-limbo-b", "de93-star-a", "48f7-adv-a", "911f-adv-b"];
+    const alone = planNight(trios, { minutes: Infinity }).best;
+    const kept = planNight(trios, { minutes: Infinity, prefer: costly }).best;
+    expect(kept.switches).toBe(alone.switches);
+    expect(order(kept)).not.toEqual(costly);
+  });
+});

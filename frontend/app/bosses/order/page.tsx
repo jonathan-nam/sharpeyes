@@ -25,6 +25,7 @@ import {
 } from "@/lib/boss-night";
 import {
   type Availability,
+  type CandidateRun,
   EMPTY_PLAN,
   type EligibleRun,
   planNight,
@@ -122,6 +123,22 @@ function pinOf(window: WindowText | undefined): string | null {
   else if (until !== null) said.push(`to ${formatOffsetShort(until)}`);
 
   return said.length === 0 ? null : `· ${said.join(" · ")}`;
+}
+
+/** The night's order without "Exclude Party Member Subsets", for that toggle to break ties toward. */
+function preferredOrder(
+  allRuns: CandidateRun[],
+  hereAll: string[],
+  hidden: ReadonlySet<string>,
+  night: number,
+  available: Record<string, Availability>,
+): string[] {
+  const runs = screenRuns(allRuns, hereAll).eligible;
+  let hiddenMinutes = 0;
+  for (const run of runs) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
+  return planNight(runs, { minutes: night + hiddenMinutes, available }).best.runs.map(
+    (planned) => planned.run.id,
+  );
 }
 
 export default function RunOrderPage() {
@@ -531,9 +548,15 @@ export default function RunOrderPage() {
     // The hidden runs take no time tonight, so the search gets their minutes back on top.
     let hiddenMinutes = 0;
     for (const run of searched) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
-    const full = planNight(searched, { minutes: night + hiddenMinutes, available });
+    const full = planNight(searched, {
+      minutes: night + hiddenMinutes,
+      available,
+      prefer: shown.everyoneOn
+        ? preferredOrder(allRuns, hereAll, hidden, night, available)
+        : undefined,
+    });
     return withoutRunsByCount(full.byCount, hidden, { minutes: night, available });
-  }, [searched, hidden, night, available]);
+  }, [searched, hidden, night, available, shown.everyoneOn, allRuns, hereAll]);
   const best = byCount[byCount.length - 1] ?? EMPTY_PLAN;
 
   const options = useMemo(() => tradeOffs(byCount), [byCount]);
