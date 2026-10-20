@@ -1,6 +1,3 @@
-import { bossLabel } from "./boss-difficulty";
-import type { InvitePartyLabel } from "@/types/invite";
-
 /**
  * Where a sign-on link points, and what the join page does with it.
  *
@@ -26,29 +23,6 @@ export function joinCallbackPath(token: string): string {
 }
 
 /**
- * What a link creates, in the fewest words that still name every kind of thing.
- *
- * A count, not a list: the characters are drawn on the page beside this, and the parties and people
- * are a number until they exist. Zero of something is left out rather than said, so "no people"
- * never appears next to two of them.
- */
-export function invitedSummary(counts: { parties: number; peopleCount: number }): string {
-  const parts: string[] = [];
-  if (counts.parties > 0)
-    parts.push(`${counts.parties} ${counts.parties === 1 ? "party" : "parties"}`);
-  if (counts.peopleCount > 0) {
-    parts.push(`${counts.peopleCount} ${counts.peopleCount === 1 ? "person" : "people"}`);
-  }
-  return parts.join(", ");
-}
-
-/** What was left out, said as a count. Empty when nothing was, so nothing is drawn. */
-export function omittedSummary(omitted: { length: number }): string {
-  if (omitted.length === 0) return "";
-  return `${omitted.length} ${omitted.length === 1 ? "party is" : "parties are"} not included.`;
-}
-
-/**
  * What is left of a link as m:ss, or null once there is none.
  *
  * Null rather than "0:00", because a dead link and a nearly dead one are different things to say
@@ -59,48 +33,4 @@ export function timeLeft(expiresAt: string, now: Date): string | null {
   const seconds = Math.floor((new Date(expiresAt).getTime() - now.getTime()) / 1000);
   if (seconds <= 0) return null;
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
-/**
- * How many of a link's parties to name, and how many are left over.
- *
- * A few is enough to recognise a group by, which is the only question this list answers: whether
- * the link was meant for you. Every one of them would be a wall on the first screen anybody sees,
- * and the count already says how many there are.
- */
-export const PARTIES_SHOWN = 3;
-
-export function partiesShown<T>(parties: T[]): { shown: T[]; more: number } {
-  return {
-    shown: parties.slice(0, PARTIES_SHOWN),
-    more: Math.max(0, parties.length - PARTIES_SHOWN),
-  };
-}
-
-/**
- * The parties that arrive with the characters ticked, out of everything a link offers.
- *
- * A config binds no seat unless the name on it was confirmed, so unticking a character drops its
- * parties (backend takeSeats). Counting all of them regardless would put a number on screen that
- * accepting will not deliver.
- *
- * Matched case-insensitively, which is how the backend matches every character name.
- */
-export function partiesTaken<T extends { characterName: string }>(
-  parties: T[],
-  mine: string[],
-): T[] {
-  const ticked = new Set(mine.map((name) => name.toLowerCase()));
-  return parties.filter((party) => ticked.has(party.characterName.toLowerCase()));
-}
-
-/**
- * One party in a line: what it is, then whose seat of yours it is.
- *
- * The character is not decoration. A boss run on three of your characters is three configs with one
- * name between them, and the same line three times reads as a bug in the list rather than as three
- * parties. It is also what ties a party to the checkbox above it, now that unticking drops one.
- */
-export function partyLabel(party: InvitePartyLabel): string {
-  return `${bossLabel(party.bossName, party.difficulty)} (${party.characterName})`;
 }

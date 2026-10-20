@@ -2,10 +2,8 @@
 
 import { useAuth } from "@/lib/use-auth";
 import { useState } from "react";
-import { apiFetch } from "@/lib/api";
-import { setAccountSettings, SETTINGS_KEY, useAccountSettings } from "@/lib/use-account-settings";
+import { saveWorld, useAccountSettings } from "@/lib/use-account-settings";
 import { WORLD_TYPES, worldShortLabel, type WorldType } from "@/lib/world";
-import type { Settings } from "@/types/settings";
 
 // Which world the site is answering for.
 //
@@ -60,12 +58,7 @@ export function WorldToggle() {
     // with nothing on screen for either the click reads as having done nothing at all.
     raiseVeil();
     try {
-      const saved = await apiFetch<Settings>(
-        SETTINGS_KEY,
-        { method: "PUT", body: JSON.stringify({ worldType: world }) },
-        getToken,
-      );
-      setAccountSettings(saved);
+      await saveWorld(world, getToken);
       // A reload, not a cache invalidation. Every list, count and total on screen was narrowed to
       // the old world by the server, and pages here fetch once on mount: clearing the cache would
       // leave the mounted page showing the other world's data with the toggle saying otherwise.

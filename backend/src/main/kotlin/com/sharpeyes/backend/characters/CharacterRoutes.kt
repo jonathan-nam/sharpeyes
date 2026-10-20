@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.characters
 
 import com.sharpeyes.backend.db.Characters
+import com.sharpeyes.backend.invites.seatInLinkedParties
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -114,6 +115,7 @@ private suspend fun RoutingContext.createCharacter(
                 it[position] = nextPosition
             }
             lookup?.spriteImgUrl?.let { spriteCache.store(it, spriteBytes) }
+            seatInLinkedParties(userId, newId, lookup?.name ?: request.name, world)
             findOwnedCharacter(newId, userId)
         }
 

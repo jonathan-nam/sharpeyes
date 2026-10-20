@@ -671,28 +671,6 @@ a:hover {
   margin-top: 1px;
 }
 
-/* Management actions are not what this strip is for. They stay out of the way
-   until you're actually on the tile. */
-/* Reorder arrows on a /characters row; disabled at the ends of the list. */
-.tile-move {
-  border: none;
-  background: none;
-  padding: 0 2px;
-  color: var(--muted-2);
-  font-size: var(--text-lg);
-  line-height: 1;
-  cursor: pointer;
-}
-
-.tile-move:hover:not(:disabled) {
-  color: var(--ink-strong);
-}
-
-.tile-move:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
 /* ---------------------------------------------------------------------------
    Inventory window
 
@@ -1312,28 +1290,8 @@ html.switching-world .world-veil {
 /* --- Confirming a link ------------------------------------------------------------------ */
 
 /* The characters a link says are yours, ticked. The one thing on that page worth getting right. */
-.join-characters {
-  margin: 12px 0;
-  padding: 0;
-  list-style: none;
-  text-align: left;
-}
-
-.join-characters li {
-  padding: 3px 0;
-}
-
-.join-characters label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
 
 /* A few party names, to recognise the group by. Not a list to work through. */
-.join-parties {
-  margin-top: 0;
-}
 
 /* --- Shared with you -------------------------------------------------------------------- */
 
@@ -1402,7 +1360,7 @@ html.switching-world .world-veil {
 /* Asked once, on an account that has never said. See components/world-choice.tsx. */
 .world-choice-cards {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-top: 20px;
 }
@@ -1422,6 +1380,10 @@ html.switching-world .world-veil {
   color: var(--ink-strong);
   font: inherit;
   cursor: pointer;
+}
+
+.world-choice-card.is-chosen {
+  border-color: var(--accent);
 }
 
 .world-choice-card:hover:not(:disabled) {
@@ -1461,10 +1423,10 @@ html.switching-world .world-veil {
   font-weight: 600;
 }
 
-/* Side by side is the whole point of the pair, so they only stack where two will not fit. */
+/* All four side by side, two by two where four will not fit. */
 @media (max-width: 560px) {
   .world-choice-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -1584,48 +1546,69 @@ img.user-avatar-img {
   margin-top: 8px;
 }
 
-/* One character per row, read down the page. */
-.character-list {
+/* Characters as their sprites, a card each, wrapping. /characters and onboarding share these. */
+.character-cards {
   list-style: none;
-  margin: 0;
+  margin: 0 0 12px;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.character-row {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 12px;
-  flex-wrap: wrap;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--line);
 }
 
-/* 96px for the reason .tile-sprite gives: it is the avatar endpoint's own size, so this is 1:1 and
-   there is nothing bigger to grow into. It was 48, which is the only other ratio available that
-   does not resample, and this page is where you look AT your characters rather than pick one. */
-.character-row-sprite {
-  width: 96px;
-  height: 96px;
-  flex: none;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-
-/* Takes the slack, so the world toggle and the actions line up down the column whatever the
-   names are. */
-.character-row-name {
-  flex: 1 1 12ch;
+.character-card {
+  position: relative;
+  /* Against the grid item's `auto` minimum, or a long name widens its track. */
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
+  align-items: center;
+  padding: 14px 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  text-align: center;
 }
 
-.character-row-actions {
-  display: inline-flex;
+.character-card-star {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+
+/* The People page's grip, top right, as a button: a click picks the card up for a click elsewhere
+   to put down. The whole card drags, so it wears the grab cursor too. */
+.character-card[draggable="true"] {
+  cursor: grab;
+}
+
+.character-card-grip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.character-card:hover .character-card-grip,
+.character-card.is-picked .character-card-grip {
+  opacity: 1;
+}
+
+.character-card.is-picked,
+.character-card.is-target {
+  border-color: var(--accent);
+}
+
+.character-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 6px;
+  margin-top: 10px;
 }
 
 .add-character {
@@ -7764,4 +7747,150 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* --- Setting up an account ----------------------------------------------------------------- */
+
+/* Where a new account is in /welcome, one row with arrows between. The Individual View's filter
+   reading: what is still ahead fades the way a left-out mark does, and what is done brightens. */
+.welcome-steps {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.welcome-step-link {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-lg);
+  cursor: pointer;
+}
+
+.welcome-step-link:disabled {
+  cursor: default;
+}
+
+.welcome-step.is-current .welcome-step-link {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.welcome-step.is-done .welcome-step-link {
+  color: var(--ink-strong);
+}
+
+.welcome-step.is-done .welcome-step-link:hover {
+  border-color: var(--ink-strong);
+}
+
+.welcome-step.is-todo,
+.welcome-step-arrow:not(.is-reached) {
+  opacity: 0.2;
+  filter: saturate(0.3);
+}
+
+.welcome-step-title {
+  margin: 0 0 12px;
+  font-size: var(--text-lg);
+}
+
+/* "Welcome, IGN" beside the main's sprite once one is starred. */
+.welcome-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.welcome-hero .hero-sprite {
+  margin: 0;
+}
+
+/* Back at the bottom left, the way forward at the bottom right. */
+.welcome-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 28px;
+}
+
+.welcome-nav-end {
+  display: flex;
+  gap: 8px;
+}
+
+/* A party on onboarding's last step: the boss's portrait, its name and mode, and who runs it. */
+.welcome-parties {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.welcome-party {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.welcome-party:hover {
+  border-color: var(--ink-strong);
+}
+
+/* One width for every row, so the rosters start in a column whatever the boss is called. */
+.welcome-party-name {
+  flex: 0 0 220px;
+  font-weight: 600;
+}
+
+/* The sender's name and sprite at the head of an invite, the way "Welcome, IGN" carries the main's. */
+.join-sender {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.join-sender .hero-sprite {
+  margin: 0;
+}
+
+/* The one thing to do on an invite, centred under what it says. */
+.join-act {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+/* The brand at the head of onboarding, standing in for the site header it hides. */
+.welcome-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 0 24px;
+}
+
+.welcome-brand-name {
+  color: var(--ink-strong);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* A line under a step's heading, set off from the cards below it. */
+.welcome-hint {
+  margin: 0 0 12px;
 }

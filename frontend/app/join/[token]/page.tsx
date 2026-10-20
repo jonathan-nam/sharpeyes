@@ -2,18 +2,13 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { INVITED_STEPS, WelcomeHeader } from "@/components/welcome-header";
 import { PageSwap } from "@/components/page-swap";
 import { SignInButton } from "@/components/sign-in-button";
-import { ApiError, apiFetch, failureText } from "@/lib/api";
+import { ApiError, apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { reportDataReady } from "@/lib/rum";
-import {
-  invitedSummary,
-  joinCallbackPath,
-  omittedSummary,
-  partiesShown,
-  partiesTaken,
-  partyLabel,
-} from "@/lib/invite-link";
+import { reloadAccountSettings } from "@/lib/use-account-settings";
+import { joinCallbackPath } from "@/lib/invite-link";
 import { useAuth } from "@/lib/use-auth";
 import type { AcceptedInvite, InvitePreview } from "@/types/invite";
 
@@ -41,20 +36,12 @@ export default function JoinPage() {
   const [state, setState] = useState<LoadState>(token === "" ? "gone" : "loading");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  /**
-   * The characters ticked as yours, or null before the preview has said what they are.
-   *
-   * All of them to begin with. The sender is usually right, and a screen that starts with nothing
-   * ticked asks everybody to do the work for the rare case where they are not.
-   */
-  const [mine, setMine] = useState<string[] | null>(null);
 
   useEffect(() => {
     if (token === "") return;
     apiFetch<InvitePreview>(`/api/join/${encodeURIComponent(token)}`, { method: "GET" }, noToken)
       .then((result) => {
         setPreview(result);
-        setMine(result.characters);
         setState("loaded");
         reportDataReady();
       })
@@ -69,12 +56,15 @@ export default function JoinPage() {
     try {
       await apiFetch<AcceptedInvite>(
         `/api/invites/${encodeURIComponent(token)}/accept`,
-        { method: "POST", body: JSON.stringify({ characters: mine ?? [] }) },
+        { method: "POST", body: JSON.stringify({ characters: preview?.characters ?? [] }) },
         getToken,
       );
+      // Accepting can set the account's world, and the settings this tab already holds were read
+      // before it did. Without this, /welcome drew no world as chosen.
+      await reloadAccountSettings(getToken);
       // Replace, not push: the token is spent, so the back button must not return to a page
       // offering to spend it.
-      router.replace("/bosses/people");
+      router.replace("/welcome?invited");
     } catch (e) {
       // The backend refuses with the reason: an account that already has characters, your own
       // link, or one made before the payload changed shape. Each is worth reading.
@@ -85,6 +75,8 @@ export default function JoinPage() {
 
   return (
     <main className="page">
+      {/* The first of the steps /welcome carries on with, so the two read as one flow. */}
+      <WelcomeHeader main={null} steps={INVITED_STEPS} step={0} reached={0} />
       <section className="auth-panel">
         {/* Unknown, expired and already used are one answer from the backend on purpose, so this
             claims none of the three and says the only thing that helps either way. The lifetime is
@@ -92,11 +84,11 @@ export default function JoinPage() {
             is a number that goes wrong when the constant moves. */}
         {state === "gone" && (
           <>
-            <h1>This link doesn&apos;t work.</h1>
+            <h2>This link doesn&apos;t work.</h2>
             <p className="party-hint">Ask for a new one.</p>
           </>
         )}
-        {state === "error" && <h1>Couldn&apos;t open this link. Reload to try again.</h1>}
+        {state === "error" && <h2>Couldn&apos;t open this link. Reload to try again.</h2>}
 
         <PageSwap
           waiting={state === "loading"}
@@ -104,76 +96,31 @@ export default function JoinPage() {
         >
           {state === "loaded" && preview && (
             <>
-              <h1>{preview.senderName} set up your parties</h1>
+              <div className="join-sender">
+                <h2>{preview.senderName} set up your parties</h2>
+                {preview.senderSprite && (
+                  <img className="hero-sprite" src={spriteUrl(preview.senderSprite)} alt="" />
+                )}
+              </div>
+              {/* The characters and parties are the next steps' to show, and they arrive filled in:
+                  every character the sender named is taken, and correctable once it is yours. */}
+              <p className="party-hint">
+                We&apos;ve pre-filled some of your character and party information.
+              </p>
 
-              {/* Ticked, because it is the one thing on a link that has to be right. These names
-                  are the SENDER'S spelling of your characters, and one taken by mistake is a
-                  character you never added, a seat bound to it, and a figure in your Drop Log for a
-                  share you are not owed. The parties below are not ticked: you are a reader of
-                  those, so there is nothing there for you to get wrong. */}
-              <ul className="join-characters">
-                {preview.characters.map((name) => (
-                  <li key={name}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={mine?.includes(name) ?? false}
-                        disabled={busy}
-                        onChange={(e) =>
-                          setMine((was) =>
-                            e.target.checked
-                              ? [...(was ?? []), name]
-                              : (was ?? []).filter((n) => n !== name),
-                          )
-                        }
-                      />
-                      {name}
-                    </label>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Of what the ticks above will actually bring, not of what the link holds: a config
-                  binds no seat unless the name on it was confirmed, so a count of all of them would
-                  be a number accepting does not deliver. */}
-              {(() => {
-                const taken = partiesTaken(preview.parties, mine ?? []);
-                const { shown, more } = partiesShown(taken);
-                return (
-                  <>
-                    <p className="party-hint">
-                      {invitedSummary({
-                        parties: taken.length,
-                        peopleCount: preview.peopleCount,
-                      })}
-                    </p>
-                    {/* A few of them, to recognise the group by. The count above says how many
-                        there are, and every one would be a wall on the first screen anybody
-                        sees. */}
-                    {shown.length > 0 && (
-                      <p className="party-hint join-parties">
-                        {shown.map(partyLabel).join(", ")}
-                        {more > 0 && `, and ${more} more`}
-                      </p>
-                    )}
-                  </>
-                );
-              })()}
-              {preview.omitted.length > 0 && (
-                <p className="party-hint">{omittedSummary(preview.omitted)}</p>
-              )}
-
-              {isLoaded && !isSignedIn && <SignInButton callbackPath={joinCallbackPath(token)} />}
-              {isLoaded && isSignedIn && (
-                <button
-                  type="button"
-                  className="party-save"
-                  disabled={busy || (mine?.length ?? 0) === 0}
-                  onClick={accept}
-                >
-                  {busy ? "Setting Up..." : "Set Up My Account"}
-                </button>
-              )}
+              <div className="join-act">
+                {isLoaded && !isSignedIn && <SignInButton callbackPath={joinCallbackPath(token)} />}
+                {isLoaded && isSignedIn && (
+                  <button
+                    type="button"
+                    className="party-save"
+                    disabled={busy || !preview || preview.characters.length === 0}
+                    onClick={accept}
+                  >
+                    {busy ? "Setting Up..." : "Set Up My Account"}
+                  </button>
+                )}
+              </div>
               {problem && <p className="split-error">{problem}</p>}
             </>
           )}

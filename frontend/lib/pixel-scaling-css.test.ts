@@ -40,7 +40,6 @@ const NATURAL: Record<string, number> = {
   ".boss-portrait.is-small": 26,
   ".run-art": 80, // the @2x portrait, BOSS_ART_2X
   ".tile-sprite": 96, // Nexon avatar render, and the one size a strip's sprite is drawn at
-  ".character-row-sprite": 96,
   ".boss-char-sprite": 96,
   ".roster-sprite": 96,
   ".member-sprite": 96, // the whole render, 1:1, above a roster box

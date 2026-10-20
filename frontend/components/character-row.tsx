@@ -2,30 +2,21 @@
 
 import { useAuth } from "@/lib/use-auth";
 import { useState } from "react";
-import { apiFetch, spriteUrl } from "@/lib/api";
-import { setAccountSettings, SETTINGS_KEY, useAccountSettings } from "@/lib/use-account-settings";
+import { CharacterCard, type CardReorder } from "@/components/character-card";
+import { apiFetch } from "@/lib/api";
+import { saveMainCharacter, useAccountSettings } from "@/lib/use-account-settings";
 import type { Character } from "@/types/character";
-import type { Settings } from "@/types/settings";
 
-// One character, and everything you can do to it.
-//
-// A row rather than the carousel's card: this is a list you read down, not a strip you scroll
-// along to pick one.
+// One character on /characters, and everything you can do to it, as a CharacterCard.
 
 export function CharacterRow({
   character,
-  onUpdated,
   onDeleted,
-  onMove,
-  canMoveUp,
-  canMoveDown,
+  reorder,
 }: {
   character: Character;
-  onUpdated: (character: Character) => void;
   onDeleted: (id: string) => void;
-  onMove: (direction: -1 | 1) => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
+  reorder: CardReorder;
 }) {
   const { getToken } = useAuth();
   const settings = useAccountSettings();
@@ -41,12 +32,7 @@ export function CharacterRow({
     if (isMain) return;
     // The response is the whole settings object, so the header avatar redraws off the same read
     // that confirmed the write rather than off what this row assumed it did.
-    const saved = await apiFetch<Settings>(
-      `${SETTINGS_KEY}/main-character`,
-      { method: "PUT", body: JSON.stringify({ characterId: character.id }) },
-      getToken,
-    );
-    setAccountSettings(saved);
+    await saveMainCharacter(character.id, getToken);
   }
 
   async function run(work: () => Promise<void>) {
@@ -58,17 +44,6 @@ export function CharacterRow({
       setWorking(false);
     }
   }
-
-  const refresh = () =>
-    run(async () => {
-      onUpdated(
-        await apiFetch<Character>(
-          `/api/characters/${character.id}/refresh`,
-          { method: "POST" },
-          getToken,
-        ),
-      );
-    });
 
   const remove = () =>
     run(async () => {
@@ -82,79 +57,31 @@ export function CharacterRow({
   const disabled = working;
 
   return (
-    <li className="character-row">
-      <button
-        type="button"
-        className={`tile-star${isMain ? " is-main" : ""}`}
-        aria-label={isMain ? `${character.name} is your main` : `Make ${character.name} your main`}
-        aria-pressed={isMain}
-        title={isMain ? "Your Main" : "Set as Main"}
-        onClick={setMain}
-      >
-        {isMain ? "★" : "☆"}
-      </button>
-
-      {character.spriteImgUrl ? (
-        <img className="character-row-sprite" src={spriteUrl(character.spriteImgUrl)} alt="" />
-      ) : (
-        <span className="character-row-sprite" aria-hidden="true" />
-      )}
-
-      <span className="character-row-name">
-        <span className="tile-name">{character.name}</span>
-        <span className="tile-meta">
-          <span className="tile-level">Lv.{character.level ?? "?"}</span>
-          <span className="tile-job">{character.jobName ?? "—"}</span>
-        </span>
-      </span>
-
-      <span className="character-row-actions">
-        <button
-          type="button"
-          className="tile-move"
-          onClick={() => onMove(-1)}
-          disabled={disabled || !canMoveUp}
-          aria-label={`Move ${character.name} up`}
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          className="tile-move"
-          onClick={() => onMove(1)}
-          disabled={disabled || !canMoveDown}
-          aria-label={`Move ${character.name} down`}
-        >
-          ↓
-        </button>
-        <button type="button" className="party-cancel" onClick={refresh} disabled={disabled}>
-          {working ? "..." : "Refresh"}
-        </button>
-        {confirming ? (
-          <>
-            <button type="button" className="party-delete" onClick={remove} disabled={disabled}>
-              Delete {character.name}?
-            </button>
-            <button
-              type="button"
-              className="party-cancel"
-              onClick={() => setConfirming(false)}
-              disabled={disabled}
-            >
-              Keep
-            </button>
-          </>
-        ) : (
+    <CharacterCard character={character} isMain={isMain} onStar={setMain} reorder={reorder}>
+      {confirming ? (
+        <>
+          <button type="button" className="party-delete" onClick={remove} disabled={disabled}>
+            Delete {character.name}?
+          </button>
           <button
             type="button"
-            className="party-delete"
-            onClick={() => setConfirming(true)}
+            className="party-cancel"
+            onClick={() => setConfirming(false)}
             disabled={disabled}
           >
-            Delete
+            Keep
           </button>
-        )}
-      </span>
-    </li>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="party-delete"
+          onClick={() => setConfirming(true)}
+          disabled={disabled}
+        >
+          Delete
+        </button>
+      )}
+    </CharacterCard>
   );
 }

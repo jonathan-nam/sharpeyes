@@ -191,6 +191,9 @@ data class InvitePartyLabel(
 @Serializable
 data class InvitePreview(
     val senderName: String,
+    // The sender's own sprite for that character, as /api/characters would hand it to them. Null
+    // when their account has never found one.
+    val senderSprite: String? = null,
     val characters: List<String>,
     /**
      * The configs this link seats you in, one entry each, for showing a few of them by name.

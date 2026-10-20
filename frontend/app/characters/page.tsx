@@ -4,15 +4,15 @@ import { useAuth } from "@/lib/use-auth";
 import { useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
 import { CharacterRow } from "@/components/character-row";
+import { movedTo, useCardReorder } from "@/lib/use-card-reorder";
 import { PageSwap } from "@/components/page-swap";
 import { apiFetch, failureText } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
 import { groupByWorld } from "@/lib/character-groups";
 import { OtherWorld } from "@/components/other-world";
-import { SETTINGS_KEY, setAccountSettings, useAccountSettings } from "@/lib/use-account-settings";
+import { reloadAccountSettings, useAccountSettings } from "@/lib/use-account-settings";
 import { worldLabel } from "@/lib/world";
 import type { Character } from "@/types/character";
-import type { Settings } from "@/types/settings";
 
 const CHARACTERS_KEY = "/api/characters";
 
@@ -55,7 +55,7 @@ export default function CharactersPage() {
    * Shows the change, then persists it, and puts it back if the server refuses.
    *
    * Optimistic because the alternative flickered, and nothing on the page is disabled while it is
-   * in flight: .tile-move and .party-* both dim when disabled, so a page-wide busy flag made every
+   * in flight: .party-* buttons dim when disabled, so a page-wide busy flag made every
    * other row flash on a click that changed one of them.
    *
    * The caches are dropped rather than reasoned about. Only reordering goes through here now, and
@@ -72,7 +72,7 @@ export default function CharactersPage() {
       await save();
       invalidate("/api/parties");
       invalidate("/api/bosses");
-      setAccountSettings(await apiFetch<Settings>(SETTINGS_KEY, { method: "GET" }, getToken));
+      await reloadAccountSettings(getToken);
     } catch (e) {
       // Back to what the server still holds. Leaving the optimistic value up would put a world on
       // screen that no party actually reads.
@@ -82,18 +82,12 @@ export default function CharactersPage() {
     }
   }
 
-  // Swaps two characters in the flat list, which is what the carousel reads. The caller decides
-  // WHICH two: within a world, so an arrow at the edge of a group cannot walk a character into a
-  // world it does not play in.
-  const move = (index: number, target: number) => {
-    if (target < 0 || target >= characters.length) return;
-    const next = characters.slice();
-    const moved = next[index];
-    const displaced = next[target];
-    // Bounds already guarantee both exist; the guard is what tells the type checker so.
-    if (!moved || !displaced) return;
-    next[index] = displaced;
-    next[target] = moved;
+  // Moves a character to where another one is, in the flat list the carousel reads. Within a world
+  // only: the caller offers no target across a group's edge, because the character on the other
+  // side of it plays somewhere else.
+  const moveTo = (id: string, targetId: string) => {
+    const next = movedTo(characters, id, targetId);
+    if (next === characters) return;
     return persist(
       () => next,
       () =>
@@ -104,6 +98,7 @@ export default function CharactersPage() {
         ),
     );
   };
+  const reorderFor = useCardReorder((id, targetId) => void moveTo(id, targetId));
 
   // Written straight to state rather than through write(): these already hold the new roster, and
   // re-deriving it from a list this component is about to replace would fight itself.
@@ -198,26 +193,18 @@ export default function CharactersPage() {
             {groups.map((group) => (
               <section className="character-group" key={group.world ?? "unplaced"}>
                 <h2 className="character-world">{group.world ?? "World not looked up"}</h2>
-                <ul className="character-list">
-                  {group.characters.map((character) => {
-                    // Against the group, not the page: an arrow at a group's edge has nowhere to go,
-                    // because the character on the other side of it plays somewhere else.
-                    const within = group.characters.indexOf(character);
-                    const index = characters.indexOf(character);
-                    const neighbour = (step: -1 | 1) =>
-                      characters.indexOf(group.characters[within + step]!);
-                    return (
-                      <CharacterRow
-                        key={character.id}
-                        character={character}
-                        onUpdated={updated}
-                        onDeleted={deleted}
-                        onMove={(direction) => move(index, neighbour(direction))}
-                        canMoveUp={within > 0}
-                        canMoveDown={within < group.characters.length - 1}
-                      />
-                    );
-                  })}
+                <ul className="character-cards">
+                  {group.characters.map((character) => (
+                    <CharacterRow
+                      key={character.id}
+                      character={character}
+                      onDeleted={deleted}
+                      reorder={reorderFor(
+                        character.id,
+                        group.characters.map((c) => c.id),
+                      )}
+                    />
+                  ))}
                 </ul>
               </section>
             ))}

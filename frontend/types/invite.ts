@@ -43,6 +43,8 @@ export type InvitePartyLabel = {
 /** What a link offers, read without an account. */
 export type InvitePreview = {
   senderName: string;
+  // The sender's sprite for that character. Absent or null when their account has none.
+  senderSprite?: string | null;
   characters: string[];
   // The configs this link seats you in, one entry each.
   parties: InvitePartyLabel[];

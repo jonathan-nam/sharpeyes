@@ -2,12 +2,14 @@ package com.sharpeyes.backend.invites
 
 import com.sharpeyes.backend.db.AccountInvite
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.sprites.SpriteCache
+import com.sharpeyes.backend.sprites.spriteProxyPath
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -161,6 +163,20 @@ internal fun partyLabels(
         )
     }
 
+/** The sender's sprite for the character the link is sent as, read now rather than frozen. */
+private fun senderSpriteOf(
+    senderUserId: String,
+    name: String,
+): String? =
+    Characters
+        .selectAll()
+        .where { (Characters.userId eq senderUserId) and (Characters.name eq name) }
+        .firstOrNull()
+        ?.get(Characters.spriteImgUrl)
+        // Through the proxy, as every character response serves it: the raw Nexon URL has no
+        // cache headers and is not what the page's spriteUrl expects.
+        ?.let { spriteProxyPath(it) }
+
 private suspend fun RoutingContext.previewInviteRoute() {
     val token = call.parameters["token"].orEmpty()
     val preview =
@@ -172,6 +188,7 @@ private suspend fun RoutingContext.previewInviteRoute() {
                     .associate { it[BossCatalog.bossKey] to it[BossCatalog.name] }
             InvitePreview(
                 senderName = payload.senderName,
+                senderSprite = senderSpriteOf(payload.senderUserId, payload.senderName),
                 characters = payload.characters.map { it.name },
                 parties = partyLabels(payload.parties, bossNames),
                 peopleCount = payload.people.size,

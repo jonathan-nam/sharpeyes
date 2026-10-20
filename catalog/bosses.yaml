@@ -35,6 +35,11 @@
 # `max_party` is how many players the boss admits, off its own entry window. Optional: absent is
 # nobody having counted it, not a boss that takes any number.
 #
+# `hp` is each difficulty's total HP, one entry per difficulty, written as the source writes it
+# ("1.57T", "54.59Q"). It is what orders bosses hardest first, Nexon publishing no ranking of its
+# own. From maplerhouse.com/guide/boss/boss-overview (built on the Nexon Open API), as of its
+# 2026-08-18 update: re-read it when a boss or mode is added or rebalanced.
+#
 # `tracked` (default true) says whether the tracker keeps clears for this boss. An untracked boss
 # stays listed here on purpose: its row is still ON the planner, so the reader must still be able
 # to name it. Drop the entry outright and that row matches nothing, which counts as an UNREADABLE
@@ -47,72 +52,87 @@ bosses:
     name: Lotus
     reset: WEEKLY
     difficulties: [NORMAL, HARD, EXTREME]
+    hp: {NORMAL: 1.57T, HARD: 33.50T, EXTREME: 1.81Q}
   - key: damien
     name: Damien
     reset: WEEKLY
     difficulties: [NORMAL, HARD]
+    hp: {NORMAL: 1.20T, HARD: 36T}
   - key: guardian-angel-slime
     name: Guardian Angel Slime
     reset: WEEKLY
     difficulties: [NORMAL, CHAOS]
+    hp: {NORMAL: 5T, CHAOS: 90T}
   - key: lucid
     name: Lucid
     reset: WEEKLY
     difficulties: [EASY, NORMAL, HARD]
+    hp: {EASY: 12T, NORMAL: 24T, HARD: 117.60T}
   - key: will
     name: Will
     reset: WEEKLY
     difficulties: [EASY, NORMAL, HARD]
+    hp: {EASY: 16.80T, NORMAL: 25.20T, HARD: 126T}
   - key: gloom
     name: Gloom
     reset: WEEKLY
     difficulties: [NORMAL, CHAOS]
+    hp: {NORMAL: 25.50T, CHAOS: 127.50T}
   - key: verus-hilla
     name: Verus Hilla
     reset: WEEKLY
     difficulties: [NORMAL, HARD]
+    hp: {NORMAL: 88T, HARD: 176T}
   - key: darknell
     name: Darknell
     reset: WEEKLY
     difficulties: [NORMAL, HARD]
+    hp: {NORMAL: 26T, HARD: 157.50T}
   - key: chosen-seren
     name: Chosen Seren
     short: Seren
     reset: WEEKLY
     difficulties: [NORMAL, HARD, EXTREME]
+    hp: {NORMAL: 208T, HARD: 483T, EXTREME: 6.48Q}
     max_party: 6
   - key: kalos-the-guardian
     name: Kalos the Guardian
     short: Kalos
     reset: WEEKLY
     difficulties: [EASY, NORMAL, CHAOS, EXTREME]
+    hp: {EASY: 357T, NORMAL: 1.06Q, CHAOS: 5.12Q, EXTREME: 21.57Q}
     max_party: 6
   - key: first-adversary
     name: First Adversary
     short: Adversary
     reset: WEEKLY
     difficulties: [EASY, NORMAL, HARD, EXTREME]
+    hp: {EASY: 571.09T, NORMAL: 1.64Q, HARD: 10.59Q, EXTREME: 33.56Q}
     max_party: 3
   - key: kaling
     name: Kaling
     reset: WEEKLY
     difficulties: [EASY, NORMAL, HARD, EXTREME]
+    hp: {EASY: 921T, NORMAL: 3.93Q, HARD: 11.84Q, EXTREME: 54.59Q}
     max_party: 6
   - key: malefic-star
     name: Malefic Star
     short: Star
     reset: WEEKLY
     difficulties: [NORMAL, HARD]
+    hp: {NORMAL: 3.26Q, HARD: 14.70Q}
     max_party: 3
   - key: limbo
     name: Limbo
     reset: WEEKLY
     difficulties: [NORMAL, HARD]
+    hp: {NORMAL: 6.48Q, HARD: 12.55Q}
     max_party: 3
   - key: baldrix
     name: Baldrix
     reset: WEEKLY
     difficulties: [NORMAL, HARD]
+    hp: {NORMAL: 9.06Q, HARD: 20.34Q}
     max_party: 3
   # After Baldrix, which is where the planner puts it (test-fixtures/planner/boss portraits
   # sample.png). Until now it was missing here entirely, so its planner row matched no name and
@@ -121,6 +141,7 @@ bosses:
     name: Jupiter
     reset: WEEKLY
     difficulties: [NORMAL, HARD]
+    hp: {NORMAL: 10.26Q, HARD: 49.40Q}
     max_party: 3
   # Untracked by request: still on the planner, so the reader must keep its name. See `tracked`.
   - key: akechi-mitsuhide
@@ -133,6 +154,7 @@ bosses:
     name: Black Mage
     reset: MONTHLY
     difficulties: [HARD, EXTREME]
+    hp: {HARD: 472.50T, EXTREME: 4.81Q}
 
   # --- Daily (not tracked) ------------------------------------------------------------
   # The tracker is weekly-and-up. Dailies reset before a once-a-day capture can say anything
