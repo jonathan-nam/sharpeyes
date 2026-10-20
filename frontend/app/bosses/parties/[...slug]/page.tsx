@@ -37,7 +37,7 @@ import { NOTHING_OUTSTANDING, poolLabel, summarize } from "@/lib/loot";
 import { assignableDrops } from "@/lib/vestige-pickup";
 import { shareConfig } from "@/lib/vestige-stacks";
 import { closedByHolder } from "@/lib/vestige-ledger";
-import { ownMember, partySizeLabel } from "@/lib/parties";
+import { asSeenBy, ownMember, partySizeLabel } from "@/lib/parties";
 import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, PartyLootPool, SellLootBody } from "@/types/loot";
@@ -460,7 +460,7 @@ export default function PartyPage() {
             <div className="party-card-head">
               {/* Your own character among them, unlike the strips on Party View, which put it in the
                 header and list only the others. Here it is one of the shares. */}
-              <RosterStrip members={party.members} />
+              <RosterStrip members={asSeenBy(party)} />
               {/* This config is off every list, so this page is the only one that can say so. It is
                 still reachable, and it has to be: an old drop is sold and paid out from here. What
                 the word is for is the picker below, which would otherwise divide tonight's drop by

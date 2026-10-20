@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { DifficultySelect } from "@/components/difficulty-select";
 import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-characters";
 import { RosterInputs } from "@/components/roster-inputs";
@@ -49,6 +49,7 @@ export function PartyConfigEditor({
   isSaving,
   adding,
   error,
+  notice,
   onSave,
   onDelete,
 }: {
@@ -70,6 +71,8 @@ export function PartyConfigEditor({
   /** The add form's own write. Adding one party does not lock the rows above it. */
   adding: boolean;
   error: string | null;
+  /** Said where the error is, for an answer that is not an error. See DuplicateParty. */
+  notice?: ReactNode;
   onSave: (body: SavePartyBody, partyId?: string) => void;
   onDelete: (party: Party) => void;
 }) {
@@ -112,6 +115,7 @@ export function PartyConfigEditor({
       ))}
 
       {error && <p className="split-error">{error}</p>}
+      {notice}
 
       <div className="loot-actions">
         <select

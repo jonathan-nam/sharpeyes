@@ -7,7 +7,8 @@ import { OtherWorld } from "@/components/other-world";
 import { useEffect, useState } from "react";
 import { CharacterPicker } from "@/components/character-picker";
 import { PartyConfigEditor } from "@/components/party-config-editor";
-import { apiFetch, failureText } from "@/lib/api";
+import { apiFetch, duplicatePartyIn, failureText } from "@/lib/api";
+import { DuplicateParty } from "@/components/duplicate-party";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { preloadBossArt } from "@/lib/preload-boss-art";
@@ -95,8 +96,16 @@ export default function EditPartiesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
+  // A new party somebody you are linked to already keeps with you, with the body that hit it.
+  const [duplicate, setDuplicate] = useState<{
+    refusal: string;
+    partyId: string;
+    body: SavePartyBody;
+  } | null>(null);
+
   async function save(body: SavePartyBody, partyId?: string) {
     setError(null);
+    setDuplicate(null);
     try {
       await write(partyId ?? ADD_PARTY, async () => {
         await apiFetch<Party>(
@@ -108,6 +117,11 @@ export default function EditPartiesPage() {
         await loadParties();
       });
     } catch (e) {
+      const found = duplicatePartyIn(e);
+      if (found) {
+        setDuplicate({ ...found, body });
+        return;
+      }
       // The backend refuses with the reason in the body (see validateNewParty). Showing it beats
       // "something went wrong" for the one thing the user can actually fix.
       setError(failureText(e, "Couldn't save that party. Try again."));
@@ -196,6 +210,16 @@ export default function EditPartiesPage() {
                     isSaving={isSaving}
                     adding={isSaving(ADD_PARTY)}
                     error={error}
+                    notice={
+                      duplicate && (
+                        <DuplicateParty
+                          refusal={duplicate.refusal}
+                          partyId={duplicate.partyId}
+                          busy={isSaving(ADD_PARTY)}
+                          onAddAnyway={() => void save({ ...duplicate.body, separate: true })}
+                        />
+                      )
+                    }
                     onSave={save}
                     onDelete={remove}
                   />
