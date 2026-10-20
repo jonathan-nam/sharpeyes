@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { NavPending } from "@/components/nav-pending";
 import { SiteFooter } from "@/components/site-footer";
+import { SetupGate } from "@/components/setup-gate";
 import { SiteHeader } from "@/components/site-header";
 import { WebVitals } from "@/components/web-vitals";
 import { WorldVeil } from "@/components/world-veil";
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Above the header so it covers every link on the page, the header's included. */}
         <NavPending />
         <SiteHeader />
+        <SetupGate />
         {children}
         <SiteFooter />
       </body>
