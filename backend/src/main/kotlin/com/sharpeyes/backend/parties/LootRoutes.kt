@@ -23,8 +23,9 @@ import kotlin.uuid.Uuid
 // The loot pool, under an owned party: /api/parties/{id}/loot. Plus the wallet's settle, which is
 // the one handler here that is NOT under a party (see settleRoute), registered by PartyRoutes.kt.
 //
-// Every handler starts by proving the party is the caller's. Nothing here trusts a loot id on its
-// own, since a loot row's owner is its party's owner and nothing else.
+// Every handler starts by proving the caller may write here: the owner, or for logging, selling and
+// keeping, an Editor acting as their own seat (PartyRoles.kt). Payouts and bundles stay the owner's.
+// Nothing here trusts a loot id on its own, since a loot row's owner is its party's owner.
 
 fun Route.lootRoutes() {
     get { listLoot() }
@@ -43,9 +44,7 @@ private suspend fun RoutingContext.listLoot() {
     val loot =
         dbQuery {
             ensureUser(userId, email)
-            // The one read here a member reaches. Every write below stays on ownsParty: the pool
-            // is the owner's book, and two people writing it is one night counted twice.
-            if (!canReadParty(partyId, userId)) null else lootFor(partyId)
+            if (!canReadParty(partyId, userId)) null else lootFor(partyId, userId)
         }
     if (loot == null) call.respond(HttpStatusCode.NotFound) else call.respond(loot)
 }
@@ -65,8 +64,9 @@ private suspend fun RoutingContext.addLootRoute() {
                 ensureUser(userId, email)
                 val dropId = request.dropKey?.let { dropIdForKey(it) }
                 val bossId = request.bossKey?.let { bossIdForKey(it) }
+                val item = LootedDrop(dropId, customName, request.quantity)
                 when {
-                    !ownsParty(partyId, userId) -> null
+                    !canEditParty(partyId, userId) -> null
                     // Exactly one name. Both would leave two answers to "what is this?", neither
                     // would leave a blank row.
                     (request.dropKey == null) == (customName == null) ->
@@ -74,18 +74,7 @@ private suspend fun RoutingContext.addLootRoute() {
                     request.dropKey != null && dropId == null -> "unknown dropKey"
                     request.bossKey != null && bossId == null -> "unknown bossKey"
                     quantityRefusal(request.quantity) != null -> quantityRefusal(request.quantity)
-                    else -> {
-                        val lootId =
-                            addLoot(
-                                partyId,
-                                LootedDrop(dropId, customName, request.quantity),
-                                bossId,
-                                droppedOn,
-                                Clock.System.now(),
-                            )
-                        addedBundles(lootId, partyId, request.bundles)
-                        findLoot(lootId, partyId)!!
-                    }
+                    else -> addPoolDrop(partyId, userId, item, bossId, droppedOn, request)
                 }
             }
         } catch (refused: BundlesRefused) {
@@ -104,11 +93,12 @@ private suspend fun RoutingContext.sellLootRoute() {
     val outcome =
         dbQuery {
             ensureUser(userId, email)
-            val loot = findLoot(lootId, partyId)
+            val loot = findLoot(lootId, partyId, userId)
             when {
-                !ownsParty(partyId, userId) -> null
+                !canEditParty(partyId, userId) -> null
                 loot == null -> null
                 !partyCanSell(partyId) -> "Heroic worlds do not trade, so this cannot be sold."
+                sellRefusal(partyId, userId, sellerId, loot) != null -> sellRefusal(partyId, userId, sellerId, loot)
                 request.amountBasis !in AMOUNT_BASES ->
                     "amountBasis must be LISTED, RECEIVED or BOUGHT"
                 saleRefusal(request) != null -> saleRefusal(request)
@@ -122,7 +112,7 @@ private suspend fun RoutingContext.sellLootRoute() {
                     sharesRefusal(request.shares, loot.ranThatWeek)
                 else -> {
                     sellLoot(lootId, request, sellerId, partyId, Clock.System.now())
-                    findLoot(lootId, partyId)!!
+                    findLoot(lootId, partyId, userId)!!
                 }
             }
         }
@@ -137,12 +127,14 @@ private suspend fun RoutingContext.unsellLootRoute() {
     val outcome =
         dbQuery {
             ensureUser(userId, email)
+            val loot = findLoot(lootId, partyId, userId)
             when {
-                !ownsParty(partyId, userId) -> null
-                findLoot(lootId, partyId) == null -> null
+                !canEditParty(partyId, userId) -> null
+                loot == null -> null
+                unsellRefusal(partyId, userId, loot) != null -> unsellRefusal(partyId, userId, loot)
                 else -> {
                     unsellLoot(lootId, Clock.System.now())
-                    findLoot(lootId, partyId)!!
+                    findLoot(lootId, partyId, userId)!!
                 }
             }
         }
@@ -216,7 +208,8 @@ private suspend fun RoutingContext.deleteLootRoute() {
     val deleted =
         dbQuery {
             ensureUser(userId, email)
-            ownsParty(partyId, userId) && deleteLoot(lootId, partyId)
+            val loot = findLoot(lootId, partyId, userId)
+            mayDeleteLoot(partyId, userId, loot) && deleteLoot(lootId, partyId)
         }
     call.respond(if (deleted) HttpStatusCode.NoContent else HttpStatusCode.NotFound)
 }
@@ -241,6 +234,7 @@ internal suspend fun RoutingContext.respondToLoot(
         null -> call.respond(HttpStatusCode.NotFound)
         is String -> call.respond(HttpStatusCode.BadRequest, outcome)
         is Refusal -> call.refuse(HttpStatusCode.BadRequest, outcome)
+        is Duplicate -> call.refuse(HttpStatusCode.Conflict, outcome.refusal)
         is LootResponse -> call.respond(onSuccess, outcome)
         else -> call.respond(HttpStatusCode.InternalServerError)
     }

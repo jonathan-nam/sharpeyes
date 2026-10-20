@@ -40,10 +40,10 @@ describe("a pool somebody else keeps", () => {
     expect(view).toContain("readOnly={readOnly}");
   });
 
-  it("offers nothing that would add to it", () => {
-    // The picker is the one control that creates a row in somebody else's pool, where two accounts
-    // logging one night is a double count with nothing on screen saying so.
-    expect(pool).toContain("{!readOnly && ( <DropPicker");
+  it("offers the picker to its owner and an Editor only", () => {
+    // The one control that creates a row in somebody else's pool. Two accounts logging one night is
+    // a double count, which the server's duplicate refusal answers (see duplicateRefusal).
+    expect(pool).toContain("{(!readOnly || editorSeats(party)) && ( <DropPicker");
   });
 
   it("states a share as paid rather than offering to change it", () => {

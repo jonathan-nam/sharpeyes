@@ -40,10 +40,11 @@ internal suspend fun RoutingContext.setTakenRoute() {
     val outcome =
         dbQuery {
             ensureUser(userId, email)
-            val loot = findLoot(lootId, partyId)
+            val loot = findLoot(lootId, partyId, userId)
             when {
-                !ownsParty(partyId, userId) -> null
+                !canEditParty(partyId, userId) -> null
                 loot == null -> null
+                keptRefusal(partyId, userId, memberId, loot) != null -> keptRefusal(partyId, userId, memberId, loot)
                 else ->
                     // Against the drop's own ranThatWeek, which is the same list the picker offers,
                     // so what is accepted and what is offered cannot disagree. An id that will not
@@ -60,7 +61,7 @@ internal suspend fun RoutingContext.setTakenRoute() {
                         keptSolo(loot.solo, partyId, memberId),
                     ) ?: run {
                         setLootTakenBy(lootId, memberId, Clock.System.now())
-                        findLoot(lootId, partyId)!!
+                        findLoot(lootId, partyId, userId)!!
                     }
             }
         }

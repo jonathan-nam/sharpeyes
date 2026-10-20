@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Field } from "@/components/add-field";
+import { failureText, isDuplicateDrop } from "@/lib/api";
 import { DropSelect } from "@/components/drop-select";
 import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
 import { StackAssign } from "@/components/stack-assign";
@@ -139,6 +140,8 @@ export function DropPicker({
   // The draft's boxes live here rather than in the block drawing them, so what is on screen and what
   // the submit sends are one value instead of two that have to be kept level.
   const [boxes, setBoxes] = useState<Record<string, string>>({});
+  // The server's word that this drop is already logged, kept until it is added again or replaced.
+  const [duplicate, setDuplicate] = useState<string | null>(null);
 
   const drops = pickableDrops(table, worldType, difficulty);
   const offered: BossDrop[] = piece
@@ -175,14 +178,16 @@ export function DropPicker({
   // now takes the DROP down with it, so the form holds it back rather than losing both.
   const ready = Boolean(body) && (night === null || stacks !== null);
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
+  async function send(again: boolean) {
     if (!body || busy || !ready) return;
+    setDuplicate(null);
+    // Empty is a night nobody has answered for, which is what a drop logged anywhere else is, so
+    // nothing is sent rather than an empty map.
+    const sent = stacks && Object.keys(stacks).length > 0 ? { ...body, bundles: stacks } : body;
     try {
-      // Empty is a night nobody has answered for, which is what a drop logged anywhere else
-      // is, so nothing is sent rather than an empty map.
-      await onAdd(stacks && Object.keys(stacks).length > 0 ? { ...body, bundles: stacks } : body);
-    } catch {
+      await onAdd(again ? { ...sent, again: true } : sent);
+    } catch (e) {
+      if (isDuplicateDrop(e)) setDuplicate(failureText(e, "This drop is already logged."));
       return;
     }
     setDropKey("");
@@ -190,6 +195,11 @@ export function DropPicker({
     setCustomName("");
     setQuantity("");
     setBoxes({});
+  }
+
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    void send(false);
   }
 
   /* Both blocks the coupon row carries, before there is a row to carry them. Inside the form and
@@ -317,6 +327,19 @@ export function DropPicker({
         <form className="loot-add" onSubmit={submit}>
           {fields}
         </form>
+      )}
+      {duplicate && (
+        <p className="split-error">
+          {duplicate}{" "}
+          <button
+            type="button"
+            className="party-save"
+            onClick={() => void send(true)}
+            disabled={busy}
+          >
+            Add Again
+          </button>
+        </p>
       )}
       {pile}
     </>

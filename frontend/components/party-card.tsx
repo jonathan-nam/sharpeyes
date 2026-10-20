@@ -8,7 +8,13 @@ import { LootList, type StackAssignment } from "@/components/loot-list";
 import { PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
-import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl, failureText } from "@/lib/api";
+import {
+  SAVED_BUT_STALE,
+  StaleAfterWrite,
+  apiAssetUrl,
+  failureText,
+  isDuplicateDrop,
+} from "@/lib/api";
 import { clearClass, clearStateLabel, nextClear } from "@/lib/boss-clears";
 import type { PieceStatus } from "@/lib/drop-log";
 import { type CouponsOutstanding, poolLabel } from "@/lib/loot";
@@ -411,7 +417,8 @@ export function PartyCard({
                       setAddError(SAVED_BUT_STALE);
                       return;
                     }
-                    setAddError("That didn't save.");
+                    // The picker says this one itself, with the button that answers it.
+                    if (!isDuplicateDrop(e)) setAddError("That didn't save.");
                     // Rethrown so the picker keeps what was chosen, ready to try again.
                     throw e;
                   }

@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
+import { MemberRoles } from "@/components/member-roles";
 import {
   apiAssetUrl,
   apiFetch,
@@ -14,6 +15,7 @@ import {
   readBack,
   SAVED_BUT_STALE,
   StaleAfterWrite,
+  isDuplicateDrop,
 } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { preloadBossArt } from "@/lib/preload-boss-art";
@@ -36,7 +38,7 @@ import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, PartyLootPool, SellLootBody } from "@/types/loot";
 import type { VestigeSettlement } from "@/types/vestige";
-import type { Party } from "@/types/party";
+import type { MemberRole, Party } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -56,6 +58,7 @@ const VESTIGE = "vestige-of-erion";
 const ADD_DROP = "add-drop";
 // Not a row either, and the only write on this page that is a member's. See leave().
 const LEAVE = "leave";
+const ROLE = "role";
 
 export default function PartyPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -152,21 +155,38 @@ export default function PartyPage() {
   async function mutate(key: string, path: string, options: RequestInit) {
     setError(null);
     try {
-      await write(key, async () => {
-        await apiFetch<unknown>(path, options, getToken);
-        // Past the write, so a refetch that fails leaves the screen behind and not the write undone.
-        // Saying "That didn't save." about one is what got a drop logged twice. See StaleAfterWrite.
-        await readBack(() => loadLoot(party!.id));
-      });
+      await mutateOrThrow(key, path, options);
     } catch (e) {
       if (e instanceof StaleAfterWrite) setError(SAVED_BUT_STALE);
       else setError(failureText(e, "That didn't save. Try again."));
     }
   }
 
+  async function mutateOrThrow(key: string, path: string, options: RequestInit) {
+    await write(key, async () => {
+      await apiFetch<unknown>(path, options, getToken);
+      // Past the write, so a refetch that fails leaves the screen behind and not the write undone.
+      // Saying "That didn't save." about one is what got a drop logged twice. See StaleAfterWrite.
+      await readBack(() => loadLoot(party!.id));
+    });
+  }
+
   // Keyed by the drop being written, so only that row is drawn as saving.
-  const add = (body: AddLootBody) =>
-    mutate(ADD_DROP, lootUrl(), { method: "POST", body: JSON.stringify(body) });
+  // A probable second logging is handed back to the picker, which offers to add it again.
+  const add = async (body: AddLootBody) => {
+    const options = { method: "POST", body: JSON.stringify(body) };
+    setError(null);
+    try {
+      await mutateOrThrow(ADD_DROP, lootUrl(), options);
+    } catch (e) {
+      if (e instanceof StaleAfterWrite) {
+        setError(SAVED_BUT_STALE);
+        return;
+      }
+      if (isDuplicateDrop(e)) throw e;
+      setError(failureText(e, "That didn't save. Try again."));
+    }
+  };
   const sell = (lootId: string, body: SellLootBody) =>
     mutate(lootId, `${lootUrl()}/${lootId}/sale`, { method: "PUT", body: JSON.stringify(body) });
   const unsell = (lootId: string) =>
@@ -209,6 +229,24 @@ export default function PartyPage() {
       router.push("/bosses/parties");
     } catch (e) {
       setError(failureText(e, "Couldn't leave that party. Try again."));
+    }
+  }
+
+  /** Makes a member who has joined a Viewer or an Editor. The owner's act. */
+  async function setRole(memberId: string, role: MemberRole) {
+    if (!party) return;
+    setError(null);
+    try {
+      const saved = await write(ROLE, () =>
+        apiFetch<Party>(
+          `/api/parties/${party.id}/members/${memberId}/role`,
+          { method: "PUT", body: JSON.stringify({ role }) },
+          getToken,
+        ),
+      );
+      setParty(saved);
+    } catch (e) {
+      setError(failureText(e, "Couldn't change that. Try again."));
     }
   }
 
@@ -392,6 +430,14 @@ export default function PartyPage() {
               onSetPaid={setPaid}
               onDelete={remove}
             />
+
+            {!readOnly && (
+              <MemberRoles
+                seats={party.seats}
+                busy={isSaving(ROLE)}
+                onSet={(id, role) => void setRole(id, role)}
+              />
+            )}
 
             {readOnly && (
               <p className="shared-party-act">

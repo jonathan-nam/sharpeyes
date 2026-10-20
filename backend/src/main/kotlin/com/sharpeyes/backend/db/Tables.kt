@@ -276,6 +276,17 @@ object PartyPeriodDifficulty : Table("party_period_difficulty") {
     override val primaryKey = PrimaryKey(partyId, periodStart)
 }
 
+// What a member may do in a party somebody else owns. No row is a Viewer. See V83__party_role.sql
+// and PartyRoles.kt.
+object PartyRole : Table("party_role") {
+    val partyId = reference("party_id", Party.id)
+    val userId = reference("user_id", Users.id)
+    val role = text("role")
+    val updatedAt = timestamp("updated_at")
+
+    override val primaryKey = PrimaryKey(partyId, userId)
+}
+
 // The people you run with. See V21__person.sql.
 object Person : Table("person") {
     val id = uuid("id")
@@ -514,6 +525,9 @@ object PartyLoot : Table("party_loot") {
     // Who took the item, in a world where it cannot be sold. The Heroic axis of soldAt above, and
     // exclusive with it (party_loot_sold_or_taken). Nothing is owed: see V49.
     val takenByMemberId = optReference("taken_by_member_id", PartyMember.id)
+
+    // Who logged it. Null is the party's owner. See V84__loot_recorded_by.sql.
+    val recordedByUserId = optReference("recorded_by_user_id", Users.id)
 
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")

@@ -20,6 +20,7 @@ import type { PartyMember } from "@/types/party";
 
 export function LootSaleForm({
   ran,
+  sellers = ran,
   busy,
   onSell,
   onCancel,
@@ -31,6 +32,8 @@ export function LootSaleForm({
    * the week's roster for a guest week is the only way to name the guest who actually sold it.
    */
   ran: PartyMember[];
+  /** Who it may be sold BY, when that is narrower than who ran: an Editor sells as themselves. */
+  sellers?: PartyMember[];
   busy: boolean;
   onSell: (body: SellLootBody) => void;
   /** Absent where the form is the card rather than a mode of a row, which has nothing to go back to. */
@@ -47,7 +50,7 @@ export function LootSaleForm({
   const [price, setPrice] = useState("");
   const [amountBasis, setAmountBasis] = useState("LISTED");
   const [splitMethod, setSplitMethod] = useState("FAIR");
-  const [sellerMemberId, setSellerMemberId] = useState(ran[0]?.id ?? "");
+  const [sellerMemberId, setSellerMemberId] = useState(sellers[0]?.id ?? "");
   // Every seat opens on one share, and an uneven split is typed here. It used to be seeded from
   // `party_member.shares`, which is the STACK entitlement the party config's boxes write: a duo
   // splitting three vestige stacks 1 and 2 had every ring and grindstone they ever sold open at
@@ -156,7 +159,7 @@ export function LootSaleForm({
                 labelled ? undefined : basis === "BOUGHT" ? "Who bought it" : "Who sold it"
               }
             >
-              {ran.map((m) => (
+              {sellers.map((m) => (
                 <option key={m.id} value={m.id}>
                   {labelled ? m.name : `${basis === "BOUGHT" ? "bought by" : "sold by"} ${m.name}`}
                 </option>
