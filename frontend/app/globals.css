@@ -1290,28 +1290,8 @@ html.switching-world .world-veil {
 /* --- Confirming a link ------------------------------------------------------------------ */
 
 /* The characters a link says are yours, ticked. The one thing on that page worth getting right. */
-.join-characters {
-  margin: 12px 0;
-  padding: 0;
-  list-style: none;
-  text-align: left;
-}
-
-.join-characters li {
-  padding: 3px 0;
-}
-
-.join-characters label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
 
 /* A few party names, to recognise the group by. Not a list to work through. */
-.join-parties {
-  margin-top: 0;
-}
 
 /* --- Shared with you -------------------------------------------------------------------- */
 
@@ -7882,4 +7862,15 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 .welcome-party-name {
   flex: 0 0 220px;
   font-weight: 600;
+}
+
+/* The sender's name and sprite at the head of an invite, the way "Welcome, IGN" carries the main's. */
+.join-sender {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.join-sender .hero-sprite {
+  margin: 0;
 }
