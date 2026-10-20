@@ -7,7 +7,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
-import { SeatInvites } from "@/components/seat-invites";
+import { ConfirmAct } from "@/components/confirm-act";
+import { PartyMembers } from "@/components/party-members";
 import { InviteLink } from "@/components/invite-link";
 import { fileUnder, peopleBody, toDraft } from "@/lib/people-board";
 import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
@@ -216,8 +217,6 @@ export default function PartyPage() {
   // A party somebody else keeps the book for. The screen is the same one; what it does not carry
   // is anything that would write into their pool. See PartyResponse.yours.
   const readOnly = party?.yours === false;
-  const [leaving, setLeaving] = useState(false);
-
   /** Takes this account's seat out of a party it does not own, and leaves the page with it. */
   async function leave() {
     if (!party) return;
@@ -232,6 +231,43 @@ export default function PartyPage() {
       router.push("/bosses/parties");
     } catch (e) {
       setError(failureText(e, "Couldn't leave that party. Try again."));
+    }
+  }
+
+  /**
+   * The owner leaving, which ends the party: every member comes off it, and the config retires with
+   * its pool kept, or goes when nothing points at it. The same DELETE the editor's Remove makes.
+   */
+  async function disband() {
+    if (!party) return;
+    setError(null);
+    try {
+      await write(LEAVE, () =>
+        apiFetch<unknown>(`/api/parties/${party.id}`, { method: "DELETE" }, getToken),
+      );
+      invalidate("/api/parties");
+      router.push("/bosses/parties");
+    } catch (e) {
+      setError(failureText(e, "Couldn't disband that party. Try again."));
+    }
+  }
+
+  /** The owner taking seat [memberId] out, the way leaving does. Answers with the party as it now is. */
+  async function removeSeat(memberId: string) {
+    if (!party) return;
+    setError(null);
+    try {
+      const saved = await write(LEAVE, () =>
+        apiFetch<Party>(
+          `/api/parties/${party.id}/members/${memberId}`,
+          { method: "DELETE" },
+          getToken,
+        ),
+      );
+      setParty(saved);
+      invalidate("/api/parties");
+    } catch (e) {
+      setError(failureText(e, "Couldn't remove them. Try again."));
     }
   }
 
@@ -460,11 +496,12 @@ export default function PartyPage() {
             />
 
             {!readOnly && (
-              <SeatInvites
+              <PartyMembers
                 seats={party.seats}
                 people={people.map((p) => p.name)}
-                busy={inviting !== null}
+                busy={inviting !== null || isSaving(LEAVE)}
                 inviting={inviting}
+                onRemove={(id) => void removeSeat(id)}
                 onInvite={(seat, name) => void inviteSeat(seat, name)}
               />
             )}
@@ -476,39 +513,26 @@ export default function PartyPage() {
               />
             )}
 
-            {readOnly && (
-              <p className="shared-party-act">
-                {leaving ? (
-                  <>
-                    <button
-                      type="button"
-                      className="party-delete"
-                      onClick={leave}
-                      disabled={isSaving(LEAVE)}
-                    >
-                      Leave this party?
-                    </button>
-                    <button
-                      type="button"
-                      className="party-cancel"
-                      onClick={() => setLeaving(false)}
-                      disabled={isSaving(LEAVE)}
-                    >
-                      Stay
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    className="party-delete"
-                    onClick={() => setLeaving(true)}
-                    disabled={isSaving(LEAVE)}
-                  >
-                    Leave
-                  </button>
-                )}
-              </p>
-            )}
+            {/* The way out of the party: a member leaves it, and its owner leaving disbands it. */}
+            <p className="shared-party-act">
+              {readOnly ? (
+                <ConfirmAct
+                  label="Leave"
+                  question="Leave this party?"
+                  keep="Stay"
+                  busy={isSaving(LEAVE)}
+                  onConfirm={() => void leave()}
+                />
+              ) : (
+                <ConfirmAct
+                  label="Disband"
+                  question="Disband this party?"
+                  keep="Keep"
+                  busy={isSaving(LEAVE)}
+                  onConfirm={() => void disband()}
+                />
+              )}
+            </p>
           </>
         )}
       </PageSwap>

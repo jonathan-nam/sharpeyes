@@ -67,6 +67,8 @@ fun Route.partyRoutes(
     // The one write here that is not the owner's: a member taking their own seat out of a party
     // they are in but do not own. See LeaveParty.kt, which holds the route beside the rule.
     post("/{id}/leave") { leavePartyRoute() }
+    // The owner taking a seat out, which is leaving done to somebody. See LeaveParty.kt.
+    delete("/{id}/members/{memberId}") { removeMemberRoute() }
     route("/{id}/loot") { lootRoutes() }
 }
 

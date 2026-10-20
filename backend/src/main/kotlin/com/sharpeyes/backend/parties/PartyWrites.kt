@@ -284,6 +284,10 @@ internal fun retireOrDeleteParty(
                 Removal.DELETED
             } else {
                 Party.update({ (Party.id eq partyId) and (Party.userId eq userId) }) { it[standing] = false }
+                // Disbanded: every member's account comes off its seat, so the party leaves their
+                // lists and takes no more writes. The seats and their payouts stay, and so does what
+                // the pair owe, which the shared book reads off People rather than off the seats.
+                PartyMember.update({ PartyMember.partyId eq partyId }) { it[linkedCharacterId] = null }
                 Removal.RETIRED
             }
         }

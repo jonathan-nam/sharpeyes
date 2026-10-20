@@ -15,6 +15,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
@@ -58,10 +59,47 @@ internal fun leaveParty(
     val party = Party.selectAll().where { Party.id eq partyId }.firstOrNull()
     val mySeats = party?.let { seatsHeldIn(userId, partyId, it) }.orEmpty()
     if (party == null || mySeats.isEmpty()) return false
+    takeOutSeats(party, mySeats, now)
+    return true
+}
 
+/**
+ * The owner taking seat [memberId] out of their own [partyId]: leaving, done to somebody. Any seat but
+ * the owner's own, joined or not, and false when the party is not theirs or the seat is not standing.
+ */
+internal fun removeMember(
+    ownerId: String,
+    partyId: Uuid,
+    memberId: Uuid,
+    now: Instant,
+): Boolean {
+    val party = Party.selectAll().where { (Party.id eq partyId) and (Party.userId eq ownerId) }.firstOrNull()
+    val seat =
+        party?.let {
+            PartyMember
+                .selectAll()
+                .where {
+                    (PartyMember.id eq memberId) and
+                        (PartyMember.partyId eq partyId) and
+                        (PartyMember.standing eq true) and
+                        PartyMember.characterId.isNull()
+                }.firstOrNull()
+        }
+    if (party == null || seat == null) return false
+    takeOutSeats(party, listOf(seat[PartyMember.id] to seat[PartyMember.name]), now)
+    return true
+}
+
+/** Takes [seats] out of [party]'s roster and their accounts off them. Leaving and removal both. */
+private fun takeOutSeats(
+    party: ResultRow,
+    seats: List<Pair<Uuid, String>>,
+    now: Instant,
+) {
+    val partyId = party[Party.id]
     val owner = party[Party.userId]
     val ownCharacterId = party[Party.characterId]
-    val leaving = mySeats.map { (_, name) -> name.lowercase() }.toSet()
+    val leaving = seats.map { (_, name) -> name.lowercase() }.toSet()
     val staying =
         PartyMember
             .selectAll()
@@ -80,14 +118,13 @@ internal fun leaveParty(
         writeMembers(partyId, ownCharacterId, others, SeatContext(owner, emptyMap(), now), shares)
     }
 
-    val seatIds = mySeats.map { (id, _) -> id }
+    val seatIds = seats.map { (id, _) -> id }
     // A seat a payout points at is retired and not deleted, so the account has to be taken off it
     // by hand. Leaving it bound would leave the party readable by the person who just left it,
     // which is the same failure unlinkPerson exists to avoid from the other end.
     PartyMember.update({ PartyMember.id inList seatIds }) { it[linkedCharacterId] = null }
     Party.update({ Party.id eq partyId }) { it[updatedAt] = now }
     syncPiecesForParty(partyId, now)
-    return true
 }
 
 /**
@@ -144,4 +181,17 @@ internal suspend fun RoutingContext.leavePartyRoute() {
             leaveParty(userId, partyId, Clock.System.now())
         }
     if (left) call.respond(HttpStatusCode.NoContent) else call.respond(HttpStatusCode.NotFound)
+}
+
+/** DELETE /api/parties/{id}/members/{memberId}. The owner taking somebody out; see removeMember. */
+internal suspend fun RoutingContext.removeMemberRoute() {
+    val (userId, email) = call.principalIdAndEmail()
+    val partyId = call.parseUuidParam("id") ?: return
+    val memberId = call.parseUuidParam("memberId") ?: return
+    val party =
+        dbQuery {
+            ensureUser(userId, email)
+            if (removeMember(userId, partyId, memberId, Clock.System.now())) findParty(partyId, userId) else null
+        }
+    if (party == null) call.respond(HttpStatusCode.NotFound) else call.respond(party)
 }

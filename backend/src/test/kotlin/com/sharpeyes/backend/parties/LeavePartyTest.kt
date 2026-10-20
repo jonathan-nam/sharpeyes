@@ -315,4 +315,56 @@ class LeavePartyTest {
             assertEquals(listOf("CreedBratton", "mechyfechy"), standing(party))
         }
     }
+
+    @Test
+    fun `the owner takes a member out, the way leaving does`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            character(owner, "Baldrix", position = 1)
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            drop(party, night)
+
+            val creed = seat(party, "CreedBratton")!![PartyMember.id]
+            assertTrue(removeMember(owner, Uuid.parse(party.id), creed, Clock.System.now()))
+
+            assertEquals(emptyList(), partiesSeatedIn(member))
+            assertFalse(canEditParty(Uuid.parse(party.id), member))
+            assertEquals(listOf("Baldrix", "mechyfechy"), standing(party))
+        }
+    }
+
+    @Test
+    fun `only the owner takes anybody out, and never their own seat`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            character(owner, "Baldrix", position = 1)
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            val baldrix = seat(party, "Baldrix")!![PartyMember.id]
+            val own = seat(party, "mechyfechy")!![PartyMember.id]
+
+            assertFalse(removeMember(member, Uuid.parse(party.id), baldrix, Clock.System.now()))
+            assertFalse(removeMember(owner, Uuid.parse(party.id), own, Clock.System.now()))
+            assertEquals(listOf("Baldrix", "CreedBratton", "mechyfechy"), standing(party))
+        }
+    }
+
+    @Test
+    fun `disbanding a party with history takes every member off it`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            link(owner, "Chris", member)
+            val party = config(theirs, listOf("CreedBratton"))
+            drop(party, night)
+
+            assertEquals(Removal.RETIRED, retireOrDeleteParty(Uuid.parse(party.id), owner, Clock.System.now()))
+
+            assertEquals(emptyList(), partiesSeatedIn(member))
+            assertFalse(canEditParty(Uuid.parse(party.id), member))
+        }
+    }
 }
