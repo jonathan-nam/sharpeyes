@@ -717,9 +717,9 @@ function SettlementCard({
             </span>
           )}
         </span>
-        {/* Money they sent beyond anything priced, which is a payment for the pieces. Out here rather
-            than in the net below: a piece debt has no price for it to count down, and netting it
-            would say you owed them the moment they paid you for coupons you cannot value. */}
+        {/* Money they sent beyond anything priced while they hold coupons of yours, which is a
+            payment for the pieces. Out here rather than in the net below: a piece debt has no price
+            for it to count down. With no pieces it is an overpayment, said as "you owe" above. */}
         {row.receivedOnPieces > 0 && (
           <span className="ledger-tally">
             <span className="ledger-amount is-paid">

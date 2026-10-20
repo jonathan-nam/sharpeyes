@@ -181,8 +181,9 @@ export type Settlement = {
     /**
      * Mesos that have arrived from them, as far as there was a priced debt to put them against.
      *
-     * Negative: a payment is a debt going away. Never more than the parts above come to, because a
-     * payment cannot make you the debtor. Anything past that is `receivedOnPieces`. See V51.
+     * Negative: a payment is a debt going away. While they hold coupons of yours it stops at what the
+     * parts above come to, and anything past that is `receivedOnPieces` (V51). Otherwise the excess
+     * was an overpayment, and lands in `owedByYou`.
      *
      * How much of the money LANDED, which is not what the card draws: the receipts themselves are
      * acts in its history, each under the note it was entered with. See moneyRows.
@@ -190,7 +191,8 @@ export type Settlement = {
     received: number;
   };
   /**
-   * Mesos received beyond anything priced, which is a payment for the PIECES they are holding.
+   * Mesos received beyond anything priced, which is a payment for the PIECES they are holding. Only
+   * while they hold some: with none, the excess is an overpayment and is in `owedByYou` instead.
    *
    * Outside the net and deliberately so. A piece debt has no price, so there is nothing for this to
    * count down; netting it anyway would read as "you owe them 400m" the moment somebody paid you for
@@ -493,9 +495,11 @@ export function buildSettlement(
   for (const row of out.values()) {
     // Everything with a price, before the money that has arrived against it.
     const priced = Object.values(row.parts).reduce((sum, part) => sum + part, 0);
-    // A payment pays down what they owe you and stops there. Past that it is not a debt of yours: it
-    // is money against the PIECES, which have no price for it to count down. See receivedOnPieces.
-    const applied = Math.min(row.receivedOnPieces, Math.max(0, priced));
+    // A payment pays down what they owe you. Past that, while they hold coupons of yours, it is money
+    // against the PIECES, which have no price for it to count down. See receivedOnPieces. With no
+    // pieces for it to be for, it can only be an overpayment, which is a debt of yours.
+    const applied =
+      row.pieces > 0 ? Math.min(row.receivedOnPieces, Math.max(0, priced)) : row.receivedOnPieces;
     // Not `-applied`, which is -0 when nothing was applied and formats as "-0" on the row.
     row.parts.received = applied > 0 ? -applied : 0;
     row.receivedOnPieces -= applied;
