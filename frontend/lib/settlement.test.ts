@@ -759,6 +759,19 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
     expect([rows[0]!.parts.received, rows[0]!.receivedOnPieces]).toEqual([0, 400 * M]);
   });
 
+  it("says an overpayment is owed back, when they hold no coupons of yours", () => {
+    // Bro sent 187b against 139b. With no pieces for the rest to be for, it is 48b you owe him.
+    const rows = buildSettlement(
+      [],
+      wallet([]),
+      [debt(BRO, 139_000 * M)],
+      new Map(),
+      new Map([["person:p-bro", 187_000 * M]]),
+    );
+    expect([rows[0]!.mesos, rows[0]!.owedByYou]).toEqual([0, 48_000 * M]);
+    expect([rows[0]!.parts.received, rows[0]!.receivedOnPieces]).toEqual([-187_000 * M, 0]);
+  });
+
   it("spends a payment on the priced debt first, and says what is left over", () => {
     const rows = buildSettlement(
       [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
