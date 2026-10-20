@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { SectionMenu } from "@/components/section-menu";
 import { UserAvatar } from "@/components/user-avatar";
 import { WorldToggle } from "@/components/world-toggle";
+import { isSetupPath } from "@/lib/setup-paths";
 import { useAuth } from "@/lib/use-auth";
 import { SharpEyesMark } from "./sharp-eyes-mark";
 
@@ -17,6 +19,9 @@ import { SharpEyesMark } from "./sharp-eyes-mark";
 // which cost the whole app static rendering.
 export function SiteHeader() {
   const { isSignedIn, isLoaded } = useAuth();
+  // Onboarding is a page of its own, with nowhere else to go until it is done. See isSetupPath.
+  const setup = isSetupPath(usePathname());
+  if (setup) return null;
 
   return (
     <header className="site-header">
