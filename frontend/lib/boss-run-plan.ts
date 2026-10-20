@@ -738,24 +738,33 @@ export function planNight(
  * two cleared bosses put the last run of the night first. Planning everything and hiding the
  * cleared runs keeps every remaining row where it was.
  *
- * Switch marks are kept as planned, since whoever ran a hidden run is still parked on it. A run
- * that no longer fits once re-timed is dropped, which can only happen when the search was given
- * more clock than `options.minutes` to account for the hidden runs.
+ * Switch marks are redrawn against the rows kept, because a hidden run is already done and nobody
+ * plays it tonight. Kept as planned, they marked a seat whose name had not changed and missed one
+ * that had. A run that no longer fits once re-timed is dropped, which can only happen when the
+ * search was given more clock than `options.minutes` to account for the hidden runs.
  */
 export function withoutRuns(plan: Plan, hidden: ReadonlySet<string>, options: PlanOptions): Plan {
   const available = options.available ?? {};
   const runs: PlannedRun[] = [];
   let clock = 0;
   let switches = 0;
+  // Where each person is parked, by person id, as the kept rows leave them.
+  const parked = new Map<string, string>();
   for (const planned of plan.runs) {
     if (hidden.has(planned.run.id)) continue;
     const { readyAt, dueBy, waitsFor } = windowOf(planned.run, available);
     const startsAt = readyAt > clock ? readyAt : clock;
     const ends = startsAt + planned.run.minutes;
     if (ends > options.minutes || ends > dueBy) continue;
-    runs.push({ ...planned, startsAt, waitingFor: startsAt > clock ? waitsFor : [] });
+    const switched: string[] = [];
+    for (const seat of planned.run.seats) {
+      const wasOn = parked.get(seat.personId);
+      if (wasOn !== undefined && wasOn !== seat.character) switched.push(seat.personId);
+      parked.set(seat.personId, seat.character);
+    }
+    runs.push({ ...planned, switched, startsAt, waitingFor: startsAt > clock ? waitsFor : [] });
     clock = ends;
-    switches += planned.switched.length;
+    switches += switched.length;
   }
   return { runs, switches, minutes: clock };
 }
