@@ -12,7 +12,7 @@ import { WorldChoice } from "@/components/world-choice";
 import { apiAssetUrl, apiFetch, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
-import { ownMember } from "@/lib/parties";
+import { hardestFirst } from "@/lib/hardest-first";
 import { SETTINGS_KEY, setAccountSettings, useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
 import { WORLDS_IN } from "@/lib/world-names";
@@ -164,7 +164,7 @@ function Welcome() {
   // Whether the main runs it: their own party run on the main, or a seat of theirs that is the main.
   const runsMain = (party: Party) =>
     party.characterId === mainId || party.members.some((m) => m.linkedCharacterId === mainId);
-  const listed = [
+  const listed = hardestFirst([
     ...ownParties
       .filter((p) => !p.solo && !p.retired)
       .map((party) => ({ party, main: runsMain(party) })),
@@ -178,10 +178,7 @@ function Welcome() {
       },
       main: runsMain(party),
     })),
-  ]
-    // The main's bosses first, otherwise as they came. sort is stable.
-    .sort((x, y) => Number(y.main) - Number(x.main))
-    .map(({ party }) => party);
+  ]);
   const mainCharacter = characters?.find((c) => c.id === settings.mainCharacterId) ?? null;
   const others = characters?.filter((c) => c !== mainCharacter) ?? [];
   const card = (c: Character) => (
