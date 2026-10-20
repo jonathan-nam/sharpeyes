@@ -276,6 +276,17 @@ object PartyPeriodDifficulty : Table("party_period_difficulty") {
     override val primaryKey = PrimaryKey(partyId, periodStart)
 }
 
+// What a member may do in a party somebody else owns. No row is a Viewer. See V83__party_role.sql
+// and PartyRoles.kt.
+object PartyRole : Table("party_role") {
+    val partyId = reference("party_id", Party.id)
+    val userId = reference("user_id", Users.id)
+    val role = text("role")
+    val updatedAt = timestamp("updated_at")
+
+    override val primaryKey = PrimaryKey(partyId, userId)
+}
+
 // The people you run with. See V21__person.sql.
 object Person : Table("person") {
     val id = uuid("id")

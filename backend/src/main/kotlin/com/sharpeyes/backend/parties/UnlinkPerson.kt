@@ -53,6 +53,7 @@ internal fun unlinkPerson(
     val account = person[Person.linkedUserId]
     if (account != null) {
         revokeSeats(userId, account)
+        dropRolesOn(userId, account)
         Person.update({ Person.id eq personId }) {
             it[linkedUserId] = null
             it[updatedAt] = Clock.System.now()
