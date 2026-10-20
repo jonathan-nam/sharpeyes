@@ -32,7 +32,7 @@ export function LootSaleForm({
    * the week's roster for a guest week is the only way to name the guest who actually sold it.
    */
   ran: PartyMember[];
-  /** Who it may be sold BY, when that is narrower than who ran: an Editor sells as themselves. */
+  /** Who it may be sold BY, when that is narrower than who ran: a member sells as themselves. */
   sellers?: PartyMember[];
   busy: boolean;
   onSell: (body: SellLootBody) => void;

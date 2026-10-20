@@ -2,6 +2,7 @@
 
 import { PageSwap } from "@/components/page-swap";
 import { InviteLink } from "@/components/invite-link";
+import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
 import { PeopleBoard } from "@/components/people-board";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
@@ -9,19 +10,17 @@ import { useEffect, useState } from "react";
 import { apiFetch, failureText } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
-import { type PersonDraft, toDraft, unclaimed } from "@/lib/people-board";
+import { type PersonDraft, peopleBody, toDraft, unclaimed } from "@/lib/people-board";
 import { spriteByName } from "@/lib/sprite-by-name";
 import type { Character } from "@/types/character";
 import type { Invite } from "@/types/invite";
-import type { Party, Person, SavePeopleBody, SeatedParty } from "@/types/party";
+import type { Party, Person, SeatedParty } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
-const PEOPLE_KEY = "/api/people";
 const PARTIES_KEY = "/api/parties";
 const SEATED_KEY = "/api/parties/seated";
 const CHARACTERS_KEY = "/api/characters";
-const INVITES_KEY = "/api/invites";
 
 // Who plays which character. Kept apart from the parties on purpose: a party names characters, and
 // this says whose they are, once, for every party that names them. Say it here and CreedBratton is
@@ -113,23 +112,11 @@ export default function PeoplePage() {
   }
 
   async function save() {
-    const body: SavePeopleBody = {
-      people: draft
-        .filter((row) => row.name.trim() !== "")
-        .map((row) => ({
-          ...(row.id ? { id: row.id } : {}),
-          name: row.name.trim(),
-          characters: row.characters,
-        })),
-    };
+    const body = peopleBody(draft);
     setBusy(true);
     setError(null);
     try {
-      const saved = await apiFetch<Person[]>(
-        PEOPLE_KEY,
-        { method: "PUT", body: JSON.stringify(body) },
-        getToken,
-      );
+      const saved = await savePeople(body, getToken);
       setPeople(saved);
       setDraft(toDraft(saved));
       put(PEOPLE_KEY, saved);
@@ -156,11 +143,7 @@ export default function PeoplePage() {
     setInviting(personId);
     setInviteError(null);
     try {
-      const made = await apiFetch<Invite>(
-        INVITES_KEY,
-        { method: "POST", body: JSON.stringify({ personId }) },
-        getToken,
-      );
+      const made = await createInvite(personId, getToken);
       setInvite(made);
     } catch {
       setInviteError("Couldn't make a link.");

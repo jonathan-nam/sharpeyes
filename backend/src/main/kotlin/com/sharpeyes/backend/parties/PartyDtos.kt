@@ -41,9 +41,6 @@ data class PartyMemberResponse(
     val shares: Int = 1,
     // How this seat usually divides a pooled pile of Eternal pieces.
     val pieceShares: Int = 1,
-    // VIEWER or EDITOR for a seat bound to somebody else's account. Null for everyone else, who
-    // cannot sign in to this party at all. See PartyRoles.kt.
-    val role: String? = null,
 )
 
 /**
@@ -113,11 +110,9 @@ data class PartyResponse(
     // somebody typed are not equally trustworthy, so the two are not drawn identically.
     val clearedByHand: Boolean = false,
     // False for a party somebody else keeps the book for, which you reach by holding a seat in it.
-    // What such a member may still write is `role`'s to say. See isSeatedIn.
+    // A member still logs drops and records sales, as their own seats. See PartyAccess.kt.
     val yours: Boolean = true,
-    // The caller's own say in it: OWNER, EDITOR or VIEWER. See PartyRoles.kt.
-    val role: String = ROLE_OWNER,
-    // The seats a member acts as, which is all an Editor may sell or keep as. Empty for the owner.
+    // The seats a member acts as, which is all a member may sell or keep as. Empty for the owner.
     val yourSeats: List<String> = emptyList(),
     val createdAt: String,
     val updatedAt: String,

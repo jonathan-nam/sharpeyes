@@ -73,7 +73,8 @@ export function InviteLink({
         {url !== null ? (
           <label className="invite-field">
             <span className="field-label">
-              {invite.characterCount} characters, {invite.partyCount} parties
+              {invite.characterCount} {invite.characterCount === 1 ? "character" : "characters"},{" "}
+              {invite.partyCount} {invite.partyCount === 1 ? "party" : "parties"}
             </span>
             <input
               className="split-input invite-url"

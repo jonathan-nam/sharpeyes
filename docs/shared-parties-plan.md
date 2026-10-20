@@ -1,6 +1,11 @@
-# Shared parties: roles, editors and one book per pair
+# Shared parties: members who write, and one book per pair
 
-Status: proposed, 2026-10-20. Nothing here is built.
+Status: phases 1 to 3 shipped 2026-10-20.
+
+**Update: no roles.** Phases 1 and 2 shipped Viewer and Editor roles (V83). They were then dropped
+(V85): every member who has joined may log drops and record sales, still only as their own seats.
+Read "Editor" below as "member".
+
 
 ## The problem
 

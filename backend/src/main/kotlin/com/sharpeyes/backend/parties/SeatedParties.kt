@@ -115,7 +115,7 @@ private data class Seat(
 /**
  * True when this user may READ the config: they own it, or they hold a seat in it.
  *
- * Deliberately not ownsParty's job. Writes are ownsParty or canEditParty (PartyRoles.kt), and a pool
+ * Deliberately not ownsParty's job. Writes are ownsParty or canEditParty (PartyAccess.kt), and a pool
  * with two keyboards is why duplicateRefusal exists.
  */
 internal fun canReadParty(

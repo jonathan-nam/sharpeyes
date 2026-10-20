@@ -31,13 +31,7 @@ export type PartyMember = {
   // How this seat usually divides a pooled pile of Eternal pieces, as a ratio. Optional for a
   // cached party from before the field; read it `?? 1`.
   pieceShares?: number;
-  // VIEWER or EDITOR for a seat bound to somebody else's account; null or absent for everyone else.
-  // Absent on a payload cached from before the field.
-  role?: MemberRole | null;
 };
-
-/** What a member who has joined may do in a party they do not own. See backend PartyRoles.kt. */
-export type MemberRole = "VIEWER" | "EDITOR";
 
 // One config: your character, one boss, and who they run it with. A boss your character solos has
 // one of these too, flagged `solo`, so what fell on it has a pool to sit in.
@@ -105,8 +99,6 @@ export type Party = {
    * so read it as `yours !== false`. Every write on a pool is the owner's; see isSeatedIn.
    */
   yours?: boolean;
-  // The caller's own say in it. Absent on a payload cached from before the field.
-  role?: "OWNER" | MemberRole;
   // The seats a member acts as. Empty for the owner. Absent on a payload cached from before it.
   yourSeats?: string[];
   createdAt: string;

@@ -1,4 +1,4 @@
-import type { Party, Person } from "@/types/party";
+import type { Party, Person, SavePeopleBody } from "@/types/party";
 
 /**
  * One row of the People page while it is being edited.
@@ -142,4 +142,33 @@ export function toDraft(rows: Person[]): PersonDraft[] {
     owned: [...(person.ownedCharacters ?? [])],
     linked: person.linked ?? false,
   }));
+}
+
+/** The People page's save body: rows with a name, each with the characters said to be theirs. */
+export function peopleBody(draft: PersonDraft[]): SavePeopleBody {
+  return {
+    people: draft
+      .filter((row) => row.name.trim() !== "")
+      .map((row) => ({
+        ...(row.id ? { id: row.id } : {}),
+        name: row.name.trim(),
+        characters: row.characters,
+      })),
+  };
+}
+
+/**
+ * [character] filed under the person named [personName], a new row when nobody is. The name is
+ * matched as the People page shows it, ignoring case, and the character goes through claim, so it
+ * leaves whoever held it before.
+ */
+export function fileUnder(
+  people: PersonDraft[],
+  personName: string,
+  character: string,
+): PersonDraft[] {
+  const at = people.findIndex((row) => key(row.name) === key(personName));
+  const rows =
+    at >= 0 ? people : [...people, { name: personName.trim(), characters: [], owned: [] }];
+  return claim(rows, character, at >= 0 ? at : rows.length - 1);
 }

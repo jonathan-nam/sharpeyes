@@ -16,6 +16,7 @@ const view = source("app", "bosses", "parties", "[...slug]", "page.tsx");
 const card = source("components", "shared-parties.tsx");
 const pool = source("components", "loot-pool.tsx");
 const row = source("components", "loot-row.tsx");
+const confirm = source("components", "confirm-act.tsx");
 
 describe("leaving a party you do not own", () => {
   it("posts to that party's own leave route", () => {
@@ -24,14 +25,16 @@ describe("leaving a party you do not own", () => {
 
   it("asks before it writes", () => {
     // It edits somebody else's roster and this account cannot put itself back. The first press only
-    // opens the question; the write hangs off the second.
-    expect(view).toContain("onClick={() => setLeaving(true)}");
-    expect(view).toContain('<button type="button" className="party-delete" onClick={leave}');
+    // opens the question; the write hangs off the second. ConfirmAct is that, for Disband too.
+    expect(confirm).toContain("onClick={() => setAsking(true)}");
+    expect(confirm).toContain('<button type="button" className="party-delete" onClick={onConfirm}');
+    expect(view).toContain("onConfirm={() => void leave()}");
   });
 
-  it("is offered only on a party that is not yours", () => {
+  it("is offered on a party that is not yours, and its owner disbands instead", () => {
     expect(view).toContain("const readOnly = party?.yours === false;");
-    expect(view).toContain("{readOnly && (");
+    expect(view).toContain('{readOnly ? ( <ConfirmAct label="Leave"');
+    expect(view).toContain("onConfirm={() => void disband()}");
   });
 });
 
@@ -40,10 +43,10 @@ describe("a pool somebody else keeps", () => {
     expect(view).toContain("readOnly={readOnly}");
   });
 
-  it("offers the picker to its owner and an Editor only", () => {
+  it("offers the picker to its owner and its members", () => {
     // The one control that creates a row in somebody else's pool. Two accounts logging one night is
     // a double count, which the server's duplicate refusal answers (see duplicateRefusal).
-    expect(pool).toContain("{(!readOnly || editorSeats(party)) && ( <DropPicker");
+    expect(pool).toContain("{(!readOnly || memberSeats(party)) && ( <DropPicker");
   });
 
   it("states a share as paid rather than offering to change it", () => {

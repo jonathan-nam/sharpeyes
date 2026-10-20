@@ -7,7 +7,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
-import { MemberRoles } from "@/components/member-roles";
+import { ConfirmAct } from "@/components/confirm-act";
+import { PartyMembers } from "@/components/party-members";
+import { InviteLink } from "@/components/invite-link";
+import { fileUnder, peopleBody, toDraft } from "@/lib/people-board";
+import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
 import {
   apiAssetUrl,
   apiFetch,
@@ -38,7 +42,8 @@ import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, PartyLootPool, SellLootBody } from "@/types/loot";
 import type { VestigeSettlement } from "@/types/vestige";
-import type { MemberRole, Party } from "@/types/party";
+import type { Invite } from "@/types/invite";
+import type { Party, PartyMember, Person } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -58,7 +63,6 @@ const VESTIGE = "vestige-of-erion";
 const ADD_DROP = "add-drop";
 // Not a row either, and the only write on this page that is a member's. See leave().
 const LEAVE = "leave";
-const ROLE = "role";
 
 export default function PartyPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -213,8 +217,6 @@ export default function PartyPage() {
   // A party somebody else keeps the book for. The screen is the same one; what it does not carry
   // is anything that would write into their pool. See PartyResponse.yours.
   const readOnly = party?.yours === false;
-  const [leaving, setLeaving] = useState(false);
-
   /** Takes this account's seat out of a party it does not own, and leaves the page with it. */
   async function leave() {
     if (!party) return;
@@ -232,21 +234,83 @@ export default function PartyPage() {
     }
   }
 
-  /** Makes a member who has joined a Viewer or an Editor. The owner's act. */
-  async function setRole(memberId: string, role: MemberRole) {
+  /**
+   * The owner leaving, which ends the party: every member comes off it, and the config retires with
+   * its pool kept, or goes when nothing points at it. The same DELETE the editor's Remove makes.
+   */
+  async function disband() {
     if (!party) return;
     setError(null);
     try {
-      const saved = await write(ROLE, () =>
+      await write(LEAVE, () =>
+        apiFetch<unknown>(`/api/parties/${party.id}`, { method: "DELETE" }, getToken),
+      );
+      invalidate("/api/parties");
+      router.push("/bosses/parties");
+    } catch (e) {
+      setError(failureText(e, "Couldn't disband that party. Try again."));
+    }
+  }
+
+  /** The owner taking seat [memberId] out, the way leaving does. Answers with the party as it now is. */
+  async function removeSeat(memberId: string) {
+    if (!party) return;
+    setError(null);
+    try {
+      const saved = await write(LEAVE, () =>
         apiFetch<Party>(
-          `/api/parties/${party.id}/members/${memberId}/role`,
-          { method: "PUT", body: JSON.stringify({ role }) },
+          `/api/parties/${party.id}/members/${memberId}`,
+          { method: "DELETE" },
           getToken,
         ),
       );
       setParty(saved);
+      invalidate("/api/parties");
     } catch (e) {
-      setError(failureText(e, "Couldn't change that. Try again."));
+      setError(failureText(e, "Couldn't remove them. Try again."));
+    }
+  }
+
+  const [people, setPeople] = useState<Person[]>([]);
+  const [inviting, setInviting] = useState<string | null>(null);
+  const [invite, setInvite] = useState<Invite | null>(null);
+
+  // The People page's names, for the box that asks who plays an unclaimed seat. Owner only.
+  useEffect(() => {
+    // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
+    if (!isLoaded) return;
+    if (!party || party.yours === false) return;
+    apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, getToken)
+      .then(setPeople)
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, party?.id]);
+
+  /**
+   * The invite link for whoever plays [seat]. An invite is a person's and carries every party they
+   * are in, so a seat whose character is nobody's yet is first filed under [personName] on the
+   * People page, the whole list going back the way that page saves it.
+   */
+  async function inviteSeat(seat: PartyMember, personName: string | null) {
+    setInviting(seat.id);
+    setError(null);
+    try {
+      let personId = seat.personId;
+      if (!personId && personName) {
+        const saved = await savePeople(
+          peopleBody(fileUnder(toDraft(people), personName, seat.name)),
+          getToken,
+        );
+        setPeople(saved);
+        put(PEOPLE_KEY, saved);
+        personId = saved.find((p) => p.name.toLowerCase() === personName.toLowerCase())?.id ?? null;
+      }
+      if (!personId) throw new Error("no person");
+      setInvite(await createInvite(personId, getToken));
+    } catch (e) {
+      setError(failureText(e, "Couldn't make a link. Try again."));
+    } finally {
+      setInviting(null);
     }
   }
 
@@ -432,46 +496,43 @@ export default function PartyPage() {
             />
 
             {!readOnly && (
-              <MemberRoles
+              <PartyMembers
                 seats={party.seats}
-                busy={isSaving(ROLE)}
-                onSet={(id, role) => void setRole(id, role)}
+                people={people.map((p) => p.name)}
+                busy={inviting !== null || isSaving(LEAVE)}
+                inviting={inviting}
+                onRemove={(id) => void removeSeat(id)}
+                onInvite={(seat, name) => void inviteSeat(seat, name)}
+              />
+            )}
+            {invite !== null && (
+              <InviteLink
+                person={invite.personName}
+                invite={invite}
+                onClose={() => setInvite(null)}
               />
             )}
 
-            {readOnly && (
-              <p className="shared-party-act">
-                {leaving ? (
-                  <>
-                    <button
-                      type="button"
-                      className="party-delete"
-                      onClick={leave}
-                      disabled={isSaving(LEAVE)}
-                    >
-                      Leave this party?
-                    </button>
-                    <button
-                      type="button"
-                      className="party-cancel"
-                      onClick={() => setLeaving(false)}
-                      disabled={isSaving(LEAVE)}
-                    >
-                      Stay
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    type="button"
-                    className="party-delete"
-                    onClick={() => setLeaving(true)}
-                    disabled={isSaving(LEAVE)}
-                  >
-                    Leave
-                  </button>
-                )}
-              </p>
-            )}
+            {/* The way out of the party: a member leaves it, and its owner leaving disbands it. */}
+            <p className="shared-party-act">
+              {readOnly ? (
+                <ConfirmAct
+                  label="Leave"
+                  question="Leave this party?"
+                  keep="Stay"
+                  busy={isSaving(LEAVE)}
+                  onConfirm={() => void leave()}
+                />
+              ) : (
+                <ConfirmAct
+                  label="Disband"
+                  question="Disband this party?"
+                  keep="Keep"
+                  busy={isSaving(LEAVE)}
+                  onConfirm={() => void disband()}
+                />
+              )}
+            </p>
           </>
         )}
       </PageSwap>

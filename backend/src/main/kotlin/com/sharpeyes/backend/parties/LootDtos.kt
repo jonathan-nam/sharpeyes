@@ -93,7 +93,7 @@ data class LootResponse(
     // Who picked up how many of those stacks. EMPTY means nobody has said, which is not the same as
     // it having divided evenly, and is why the ledger can name a debt's size without its direction.
     val bundlesBy: List<LootBundleResponse> = emptyList(),
-    // The caller logged it, which is what lets an Editor take it back off. See PartyRoles.kt.
+    // The caller logged it, which is what lets a member take it back off. See PartyAccess.kt.
     val recordedByYou: Boolean = true,
 )
 

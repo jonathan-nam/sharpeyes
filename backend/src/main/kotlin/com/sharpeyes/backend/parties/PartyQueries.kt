@@ -253,7 +253,6 @@ internal fun seatsFor(
             .where { Person.userId eq userId }
             .associate { it[Person.id] to it[Person.name] }
     val owners = personCharacters(userId).byCharacter()
-    val roles = storedRoles(partyIds)
 
     // Two joins to characters, so the alias says which is which: the seat's own character, and the
     // character on somebody else's account that the seat IS (V75). A seat can carry one or the
@@ -267,7 +266,6 @@ internal fun seatsFor(
         .orderBy(PartyMember.position)
         .groupBy({ it[PartyMember.partyId] }) { row ->
             val owner = owners[row[PartyMember.name].lowercase()]
-            val account = row.getOrNull(theirCharacter[Characters.userId])
             PartyMemberResponse(
                 id = row[PartyMember.id].toString(),
                 name = row[PartyMember.name],
@@ -279,7 +277,6 @@ internal fun seatsFor(
                 guest = !row[PartyMember.standing],
                 shares = row[PartyMember.shares],
                 pieceShares = row[PartyMember.pieceShares],
-                role = account?.let { roles[row[PartyMember.partyId] to it] ?: ROLE_VIEWER },
             )
         }
 }

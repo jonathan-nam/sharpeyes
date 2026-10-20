@@ -8,7 +8,7 @@ import { copyText, formatMoney } from "@/lib/money";
 import { sharesLabel } from "@/lib/shares";
 import { divides, formatDropped, saleMoney, splitOf, statusLabel } from "@/lib/loot";
 import { isMine } from "@/lib/wallet";
-import { editorSeats } from "@/lib/parties";
+import { memberSeats } from "@/lib/parties";
 import { canTrade, isPerMember } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Loot, SellLootBody } from "@/types/loot";
@@ -75,7 +75,7 @@ export function LootRow({
   couponRemovable?: boolean;
   /**
    * A party somebody else keeps the book for. The row still says everything it says; it offers
-   * only what an Editor may do as one of their own seats. See editorSeats.
+   * only what a member may do as one of their own seats. See memberSeats.
    */
   readOnly?: boolean;
   busy: boolean;
@@ -132,11 +132,11 @@ export function LootRow({
   const keepers = !instanced && (loot.solo === true || party.solo) ? ran.filter(isMine) : [];
   // What a member who does not own the pool may still press: acts as their own seats, and Remove on
   // a drop they logged that nobody has sold or kept. The server refuses the rest anyway.
-  const editor = readOnly ? editorSeats(party) : null;
+  const member = readOnly ? memberSeats(party) : null;
   const actsAs = (memberId: string | null | undefined) =>
-    !readOnly || (memberId != null && (editor?.has(memberId) ?? false));
+    !readOnly || (memberId != null && (member?.has(memberId) ?? false));
   const sellers = ran.filter((m) => actsAs(m.id));
-  const mayRemove = !readOnly || (editor !== null && loot.recordedByYou === true);
+  const mayRemove = !readOnly || (member !== null && loot.recordedByYou === true);
 
   return (
     <article className={`loot-row status-${loot.status.toLowerCase()}`}>
@@ -198,7 +198,7 @@ export function LootRow({
         </div>
       )}
 
-      {loot.status === "PENDING" && !canSell && (!readOnly || editor) && (
+      {loot.status === "PENDING" && !canSell && (!readOnly || member) && (
         <div className="loot-actions">
           {/* Nobody takes an instanced drop: it is already in every inventory that ran, so naming
               a seat would hand the party's one copy to somebody when there was never one copy.

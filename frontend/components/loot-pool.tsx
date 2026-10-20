@@ -7,7 +7,7 @@ import { StackAssign } from "@/components/stack-assign";
 import { nightLabel, poolNights, ranAtThisMode } from "@/lib/pool-nights";
 import type { PieceStatus } from "@/lib/drop-log";
 import { takenTally } from "@/lib/loot";
-import { editorSeats, modeThisWeek } from "@/lib/parties";
+import { memberSeats, modeThisWeek } from "@/lib/parties";
 import { canTrade } from "@/lib/world";
 import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Boss } from "@/types/boss";
@@ -52,7 +52,7 @@ export function LootPool({
   adding: boolean;
   /**
    * A party somebody else keeps the book for. The pool reads the same; what goes is everything
-   * that would write into it, except what an Editor may do as themselves. See editorSeats.
+   * that would write into it, except what a member may do as themselves. See memberSeats.
    */
   readOnly?: boolean;
   /** Whether THIS drop's write is in flight, by its id. */
@@ -108,7 +108,7 @@ export function LootPool({
         )}
       </div>
 
-      {(!readOnly || editorSeats(party)) && (
+      {(!readOnly || memberSeats(party)) && (
         <DropPicker
           bossKey={party.bossKey}
           worldType={party.worldType}

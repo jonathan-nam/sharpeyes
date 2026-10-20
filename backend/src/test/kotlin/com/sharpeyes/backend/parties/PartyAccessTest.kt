@@ -4,7 +4,6 @@ import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
-import com.sharpeyes.backend.db.PartyRole
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
@@ -29,8 +28,8 @@ import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
-/** Who may do what in a party: the owner, a member they made an Editor, and a member who reads. */
-class PartyRolesTest {
+/** Who may write into a party: its owner and every member who has joined, and nobody else. */
+class PartyAccessTest {
     private val owner = "user_test_roles_owner"
     private val member = "user_test_roles_member"
     private val stranger = "user_test_roles_stranger"
@@ -121,33 +120,11 @@ class PartyRolesTest {
         return config(theirs, listOf("CreedBratton", "Baldrix"))
     }
 
-    private fun setRole(
-        party: PartyResponse,
-        name: String,
-        role: String,
-        by: String = owner,
-    ) = setMemberRole(by, Uuid.parse(party.id), seat(party, name)!![PartyMember.id], role, Clock.System.now())
-
-    private fun roleOf(
-        party: PartyResponse,
-        userId: String,
-    ) = roleIn(Uuid.parse(party.id), userId)
-
     @Test
-    fun `a member reads until the owner makes them an Editor`() {
+    fun `a member who has joined may write, and sees the seats they act as`() {
         transaction {
             val party = shared()
-            assertEquals(ROLE_VIEWER, roleOf(party, member))
-            assertFalse(canEditParty(Uuid.parse(party.id), member))
-
-            assertEquals(RoleOutcome.Set, setRole(party, "CreedBratton", ROLE_EDITOR))
-
-            assertEquals(ROLE_EDITOR, roleOf(party, member))
             assertTrue(canEditParty(Uuid.parse(party.id), member))
-            assertEquals(ROLE_EDITOR, findParty(Uuid.parse(party.id), member)!!.role)
-            val creed = findParty(Uuid.parse(party.id), owner)!!.seats.single { it.name == "CreedBratton" }
-            assertEquals(ROLE_EDITOR, creed.role)
-            assertEquals(ROLE_EDITOR, partiesSeatedIn(member).single().party.role)
             val creedSeat = seat(party, "CreedBratton")!![PartyMember.id].toString()
             assertEquals(listOf(creedSeat), findParty(Uuid.parse(party.id), member)!!.yourSeats)
             assertEquals(emptyList(), findParty(Uuid.parse(party.id), owner)!!.yourSeats)
@@ -155,87 +132,49 @@ class PartyRolesTest {
     }
 
     @Test
-    fun `setting Viewer takes the Editor back`() {
-        transaction {
-            val party = shared()
-            setRole(party, "CreedBratton", ROLE_EDITOR)
-            assertEquals(RoleOutcome.Set, setRole(party, "CreedBratton", ROLE_VIEWER))
-            assertEquals(ROLE_VIEWER, roleOf(party, member))
-        }
-    }
-
-    @Test
-    fun `only the owner sets a role, and nobody else learns the party exists`() {
+    fun `nobody else may, and nobody else learns the party exists`() {
         transaction {
             val party = shared()
             character(stranger, "Nobody")
-            assertEquals(RoleOutcome.NotFound, setRole(party, "CreedBratton", ROLE_EDITOR, by = member))
-            assertEquals(RoleOutcome.NotFound, setRole(party, "CreedBratton", ROLE_EDITOR, by = stranger))
-            assertEquals(ROLE_VIEWER, roleOf(party, member))
-            assertNull(roleOf(party, stranger))
             assertFalse(canEditParty(Uuid.parse(party.id), stranger))
+            assertNull(findParty(Uuid.parse(party.id), stranger))
         }
     }
 
     @Test
-    fun `a seat nobody has claimed has no role to set`() {
+    fun `the owner may`() {
         transaction {
             val party = shared()
-            assertTrue(setRole(party, "Baldrix", ROLE_EDITOR) is RoleOutcome.Refused)
-            assertNull(findParty(Uuid.parse(party.id), owner)!!.seats.single { it.name == "Baldrix" }.role)
+            assertTrue(canEditParty(Uuid.parse(party.id), owner))
         }
     }
 
     @Test
-    fun `a role that is not Viewer or Editor is refused`() {
+    fun `leaving ends it`() {
         transaction {
             val party = shared()
-            assertTrue(setRole(party, "CreedBratton", ROLE_OWNER) is RoleOutcome.Refused)
-            assertEquals(ROLE_VIEWER, roleOf(party, member))
-        }
-    }
-
-    @Test
-    fun `the owner is the owner`() {
-        transaction {
-            val party = shared()
-            assertEquals(ROLE_OWNER, roleOf(party, owner))
-            assertEquals(ROLE_OWNER, findParty(Uuid.parse(party.id), owner)!!.role)
-        }
-    }
-
-    @Test
-    fun `leaving drops the Editor, so coming back is as a Viewer`() {
-        transaction {
-            val party = shared()
-            setRole(party, "CreedBratton", ROLE_EDITOR)
             assertTrue(leaveParty(member, Uuid.parse(party.id), Clock.System.now()))
-            assertNull(roleOf(party, member))
-            assertEquals(0, PartyRole.selectAll().where { PartyRole.userId eq member }.count())
+            assertFalse(canEditParty(Uuid.parse(party.id), member))
         }
     }
 
     @Test
-    fun `unlinking drops the Editor`() {
+    fun `unlinking ends it`() {
         transaction {
             val party = shared()
-            setRole(party, "CreedBratton", ROLE_EDITOR)
             val chris = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
             assertTrue(unlinkPerson(owner, chris))
-            assertNull(roleOf(party, member))
-            assertEquals(0, PartyRole.selectAll().where { PartyRole.userId eq member }.count())
+            assertFalse(canEditParty(Uuid.parse(party.id), member))
         }
     }
 
     @Test
-    fun `a stored Editor row grants nothing without a standing seat`() {
+    fun `a seat with no account behind it grants nothing`() {
         transaction {
             val party = shared()
-            setRole(party, "CreedBratton", ROLE_EDITOR)
             PartyMember.update({ PartyMember.id eq seat(party, "CreedBratton")!![PartyMember.id] }) {
                 it[linkedCharacterId] = null
             }
-            assertNull(roleOf(party, member))
             assertFalse(canEditParty(Uuid.parse(party.id), member))
         }
     }
