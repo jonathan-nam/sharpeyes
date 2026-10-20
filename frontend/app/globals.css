@@ -671,28 +671,6 @@ a:hover {
   margin-top: 1px;
 }
 
-/* Management actions are not what this strip is for. They stay out of the way
-   until you're actually on the tile. */
-/* Reorder arrows on a /characters row; disabled at the ends of the list. */
-.tile-move {
-  border: none;
-  background: none;
-  padding: 0 2px;
-  color: var(--muted-2);
-  font-size: var(--text-lg);
-  line-height: 1;
-  cursor: pointer;
-}
-
-.tile-move:hover:not(:disabled) {
-  color: var(--ink-strong);
-}
-
-.tile-move:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
 /* ---------------------------------------------------------------------------
    Inventory window
 
@@ -1616,6 +1594,32 @@ img.user-avatar-img {
   position: absolute;
   top: 8px;
   left: 8px;
+}
+
+/* The People page's grip, top right, as a button: a click picks the card up for a click elsewhere
+   to put down. The whole card drags, so it wears the grab cursor too. */
+.character-card[draggable="true"] {
+  cursor: grab;
+}
+
+.character-card-grip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.character-card:hover .character-card-grip,
+.character-card.is-picked .character-card-grip {
+  opacity: 1;
+}
+
+.character-card.is-picked,
+.character-card.is-target {
+  border-color: var(--accent);
 }
 
 .character-card-actions {

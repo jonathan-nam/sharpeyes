@@ -41,11 +41,12 @@ describe("the world switch veil", () => {
     // The save and the reload are two round trips. Raising after them would leave the click with
     // nothing on screen for the part that takes the longest.
     //
-    // Within choose() alone: against the whole file this compares to the `apiFetch` IMPORT, which
+    // Within choose() alone: against the whole file this compares to the `saveWorld` IMPORT, which
     // sits above everything and makes the assertion unfailable.
     const choose = /async function choose\([\s\S]*?\n {2}\}/.exec(toggle)?.[0] ?? "";
     expect(choose).toContain("raiseVeil()");
-    expect(choose.indexOf("raiseVeil()")).toBeLessThan(choose.indexOf("apiFetch"));
+    expect(choose).toContain("saveWorld(");
+    expect(choose.indexOf("raiseVeil()")).toBeLessThan(choose.indexOf("saveWorld("));
   });
 
   it("is lowered again when the switch fails", () => {

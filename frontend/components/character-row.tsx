@@ -2,28 +2,21 @@
 
 import { useAuth } from "@/lib/use-auth";
 import { useState } from "react";
-import { CharacterCard } from "@/components/character-card";
+import { CharacterCard, type CardReorder } from "@/components/character-card";
 import { apiFetch } from "@/lib/api";
-import { setAccountSettings, SETTINGS_KEY, useAccountSettings } from "@/lib/use-account-settings";
+import { saveMainCharacter, useAccountSettings } from "@/lib/use-account-settings";
 import type { Character } from "@/types/character";
-import type { Settings } from "@/types/settings";
 
 // One character on /characters, and everything you can do to it, as a CharacterCard.
 
 export function CharacterRow({
   character,
-  onUpdated,
   onDeleted,
-  onMove,
-  canMoveUp,
-  canMoveDown,
+  reorder,
 }: {
   character: Character;
-  onUpdated: (character: Character) => void;
   onDeleted: (id: string) => void;
-  onMove: (direction: -1 | 1) => void;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
+  reorder: CardReorder;
 }) {
   const { getToken } = useAuth();
   const settings = useAccountSettings();
@@ -39,12 +32,7 @@ export function CharacterRow({
     if (isMain) return;
     // The response is the whole settings object, so the header avatar redraws off the same read
     // that confirmed the write rather than off what this row assumed it did.
-    const saved = await apiFetch<Settings>(
-      `${SETTINGS_KEY}/main-character`,
-      { method: "PUT", body: JSON.stringify({ characterId: character.id }) },
-      getToken,
-    );
-    setAccountSettings(saved);
+    await saveMainCharacter(character.id, getToken);
   }
 
   async function run(work: () => Promise<void>) {
@@ -56,17 +44,6 @@ export function CharacterRow({
       setWorking(false);
     }
   }
-
-  const refresh = () =>
-    run(async () => {
-      onUpdated(
-        await apiFetch<Character>(
-          `/api/characters/${character.id}/refresh`,
-          { method: "POST" },
-          getToken,
-        ),
-      );
-    });
 
   const remove = () =>
     run(async () => {
@@ -80,28 +57,7 @@ export function CharacterRow({
   const disabled = working;
 
   return (
-    <CharacterCard character={character} isMain={isMain} onStar={setMain}>
-      <button
-        type="button"
-        className="tile-move"
-        onClick={() => onMove(-1)}
-        disabled={disabled || !canMoveUp}
-        aria-label={`Move ${character.name} earlier`}
-      >
-        ←
-      </button>
-      <button
-        type="button"
-        className="tile-move"
-        onClick={() => onMove(1)}
-        disabled={disabled || !canMoveDown}
-        aria-label={`Move ${character.name} later`}
-      >
-        →
-      </button>
-      <button type="button" className="party-cancel" onClick={refresh} disabled={disabled}>
-        {working ? "..." : "Refresh"}
-      </button>
+    <CharacterCard character={character} isMain={isMain} onStar={setMain} reorder={reorder}>
       {confirming ? (
         <>
           <button type="button" className="party-delete" onClick={remove} disabled={disabled}>

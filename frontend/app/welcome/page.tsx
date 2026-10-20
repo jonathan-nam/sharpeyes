@@ -13,14 +13,13 @@ import { apiAssetUrl, apiFetch, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { hardestFirst } from "@/lib/hardest-first";
-import { SETTINGS_KEY, setAccountSettings, useAccountSettings } from "@/lib/use-account-settings";
+import { saveMainCharacter, saveWorld, useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
 import { WORLDS_IN } from "@/lib/world-names";
 import type { WorldType } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { Party, SavePartyBody, SeatedParty } from "@/types/party";
-import type { Settings } from "@/types/settings";
 
 // A new account's first three steps: the world, the characters, the parties they are already in.
 //
@@ -92,13 +91,7 @@ function Welcome() {
     if (settings?.worldType === type) return;
     setSavingWorld(true);
     try {
-      setAccountSettings(
-        await apiFetch<Settings>(
-          SETTINGS_KEY,
-          { method: "PUT", body: JSON.stringify({ worldType: type }) },
-          getToken,
-        ),
-      );
+      await saveWorld(type, getToken);
     } catch {
       setPickedWorld(null);
       setFailed(true);
@@ -111,13 +104,7 @@ function Welcome() {
   async function setMain(characterId: string) {
     setSettingMain(true);
     try {
-      setAccountSettings(
-        await apiFetch<Settings>(
-          `${SETTINGS_KEY}/main-character`,
-          { method: "PUT", body: JSON.stringify({ characterId }) },
-          getToken,
-        ),
-      );
+      await saveMainCharacter(characterId, getToken);
     } catch {
       setFailed(true);
     } finally {
