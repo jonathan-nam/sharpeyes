@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { DragEvent, ReactNode } from "react";
 import { spriteUrl } from "@/lib/api";
 import type { Character } from "@/types/character";
 
@@ -12,16 +12,41 @@ export function CharacterCard({
   isMain,
   onStar,
   starBusy = false,
+  reorder,
   children,
 }: {
   character: Character;
   isMain: boolean;
   onStar: () => void;
   starBusy?: boolean;
+  /** Drag onto another card, or pick up by the grip and click where it goes. See CardReorder. */
+  reorder?: CardReorder;
   children?: ReactNode;
 }) {
   return (
-    <li className="character-card">
+    <li
+      className={`character-card${reorder?.picked ? " is-picked" : ""}${reorder?.target ? " is-target" : ""}`}
+      draggable={reorder !== undefined}
+      onDragStart={reorder?.onDragStart}
+      onDragOver={reorder?.onDragOver}
+      onDragLeave={reorder?.onDragLeave}
+      onDrop={reorder?.onDrop}
+      onClick={reorder?.onPlace}
+    >
+      {reorder && (
+        // The People page's grip, and its pickup: a click on it lifts the card, a click on another
+        // card puts it there. Dragging needs a mouse; this works on a touch screen too.
+        <button
+          type="button"
+          className="person-grip character-card-grip"
+          aria-label={reorder.picked ? `Put ${character.name} down` : `Move ${character.name}`}
+          aria-pressed={reorder.picked}
+          onClick={(e) => {
+            e.stopPropagation();
+            reorder.onPick();
+          }}
+        />
+      )}
       <button
         type="button"
         className={`tile-star character-card-star${isMain ? " is-main" : ""}`}
@@ -49,3 +74,16 @@ export function CharacterCard({
     </li>
   );
 }
+
+/** What a card needs to be moved within its list. The list owns where it goes. */
+export type CardReorder = {
+  picked: boolean;
+  target: boolean;
+  onPick: () => void;
+  /** A click on the card while another is picked up: put that one here. */
+  onPlace: () => void;
+  onDragStart: (e: DragEvent) => void;
+  onDragOver: (e: DragEvent) => void;
+  onDragLeave: () => void;
+  onDrop: (e: DragEvent) => void;
+};

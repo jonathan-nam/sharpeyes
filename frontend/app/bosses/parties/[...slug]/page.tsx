@@ -9,6 +9,8 @@ import { LootPool } from "@/components/loot-pool";
 import { RosterStrip } from "@/components/roster-strip";
 import { MemberRoles } from "@/components/member-roles";
 import { InviteLink } from "@/components/invite-link";
+import { fileUnder, peopleBody, toDraft } from "@/lib/people-board";
+import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
 import {
   apiAssetUrl,
   apiFetch,
@@ -61,7 +63,6 @@ const ADD_DROP = "add-drop";
 // Not a row either, and the only write on this page that is a member's. See leave().
 const LEAVE = "leave";
 const ROLE = "role";
-const PEOPLE_KEY = "/api/people";
 
 export default function PartyPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -279,38 +280,16 @@ export default function PartyPage() {
     try {
       let personId = seat.personId;
       if (!personId && personName) {
-        const named = people.find((p) => p.name.toLowerCase() === personName.toLowerCase());
-        const body = {
-          people: [
-            ...people
-              .filter((p) => p !== named)
-              .map((p) => ({ id: p.id, name: p.name, characters: p.characters })),
-            {
-              id: named?.id,
-              name: named?.name ?? personName,
-              characters: [...(named?.characters ?? []), seat.name],
-            },
-          ],
-        };
-        const saved = await apiFetch<Person[]>(
-          PEOPLE_KEY,
-          { method: "PUT", body: JSON.stringify(body) },
+        const saved = await savePeople(
+          peopleBody(fileUnder(toDraft(people), personName, seat.name)),
           getToken,
         );
         setPeople(saved);
         put(PEOPLE_KEY, saved);
-        personId =
-          saved.find((p) => p.name.toLowerCase() === (named?.name ?? personName).toLowerCase())
-            ?.id ?? null;
+        personId = saved.find((p) => p.name.toLowerCase() === personName.toLowerCase())?.id ?? null;
       }
       if (!personId) throw new Error("no person");
-      setInvite(
-        await apiFetch<Invite>(
-          "/api/invites",
-          { method: "POST", body: JSON.stringify({ personId }) },
-          getToken,
-        ),
-      );
+      setInvite(await createInvite(personId, getToken));
     } catch (e) {
       setError(failureText(e, "Couldn't make a link. Try again."));
     } finally {

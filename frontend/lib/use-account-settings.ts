@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/use-auth";
 import { useEffect, useSyncExternalStore } from "react";
 import { apiFetch } from "./api";
 import type { Settings } from "@/types/settings";
+import type { WorldType } from "@/lib/world";
 
 // The account's settings, shared by every component that asks for them.
 //
@@ -88,4 +89,40 @@ export function useAccountSettings(): Settings | undefined {
   }, [isSignedIn]);
 
   return settings;
+}
+
+type GetToken = () => Promise<string | null>;
+
+/**
+ * The account's writes, each answered with the whole settings object and put in the store, so every
+ * reader redraws off the server's reply rather than off what the caller assumed it did.
+ */
+export async function saveWorld(worldType: WorldType, getToken: GetToken): Promise<Settings> {
+  const saved = await apiFetch<Settings>(
+    SETTINGS_KEY,
+    { method: "PUT", body: JSON.stringify({ worldType }) },
+    getToken,
+  );
+  setAccountSettings(saved);
+  return saved;
+}
+
+export async function saveMainCharacter(
+  characterId: string,
+  getToken: GetToken,
+): Promise<Settings> {
+  const saved = await apiFetch<Settings>(
+    `${SETTINGS_KEY}/main-character`,
+    { method: "PUT", body: JSON.stringify({ characterId }) },
+    getToken,
+  );
+  setAccountSettings(saved);
+  return saved;
+}
+
+/** Reads the settings again, for after a write elsewhere that can change them. */
+export async function reloadAccountSettings(getToken: GetToken): Promise<Settings> {
+  const saved = await apiFetch<Settings>(SETTINGS_KEY, { method: "GET" }, getToken);
+  setAccountSettings(saved);
+  return saved;
 }

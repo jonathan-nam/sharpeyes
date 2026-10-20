@@ -6,6 +6,7 @@ import {
   plays,
   stillAttributed,
   toDraft,
+  fileUnder,
   unclaimed,
 } from "./people-board";
 import type { Party, PartyMember } from "@/types/party";
@@ -239,5 +240,30 @@ describe("toDraft", () => {
     const draft = toDraft(rows);
     draft[0]!.characters.push("C");
     expect(rows[0]!.characters).toEqual(["A"]);
+  });
+});
+
+describe("fileUnder", () => {
+  const people = [
+    { id: "p1", name: "Bro", characters: ["iPhone69C"], owned: [] },
+    { id: "p2", name: "Jared", characters: ["CourseLair"], owned: [] },
+  ];
+
+  it("files a character under a person already on the list, whatever the case", () => {
+    expect(fileUnder(people, "bro", "Freeballynn")[0]!.characters).toEqual([
+      "iPhone69C",
+      "Freeballynn",
+    ]);
+  });
+
+  it("adds the person when nobody has that name", () => {
+    const filed = fileUnder(people, "Chris", "CreedBratton");
+    expect(filed.at(-1)).toEqual({ name: "Chris", characters: ["CreedBratton"], owned: [] });
+  });
+
+  it("takes the character off whoever held it", () => {
+    const filed = fileUnder(people, "Bro", "CourseLair");
+    expect(filed[1]!.characters).toEqual([]);
+    expect(filed[0]!.characters).toContain("CourseLair");
   });
 });
