@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
+import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { spriteUrl } from "@/lib/api";
 
 /** The steps a fresh account takes. An invited one has accepting its link in front of these. */
@@ -31,6 +32,13 @@ export function WelcomeHeader({
 }) {
   return (
     <>
+      {/* The site header is hidden while an account is set up (see isSetupPath), so the brand is
+          said here instead, as the first thing a new account sees. 64px is twice the mark's own
+          32px grid, so the pixel art scales whole. */}
+      <div className="welcome-brand">
+        <SharpEyesMark size={64} />
+        <span className="welcome-brand-name">SharpEyes</span>
+      </div>
       {main ? (
         <div className="welcome-hero">
           <h1 className="page-title">Welcome, {main.name}</h1>

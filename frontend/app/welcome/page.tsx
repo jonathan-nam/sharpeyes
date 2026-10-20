@@ -167,7 +167,6 @@ function Welcome() {
     })),
   ]);
   const mainCharacter = characters?.find((c) => c.id === settings.mainCharacterId) ?? null;
-  const others = characters?.filter((c) => c !== mainCharacter) ?? [];
   const card = (c: Character) => (
     <CharacterCard
       key={c.id}
@@ -213,21 +212,11 @@ function Welcome() {
 
       {step === 1 && characters && (
         <>
-          <h2 className="welcome-step-title">Main Character</h2>
-          <ul className="character-cards">
-            {mainCharacter ? (
-              card(mainCharacter)
-            ) : (
-              // Held open, so starring a character below has somewhere visible to move it to.
-              <li className="character-card is-empty" aria-hidden="true" />
-            )}
-          </ul>
-          {others.length > 0 && (
-            <>
-              <h2 className="welcome-step-title">Characters</h2>
-              <ul className="character-cards">{others.map(card)}</ul>
-            </>
-          )}
+          <h2 className="welcome-step-title">Characters</h2>
+          <p className="party-hint welcome-hint">
+            Click the Star to designate your main character.
+          </p>
+          {characters.length > 0 && <ul className="character-cards">{characters.map(card)}</ul>}
           <h2 className="welcome-step-title">Add Character</h2>
           <AddCharacter onAdded={(c) => setCharacters([...characters, c])} />
         </>
