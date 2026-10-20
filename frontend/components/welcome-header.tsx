@@ -31,7 +31,7 @@ export function WelcomeHeader({
   onStep?: (step: number) => void;
 }) {
   return (
-    <>
+    <div className="welcome-head">
       {/* The site header is hidden while an account is set up (see isSetupPath), so the brand is
           said here instead, as the first thing a new account sees. 64px is twice the mark's own
           32px grid, so the pixel art scales whole. */}
@@ -79,6 +79,6 @@ export function WelcomeHeader({
           })}
         </ol>
       </nav>
-    </>
+    </div>
   );
 }

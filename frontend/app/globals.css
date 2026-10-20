@@ -7894,3 +7894,15 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 .welcome-hint {
   margin: 0 0 12px;
 }
+
+/* The brand, the greeting and the steps sit centred over a setup page, the way the invite under
+   them already does. What each step shows stays full width. */
+.welcome-head {
+  text-align: center;
+}
+
+.welcome-head .welcome-brand,
+.welcome-head .welcome-hero,
+.welcome-head .welcome-steps {
+  justify-content: center;
+}
