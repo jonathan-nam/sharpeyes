@@ -65,6 +65,8 @@ export type Loot = {
   // OPTIONAL for the reason sharesThatWeek is: lib/cache.ts hands back whatever shape the API had
   // when the page last fetched. Absent reads as "recorded before everything", which is what those
   // rows meant when they were cached, and is corrected by the next fetch.
+  // The caller logged it, which is what lets an Editor remove it. Absent on a cached payload.
+  recordedByYou?: boolean;
   recordedAt?: string;
   // Who is owed, pinned when the drop sold. Empty before that.
   payouts: LootPayout[];
@@ -114,6 +116,8 @@ export type AddLootBody = {
    * drop nobody has answered for yet.
    */
   bundles?: Record<string, number>;
+  // Log it even though the same drop is already in the pool for its period.
+  again?: boolean;
 };
 
 // POST /api/parties/loot. A drop named by character and boss, for the Drop Log: the pool is the

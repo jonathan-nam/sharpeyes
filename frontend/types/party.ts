@@ -107,6 +107,8 @@ export type Party = {
   yours?: boolean;
   // The caller's own say in it. Absent on a payload cached from before the field.
   role?: "OWNER" | MemberRole;
+  // The seats a member acts as. Empty for the owner. Absent on a payload cached from before it.
+  yourSeats?: string[];
   createdAt: string;
   updatedAt: string;
 };

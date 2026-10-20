@@ -15,6 +15,7 @@ import {
   readBack,
   SAVED_BUT_STALE,
   StaleAfterWrite,
+  isDuplicateDrop,
 } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { preloadBossArt } from "@/lib/preload-boss-art";
@@ -154,21 +155,38 @@ export default function PartyPage() {
   async function mutate(key: string, path: string, options: RequestInit) {
     setError(null);
     try {
-      await write(key, async () => {
-        await apiFetch<unknown>(path, options, getToken);
-        // Past the write, so a refetch that fails leaves the screen behind and not the write undone.
-        // Saying "That didn't save." about one is what got a drop logged twice. See StaleAfterWrite.
-        await readBack(() => loadLoot(party!.id));
-      });
+      await mutateOrThrow(key, path, options);
     } catch (e) {
       if (e instanceof StaleAfterWrite) setError(SAVED_BUT_STALE);
       else setError(failureText(e, "That didn't save. Try again."));
     }
   }
 
+  async function mutateOrThrow(key: string, path: string, options: RequestInit) {
+    await write(key, async () => {
+      await apiFetch<unknown>(path, options, getToken);
+      // Past the write, so a refetch that fails leaves the screen behind and not the write undone.
+      // Saying "That didn't save." about one is what got a drop logged twice. See StaleAfterWrite.
+      await readBack(() => loadLoot(party!.id));
+    });
+  }
+
   // Keyed by the drop being written, so only that row is drawn as saving.
-  const add = (body: AddLootBody) =>
-    mutate(ADD_DROP, lootUrl(), { method: "POST", body: JSON.stringify(body) });
+  // A probable second logging is handed back to the picker, which offers to add it again.
+  const add = async (body: AddLootBody) => {
+    const options = { method: "POST", body: JSON.stringify(body) };
+    setError(null);
+    try {
+      await mutateOrThrow(ADD_DROP, lootUrl(), options);
+    } catch (e) {
+      if (e instanceof StaleAfterWrite) {
+        setError(SAVED_BUT_STALE);
+        return;
+      }
+      if (isDuplicateDrop(e)) throw e;
+      setError(failureText(e, "That didn't save. Try again."));
+    }
+  };
   const sell = (lootId: string, body: SellLootBody) =>
     mutate(lootId, `${lootUrl()}/${lootId}/sale`, { method: "PUT", body: JSON.stringify(body) });
   const unsell = (lootId: string) =>

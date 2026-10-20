@@ -59,6 +59,41 @@ internal fun canEditParty(
     userId: String,
 ): Boolean = roleIn(partyId, userId).let { it == ROLE_OWNER || it == ROLE_EDITOR }
 
+/** [userId]'s standing seats in somebody else's [partyId]: the only seats an Editor may act as. */
+internal fun mySeatsIn(
+    partyId: Uuid,
+    userId: String,
+): Set<Uuid> =
+    PartyMember
+        .join(Characters, JoinType.INNER, PartyMember.linkedCharacterId, Characters.id)
+        .selectAll()
+        .where {
+            (PartyMember.partyId eq partyId) and
+                (PartyMember.standing eq true) and
+                (Characters.userId eq userId)
+        }.map { it[PartyMember.id] }
+        .toSet()
+
+/**
+ * Whether [userId] may act as seat [memberId] in [partyId]. The owner acts as anybody, the way every
+ * write worked before roles; an Editor only as one of their own seats.
+ */
+internal fun mayActAs(
+    partyId: Uuid,
+    userId: String,
+    memberId: Uuid?,
+): Boolean = ownsParty(partyId, userId) || (memberId != null && memberId in mySeatsIn(partyId, userId))
+
+/** [this] as a member who does not own it sees it: their role, and the seats they act as. */
+internal fun PartyResponse.asMember(userId: String): PartyResponse {
+    val partyId = Uuid.parse(id)
+    return copy(
+        yours = false,
+        role = roleIn(partyId, userId) ?: ROLE_VIEWER,
+        yourSeats = mySeatsIn(partyId, userId).map { it.toString() },
+    )
+}
+
 /** Every stored role on [partyIds], by (party, account). Absent is a Viewer. */
 internal fun storedRoles(partyIds: List<Uuid>): Map<Pair<Uuid, String>, String> =
     if (partyIds.isEmpty()) {

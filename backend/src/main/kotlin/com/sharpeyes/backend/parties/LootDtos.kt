@@ -93,6 +93,8 @@ data class LootResponse(
     // Who picked up how many of those stacks. EMPTY means nobody has said, which is not the same as
     // it having divided evenly, and is why the ledger can name a debt's size without its direction.
     val bundlesBy: List<LootBundleResponse> = emptyList(),
+    // The caller logged it, which is what lets an Editor take it back off. See PartyRoles.kt.
+    val recordedByYou: Boolean = true,
 )
 
 /**
@@ -124,6 +126,8 @@ data class AddLootRequest(
     // Carried with the drop rather than PUT after it so the pair cannot half-land. Refusing it rolls
     // the drop back too, because one act was asked for and one answer is owed. See addedBundles.
     val bundles: Map<String, Int>? = null,
+    // Log it even though the same drop is already in this pool for its period. See duplicateRefusal.
+    val again: Boolean = false,
 )
 
 /**

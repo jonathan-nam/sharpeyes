@@ -115,8 +115,8 @@ private data class Seat(
 /**
  * True when this user may READ the config: they own it, or they hold a seat in it.
  *
- * Deliberately not ownsParty's job. Every write stays on that one, because a pool with two
- * keyboards logs one night twice, which is the failure this repo exists to prevent.
+ * Deliberately not ownsParty's job. Writes are ownsParty or canEditParty (PartyRoles.kt), and a pool
+ * with two keyboards is why duplicateRefusal exists.
  */
 internal fun canReadParty(
     partyId: Uuid,
@@ -127,8 +127,8 @@ internal fun canReadParty(
  * True when one of this account's characters holds a standing seat in [partyId].
  *
  * The same rule partiesSeatedIn is built on, asked about one party: you reach a party by owning a
- * character whose seat states so as a foreign key. It says what may be READ and never what may be
- * written, because every write lands in the owner's pool. See ownsParty, which is the other half.
+ * character whose seat states so as a foreign key. It says what may be READ; what may be written is
+ * canEditParty's, which needs this as well.
  *
  * Must be called from inside a `transaction { }` block.
  */

@@ -526,6 +526,9 @@ object PartyLoot : Table("party_loot") {
     // exclusive with it (party_loot_sold_or_taken). Nothing is owed: see V49.
     val takenByMemberId = optReference("taken_by_member_id", PartyMember.id)
 
+    // Who logged it. Null is the party's owner. See V84__loot_recorded_by.sql.
+    val recordedByUserId = optReference("recorded_by_user_id", Users.id)
+
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 

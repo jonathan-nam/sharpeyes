@@ -55,6 +55,7 @@ internal fun addLoot(
         it[PartyLoot.solo] = source.solo
         it[PartyLoot.droppedOn] = droppedOn
         it[difficulty] = mode
+        it[recordedByUserId] = source.recordedBy
         it[createdAt] = now
         it[updatedAt] = now
     }
@@ -99,6 +100,8 @@ internal data class LootSource(
     val fromClear: Boolean = false,
     // It fell on a run with nobody else, so it divides by one seat. See V72 and ranWith.
     val solo: Boolean = false,
+    // Who logged it. Null is the party's owner. See V84.
+    val recordedBy: String? = null,
 )
 
 /**

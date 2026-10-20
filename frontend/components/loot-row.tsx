@@ -8,6 +8,7 @@ import { copyText, formatMoney } from "@/lib/money";
 import { sharesLabel } from "@/lib/shares";
 import { divides, formatDropped, saleMoney, splitOf, statusLabel } from "@/lib/loot";
 import { isMine } from "@/lib/wallet";
+import { editorSeats } from "@/lib/parties";
 import { canTrade, isPerMember } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Loot, SellLootBody } from "@/types/loot";
@@ -73,8 +74,8 @@ export function LootRow({
    */
   couponRemovable?: boolean;
   /**
-   * A party somebody else keeps the book for. The row still says everything it says; it just
-   * offers nothing to press, because every write here lands in their pool. See PartyResponse.yours.
+   * A party somebody else keeps the book for. The row still says everything it says; it offers
+   * only what an Editor may do as one of their own seats. See editorSeats.
    */
   readOnly?: boolean;
   busy: boolean;
@@ -129,6 +130,13 @@ export function LootRow({
   const instanced = isPerMember(loot.perMember, party.worldType);
   // A drop you got solo owes nobody, so keeping it is not a sale. Same rule as keptSolo.
   const keepers = !instanced && (loot.solo === true || party.solo) ? ran.filter(isMine) : [];
+  // What a member who does not own the pool may still press: acts as their own seats, and Remove on
+  // a drop they logged that nobody has sold or kept. The server refuses the rest anyway.
+  const editor = readOnly ? editorSeats(party) : null;
+  const actsAs = (memberId: string | null | undefined) =>
+    !readOnly || (memberId != null && (editor?.has(memberId) ?? false));
+  const sellers = ran.filter((m) => actsAs(m.id));
+  const mayRemove = !readOnly || (editor !== null && loot.recordedByYou === true);
 
   return (
     <article className={`loot-row status-${loot.status.toLowerCase()}`}>
@@ -182,7 +190,7 @@ export function LootRow({
       {/* A piece row has no sale, so Remove is all it has: the pieces are priced on the Drop Log and
           everything else here would act on a pot that does not exist. Withheld where the row heads a
           config, which would go with it. See couponRemovable. */}
-      {loot.status === "PENDING" && canSell && pieces && couponRemovable && !readOnly && (
+      {loot.status === "PENDING" && canSell && pieces && couponRemovable && mayRemove && (
         <div className="loot-actions">
           <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
             Remove
@@ -190,7 +198,7 @@ export function LootRow({
         </div>
       )}
 
-      {loot.status === "PENDING" && !canSell && !readOnly && (
+      {loot.status === "PENDING" && !canSell && (!readOnly || editor) && (
         <div className="loot-actions">
           {/* Nobody takes an instanced drop: it is already in every inventory that ran, so naming
               a seat would hand the party's one copy to somebody when there was never one copy.
@@ -198,7 +206,7 @@ export function LootRow({
               RAN rather than the config's solo flag. */}
           {divides(ran) &&
             !instanced &&
-            ran.map((m) => (
+            sellers.map((m) => (
               <button
                 key={m.id}
                 type="button"
@@ -209,9 +217,11 @@ export function LootRow({
                 {m.name} took it
               </button>
             ))}
-          <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-            Remove
-          </button>
+          {mayRemove && (
+            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+              Remove
+            </button>
+          )}
         </div>
       )}
 
@@ -223,20 +233,20 @@ export function LootRow({
               // says the drop is spoken for.
               "Somebody no longer in the party"}
           </span>
+          {actsAs(loot.takenByMemberId) && (
+            <button
+              type="button"
+              className="party-cancel"
+              onClick={() => onSetTaken(null)}
+              disabled={busy}
+            >
+              Put Back
+            </button>
+          )}
           {!readOnly && (
-            <>
-              <button
-                type="button"
-                className="party-cancel"
-                onClick={() => onSetTaken(null)}
-                disabled={busy}
-              >
-                Put Back
-              </button>
-              <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-                Remove
-              </button>
-            </>
+            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+              Remove
+            </button>
           )}
         </div>
       )}
@@ -244,10 +254,11 @@ export function LootRow({
       {loot.status === "PENDING" &&
         canSell &&
         !pieces &&
-        !readOnly &&
+        (!readOnly || sellers.length > 0) &&
         (selling ? (
           <LootSaleForm
             ran={ran}
+            sellers={sellers}
             busy={busy}
             onSell={(body) => {
               onSell(body);
@@ -276,9 +287,11 @@ export function LootRow({
                 {keepers.length === 1 ? "Keep" : `${m.name} kept it`}
               </button>
             ))}
-            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-              Remove
-            </button>
+            {mayRemove && (
+              <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+                Remove
+              </button>
+            )}
           </div>
         ))}
 
@@ -371,14 +384,16 @@ export function LootRow({
             </>
           )}
 
-          {!readOnly && (
+          {actsAs(loot.sellerMemberId) && (
             <div className="loot-actions">
               <button type="button" className="party-cancel" onClick={onUnsell} disabled={busy}>
                 Undo Sale
               </button>
-              <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-                Remove
-              </button>
+              {!readOnly && (
+                <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+                  Remove
+                </button>
+              )}
             </div>
           )}
         </>

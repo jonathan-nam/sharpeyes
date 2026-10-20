@@ -148,6 +148,9 @@ class PartyRolesTest {
             val creed = findParty(Uuid.parse(party.id), owner)!!.seats.single { it.name == "CreedBratton" }
             assertEquals(ROLE_EDITOR, creed.role)
             assertEquals(ROLE_EDITOR, partiesSeatedIn(member).single().party.role)
+            val creedSeat = seat(party, "CreedBratton")!![PartyMember.id].toString()
+            assertEquals(listOf(creedSeat), findParty(Uuid.parse(party.id), member)!!.yourSeats)
+            assertEquals(emptyList(), findParty(Uuid.parse(party.id), owner)!!.yourSeats)
         }
     }
 

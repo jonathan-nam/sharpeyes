@@ -134,7 +134,11 @@ private fun sharesThatWeekFor(
         row[PartyLoot.id] to shares.orEmpty().mapKeys { it.key.toString() }
     }
 
-internal fun lootFor(partyId: Uuid): List<LootResponse> {
+/** [viewer] is who `recordedByYou` answers for. Null answers as the owner. */
+internal fun lootFor(
+    partyId: Uuid,
+    viewer: String? = null,
+): List<LootResponse> {
     val rows =
         lootWithCatalog()
             .selectAll()
@@ -156,14 +160,16 @@ internal fun lootFor(partyId: Uuid): List<LootResponse> {
     val sharesByLoot = sharesThatWeekFor(rows, weekRosters)
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
     val mine = ownSeatsIn(rows.map { it[PartyLoot.partyId] }.distinct())
+    val owner = Party.selectAll().where { Party.id eq partyId }.single()[Party.userId]
     return rows.map {
-        it.toLootResponse(
-            payoutsByLoot[it[PartyLoot.id]].orEmpty(),
-            ranByLoot[it[PartyLoot.id]].orEmpty(),
-            sharesByLoot[it[PartyLoot.id]].orEmpty(),
-            bundlesByLoot[it[PartyLoot.id]].orEmpty(),
-            mine,
-        )
+        it
+            .toLootResponse(
+                payoutsByLoot[it[PartyLoot.id]].orEmpty(),
+                ranByLoot[it[PartyLoot.id]].orEmpty(),
+                sharesByLoot[it[PartyLoot.id]].orEmpty(),
+                bundlesByLoot[it[PartyLoot.id]].orEmpty(),
+                mine,
+            ).copy(recordedByYou = viewer == null || (it[PartyLoot.recordedByUserId] ?: owner) == viewer)
     }
 }
 
@@ -218,7 +224,8 @@ internal fun allLootFor(userId: String): List<PartyLootPoolResponse> {
 internal fun findLoot(
     lootId: Uuid,
     partyId: Uuid,
-): LootResponse? = lootFor(partyId).firstOrNull { it.id == lootId.toString() }
+    viewer: String? = null,
+): LootResponse? = lootFor(partyId, viewer).firstOrNull { it.id == lootId.toString() }
 
 /**
  * Seats that cannot be removed from a party because loot history points at them.

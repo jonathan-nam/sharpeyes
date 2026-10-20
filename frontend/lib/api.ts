@@ -83,6 +83,11 @@ export const SAVED_BUT_STALE = "Saved. Reload to see it.";
  * nginx's 502 page. Only a refusal the backend marked as user-facing is shown, so a new backend
  * message stays hidden until somebody words it for users.
  */
+/** The server thinks this drop is already logged for its period. See the backend's duplicateRefusal. */
+export function isDuplicateDrop(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 409;
+}
+
 export function failureText(e: unknown, fallback: string): string {
   if (e instanceof StaleAfterWrite) return SAVED_BUT_STALE;
   if (e instanceof ApiError && e.refusal !== null) return e.refusal;

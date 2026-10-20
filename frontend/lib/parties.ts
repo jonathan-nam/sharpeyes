@@ -391,3 +391,8 @@ export function guaranteedDrop(
 export function hasGuaranteedDrop(table: BossDrop[] | undefined): boolean {
   return (table ?? []).some((drop) => Object.keys(drop.pieces ?? {}).length > 0);
 }
+
+/** The seats an Editor acts as in a party they do not own, or null when they are not an Editor. */
+export function editorSeats(party: Party): Set<string> | null {
+  return party.yours === false && party.role === "EDITOR" ? new Set(party.yourSeats ?? []) : null;
+}

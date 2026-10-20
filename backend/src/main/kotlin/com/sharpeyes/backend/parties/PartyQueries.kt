@@ -135,7 +135,7 @@ internal fun partiesFromRows(
                 clear = clears[id] ?: ClearState(null, false),
                 week = WeekState(id !in spelledOut, skippedThisPeriod = id in off, ranAsParty, modes[id]),
             )
-        if (id in asCharacter) party.copy(yours = false, role = roleIn(id, userId) ?: ROLE_VIEWER) else party
+        if (id in asCharacter) party.asMember(userId) else party
     }
 }
 
@@ -181,7 +181,7 @@ internal fun findParty(
             clear = clears[partyId] ?: ClearState(null, false),
             week = state,
         )
-    return party.copy(yours = viewer.owner, role = roleIn(partyId, userId) ?: ROLE_VIEWER)
+    return if (viewer.owner) party else party.asMember(userId)
 }
 
 /** True when the config exists and belongs to this user. The ownership check every write starts with. */
