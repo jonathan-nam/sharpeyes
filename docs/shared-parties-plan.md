@@ -68,10 +68,11 @@ both cards side by side and does not net them, the same rule as the per-party wa
 
 ### Phase 1. Roles (backend + Party View)
 
-- V83: `party_share(party_id, user_id, role)`, role `VIEWER | EDITOR`, unique on (party_id,
-  user_id). Backfilled VIEWER for every account with a linked standing seat today. Created on
-  invite accept and seat binding, removed on leave and unlink.
-- `canEditParty(userId, partyId)` = owner, or a share with role EDITOR and a standing seat.
+- V83: `party_role(party_id, user_id, role)`, keyed on (party_id, user_id). Only Editors get a
+  row: no row is a Viewer, so nothing is backfilled and nothing has to follow seat binding. Leave
+  and unlink delete it.
+- `canEditParty(partyId, userId)` = owner, or an Editor row and a standing seat. The seat still
+  grants access, so a row alone is never a way in.
 - Owner sets the role from the party's member list. A member sees their role.
 - Tests: Viewer refused on every write route below; Editor refused on config routes; leave and
   unlink drop the share.
