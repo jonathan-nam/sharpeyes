@@ -13,7 +13,7 @@ const source = (...parts: string[]) =>
   readFileSync(join(__dirname, "..", ...parts), "utf8").replace(/\s+/g, " ");
 
 const view = source("app", "bosses", "parties", "[...slug]", "page.tsx");
-const card = source("components", "shared-parties.tsx");
+const list = source("app", "bosses", "parties", "page.tsx");
 const pool = source("components", "loot-pool.tsx");
 const row = source("components", "loot-row.tsx");
 const confirm = source("components", "confirm-act.tsx");
@@ -53,8 +53,11 @@ describe("a pool somebody else keeps", () => {
     expect(row).toContain("{readOnly ? ( <span");
   });
 
-  it("leaves the shared card with no writes at all", () => {
-    // Every callback it used to take has gone to the party's own page.
-    expect(card.match(/on[A-Z]\w+:/g)).toBeNull();
+  it("lists a shared party with no writes at all", () => {
+    // The card a party somebody else owns is drawn with on Party View: every write is its owner's,
+    // and recording into it is done on its own page.
+    const card = /function sharedCard\([\s\S]*?\); \}/.exec(list)?.[0] ?? "";
+    expect(card).toContain("<PartyCard");
+    expect(card.match(/ on[A-Z]\w+=/g)).toBeNull();
   });
 });

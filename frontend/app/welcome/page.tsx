@@ -13,6 +13,7 @@ import { apiAssetUrl, apiFetch, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { hardestFirst } from "@/lib/hardest-first";
+import { asYourRow } from "@/lib/shared-parties";
 import { saveMainCharacter, saveWorld, useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
 import { WORLDS_IN } from "@/lib/world-names";
@@ -147,25 +148,13 @@ function Welcome() {
   //
   // A seated party is the owner's row, so its `characterId`s are the OWNER'S characters and the
   // roster would mark them as yours. Re-marked here against the seats that are this account's.
-  const mainId = settings.mainCharacterId;
-  // Whether the main runs it: their own party run on the main, or a seat of theirs that is the main.
-  const runsMain = (party: Party) =>
-    party.characterId === mainId || party.members.some((m) => m.linkedCharacterId === mainId);
-  const listed = hardestFirst([
-    ...ownParties
-      .filter((p) => !p.solo && !p.retired)
-      .map((party) => ({ party, main: runsMain(party) })),
-    ...(seated ?? []).map(({ party, mySeatIds }) => ({
-      party: {
-        ...party,
-        members: party.members.map((m) => ({
-          ...m,
-          characterId: mySeatIds.includes(m.id) ? m.id : null,
-        })),
-      },
-      main: runsMain(party),
-    })),
-  ]);
+  // The main runs it: their own party run on the main, or one they are seated in as the main. A
+  // seated party is filed under their own character in it, so both read the same. See asYourRow.
+  const listed = hardestFirst(
+    [...ownParties.filter((p) => !p.solo && !p.retired), ...(seated ?? []).map(asYourRow)].map(
+      (party) => ({ party, main: party.characterId === settings.mainCharacterId }),
+    ),
+  );
   const mainCharacter = characters?.find((c) => c.id === settings.mainCharacterId) ?? null;
   const card = (c: Character) => (
     <CharacterCard

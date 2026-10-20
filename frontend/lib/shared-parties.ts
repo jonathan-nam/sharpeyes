@@ -1,32 +1,20 @@
-import type { SeatedParty } from "@/types/party";
-
-/** Somebody else's parties, filed under the character of yours that sits in them. */
-export type SharedGroup = {
-  characterId: string;
-  parties: SeatedParty[];
-};
+import type { Party, SeatedParty } from "@/types/party";
 
 /**
- * Shared parties grouped by which character of yours is in them, in your own character order.
+ * A party somebody else owns, as a row of yours: filed under the character of yours that sits in it,
+ * and with your seats marked as yours rather than the owner's.
  *
- * The same question the owner's list answers about their own configs, asked from the other end:
- * seventeen cards in a row say nothing about which character has a night tonight. Ordered to match
- * that list, so the two read down the page the same way.
- *
- * A party whose character this account cannot place goes last rather than nowhere. Dropping it
- * would be a shorter list that looks complete, which is worse than a heading with no name behind it.
+ * The response is the owner's own row, so its `characterId` and every seat's are the OWNER'S
+ * characters, and a roster drawn from it would mark them as yours. Party View files these beside
+ * your own parties and onboarding lists them, and both read them through here.
  */
-export function bySeatedCharacter(parties: SeatedParty[], characterOrder: string[]): SharedGroup[] {
-  const rank = new Map(characterOrder.map((id, i) => [id, i]));
-  const groups = new Map<string, SharedGroup>();
-  for (const party of parties) {
-    const group = groups.get(party.yourCharacterId);
-    if (group) group.parties.push(party);
-    else
-      groups.set(party.yourCharacterId, { characterId: party.yourCharacterId, parties: [party] });
-  }
-  const last = characterOrder.length;
-  return [...groups.values()].sort(
-    (a, b) => (rank.get(a.characterId) ?? last) - (rank.get(b.characterId) ?? last),
-  );
+export function asYourRow({ party, mySeatIds, yourCharacterId }: SeatedParty): Party {
+  return {
+    ...party,
+    characterId: yourCharacterId,
+    members: party.members.map((m) => ({
+      ...m,
+      characterId: mySeatIds.includes(m.id) ? yourCharacterId : null,
+    })),
+  };
 }
