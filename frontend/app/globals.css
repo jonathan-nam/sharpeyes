@@ -1402,7 +1402,7 @@ html.switching-world .world-veil {
 /* Asked once, on an account that has never said. See components/world-choice.tsx. */
 .world-choice-cards {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-top: 20px;
 }
@@ -1424,7 +1424,10 @@ html.switching-world .world-veil {
   cursor: pointer;
 }
 
-.world-choice-card.is-chosen,
+.world-choice-card.is-chosen {
+  border-color: var(--accent);
+}
+
 .world-choice-card:hover:not(:disabled) {
   border-color: var(--ink-strong);
 }
@@ -1462,10 +1465,10 @@ html.switching-world .world-veil {
   font-weight: 600;
 }
 
-/* Side by side is the whole point of the pair, so they only stack where two will not fit. */
+/* All four side by side, two by two where four will not fit. */
 @media (max-width: 560px) {
   .world-choice-cards {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -7826,4 +7829,35 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   gap: 8px;
   padding: 6px 0;
   border-bottom: 1px solid var(--line);
+}
+
+/* "Welcome, IGN" beside the main's sprite once one is starred. */
+.welcome-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.welcome-hero .hero-sprite {
+  margin: 0;
+}
+
+/* The slot a starred character moves into, held open while there is none. */
+.character-card.is-empty {
+  min-height: 150px;
+  border-style: dashed;
+  background: none;
+}
+
+/* Back at the bottom left, the way forward at the bottom right. */
+.welcome-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 28px;
+}
+
+.welcome-nav-end {
+  display: flex;
+  gap: 8px;
 }

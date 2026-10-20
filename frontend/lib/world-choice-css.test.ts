@@ -11,12 +11,12 @@ function rule(selector: string): string {
   return css.slice(at, css.indexOf("}", at));
 }
 
-// The world choice is a pair, and the pair is the point: two cards seen at once is what makes it a
-// comparison rather than a question with an unseen alternative. A rule that let one card grow would
-// break the pairing on the one screen a new account cannot get past.
-describe("the world cards are a pair", () => {
+// One card per world, all four seen at once, so the choice is a comparison rather than a question
+// with an unseen alternative. A rule that let one card grow would break the row on the one screen a
+// new account cannot get past.
+describe("the world cards are one row", () => {
   it("gives them a column each", () => {
-    expect(rule(".world-choice-cards")).toMatch(/grid-template-columns:\s*repeat\(2,\s*1fr\)/);
+    expect(rule(".world-choice-cards")).toMatch(/grid-template-columns:\s*repeat\(4,\s*1fr\)/);
   });
 
   // A grid item's automatic minimum is its content, not its 1fr share, so a long world name would
@@ -27,9 +27,9 @@ describe("the world cards are a pair", () => {
     expect(rule(".world-choice-card")).toMatch(/min-width:\s*0/);
   });
 
-  // Stacking is for where two will not fit, and nowhere else. Written as a max-width query, so
+  // Wrapping is for where four will not fit, and nowhere else. Written as a max-width query, so
   // widening the breakpoint is a deliberate edit rather than something a default inherits.
-  it("stacks them only on a narrow screen", () => {
+  it("wraps them only on a narrow screen", () => {
     const at = css.indexOf(".world-choice-cards");
     const stacked = css.slice(at);
     expect(stacked).toMatch(/@media \(max-width: 560px\) \{\s*\.world-choice-cards \{/);

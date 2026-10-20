@@ -6,12 +6,14 @@ import { Fragment, useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
 import { CharacterCard } from "@/components/character-card";
 import { WorldChoice } from "@/components/world-choice";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, spriteUrl } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { ownMember } from "@/lib/parties";
 import { SETTINGS_KEY, setAccountSettings, useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
+import { WORLDS_IN } from "@/lib/world-names";
+import type { WorldType } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { SeatedParty } from "@/types/party";
@@ -40,6 +42,31 @@ export default function Welcome() {
   const [bosses, setBosses] = useState<Boss[]>([]);
   const [failed, setFailed] = useState(false);
   const [settingMain, setSettingMain] = useState(false);
+  // The world picked here, by name. The account stores only its category, so before anything is
+  // picked the card that reads as chosen is the world the account's characters are in.
+  const [pickedWorld, setPickedWorld] = useState<string | null>(null);
+  const [savingWorld, setSavingWorld] = useState(false);
+
+  /** Picks [world], saving its category when that is not the one the account already holds. */
+  async function chooseWorld(world: string, type: WorldType) {
+    setPickedWorld(world);
+    if (settings?.worldType === type) return;
+    setSavingWorld(true);
+    try {
+      setAccountSettings(
+        await apiFetch<Settings>(
+          SETTINGS_KEY,
+          { method: "PUT", body: JSON.stringify({ worldType: type }) },
+          getToken,
+        ),
+      );
+    } catch {
+      setPickedWorld(null);
+      setFailed(true);
+    } finally {
+      setSavingWorld(false);
+    }
+  }
 
   /** Stars [characterId] as the account's main, through the route the Characters page uses. */
   async function setMain(characterId: string) {
@@ -68,9 +95,9 @@ export default function Welcome() {
   useEffect(() => {
     // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
     if (!isLoaded) return;
-    if (!isSignedIn || step === 0) return;
+    if (!isSignedIn) return;
     const read =
-      step === 1
+      step < 2
         ? apiFetch<Character[]>("/api/characters", { method: "GET" }, getToken).then(setCharacters)
         : Promise.all([
             apiFetch<SeatedParty[]>("/api/parties/seated", { method: "GET" }, getToken),
@@ -86,11 +113,38 @@ export default function Welcome() {
   if (!isLoaded || !isSignedIn || !settings) return <main className="page" />;
 
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
+  const mainCharacter = characters?.find((c) => c.id === settings.mainCharacterId) ?? null;
+  const others = characters?.filter((c) => c !== mainCharacter) ?? [];
+  const card = (c: Character) => (
+    <CharacterCard
+      key={c.id}
+      character={c}
+      isMain={c === mainCharacter}
+      onStar={() => void setMain(c.id)}
+      starBusy={settingMain}
+    />
+  );
+  // Of the worlds in the account's category, the one its characters are in: the main's first.
+  const inCategory = settings.worldType ? WORLDS_IN[settings.worldType] : [];
+  const worldOf = (c: Character | null | undefined) =>
+    c?.worldName && inCategory.includes(c.worldName) ? c.worldName : null;
+  const chosenWorld =
+    pickedWorld ?? worldOf(mainCharacter) ?? worldOf(characters?.find((c) => worldOf(c))) ?? null;
+  const main = settings.mainCharacterName
+    ? { name: settings.mainCharacterName, sprite: settings.mainCharacterSprite }
+    : null;
 
   return (
     <main className="page">
-      <h1 className="page-title">Onboarding</h1>
-      <nav aria-label="Onboarding progress">
+      {main ? (
+        <div className="welcome-hero">
+          {main.sprite && <img className="hero-sprite" src={spriteUrl(main.sprite)} alt="" />}
+          <h1 className="page-title">Welcome, {main.name}</h1>
+        </div>
+      ) : (
+        <h1 className="page-title">Welcome</h1>
+      )}
+      <nav aria-label="Setup progress">
         <ol className="welcome-steps">
           {STEPS.map((label, i) => {
             const state = i === step ? "is-current" : i <= reached ? "is-done" : "is-todo";
@@ -125,48 +179,42 @@ export default function Welcome() {
       </nav>
 
       {step === 0 && (
-        <WorldChoice chosen={settings.worldType} onChosen={() => setStep(1)} embedded />
+        <WorldChoice
+          chosen={chosenWorld}
+          busy={savingWorld}
+          onChoose={(world, type) => void chooseWorld(world, type)}
+        />
       )}
 
-      {step > 0 && <h2 className="welcome-step-title">{STEPS[step]}</h2>}
       {failed && (
         <p className="routine-error">Couldn&apos;t load this step. Reload to try again.</p>
       )}
 
       {step === 1 && characters && (
         <>
-          {characters.length > 0 && (
-            <ul className="character-cards">
-              {characters.map((c) => (
-                <CharacterCard
-                  key={c.id}
-                  character={c}
-                  isMain={settings.mainCharacterId === c.id}
-                  onStar={() => void setMain(c.id)}
-                  starBusy={settingMain}
-                />
-              ))}
-            </ul>
+          <h2 className="welcome-step-title">Main Character</h2>
+          <ul className="character-cards">
+            {mainCharacter ? (
+              card(mainCharacter)
+            ) : (
+              // Held open, so starring a character below has somewhere visible to move it to.
+              <li className="character-card is-empty" aria-hidden="true" />
+            )}
+          </ul>
+          {others.length > 0 && (
+            <>
+              <h2 className="welcome-step-title">Characters</h2>
+              <ul className="character-cards">{others.map(card)}</ul>
+            </>
           )}
+          <h2 className="welcome-step-title">Add Character</h2>
           <AddCharacter onAdded={(c) => setCharacters([...characters, c])} />
-          <div className="loot-actions">
-            <button type="button" className="party-cancel" onClick={() => setStep(0)}>
-              Back
-            </button>
-            <button
-              type="button"
-              className="party-save"
-              disabled={!characters.some((c) => c.id === settings.mainCharacterId)}
-              onClick={() => setStep(2)}
-            >
-              Next
-            </button>
-          </div>
         </>
       )}
 
       {step === 2 && seated && (
         <>
+          <h2 className="welcome-step-title">Parties</h2>
           {seated.length > 0 ? (
             <ul className="welcome-list">
               {seated.map(({ party }) => (
@@ -188,23 +236,43 @@ export default function Welcome() {
           ) : (
             <p className="party-hint">No parties yet.</p>
           )}
-          <div className="loot-actions">
-            <button type="button" className="party-cancel" onClick={() => setStep(1)}>
-              Back
+        </>
+      )}
+
+      <div className="welcome-nav">
+        <span>
+          {step > 0 && (
+            <button type="button" className="party-cancel" onClick={() => setStep(step - 1)}>
+              {"\u2190 Back"}
             </button>
-            <Link className="party-cancel" href="/bosses/parties/edit">
-              Set Up a Party
-            </Link>
+          )}
+        </span>
+        <span className="welcome-nav-end">
+          {step < 2 ? (
             <button
               type="button"
               className="party-save"
-              onClick={() => router.push("/bosses/parties")}
+              disabled={step === 0 ? chosenWorld === null || savingWorld : mainCharacter === null}
+              onClick={() => setStep(step + 1)}
             >
-              Finish
+              {"Next \u2192"}
             </button>
-          </div>
-        </>
-      )}
+          ) : (
+            <>
+              <Link className="party-cancel" href="/bosses/parties/edit">
+                Set Up a Party
+              </Link>
+              <button
+                type="button"
+                className="party-save"
+                onClick={() => router.push("/bosses/parties")}
+              >
+                {"Finish \u2192"}
+              </button>
+            </>
+          )}
+        </span>
+      </div>
     </main>
   );
 }
