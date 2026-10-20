@@ -7874,3 +7874,10 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 .join-sender .hero-sprite {
   margin: 0;
 }
+
+/* The one thing to do on an invite, centred under what it says. */
+.join-act {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}

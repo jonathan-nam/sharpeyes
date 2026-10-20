@@ -108,17 +108,19 @@ export default function JoinPage() {
                 We&apos;ve pre-filled some of your character and party information.
               </p>
 
-              {isLoaded && !isSignedIn && <SignInButton callbackPath={joinCallbackPath(token)} />}
-              {isLoaded && isSignedIn && (
-                <button
-                  type="button"
-                  className="party-save"
-                  disabled={busy || !preview || preview.characters.length === 0}
-                  onClick={accept}
-                >
-                  {busy ? "Setting Up..." : "Set Up My Account"}
-                </button>
-              )}
+              <div className="join-act">
+                {isLoaded && !isSignedIn && <SignInButton callbackPath={joinCallbackPath(token)} />}
+                {isLoaded && isSignedIn && (
+                  <button
+                    type="button"
+                    className="party-save"
+                    disabled={busy || !preview || preview.characters.length === 0}
+                    onClick={accept}
+                  >
+                    {busy ? "Setting Up..." : "Set Up My Account"}
+                  </button>
+                )}
+              </div>
               {problem && <p className="split-error">{problem}</p>}
             </>
           )}
