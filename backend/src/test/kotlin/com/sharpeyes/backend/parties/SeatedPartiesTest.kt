@@ -452,7 +452,9 @@ class SeatedPartiesTest {
             // take the attributions with it, and a payout still points at the seats.
             val after = peopleFor(owner).single()
             assertEquals("Chris", after.name)
-            assertEquals(listOf("AnAltOfTheirs"), after.characters)
+            // And the character only the link said was theirs, filed by name now so their shares
+            // stay on their card. See SharedSlice.kt.
+            assertEquals(listOf("AnAltOfTheirs", "CreedBratton"), after.characters.sorted())
         }
     }
 
