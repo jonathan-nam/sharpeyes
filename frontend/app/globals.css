@@ -3309,6 +3309,24 @@ button.link:disabled {
   text-align: center;
 }
 
+/* The label as a picker, framed like the arrows beside it. */
+.week-pick {
+  width: 100%;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-base);
+  line-height: 1.4;
+  text-align: center;
+  cursor: pointer;
+}
+
+.week-pick:hover {
+  background: var(--surface-2);
+}
+
 .week-today {
   margin-left: 4px;
   padding: 2px 8px;
@@ -7305,18 +7323,18 @@ button.link:disabled {
 /* A card SECTION, which two of them are: what is unsettled, and what can be done about it. The
    steps are 11px lowercase labels on the figure each one heads, and neither of these heads a figure,
    so they carry a heading's size and weight instead of reading as one more step in the arithmetic. */
-/* The week picker, at the head of the Offsets list: a "Filter by" label over a select that takes the
-   panel's width and gives before it can leave the card. */
 .ledger-offsets-panel {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+/* "Filter By" and the week stepper on one line. Wraps rather than leaving a narrow card. */
 .ledger-filter {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
 }
 
 .ledger-heading {

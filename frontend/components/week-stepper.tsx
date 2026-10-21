@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { formatWeekStart, weekLabel } from "@/lib/boss-clears";
 import { stepThrough } from "@/lib/week-steps";
 import type { BossClearsView } from "@/types/boss";
@@ -12,7 +13,8 @@ function WeekSteps({
   back,
   busy,
 }: {
-  label: string;
+  /** What sits between the arrows: the week as text, or a picker of them. */
+  label: ReactNode;
   /** Null disables the arrow. */
   onPrevious: (() => void) | null;
   onNext: (() => void) | null;
@@ -94,7 +96,11 @@ export function WeekStepper({
   );
 }
 
-/** The same control over a list of weeks, newest first, where "" is every week. See stepThrough. */
+/**
+ * The same control over a list of weeks, newest first, where "" is every week. See stepThrough.
+ *
+ * The label is a picker as well, because a list is known up front here where Party View's is not.
+ */
 export function WeekFilter({
   weeks,
   shown,
@@ -107,7 +113,21 @@ export function WeekFilter({
   const { previous, next } = stepThrough(weeks, shown);
   return (
     <WeekSteps
-      label={shown ? `Week of ${formatWeekStart(shown)}` : "All Weeks"}
+      label={
+        <select
+          className="week-pick"
+          aria-label="Week"
+          value={shown}
+          onChange={(e) => onSelect(e.target.value)}
+        >
+          <option value="">All Weeks</option>
+          {weeks.map((w) => (
+            <option key={w} value={w}>
+              Week of {formatWeekStart(w)}
+            </option>
+          ))}
+        </select>
+      }
       onPrevious={previous === null ? null : () => onSelect(previous)}
       onNext={next === null ? null : () => onSelect(next)}
       back={shown ? { label: "All Weeks", onClick: () => onSelect("") } : null}
