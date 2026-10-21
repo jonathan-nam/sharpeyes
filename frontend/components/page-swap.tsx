@@ -13,8 +13,10 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
  * So they overlap. The placeholder is kept mounted for the length of the fade and taken out of
  * flow, the content fades up underneath it, and only then is it dropped.
  *
- * Once settled this renders its children and nothing else, so steady-state layout is exactly what
- * it would be without the wrapper.
+ * Once settled its wrappers are `display: contents`, so steady-state layout is exactly what it
+ * would be without them. They are never taken OUT: returning bare children when the fade ended
+ * changed the tree's shape, React remounted the whole page, and whatever was pressed or typed in
+ * the first 280ms (an armed confirm, a half-filled box) was lost.
  */
 
 // The overlap. Must match .page-swap-in in globals.css: the placeholder is unmounted from here, so
@@ -94,10 +96,6 @@ export function PageSwap({
 
   const holding = waiting || lingering;
 
-  // Nothing in hand and nothing on the way: the page has never waited, or has finished. No wrapper,
-  // so a settled page is laid out exactly as it would be without this component in the tree.
-  if (!holding) return <>{children}</>;
-
   /*
    * A shaped placeholder is drawn at once, at full strength, and bare.
    *
@@ -112,10 +110,11 @@ export function PageSwap({
    * positioning context, and this is then the same markup the route boundary renders: handing over
    * from loading.tsx to the page changes nothing on screen.
    */
-  if (shaped) return <>{placeholder}</>;
+  if (shaped) return waiting ? <>{placeholder}</> : <>{children}</>;
 
+  // Settled, the same two elements stay and merely stop being boxes. See the comment at the top.
   return (
-    <div className="page-swap">
+    <div className={holding ? "page-swap" : "page-swap-done"}>
       {holding && (
         // While waiting it is the placeholder, and wears the delay that decides whether it is drawn
         // at all: a load that finishes inside 150ms should never show one. That class is on this
@@ -134,7 +133,7 @@ export function PageSwap({
           {placeholder}
         </div>
       )}
-      {!waiting && <div className="page-swap-in">{children}</div>}
+      {!waiting && <div className={lingering ? "page-swap-in" : "page-swap-done"}>{children}</div>}
     </div>
   );
 }
