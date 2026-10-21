@@ -80,7 +80,7 @@ class PieceSyncTest {
     // --- the grid ------------------------------------------------------------------------------
 
     /**
-     * boss -> difficulty -> world -> (item, count). Jonathan's validated table, by hand, so a change
+     * boss -> difficulty -> world -> (item, count). A table validated by hand, so a change
      * to catalog/items.yaml has to be made twice to pass.
      */
     private val grid =
@@ -185,7 +185,7 @@ class PieceSyncTest {
         Characters.insert {
             it[Characters.id] = id
             it[Characters.userId] = owner
-            it[name] = "Husky"
+            it[name] = "Marrow"
             it[worldType] = world
             it[createdAt] = now
             it[updatedAt] = now

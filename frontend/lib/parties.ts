@@ -1,7 +1,7 @@
 // Reading a set of party configs.
 //
 // A config is one of your characters, on one boss, with the people that character runs it with:
-// "mechyfechy runs Kalos with CreedBratton". A boss that character solos has a config too, holding
+// "tidelark runs Kalos with Pinewick". A boss that character solos has a config too, holding
 // what fell on it, but it is not a party and is not in any list this file reads: /api/parties leaves
 // solo configs out unless asked, which is what keeps the list short enough to read.
 
@@ -206,7 +206,7 @@ export type ConsolidatedParty = {
 /**
  * Configs with the same roster, merged into one entry per arrangement.
  *
- * A duo with CreedBratton across Kalos, First Adversary and Baldrix is one arrangement and three
+ * A duo with Pinewick across Kalos, First Adversary and Baldrix is one arrangement and three
  * runs. Per boss is the right shape on the night; per arrangement is the right shape when the
  * question is who you run with rather than what is on tonight.
  *

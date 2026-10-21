@@ -162,12 +162,12 @@ class PartyMemberWritesTest {
         )
     }
 
-    /** The owner, Chris on [member]'s account as CreedBratton, and Baldrix unclaimed. */
+    /** The owner, Chris on [member]'s account as Pinewick, and Baldrix unclaimed. */
     private fun shared(): PartyResponse {
-        val theirs = character(owner, "mechyfechy")
-        character(member, "CreedBratton")
+        val theirs = character(owner, "tidelark")
+        character(member, "Pinewick")
         link(owner, "Chris", member)
-        val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+        val party = config(theirs, listOf("Pinewick", "Baldrix"))
         return party
     }
 
@@ -199,8 +199,8 @@ class PartyMemberWritesTest {
             val party = shared()
             val lootId = drop(party, by = member)
             val row = loot(party, lootId)
-            assertNull(sellRefusal(id(party), member, seatId(party, "CreedBratton"), row))
-            assertNotNull(sellRefusal(id(party), member, seatId(party, "mechyfechy"), row))
+            assertNull(sellRefusal(id(party), member, seatId(party, "Pinewick"), row))
+            assertNotNull(sellRefusal(id(party), member, seatId(party, "tidelark"), row))
             assertNotNull(sellRefusal(id(party), member, seatId(party, "Baldrix"), row))
             assertNull(sellRefusal(id(party), owner, seatId(party, "Baldrix"), row))
         }
@@ -211,9 +211,9 @@ class PartyMemberWritesTest {
         transaction {
             val party = shared()
             val lootId = drop(party)
-            sell(party, lootId, "mechyfechy")
+            sell(party, lootId, "tidelark")
             val row = loot(party, lootId)
-            assertNotNull(sellRefusal(id(party), member, seatId(party, "CreedBratton"), row))
+            assertNotNull(sellRefusal(id(party), member, seatId(party, "Pinewick"), row))
             assertNotNull(unsellRefusal(id(party), member, row))
             assertNull(unsellRefusal(id(party), owner, row))
         }
@@ -224,7 +224,7 @@ class PartyMemberWritesTest {
         transaction {
             val party = shared()
             val lootId = drop(party, by = member)
-            sell(party, lootId, "CreedBratton")
+            sell(party, lootId, "Pinewick")
             assertNull(unsellRefusal(id(party), member, loot(party, lootId)))
         }
     }
@@ -235,9 +235,9 @@ class PartyMemberWritesTest {
             val party = shared()
             val lootId = drop(party)
             val row = loot(party, lootId)
-            assertNull(keptRefusal(id(party), member, seatId(party, "CreedBratton"), row))
-            assertNotNull(keptRefusal(id(party), member, seatId(party, "mechyfechy"), row))
-            PartyLoot.update({ PartyLoot.id eq lootId }) { it[takenByMemberId] = seatId(party, "mechyfechy") }
+            assertNull(keptRefusal(id(party), member, seatId(party, "Pinewick"), row))
+            assertNotNull(keptRefusal(id(party), member, seatId(party, "tidelark"), row))
+            PartyLoot.update({ PartyLoot.id eq lootId }) { it[takenByMemberId] = seatId(party, "tidelark") }
             assertNotNull(keptRefusal(id(party), member, null, loot(party, lootId)))
         }
     }
@@ -253,7 +253,7 @@ class PartyMemberWritesTest {
             assertTrue(mayDeleteLoot(id(party), member, loot(party, theirs)))
             assertFalse(mayDeleteLoot(id(party), member, loot(party, ownersDrop)))
             assertTrue(mayDeleteLoot(id(party), owner, loot(party, theirs, owner)))
-            sell(party, theirs, "CreedBratton")
+            sell(party, theirs, "Pinewick")
             assertFalse(mayDeleteLoot(id(party), member, loot(party, theirs)))
         }
     }

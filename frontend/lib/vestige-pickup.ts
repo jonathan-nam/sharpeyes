@@ -11,7 +11,7 @@
 //
 // Offered on EVERY night, not only the ones that will not divide. A night whose stacks happen to
 // come out even is not a night that divided: one person may still have looted the lot, and until
-// somebody says so the ledger assumes they did not. Six of HuskyxKenshi's seven nights had nothing
+// somebody says so the ledger assumes they did not. Six of MarrowWind's seven nights had nothing
 // recorded and five of them were never even asked about, which is what that assumption costs.
 //
 // What is written is party_loot_bundle (V41). Every figure anybody is owed follows from it on read.

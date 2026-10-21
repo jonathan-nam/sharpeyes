@@ -177,12 +177,12 @@ export function SettlementStage({
         }}
         // ONE request, and one repaint. It was a settle followed by an entry per share, and the
         // halves of an offset cancel: between them the ledger said the shares were paid and nothing
-        // had come off the debt, which walked Bro's card from 253.86b up to 254b and back down over
+        // had come off the debt, which walked Owen's card from 253.86b up to 254b and back down over
         // two round trips. A failure in the gap left it there.
         //
         // The coupon money is in the same request for the same reason one step out. It was a
         // disposal of its own after this one, and both come off what they owe you, so a press
-        // covering the pair took Bro's card down by the shares and then down again by the money:
+        // covering the pair took Owen's card down by the shares and then down again by the money:
         // one button, one figure, two visible steps.
         //
         // The server writes all of it in one transaction and answers with every list, so there is

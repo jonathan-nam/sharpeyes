@@ -153,7 +153,7 @@ class SettlementBalanceDbTest {
         PartyMember.insert {
             it[id] = memberId
             it[PartyMember.partyId] = partyId
-            it[name] = "Bro"
+            it[name] = "Owen"
             it[position] = 0
             it[standing] = true
             it[shares] = 1
@@ -193,7 +193,7 @@ class SettlementBalanceDbTest {
                 exec(
                     "INSERT INTO settlement_debt (id, user_id, holder_kind, character_name, " +
                         "amount, note, incurred_at, created_at) VALUES ('$debtId', '$userId', " +
-                        "'CHARACTER', 'bro', -1109227872, 'offset against Bro', now(), now())",
+                        "'CHARACTER', 'owen', -1109227872, 'offset against Owen', now(), now())",
                 )
                 exec(
                     "INSERT INTO settlement_debt_payout (debt_id, loot_id, member_id) " +
@@ -220,18 +220,18 @@ class SettlementBalanceDbTest {
     fun `a sale comes back carrying whose pieces it was`() {
         transaction {
             ensureUser(userId, "settlement@example.com")
-            val bro = person(userId, "Bro")
+            val owen = person(userId, "Owen")
             // The night this exists for: 160 fell, 80 were theirs, you looted the lot and sold it.
-            soldWithShare(userId, bro, pieces = 160, amount = 4_000_000_000, theirs = 80)
+            soldWithShare(userId, owen, pieces = 160, amount = 4_000_000_000, theirs = 80)
             // A second sale with nobody else's pieces in it, so the join has two rows to tell apart.
-            soldWithShare(userId, bro, pieces = 20, amount = 500_000_000, theirs = 20)
+            soldWithShare(userId, owen, pieces = 20, amount = 500_000_000, theirs = 20)
 
             val rows = tranchesFor(userId)
             assertEquals(2, rows.size)
             val big = rows.first { it.pieces == 160.0 }
             assertEquals(1, big.shares.size)
             assertEquals(80.0, big.shares[0].pieces)
-            assertEquals(bro.toString(), big.shares[0].holder.personId)
+            assertEquals(owen.toString(), big.shares[0].holder.personId)
             assertEquals("PERSON", big.shares[0].holder.kind)
             // Their share of the money is never stored, only derivable: 80 of 160 at 4b is 2b.
             assertEquals(20.0, rows.first { it.pieces == 20.0 }.shares[0].pieces)
@@ -242,8 +242,8 @@ class SettlementBalanceDbTest {
     fun `removing a mistyped sale takes its attribution with it`() {
         transaction {
             ensureUser(userId, "settlement@example.com")
-            val bro = person(userId, "Bro")
-            val trancheId = soldWithShare(userId, bro, 160, 4_000_000_000, 80)
+            val owen = person(userId, "Owen")
+            val trancheId = soldWithShare(userId, owen, 160, 4_000_000_000, 80)
 
             VestigeTranche.deleteWhere { VestigeTranche.id eq trancheId }
             // Left behind, a share would go on crediting somebody out of a sale that never happened.
@@ -262,7 +262,7 @@ class SettlementBalanceDbTest {
         transaction {
             ensureUser(userId, "settlement@example.com")
             ensureUser(strangerId, "stranger@example.com")
-            val mine = person(userId, "Bro")
+            val mine = person(userId, "Owen")
             val theirs = person(strangerId, "Someone")
             val now = Clock.System.now()
 

@@ -12,7 +12,7 @@
 // no more way to reach one than drop-log.ts does.
 //
 // A row can be finished twice over and honestly. One night's coupons sit in as many piles as there
-// were people bending down, and closing the books with Bro says nothing about Jared, so a night
+// were people bending down, and closing the books with Owen says nothing about Felix, so a night
 // settled with both is TWO records. Folding them would name one person and quietly drop the other.
 
 import { settledForYou } from "./drop-log";
@@ -236,7 +236,7 @@ export type SettledLine = {
  * boss per week for ever after. The act is the honest unit anyway, because "how it was settled" is a
  * property of the act and not of any one night behind it.
  *
- * By the ACT and never by the person. Two settlements with Bro a month apart are two decisions, and
+ * By the ACT and never by the person. Two settlements with Owen a month apart are two decisions, and
  * folding them together would put one date on both.
  *
  * A money drop is its own line always. Each sold separately, at its own price, and nothing groups

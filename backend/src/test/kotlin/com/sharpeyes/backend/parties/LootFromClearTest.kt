@@ -75,7 +75,7 @@ class LootFromClearTest {
         Characters.insert {
             it[Characters.id] = mine
             it[Characters.userId] = owner
-            it[Characters.name] = "Husky"
+            it[Characters.name] = "Marrow"
             it[Characters.worldType] = WORLD_INTERACTIVE
             it[createdAt] = now
             it[updatedAt] = now

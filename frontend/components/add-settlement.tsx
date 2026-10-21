@@ -217,7 +217,7 @@ export function AddSettlement({
         <div className="ledger-entry">
           {/* The one figure on this page nothing else could have known. See V56.
 
-              "Bro owes me ___ for ___" was a sentence spread over two boxes, with no unit on either
+              "Owen owes me ___ for ___" was a sentence spread over two boxes, with no unit on either
               and nothing saying what "for" wanted. The step names the act, the labels name the
               fields, and the b/m suffix is the one thing about parseMesos nobody can guess, so it
               stays a placeholder on the amount. */}

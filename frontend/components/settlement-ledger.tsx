@@ -478,7 +478,7 @@ function SettlementCard({
    * theirs. This is the third thing that can happen: the mesos left your hands.
    *
    * It went missing when Settle was pulled off a card with nothing to collect, and pulling it was
-   * right; what was wrong was leaving no act in its place. Jared's card said "you owe 289,382,716"
+   * right; what was wrong was leaving no act in its place. Felix's card said "you owe 289,382,716"
    * with nothing to do about it, which is a ledger you cannot keep.
    *
    * Dollars are in it for the same reason. `owes` is the meso figure alone (an offset cannot be
@@ -1406,7 +1406,7 @@ const dayOf = (at: string) => formatDropped(at.slice(0, 10));
  *
  * An offset covers ONE share, so the act row used to be a free-text note and a count with the night
  * itself a second fold down: two clicks to reach "which drop was that", and the middle row saying
- * nothing but "offset against Bro". Where there is one share, its drop IS the row.
+ * nothing but "offset against Owen". Where there is one share, its drop IS the row.
  *
  * Several shares still fold, for the entries written while one press wrote one entry over all of
  * them. Offset records a row per share now, so nothing new arrives in that shape.

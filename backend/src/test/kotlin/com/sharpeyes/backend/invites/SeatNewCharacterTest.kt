@@ -128,10 +128,10 @@ class SeatNewCharacterTest {
     @Test
     fun `a character added after joining takes the seat the sender made for it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "LaterAlt"))
+            val party = config(theirs, listOf("Pinewick", "LaterAlt"))
             assertNull(seatOf(party, "LaterAlt"))
 
             val alt = character(member, "LaterAlt", position = 1)
@@ -145,7 +145,7 @@ class SeatNewCharacterTest {
     @Test
     fun `nobody unlinked takes a seat by naming it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
+            val theirs = character(owner, "tidelark")
             val party = config(theirs, listOf("LaterAlt"))
             val impostor = character(stranger, "LaterAlt")
             seatInLinkedParties(stranger, impostor, "LaterAlt", WORLD_INTERACTIVE)
@@ -156,10 +156,10 @@ class SeatNewCharacterTest {
     @Test
     fun `a name in the other world is somebody else`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "LaterAlt"))
+            val party = config(theirs, listOf("Pinewick", "LaterAlt"))
             val alt = character(member, "LaterAlt", position = 1)
             seatInLinkedParties(member, alt, "LaterAlt", "HEROIC")
             assertNull(seatOf(party, "LaterAlt"))

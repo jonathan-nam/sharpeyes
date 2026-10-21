@@ -26,7 +26,7 @@ const plan = source("components", "run-plan.tsx");
 
 const mine: PartyMember = {
   id: "m1",
-  name: "HuskyxKenshi",
+  name: "MarrowWind",
   personId: null,
   personName: null,
   characterId: "char-m1",
@@ -38,9 +38,9 @@ const mine: PartyMember = {
 
 const theirs: PartyMember = {
   id: "m2",
-  name: "CreedBratton",
-  personId: "p-bro",
-  personName: "Bro",
+  name: "Pinewick",
+  personId: "p-owen",
+  personName: "Owen",
   characterId: null,
   linkedCharacterId: null,
   spriteImgUrl: null,
@@ -50,7 +50,7 @@ const theirs: PartyMember = {
 
 const party: Party = {
   id: "pa",
-  slug: "husky/baldrix",
+  slug: "marrow/baldrix",
   characterId: "char-m1",
   solo: false,
   oneOff: false,

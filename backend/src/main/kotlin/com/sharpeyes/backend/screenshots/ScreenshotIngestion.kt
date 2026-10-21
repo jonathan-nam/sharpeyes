@@ -251,7 +251,7 @@ private fun upsertTokenCounts(
 
     if (inventoryComplete) {
         // The player spent the stack. A row kept here outlives the item and reads as a
-        // confident wrong number: mechyfechy showed 50 Kaling pieces held for 37 minutes after
+        // confident wrong number: tidelark showed 50 Kaling pieces held for 37 minutes after
         // a capture that plainly had none, because nothing could ever clear it.
         //
         // Deleted rather than zeroed, because "no row" is already how an item the player has

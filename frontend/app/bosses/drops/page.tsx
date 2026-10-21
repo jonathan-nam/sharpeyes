@@ -499,7 +499,7 @@ export default function DropLogPage() {
   };
   const yours = yourPiles(ledgers);
   // What the OTHER piles are holding of yours, so your own pile's debt reads as what changes hands:
-  // owing Bro 90 while he holds 20 of yours is 70. Netted per creditor, never across people. See owes.
+  // owing Owen 90 while he holds 20 of yours is 70. Netted per creditor, never across people. See owes.
   const heldOfYours = heldOfYoursBy(ledgers);
   // Of your own piles, the ones with something to answer. A pile that owes nobody is not drawn at
   // all: it is a count with no question on it, and this tab is the list of what is still open.
@@ -846,7 +846,7 @@ export default function DropLogPage() {
 
               A Reopen used to sit on every row and it undid HALF of a settlement. Closing a coupon
               pair is ONE act that writes one row per inventory (see onSettlePair), so deleting one of
-              them left a night shut in their pile and open in yours: Jonathan hit it by accident and
+              them left a night shut in their pile and open in yours: a user hit it by accident and
               60 coupons reappeared on the Sale Ledger with the other side still closed. A button
               whose one effect is to half-undo a paired act is a trap however it is labelled, the same
               reason Settle came off a card with nothing to collect. A settlement filed against the

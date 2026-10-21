@@ -24,7 +24,7 @@ const SEATED_KEY = "/api/parties/seated";
 const CHARACTERS_KEY = "/api/characters";
 
 // Who plays which character. Kept apart from the parties on purpose: a party names characters, and
-// this says whose they are, once, for every party that names them. Say it here and CreedBratton is
+// this says whose they are, once, for every party that names them. Say it here and Pinewick is
 // Chris's everywhere he turns up.
 //
 // The characters are the sprites they are in every other roster, because that is what makes the

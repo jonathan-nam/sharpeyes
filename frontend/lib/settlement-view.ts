@@ -145,7 +145,7 @@ export function settlementView(
     holderNames,
     new Set(people.filter((p) => p.pinned).map((p) => `person:${p.id}`)),
     // The pieces a priced tranche already spoke for, per pair. `saleCredits` above is the money the
-    // same rows came to, and passing one without the other is what had this card asking Bro for 130
+    // same rows came to, and passing one without the other is what had this card asking Owen for 130
     // coupons while the Sale Ledger, subtracting the 70 he had been sold, asked for 60.
     answeredSalesByPair(tranches),
     // What has been decided about their money, and nothing more. An empty list means undecided,

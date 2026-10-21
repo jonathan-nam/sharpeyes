@@ -178,7 +178,7 @@ private suspend fun RoutingContext.closeRoute(kind: String) {
  *
  * TWO POTS, and that is why they are one request. The shares you owe and their own money a sale left
  * in your hands both come off what they owe you, and as two requests the card drew between them:
- * Bro's debt went down by the shares, then down again by the money, for one press of one button.
+ * Owen's debt went down by the shares, then down again by the money, for one press of one button.
  *
  * ONE ROW PER SHARE, so the history reads as the drops it was rather than as a figure naming nobody,
  * and one can be taken back without the others.

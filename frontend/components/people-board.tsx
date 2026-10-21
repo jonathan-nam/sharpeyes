@@ -140,7 +140,7 @@ export function PeopleBoard({
                         className="split-input person-name"
                         value={row.name}
                         onChange={(e) => onRename(index, e.target.value)}
-                        placeholder="Jared"
+                        placeholder="Felix"
                         maxLength={40}
                       />
                     </span>

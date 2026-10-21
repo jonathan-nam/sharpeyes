@@ -35,7 +35,7 @@ describe("which section a path belongs to", () => {
     expect(labelFor("/bosses/parties/abc-123")).toBe("Party View");
     // A config names itself with two segments, and a doubled character name with three. Both are
     // still one page under Party View. See lib/party-path.ts.
-    expect(labelFor("/bosses/parties/mechyfechy/kalos-the-guardian")).toBe("Party View");
+    expect(labelFor("/bosses/parties/tidelark/kalos-the-guardian")).toBe("Party View");
     expect(labelFor("/bosses/parties/heroic/rune/kalos-the-guardian")).toBe("Party View");
   });
 

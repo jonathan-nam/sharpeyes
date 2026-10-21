@@ -118,7 +118,7 @@ const catalogDrop = (
 });
 
 /** Your character and one stranger, in two parties on two bosses. */
-const duo = () => [seat("m1", "Husky", { mine: true }), seat("m2", "Rune")];
+const duo = () => [seat("m1", "Marrow", { mine: true }), seat("m2", "Rune")];
 
 describe("which drops are sold as a lot", () => {
   it("reads the catalog rather than a list of its own", () => {
@@ -159,7 +159,7 @@ describe("the queue a lot is drawn from", () => {
   it("splits evenly whatever stack ratio the party is on", () => {
     // Rune's 2 is an entitlement to the vestige stacks, which is the only thing that column says.
     // Reading it here sold a pile of grindstones 1:2 off a set of boxes that opened even.
-    const carried = [seat("m1", "Husky", { mine: true }), seat("m2", "Rune", { shares: 2 })];
+    const carried = [seat("m1", "Marrow", { mine: true }), seat("m2", "Rune", { shares: 2 })];
     const queue = lotQueue(
       [party("p1", "limbo", carried)],
       [pool("p1", [drop("l1", STONE, "2026-07-30", ["m1", "m2"])])],
@@ -173,7 +173,7 @@ describe("the queue a lot is drawn from", () => {
   });
 
   it("splits evenly whatever the week itself was pinned on", () => {
-    const carried = [seat("m1", "Husky", { mine: true }), seat("m2", "Rune", { shares: 1 })];
+    const carried = [seat("m1", "Marrow", { mine: true }), seat("m2", "Rune", { shares: 1 })];
     const queue = lotQueue(
       [party("p1", "limbo", carried)],
       [pool("p1", [drop("l1", STONE, "2026-07-30", ["m1", "m2"], { sharesThatWeek: { m2: 2 } })])],
@@ -350,8 +350,8 @@ describe("what each row of a lot sold for", () => {
       weekStart: "2026-07-16",
       characterId: "char-m1",
       sellerMemberId: "m1",
-      sellerName: "Husky",
-      ran: [seat("m1", "Husky", { mine: true })],
+      sellerName: "Marrow",
+      ran: [seat("m1", "Marrow", { mine: true })],
     }));
 
   it("divides the total evenly when it divides", () => {
@@ -433,8 +433,8 @@ describe("the seats a lot's share boxes stand for", () => {
 
   it("is one set of boxes per distinct roster, not per row", () => {
     expect(lotRosters(rosterQueue).map((r) => r.names)).toEqual([
-      ["Husky", "Rune"],
-      ["Husky", "Rune", "Kelp"],
+      ["Marrow", "Rune"],
+      ["Marrow", "Rune", "Kelp"],
     ]);
   });
 
@@ -451,8 +451,8 @@ describe("the seats a lot's share boxes stand for", () => {
   it("applies a typed ratio to every row that roster ran, by their seat in it", () => {
     const [duoRoster, trioRoster] = lotRosters(rosterQueue);
     const body = lotSaleBody(STONE, 3 * B, "RECEIVED", "FAIR", rosterQueue, {
-      [duoRoster!.key]: { Husky: 1, Rune: 2 },
-      [trioRoster!.key]: { Husky: 1, Rune: 1, Kelp: 0 },
+      [duoRoster!.key]: { Marrow: 1, Rune: 2 },
+      [trioRoster!.key]: { Marrow: 1, Rune: 1, Kelp: 0 },
     });
     expect(body.rows.map((r) => [r.lootId, r.shares])).toEqual([
       ["l1", { m1: 1, m2: 2 }],

@@ -147,29 +147,29 @@ class LeavePartyTest {
     @Test
     fun `a member takes their own seat out, and stops reading the party`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(owner, "Baldrix", position = 1)
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            val party = config(theirs, listOf("Pinewick", "Baldrix"))
             assertTrue(partiesSeatedIn(member).isNotEmpty())
 
             assertTrue(leave(member, party))
 
             // The read and the write agree, which is the point of authorising both on the seat.
             assertEquals(emptyList(), partiesSeatedIn(member))
-            assertEquals(listOf("Baldrix", "mechyfechy"), standing(party))
+            assertEquals(listOf("Baldrix", "tidelark"), standing(party))
         }
     }
 
     @Test
     fun `the account comes off the seat, so a seat left standing is not a way back in`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(owner, "Baldrix", position = 1)
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            val party = config(theirs, listOf("Pinewick", "Baldrix"))
             drop(party, night)
 
             assertTrue(leave(member, party))
@@ -177,7 +177,7 @@ class LeavePartyTest {
             // The seat survives the leave (a week's roster points at it), so the binding is what
             // has to go. unlinkPerson makes the same move from the owner's end and for the same
             // reason: a revoke that leaves the seat bound looks like it worked.
-            val mine = seat(party, "CreedBratton")!!
+            val mine = seat(party, "Pinewick")!!
             assertNull(mine[PartyMember.linkedCharacterId])
             PartyMember.update({ PartyMember.id eq mine[PartyMember.id] }) { it[standing] = true }
             assertEquals(emptyList(), partiesSeatedIn(member))
@@ -187,18 +187,18 @@ class LeavePartyTest {
     @Test
     fun `a night already played keeps the seat that ran it, and its roster`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(owner, "Baldrix", position = 1)
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            val party = config(theirs, listOf("Pinewick", "Baldrix"))
             drop(party, night)
 
             assertTrue(leave(member, party))
 
             // Retired, not deleted. A payout and a week's roster both reference the seat with ON
             // DELETE CASCADE, so deleting it would erase a debt in the same breath as a leave.
-            val mine = seat(party, "CreedBratton")!!
+            val mine = seat(party, "Pinewick")!!
             assertFalse(mine[PartyMember.standing])
             // And that week still says they were on it, so what fell is still divided by two.
             val ran =
@@ -216,36 +216,36 @@ class LeavePartyTest {
     @Test
     fun `a seat nothing points at is deleted rather than left retired`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(owner, "Baldrix", position = 1)
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            val party = config(theirs, listOf("Pinewick", "Baldrix"))
 
             assertTrue(leave(member, party))
 
             // Nothing was ever played with them in it, so there is nothing to keep the row for.
             // retireOrDelete's rule, unchanged: a seat is kept because something points at it.
-            assertNull(seat(party, "CreedBratton"))
+            assertNull(seat(party, "Pinewick"))
         }
     }
 
     @Test
     fun `the split the people staying agreed is not re-cut`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(owner, "Baldrix", position = 1)
             link(owner, "Chris", member)
             // Somebody carries, which is what shares are for.
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"), mapOf("mechyfechy" to 3, "Baldrix" to 2))
+            val party = config(theirs, listOf("Pinewick", "Baldrix"), mapOf("tidelark" to 3, "Baldrix" to 2))
 
             assertTrue(leave(member, party))
 
             // The roster is written through writeMembers, which reads a name it was given no share
             // for as taking one. Handing the shares back in is what stops a leave from quietly
             // re-cutting somebody else's money.
-            assertEquals(3, seat(party, "mechyfechy")!![PartyMember.shares])
+            assertEquals(3, seat(party, "tidelark")!![PartyMember.shares])
             assertEquals(2, seat(party, "Baldrix")!![PartyMember.shares])
         }
     }
@@ -253,10 +253,10 @@ class LeavePartyTest {
     @Test
     fun `nobody else left demotes the config to the solo pool it now is`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             drop(party, night)
 
             assertTrue(leave(member, party))
@@ -273,92 +273,92 @@ class LeavePartyTest {
     @Test
     fun `a party I have no seat in is not mine to leave`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(stranger, "Nosy")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
 
             // The one that matters. This is a write on somebody else's config, so a caller who is
             // not in it reaching the roster would reach every roster.
             assertFalse(leave(stranger, party))
-            assertEquals(listOf("CreedBratton", "mechyfechy"), standing(party))
+            assertEquals(listOf("Pinewick", "tidelark"), standing(party))
         }
     }
 
     @Test
     fun `a seat that only NAMES my character is not mine to leave`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             // No link, so nothing bound the seat: the owner typed a name that happens to be a real
             // character of somebody's. Reading it is refused for the same reason (SeatedPartiesTest),
             // and writing it would let anybody who picked the name edit the roster.
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
 
             assertFalse(leave(member, party))
-            assertEquals(listOf("CreedBratton", "mechyfechy"), standing(party))
+            assertEquals(listOf("Pinewick", "tidelark"), standing(party))
         }
     }
 
     @Test
     fun `my own config is not a party I can leave`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
 
             // Leaving your own config would be deleting it with the pool still hanging off it, and
             // DELETE /api/parties/{id} is that door, which retires rather than destroys.
             assertFalse(leave(owner, party))
-            assertEquals(listOf("CreedBratton", "mechyfechy"), standing(party))
+            assertEquals(listOf("Pinewick", "tidelark"), standing(party))
         }
     }
 
     @Test
     fun `the owner takes a member out, the way leaving does`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(owner, "Baldrix", position = 1)
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            val party = config(theirs, listOf("Pinewick", "Baldrix"))
             drop(party, night)
 
-            val creed = seat(party, "CreedBratton")!![PartyMember.id]
-            assertTrue(removeMember(owner, Uuid.parse(party.id), creed, Clock.System.now()))
+            val pine = seat(party, "Pinewick")!![PartyMember.id]
+            assertTrue(removeMember(owner, Uuid.parse(party.id), pine, Clock.System.now()))
 
             assertEquals(emptyList(), partiesSeatedIn(member))
             assertFalse(canEditParty(Uuid.parse(party.id), member))
-            assertEquals(listOf("Baldrix", "mechyfechy"), standing(party))
+            assertEquals(listOf("Baldrix", "tidelark"), standing(party))
         }
     }
 
     @Test
     fun `only the owner takes anybody out, and never their own seat`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(owner, "Baldrix", position = 1)
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton", "Baldrix"))
+            val party = config(theirs, listOf("Pinewick", "Baldrix"))
             val baldrix = seat(party, "Baldrix")!![PartyMember.id]
-            val own = seat(party, "mechyfechy")!![PartyMember.id]
+            val own = seat(party, "tidelark")!![PartyMember.id]
 
             assertFalse(removeMember(member, Uuid.parse(party.id), baldrix, Clock.System.now()))
             assertFalse(removeMember(owner, Uuid.parse(party.id), own, Clock.System.now()))
-            assertEquals(listOf("Baldrix", "CreedBratton", "mechyfechy"), standing(party))
+            assertEquals(listOf("Baldrix", "Pinewick", "tidelark"), standing(party))
         }
     }
 
     @Test
     fun `disbanding a party with history takes every member off it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             drop(party, night)
 
             assertEquals(Removal.RETIRED, retireOrDeleteParty(Uuid.parse(party.id), owner, Clock.System.now()))

@@ -28,7 +28,7 @@ import kotlin.uuid.Uuid
  * Writes [payload] onto [userId]'s account.
  *
  * The account need NOT be empty. It had to be until the mirror was unwound: accepting used to copy
- * the sender's configs onto your account, and merging those meant guessing whether the CreedBratton
+ * the sender's configs onto your account, and merging those meant guessing whether the Pinewick
  * in the payload was the one already here. Since V75 accepting binds a seat on the sender's own row
  * instead, so the only thing that can overlap is a character or a person, and both of those are
  * matched by NAME, which is the match the rest of the app already runs on.
@@ -261,7 +261,7 @@ private fun bindSeats(
  * Records that these two accounts are two people, from both sides.
  *
  * Written here and nowhere else. This is the one moment both accounts are known at once: afterwards
- * the sender's Bro and Bro's account are joined only by character names, which cannot tell a shared
+ * the sender's Owen and Owen's account are joined only by character names, which cannot tell a shared
  * party from two people who happen to know the same name.
  */
 private fun linkAccounts(

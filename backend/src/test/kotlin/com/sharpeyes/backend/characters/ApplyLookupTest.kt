@@ -64,7 +64,7 @@ class ApplyLookupTest {
     /** A character recorded in [world] under [name], which is where the wrong answers start. */
     private fun character(
         world: String,
-        name: String = "mechyfechy",
+        name: String = "tidelark",
     ) {
         val owner = userId
         val now = Clock.System.now()
@@ -82,7 +82,7 @@ class ApplyLookupTest {
 
     private fun found(
         world: GmsWorld?,
-        name: String = "mechyfechy",
+        name: String = "tidelark",
     ) = NexonLookupResult(
         name = name,
         level = 296,
@@ -150,11 +150,11 @@ class ApplyLookupTest {
         transaction {
             // The lookup matches case-insensitively, so this is a name that was typed rather than
             // read, and a refresh is the only thing that can tell the two apart.
-            character(WORLD_INTERACTIVE, name = "Huskyxkenshi")
+            character(WORLD_INTERACTIVE, name = "Marrowwind")
 
-            applyLookup(characterId, userId, found(GmsWorld.SCANIA, name = "HuskyxKenshi"), Clock.System.now())
+            applyLookup(characterId, userId, found(GmsWorld.SCANIA, name = "MarrowWind"), Clock.System.now())
 
-            assertEquals("HuskyxKenshi", stored()[Characters.name])
+            assertEquals("MarrowWind", stored()[Characters.name])
         }
     }
 

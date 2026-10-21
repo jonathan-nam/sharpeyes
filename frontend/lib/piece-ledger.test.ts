@@ -238,7 +238,7 @@ describe("a sale only reaching the nights that were on the books", () => {
   });
 
   it("does not answer a night logged after it", () => {
-    // Hard Baldrix, and the reason the row read "Yours". You sell 60 of Bro's at 04:20 and log a
+    // Hard Baldrix, and the reason the row read "Yours". You sell 60 of Owen's at 04:20 and log a
     // fresh night at 04:46: the sale cannot have been about coupons you had not picked up yet.
     const out = spendSales(
       [night("baldrix", "2026-08-23", 60, "2026-08-23T04:46:41Z")],
@@ -382,12 +382,12 @@ describe("a night that does not divide", () => {
     weekStart: "2026-10-15",
     order: 0,
     total: 45,
-    seats: [seat("Mech", looted[0]), seat("Bro", looted[1])],
+    seats: [seat("Kip", looted[0]), seat("Owen", looted[1])],
   });
 
   it("owes the exact half, whoever looted the lot", () => {
     expect(transfersOf(jupiter([45, 0])).map((t) => [t.from, t.to, t.pieces])).toEqual([
-      ["Mech", "Bro", 22.5],
+      ["Kip", "Owen", 22.5],
     ]);
   });
 

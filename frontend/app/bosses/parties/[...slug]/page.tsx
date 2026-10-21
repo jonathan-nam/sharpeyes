@@ -444,7 +444,7 @@ export default function PartyPage() {
               filtered by it (see ranAtThisMode). Several of your characters can run the same boss,
               so without the name the title does not say which config this is.
 
-              It used to read "Chaos Kalos the Guardian with iPhone69C", naming the roster as it
+              It used to read "Chaos Kalos the Guardian with Moxie77Q", naming the roster as it
               stands today. The pool under it is a season of nights and who ran each is that night's
               own fact (party_week_seat, and ranSeats divides by it), so the title promised a list
               filtered by those members and delivered one filtered by the mode.

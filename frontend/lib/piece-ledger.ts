@@ -93,7 +93,7 @@ export function formatPieces(n: number): string {
  *
  * It was the largest remainder, which gave one of them 23 and called the other's half a coupon
  * theirs. Coupons trade whole, so a .5 is the two of them to settle, and the ledger says so rather
- * than deciding (Jonathan, 2026-10-21). The entitlements still add up to what dropped.
+ * than deciding (decided 2026-10-21). The entitlements still add up to what dropped.
  */
 export function entitlements(total: number, seats: LedgerSeat[]): Map<string, number> {
   const weight = seats.reduce((sum, s) => sum + s.shares, 0);
@@ -286,7 +286,7 @@ export function oldestNightFirst(
  * out of `settleThePair` and leave it open for ever. Whoever DRAWS the list skips the zeroes. The
  * input order is preserved, because spending order and reading order are different questions too.
  *
- * The credit is one CREDITOR's. Spending Bro's answered coupons on a night Jared is owed is the
+ * The credit is one CREDITOR's. Spending Owen's answered coupons on a night Felix is owed is the
  * cross-person netting this app refuses everywhere else.
  */
 export function spendOldestFirst<
@@ -325,7 +325,7 @@ export type AnsweredSale = {
  *
  * Each sale takes the NEWEST nights it could have answered, because a sale is the evening's loot
  * going to market. Oldest first credited a Jupiter sale as "Jupiter (100), Malefic Star (20)" and
- * landed 1 of Bro's 41 sales on whole nights; newest first lands 29, every October one included.
+ * landed 1 of Owen's 41 sales on whole nights; newest first lands 29, every October one included.
  * Sales are taken in the order they were recorded. Every night is RETURNED at what it still owes,
  * for the reason spendOldestFirst says.
  */

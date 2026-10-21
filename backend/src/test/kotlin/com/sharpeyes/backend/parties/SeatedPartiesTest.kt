@@ -122,16 +122,16 @@ class SeatedPartiesTest {
     @Test
     fun `a character with a seat in somebody else's party reaches it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
 
             val seated = partiesSeatedIn(member)
             assertEquals(listOf(party.id), seated.map { it.party.id })
             // The whole roster, as the owner arranged it, and which seat is mine.
             assertEquals(
-                listOf("mechyfechy", "CreedBratton"),
+                listOf("tidelark", "Pinewick"),
                 seated
                     .single()
                     .party.seats
@@ -144,11 +144,11 @@ class SeatedPartiesTest {
     @Test
     fun `a party I have no seat in stays invisible`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(stranger, "Nosy")
             link(owner, "Chris", member)
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("Pinewick"))
 
             // The one that matters. Every other party read in the app is filtered by ownership, and
             // this is the read that is not, so a stranger reaching it would reach everything.
@@ -159,12 +159,12 @@ class SeatedPartiesTest {
     @Test
     fun `a seat that only NAMES my character is not a seat in it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             // No link, so nothing bound the seat. The owner typed a name that happens to be a real
             // character of somebody's, which is not the same as that person being in the party, and
             // is exactly how a name match would hand an account to a stranger who picked the name.
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("Pinewick"))
 
             assertEquals(emptyList(), partiesSeatedIn(member))
         }
@@ -173,10 +173,10 @@ class SeatedPartiesTest {
     @Test
     fun `my own parties are not in it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("Pinewick"))
 
             // The owner is seated in their own config, which partiesFor already answers for. Two
             // answers to one party is what the mirror used to be.
@@ -187,10 +187,10 @@ class SeatedPartiesTest {
     @Test
     fun `a seat retired out of the roster is a party I have left`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             assertTrue(partiesSeatedIn(member).isNotEmpty())
 
             PartyMember.update({ PartyMember.id eq Uuid.parse(party.members[1].id) }) {
@@ -203,10 +203,10 @@ class SeatedPartiesTest {
     @Test
     fun `the seat carries the binding, and never as one of the owner's own`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            val mine = character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            val mine = character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
 
             val seat = party.members[1]
             assertEquals(mine.toString(), seat.linkedCharacterId)
@@ -219,17 +219,17 @@ class SeatedPartiesTest {
     @Test
     fun `the party a seat reaches is readable, and says it is not yours`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(stranger, "Nosy")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             val partyId = Uuid.parse(party.id)
 
             // The same row the owner reads, which is what makes the two screens one screen.
             val seen = assertNotNull(findParty(partyId, member))
             assertEquals(party.id, seen.id)
-            assertEquals(listOf("mechyfechy", "CreedBratton"), seen.seats.map { it.name })
+            assertEquals(listOf("tidelark", "Pinewick"), seen.seats.map { it.name })
             assertFalse(seen.yours)
             assertTrue(findParty(partyId, owner)!!.yours)
 
@@ -241,11 +241,11 @@ class SeatedPartiesTest {
     @Test
     fun `a member may read the pool and still not write it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             character(stranger, "Nosy")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             val partyId = Uuid.parse(party.id)
 
             assertTrue(canReadParty(partyId, member))
@@ -259,10 +259,10 @@ class SeatedPartiesTest {
     @Test
     fun `the clear on a shared party answers for YOUR character`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            val mine = character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            val mine = character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             val partyId = Uuid.parse(party.id)
 
             // Their character has run it, the owner's has not. boss_clear is per CHARACTER, so the
@@ -307,10 +307,10 @@ class SeatedPartiesTest {
     @Test
     fun `a member sees the pool, counted as the owner counts it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             drop(party, LocalDate.parse("2026-07-20"))
 
             val seen = partiesSeatedIn(member).single()
@@ -325,10 +325,10 @@ class SeatedPartiesTest {
     @Test
     fun `a night the member was not on is still the party's night`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             val night = LocalDate.parse("2026-07-20")
 
             // The owner ran that week without them, spelled out as a roster of one.
@@ -352,10 +352,10 @@ class SeatedPartiesTest {
     @Test
     fun `a seat of yours names the character the party is filed under`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            val mine = character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            val mine = character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
 
             val seen = partiesSeatedIn(member).single()
             assertEquals(listOf(party.members[1].id), seen.mySeatIds)
@@ -368,10 +368,10 @@ class SeatedPartiesTest {
     @Test
     fun `the owner's own read is untouched by any of it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             drop(party, LocalDate.parse("2026-07-20"))
 
             // partiesFor is what every party screen reads. It is owner-scoped and stays that way:
@@ -385,10 +385,10 @@ class SeatedPartiesTest {
     @Test
     fun `unlinking takes the account off the person AND its seats back`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             assertTrue(partiesSeatedIn(member).isNotEmpty(), "the member should be able to reach it first")
 
             val chris = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
@@ -411,14 +411,14 @@ class SeatedPartiesTest {
     @Test
     fun `unlinking ends it on their side too`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            val creed = character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
             link(owner, "Chris", member)
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("Pinewick"))
             // The member's own half: a person for the owner, and a party seating the owner's character.
-            savePeople(member, SavePeopleRequest(listOf(PersonRequest(null, "Mech", emptyList()))), Clock.System.now())
+            savePeople(member, SavePeopleRequest(listOf(PersonRequest(null, "Kip", emptyList()))), Clock.System.now())
             Person.update({ Person.userId eq member }) { it[linkedUserId] = owner }
-            val theirsSeated = config(creed, listOf("mechyfechy"), userId = member)
+            val theirsSeated = config(pine, listOf("tidelark"), userId = member)
             PartyMember.update({ PartyMember.id eq Uuid.parse(theirsSeated.members[1].id) }) {
                 it[linkedCharacterId] = theirs
             }
@@ -435,8 +435,8 @@ class SeatedPartiesTest {
     @Test
     fun `unlinking keeps the person and what this account said about them`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             savePeople(
                 owner,
                 SavePeopleRequest(listOf(PersonRequest(null, "Chris", listOf("AnAltOfTheirs")))),
@@ -444,7 +444,7 @@ class SeatedPartiesTest {
             )
             val chris = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
             Person.update({ Person.id eq chris }) { it[linkedUserId] = member }
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("Pinewick"))
 
             unlinkPerson(owner, chris)
 
@@ -454,14 +454,14 @@ class SeatedPartiesTest {
             assertEquals("Chris", after.name)
             // And the character only the link said was theirs, filed by name now so their shares
             // stay on their card. See SharedSlice.kt.
-            assertEquals(listOf("AnAltOfTheirs", "CreedBratton"), after.characters.sorted())
+            assertEquals(listOf("AnAltOfTheirs", "Pinewick"), after.characters.sorted())
         }
     }
 
     @Test
     fun `unlinking somebody who was never linked is a success, and unlinking a stranger's person is not`() {
         transaction {
-            character(owner, "mechyfechy")
+            character(owner, "tidelark")
             savePeople(
                 owner,
                 SavePeopleRequest(listOf(PersonRequest(null, "Dwight", emptyList()))),
@@ -479,10 +479,10 @@ class SeatedPartiesTest {
     @Test
     fun `a seated party answers for the week asked about`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "tidelark")
+            character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CreedBratton"))
+            val party = config(theirs, listOf("Pinewick"))
             val lastWeek = currentWeek().minus(DatePeriod(days = 7))
             PartyPeriodSkip.insert {
                 it[partyId] = Uuid.parse(party.id)
