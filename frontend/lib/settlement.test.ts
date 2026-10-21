@@ -2115,4 +2115,36 @@ describe("sliceActToWeek", () => {
       ["a", 30],
     ]);
   });
+
+  // The sale row reads "60 of 90" off these two numbers, so a placed night must carry what it owed
+  // before ANY sale, not what an earlier one left. Prod's 2026-10-20 sale, cut down.
+  it("names each night at what it owed before every sale, beside what this one took", () => {
+    const at = (lootId: string, pieces: number, recordedAt: string) => ({
+      ...n(lootId, lootId, "2026-10-15", pieces),
+      recordedAt,
+    });
+    const sale = (pieces: number, soldAt: string) => ({
+      trancheId: soldAt,
+      pieces,
+      mesos: pieces,
+      lot: { pieces, amount: pieces },
+      soldAt,
+    });
+    const first = sale(30, "2026-10-19T16:43:00Z");
+    const second = sale(140, "2026-10-20T17:51:00Z");
+    const placed = nightsOfSales({
+      sales: [first, second],
+      owedNights: [
+        at("adversary", 120, "2026-10-19T15:46:00Z"),
+        at("kalos", 90, "2026-10-19T16:40:00Z"),
+      ],
+    });
+    expect(placed.get(first)!.map((p) => [p.night.lootId, p.pieces, p.night.pieces])).toEqual([
+      ["kalos", 30, 90],
+    ]);
+    expect(placed.get(second)!.map((p) => [p.night.lootId, p.pieces, p.night.pieces])).toEqual([
+      ["kalos", 60, 90],
+      ["adversary", 80, 120],
+    ]);
+  });
 });
