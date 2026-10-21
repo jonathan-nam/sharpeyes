@@ -86,5 +86,5 @@ export async function signOut(): Promise<void> {
   const { error } = await authClient.signOut();
   // Still signed in, so stay put rather than show a sign-in page over a live session.
   if (error) return;
-  window.location.assign("/sign-in");
+  window.location.assign("/");
 }
