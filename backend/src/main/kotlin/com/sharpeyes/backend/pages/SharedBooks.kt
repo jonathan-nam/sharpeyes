@@ -8,6 +8,7 @@ import com.sharpeyes.backend.parties.VestigeHolder
 import com.sharpeyes.backend.parties.allLootFor
 import com.sharpeyes.backend.parties.debtsFor
 import com.sharpeyes.backend.parties.disposalsFor
+import com.sharpeyes.backend.parties.imageOf
 import com.sharpeyes.backend.parties.partiesFor
 import com.sharpeyes.backend.parties.paymentsFor
 import com.sharpeyes.backend.parties.settlementsFor
@@ -76,6 +77,7 @@ internal fun bookBetween(
     val yours = personFor(member, owner)
     return SharedBookResponse(
         ownerName = yours?.get(Person.name) ?: senderNameFor(owner) ?: "Party owner",
+        ownerImage = imageOf(owner),
         personId = personId,
         ownerPersonId = yours?.get(Person.id)?.toString(),
         parties = parties,

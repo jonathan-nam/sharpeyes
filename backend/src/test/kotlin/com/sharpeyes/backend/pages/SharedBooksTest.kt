@@ -7,6 +7,7 @@ import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.VestigePayment
 import com.sharpeyes.backend.db.VestigeTranche
+import com.sharpeyes.backend.parties.PERSON
 import com.sharpeyes.backend.parties.PartyResponse
 import com.sharpeyes.backend.parties.PersonRequest
 import com.sharpeyes.backend.parties.SELF
@@ -26,6 +27,8 @@ import com.sharpeyes.backend.parties.insertSharedDebt
 import com.sharpeyes.backend.parties.insertSharedPayment
 import com.sharpeyes.backend.parties.insertSharedTranche
 import com.sharpeyes.backend.parties.ownBookRefusal
+import com.sharpeyes.backend.parties.paymentRefusal
+import com.sharpeyes.backend.parties.paymentsFor
 import com.sharpeyes.backend.parties.savePeople
 import com.sharpeyes.backend.parties.sharedBookAt
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
@@ -243,8 +246,17 @@ class SharedBooksTest {
                     .map { it.pieces },
             )
 
+            // Either way round (V89): the owner paying the member back is the same row, signed.
+            insertSharedPayment(book, member, -2_000_000_000, "paid back", now)
+            assertEquals(listOf(5_000_000_000, -2_000_000_000), paymentsFor(owner).map { it.amount })
+            assertNull(paymentRefusal(VestigeHolder(PERSON, chris.toString()), -2_000_000_000, null))
+            assertEquals(
+                "amount must be nonzero and at most 1000000000000 either way",
+                paymentRefusal(VestigeHolder(PERSON, chris.toString()), 0, null),
+            )
+
             // A second copy of the same debt, in the member's own book, is refused.
-            assertEquals("Mech keeps your shared book. Add it on their card.", ownBookRefusal(member, mech))
+            assertEquals("Mech keeps your shared book. Reload and pick them again.", ownBookRefusal(member, mech))
             assertNull(ownBookRefusal(owner, chris), "the owner's book is the shared one")
 
             // Each side takes back only its own.

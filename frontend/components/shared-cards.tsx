@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
+import { DiscordAvatar } from "@/components/discord-avatar";
 import { ArmedRemove } from "@/components/settlement-ledger";
 import { failureText } from "@/lib/api";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
@@ -56,7 +57,10 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
     <section className="ledger-card">
       <header className="ledger-head">
         <span className="loot-title">
-          <span className="loot-name">{card.name}</span>
+          <span className="loot-name ledger-who">
+            <DiscordAvatar image={card.image} size="sm" />
+            {card.name}
+          </span>
           <span className="loot-meta ledger-summary is-open">
             {card.owed > 0 && (
               <CopyAmount value={card.owed} display={`${formatMesos(card.owed, true)} owed`} />
@@ -108,146 +112,8 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
         />
       )}
 
-      <SharedEntry card={card} writes={writes} onError={setRefusal} />
       {refusal && <span className="split-error">{refusal}</span>}
     </section>
-  );
-}
-
-/**
- * A debt either way, or a payment you sent, written into their book. The same boxes as Add
- * Settlement, with the direction said: in a shared book "who owes you" is only half of it.
- */
-function SharedEntry({
-  card,
-  writes,
-  onError,
-}: {
-  card: SharedCard;
-  writes: SharedWrites;
-  onError: (refusal: string | null) => void;
-}) {
-  const [youOwe, setYouOwe] = useState(true);
-  const [owed, setOwed] = useState("");
-  const [note, setNote] = useState("");
-  const [sent, setSent] = useState("");
-  const [sentNote, setSentNote] = useState("");
-  const debt = parseMesos(owed);
-  const paid = parseMesos(sent);
-  const save = (action: Promise<void>, clear: () => void) => {
-    onError(null);
-    action.then(clear, (e) => onError(failureText(e, "That didn't save. Try again.")));
-  };
-  return (
-    <>
-      <div className="ledger-entry">
-        <span className="ledger-heading">Add Debt</span>
-        <form
-          className="ledger-sale"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (debt === null || debt < 1) return;
-            // Their book counts what you owe them as positive. See SettlementDebt.amount.
-            save(writes.add(card.personId, "debts", youOwe ? debt : -debt, note.trim()), () => {
-              setOwed("");
-              setNote("");
-            });
-          }}
-        >
-          <label className="loot-share-input is-stacked">
-            Who
-            <select
-              className="split-input"
-              value={youOwe ? "you" : "them"}
-              onChange={(e) => setYouOwe(e.target.value === "you")}
-              disabled={writes.busy}
-            >
-              <option value="you">You owe {card.name}</option>
-              <option value="them">{card.name} owes you</option>
-            </select>
-          </label>
-          <label className="loot-share-input is-stacked">
-            Amount
-            <input
-              className="split-input"
-              value={owed}
-              onChange={(e) => setOwed(e.target.value)}
-              placeholder="1.5b"
-              inputMode="decimal"
-              aria-label="Amount"
-            />
-          </label>
-          <label className="loot-share-input is-grow is-stacked">
-            Description
-            <input
-              className="split-input"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={120}
-              aria-label="Description, optional"
-            />
-          </label>
-          <button
-            type="submit"
-            className="party-save ledger-add"
-            disabled={writes.busy || debt === null || debt < 1}
-            aria-label={`Add a debt with ${card.name}`}
-          >
-            +
-          </button>
-        </form>
-      </div>
-      <div className="ledger-entry">
-        <span className="ledger-heading">Add Payment</span>
-        <form
-          className="ledger-sale"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (paid === null || paid < 1) return;
-            save(writes.add(card.personId, "payments", paid, sentNote.trim()), () => {
-              setSent("");
-              setSentNote("");
-            });
-          }}
-        >
-          <label className="loot-share-input is-stacked">
-            Who
-            <select className="split-input" value="you" disabled>
-              <option value="you">You paid {card.name}</option>
-            </select>
-          </label>
-          <label className="loot-share-input is-stacked">
-            Amount
-            <input
-              className="split-input"
-              value={sent}
-              onChange={(e) => setSent(e.target.value)}
-              placeholder="1.5b"
-              inputMode="decimal"
-              aria-label={`Amount you paid ${card.name}`}
-            />
-          </label>
-          <label className="loot-share-input is-grow is-stacked">
-            Description
-            <input
-              className="split-input"
-              value={sentNote}
-              onChange={(e) => setSentNote(e.target.value)}
-              maxLength={120}
-              aria-label="Description, optional"
-            />
-          </label>
-          <button
-            type="submit"
-            className="party-save ledger-add"
-            disabled={writes.busy || paid === null || paid < 1}
-            aria-label={`Add a payment to ${card.name}`}
-          >
-            +
-          </button>
-        </form>
-      </div>
-    </>
   );
 }
 

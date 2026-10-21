@@ -6,6 +6,8 @@ export type Actor = {
   username: string | null;
   // Backend-relative, resolve with spriteUrl().
   spriteImgUrl: string | null;
+  /** Their current Discord avatar. Absent on a cached payload. */
+  image?: string | null;
 };
 
 export type AppNotification = {

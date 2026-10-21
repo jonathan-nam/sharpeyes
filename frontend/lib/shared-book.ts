@@ -1,5 +1,5 @@
 import { bossLabel } from "@/lib/boss-difficulty";
-import { moneyRows } from "@/lib/settlement";
+import { moneyRows, type SettlementTotals } from "@/lib/settlement";
 import { settlementView } from "@/lib/settlement-view";
 import { paymentsSinceClosing } from "@/lib/vestige-ledger";
 import type { Owings, WalletLine } from "@/lib/wallet";
@@ -9,6 +9,8 @@ import type { SharedBook } from "@/types/page";
 /** Your card in somebody else's book, from your side. Every figure is theirs, swapped. */
 export type SharedCard = {
   name: string;
+  /** The owner's Discord avatar. */
+  image: string | null;
   /** Your person row in their book: where your writes into it go (/api/shared-books/{personId}). */
   personId: string;
   /** Mesos they owe you: what their card says they owe you, netted or as unpaid shares. */
@@ -123,6 +125,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     source === "PAYMENT" ? paymentsById.get(id) : source === "DEBT" ? debtsById.get(id) : undefined;
   return {
     name: book.ownerName,
+    image: book.ownerImage ?? null,
     personId: book.personId,
     owed: row.owedByYou + row.sharesYouOwe,
     owe: row.mesos,
@@ -137,7 +140,12 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
         const row = writtenBy(act.id, act.source);
         return {
           key: act.id,
-          label: act.label === "paid" || act.label === "offset" ? paidLabel[act.source] : act.label,
+          label:
+            act.label === "you paid"
+              ? `${book.ownerName} paid you`
+              : act.label === "paid" || act.label === "offset"
+                ? paidLabel[act.source]
+                : act.label,
           mesos: act.amount,
           by: row?.recordedByYou === false ? (row.recordedByName ?? book.ownerName) : null,
           // Only a typed credit or a receipt: an offset is the owner's act on their own shares.
@@ -157,5 +165,20 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
         .map((line) => ({ ...line, name: where(line) })),
       holding: row.holding,
     },
+  };
+}
+
+/** [totals] with every shared card added in, so the tiles cover each book you are owed or owe in. */
+export function withSharedCards(totals: SettlementTotals, cards: SharedCard[]): SettlementTotals {
+  const owed = totals.owed + cards.reduce((sum, card) => sum + card.owed, 0);
+  const owe = totals.owe + cards.reduce((sum, card) => sum + card.owe, 0);
+  const usdOwed = totals.usd.owed + cards.reduce((sum, card) => sum + card.usd.owed, 0);
+  const usdOwe = totals.usd.owe + cards.reduce((sum, card) => sum + card.usd.owe, 0);
+  return {
+    owed,
+    owe,
+    net: owed - owe,
+    people: totals.people + cards.length,
+    usd: { owed: usdOwed, owe: usdOwe, net: usdOwed - usdOwe },
   };
 }

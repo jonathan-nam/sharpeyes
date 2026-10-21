@@ -5,6 +5,7 @@ import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publish
 import com.sharpeyes.backend.friends.discordUsernameOf
 import com.sharpeyes.backend.friends.faceOf
+import com.sharpeyes.backend.parties.imageOf
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -104,5 +105,5 @@ internal fun dismiss(
 
 private fun actorOf(account: String): Actor {
     val (name, sprite) = faceOf(account)
-    return Actor(name, discordUsernameOf(account), sprite)
+    return Actor(name, discordUsernameOf(account), sprite, imageOf(account))
 }

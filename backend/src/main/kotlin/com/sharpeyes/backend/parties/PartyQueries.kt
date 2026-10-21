@@ -120,6 +120,7 @@ internal fun partiesFromRows(
     val resets = rows.associate { it[Party.id] to it[BossCatalog.reset] }
     val modes = periodDifficulties(partyIds) { periodShown(resets.getValue(it), week, now) }
     val characterSlugs = characterSlugsFor(userId)
+    val accounts = accountsFor(partyIds, userId)
 
     return rows.map { row ->
         val id = row[Party.id]
@@ -127,14 +128,15 @@ internal fun partiesFromRows(
         val members = ranIn(seats, rosters[id].orEmpty())
         val ranAsParty = ranAsPartyIn(row, shown, members.size, spelledOut = id in spelledOut, off = id in off)
         val party =
-            row.toPartyResponse(
-                slug = partySlug(id, characterSlugs[row[Party.characterId]], row[BossCatalog.bossKey]),
-                members = members,
-                seats = seats,
-                loot = counts[id] ?: LootCounts(0, 0, 0),
-                clear = clears[id] ?: ClearState(null, false),
-                week = WeekState(id !in spelledOut, skippedThisPeriod = id in off, ranAsParty, modes[id]),
-            )
+            row
+                .toPartyResponse(
+                    slug = partySlug(id, characterSlugs[row[Party.characterId]], row[BossCatalog.bossKey]),
+                    members = members,
+                    seats = seats,
+                    loot = counts[id] ?: LootCounts(0, 0, 0),
+                    clear = clears[id] ?: ClearState(null, false),
+                    week = WeekState(id !in spelledOut, skippedThisPeriod = id in off, ranAsParty, modes[id]),
+                ).copy(accounts = accounts[id].orEmpty())
         if (id in asCharacter) party.asMember(userId) else party
     }
 }
@@ -171,16 +173,17 @@ internal fun findParty(
             difficulty = periodDifficulties(listOf(partyId)) { livePeriod }[partyId],
         )
     val party =
-        row.toPartyResponse(
-            slug = partySlug(partyId, characterSlugsFor(userId)[row[Party.characterId]], row[BossCatalog.bossKey]),
-            members = ranIn(seats, rosterFor(partyId, week)),
-            seats = seats,
-            // All time, unlike the list's. This is the page that sells a drop and pays it out, so a
-            // week that hid an old one would put it beyond the only controls that can settle it.
-            loot = lootCountsFor(listOf(partyId), week = null)[partyId] ?: LootCounts(0, 0, 0),
-            clear = clears[partyId] ?: ClearState(null, false),
-            week = state,
-        )
+        row
+            .toPartyResponse(
+                slug = partySlug(partyId, characterSlugsFor(userId)[row[Party.characterId]], row[BossCatalog.bossKey]),
+                members = ranIn(seats, rosterFor(partyId, week)),
+                seats = seats,
+                // All time, unlike the list's. This is the page that sells a drop and pays it out, so a
+                // week that hid an old one would put it beyond the only controls that can settle it.
+                loot = lootCountsFor(listOf(partyId), week = null)[partyId] ?: LootCounts(0, 0, 0),
+                clear = clears[partyId] ?: ClearState(null, false),
+                week = state,
+            ).copy(accounts = accountsFor(listOf(partyId), userId)[partyId].orEmpty())
     return if (viewer.owner) party else party.asMember(userId)
 }
 
@@ -212,6 +215,7 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
             .selectAll()
             .where { Party.userId eq userId }
             .mapTo(mutableSetOf()) { it[PartyMember.name].lowercase() }
+    val images = imagesOf(people.mapNotNull { it[Person.linkedUserId] })
 
     return people.map {
         val attributed = characters.attributed[it[Person.id]].orEmpty()
@@ -222,6 +226,7 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
             characters = characters.attributed[it[Person.id]].orEmpty(),
             ownedCharacters = characters.owned[it[Person.id]].orEmpty(),
             linked = it[Person.linkedUserId] != null,
+            image = account?.let(images::get),
             notOnAccount = roster.notOnAccount(account, attributed),
             contested = roster.contestedFor(account, attributed, seated),
             pinned = it[Person.pinned],

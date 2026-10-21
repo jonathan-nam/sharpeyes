@@ -1,9 +1,11 @@
 "use client";
 
 import { AddSettlement } from "@/components/add-settlement";
+import type { SharedWrites } from "@/components/shared-cards";
 import { SettlementLedger } from "@/components/settlement-ledger";
 import { SettlementSummary } from "@/components/settlement-summary";
 import { keptOfYours } from "@/lib/settlement";
+import { type SharedCard, withSharedCards } from "@/lib/shared-book";
 import { type settlementView, vestigeOf } from "@/lib/settlement-view";
 import {
   DEBTS_KEY,
@@ -27,6 +29,8 @@ export function SettlementStage({
   view,
   writes,
   sharedOwners = [],
+  sharedCards = [],
+  onShared,
 }: {
   page: Pick<
     DropLogPage,
@@ -35,10 +39,13 @@ export function SettlementStage({
   view: ReturnType<typeof settlementView>;
   writes: DropLogWrites;
   /**
-   * Your people whose account keeps a shared book with you. Their debts and payments go on that
-   * book's card, where both of you see them, so these boxes do not offer them. See ownBookRefusal.
+   * Your people whose account keeps a shared book with you. Their debts and payments go into that
+   * book rather than yours, through `sharedCards`. See ownBookRefusal.
    */
   sharedOwners?: string[];
+  /** Your cards in other owners' books: counted in the tiles, and offered by the boxes. */
+  sharedCards?: SharedCard[];
+  onShared?: SharedWrites["add"];
 }) {
   const { settlement, totals, wallet, offsetShares } = view;
   const { busy } = writes;
@@ -53,7 +60,7 @@ export function SettlementStage({
     <section className="loot-pool">
       <h2 className="loot-pool-title">Settlement Summary</h2>
 
-      <SettlementSummary rows={settlement} totals={totals} />
+      <SettlementSummary totals={withSharedCards(totals, sharedCards)} />
 
       {/* The two boxes, above the cards they write to and out of every one of them. A card names its
           person, so the boxes inside one did not have to; out here the picker does, and it offers
@@ -80,10 +87,23 @@ export function SettlementStage({
             body: JSON.stringify({ holder, amount, note: note || undefined }),
           })
         }
+        shared={sharedCards.map((card) => ({
+          personId: card.personId,
+          name: card.name,
+          image: card.image,
+        }))}
+        onShared={onShared}
       />
 
       <SettlementLedger
         rows={settlement}
+        images={
+          new Map(
+            page.people.flatMap((person) =>
+              person.image ? [[`person:${person.id}`, person.image] as const] : [],
+            ),
+          )
+        }
         bossByKey={bossByKey}
         partyById={partyById}
         offsetShares={offsetShares}

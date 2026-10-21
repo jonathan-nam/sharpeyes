@@ -47,9 +47,16 @@ describe("the way in for somebody with no card", () => {
     expect(component).toContain('className="party-save ledger-add"');
   });
 
+  it("offers a shared owner both ways, signed as their book counts it", () => {
+    // In their book what you owe them is positive, so "they owe you" goes in negative (V88).
+    expect(component).toContain('onShared(one.personId, "debts", mesos, text)');
+    expect(component).toContain('onShared(one.personId, "debts", -mesos, text)');
+    expect(component).toContain("`You paid ${one.name}`");
+  });
+
   it("draws nothing when there is nobody to pick", () => {
     // A picker of nobody is a control that cannot be completed, which is worse than no control.
-    expect(component).toContain("if (payers.length === 0) return null;");
+    expect(component).toContain("if (receipts.length === 0) return null;");
   });
 
   it("takes a payment from an unclaimed character too, which only a card could before", () => {

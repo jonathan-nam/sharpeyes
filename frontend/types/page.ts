@@ -44,6 +44,8 @@ export type DropLogPage = {
  */
 export type SharedBook = {
   ownerName: string;
+  /** Their current Discord avatar. Absent on a cached payload. */
+  ownerImage?: string | null;
   personId: string;
   /** Your person row for the owner. Optional for a cached book from before the field. */
   ownerPersonId?: string | null;
