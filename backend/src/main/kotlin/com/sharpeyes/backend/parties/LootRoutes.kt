@@ -25,7 +25,7 @@ import kotlin.uuid.Uuid
 //
 // Every handler starts by proving the caller may write here: the owner, or for logging, selling and
 // keeping, a member acting as their own seat (PartyAccess.kt), and for a payout either end of it.
-// Bundles stay the owner's.
+// Bundles: the owner, or a member on a drop they logged.
 // Nothing here trusts a loot id on its own, since a loot row's owner is its party's owner.
 
 fun Route.lootRoutes() {

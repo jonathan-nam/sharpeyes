@@ -89,15 +89,20 @@ export function LootPool({
   // Offered only where something can actually be answered. A pool whose coupon nights have all
   // settled is history, and an Edit over it is a button that opens nothing.
   const pickup = stacks?.pickup;
+  // A member corrects the stacks of a night they logged, and no other (setBundlesRoute).
+  const mine = new Set(loot.filter((row) => row.recordedByYou === true).map((row) => row.id));
   const correctable = Boolean(
-    pickup?.onSave && pickup.drops.some((drop) => !pickup.locked?.has(drop.lootId)),
+    pickup?.onSave &&
+    pickup.drops.some(
+      (drop) => !pickup.locked?.has(drop.lootId) && (!readOnly || mine.has(drop.lootId)),
+    ),
   );
 
   return (
     <section className="loot-pool">
       <div className="loot-pool-head">
         <h2 className="loot-pool-title">Loot Pool</h2>
-        {correctable && !readOnly && (
+        {correctable && (
           <button
             type="button"
             className="party-cancel"
