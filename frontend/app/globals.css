@@ -7540,7 +7540,7 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   font-size: var(--text-base);
 }
 
-/* The day, in a column of its own between the text and the controls. Ink rather than the muted
+/* The day, in a column of its own before the ×. Ink rather than the muted
    register, since it is what a week filter is read against; it wraps (right-aligned) before it can
    push the figure or the controls off the card. */
 .ledger-when {
@@ -7562,8 +7562,8 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
    leave the name at nothing and still spill 6px past the card, so the row wraps instead. One line is
    worth having where there is width for it, and never worth the figure sliding off the end.
 
-   Not a typed entry, which holds its line at every width: a note, a figure and the ×, with none of
-   the icon, date and second figure that run the line out here. */
+   Not a typed entry, which holds its line at every width: the mark, a note, a figure and the ×,
+   with none of the date and second figure that run the line out here. */
 @media (max-width: 560px) {
   .ledger-drop-head.is-oneline:not(.is-typed) {
     flex-wrap: wrap;
