@@ -10,20 +10,20 @@ const pool = (partyId: string, ...rows: Loot[]): PartyLootPool => ({ partyId, lo
 
 describe("a run logged in your own party and a shared one", () => {
   const own = {
-    parties: [party("mine", "crane", "kalos"), party("other", "crane", "lucid")],
+    parties: [party("mine", "pine", "kalos"), party("other", "pine", "lucid")],
     pools: [
       pool("mine", loot("dup", "2026-10-15"), loot("only-mine", "2026-10-08")),
       pool("other", loot("lucid", "2026-10-15")),
     ],
   };
   const shared = {
-    parties: [party("theirs", "crane", "kalos")],
+    parties: [party("theirs", "pine", "kalos")],
     pools: [pool("theirs", loot("their-copy", "2026-10-15"))],
-    ownerOf: new Map([["theirs", "Mech"]]),
+    ownerOf: new Map([["theirs", "Kip"]]),
   };
 
   it("counts the owner's copy: your own drop that week is the duplicate", () => {
-    expect([...loggedTwice(own, shared)]).toEqual([["dup", "Mech"]]);
+    expect([...loggedTwice(own, shared)]).toEqual([["dup", "Kip"]]);
   });
 
   it("keeps a week only your copy has, and a different boss", () => {
@@ -38,11 +38,11 @@ describe("a run logged in your own party and a shared one", () => {
       parties: [
         {
           ...party("theirs", "their-leader", "kalos"),
-          seats: [{ characterId: "crane" }, { characterId: null }],
+          seats: [{ characterId: "pine" }, { characterId: null }],
         } as unknown as Party,
       ],
     };
-    expect([...loggedTwice(own, seated)]).toEqual([["dup", "Mech"]]);
+    expect([...loggedTwice(own, seated)]).toEqual([["dup", "Kip"]]);
   });
 
   it("takes the duplicates out of the pools that are counted", () => {

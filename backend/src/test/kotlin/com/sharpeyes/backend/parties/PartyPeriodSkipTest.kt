@@ -332,10 +332,10 @@ class PartyPeriodSkipTest {
             // The pair still cannot be on at once, because arming it again comes back through the
             // same rule with the new party in the way. Both doors: saving the config over again,
             // and the toggle that puts a night back on without writing one (see setSkipRoute).
-            val other2 = mine("Kestrel")
+            val other2 = mine("Wind")
             partyOn(other2, "limbo", members = listOf("Steve"))
             assertEquals(
-                Refusal("Steve is already in Kestrel's party for this boss. Remove them from it first."),
+                Refusal("Steve is already in Wind's party for this boss. Remove them from it first."),
                 validateSavedParty(
                     userId,
                     Uuid.parse(night.id),
@@ -345,7 +345,7 @@ class PartyPeriodSkipTest {
                 ),
             )
             assertEquals(
-                Refusal("Steve is already in Kestrel's party for this boss. Remove them from it first."),
+                Refusal("Steve is already in Wind's party for this boss. Remove them from it first."),
                 validateBossRoster(
                     userId,
                     limbo,
@@ -363,23 +363,23 @@ class PartyPeriodSkipTest {
     @Test
     fun `a party taken off this week frees its seats for a ONE-OFF that week`() {
         transaction {
-            val warrior = mine("warden2030")
-            val acorn = mine("acmeacme")
+            val warrior = mine("orchid88")
+            val plum = mine("plumtwig")
             val kalos = bossIdForKey("kalos-the-guardian")!!
-            val standing = partyOn(warrior, "kalos-the-guardian", members = listOf("iPager42X"))
-            val held = Refusal("iPager42X is already in warden2030's party for this boss. Remove them from it first.")
+            val standing = partyOn(warrior, "kalos-the-guardian", members = listOf("Moxie77Q"))
+            val held = Refusal("Moxie77Q is already in orchid88's party for this boss. Remove them from it first.")
 
             fun check(oneOff: Boolean) =
                 validateBossRoster(
                     userId,
                     kalos,
                     exclude = null,
-                    rosterOf(acorn, listOf("iPager42X")),
+                    rosterOf(plum, listOf("Moxie77Q")),
                     Clock.System.now(),
                     oneOff = oneOff,
                 )
 
-            // While the party is on it holds iPager42X's clear, whichever kind is being written.
+            // While the party is on it holds Moxie77Q's clear, whichever kind is being written.
             assertEquals(held, check(oneOff = true))
             assertEquals(held, check(oneOff = false))
 
@@ -396,9 +396,9 @@ class PartyPeriodSkipTest {
 
             // And the pair still cannot be on at once: putting the standing party back while the
             // night is armed comes back through the same rule, from the other end.
-            val night = partyOn(acorn, "kalos-the-guardian", oneOff = true, members = listOf("iPager42X"))
+            val night = partyOn(plum, "kalos-the-guardian", oneOff = true, members = listOf("Moxie77Q"))
             assertEquals(
-                Refusal("iPager42X is already in acmeacme's party for this boss. Remove them from it first."),
+                Refusal("Moxie77Q is already in plumtwig's party for this boss. Remove them from it first."),
                 validateBossRoster(
                     userId,
                     kalos,

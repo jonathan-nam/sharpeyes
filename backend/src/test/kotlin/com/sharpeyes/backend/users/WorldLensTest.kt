@@ -98,7 +98,7 @@ class WorldLensTest {
 
     private fun both() {
         ensureUser(userId, "$userId@example.com")
-        characterWithParty("mechobotto", WORLD_INTERACTIVE)
+        characterWithParty("tidelark", WORLD_INTERACTIVE)
         characterWithParty("Rune", WORLD_HEROIC)
     }
 
@@ -116,7 +116,7 @@ class WorldLensTest {
             both()
 
             setActiveWorld(userId, WORLD_INTERACTIVE)
-            assertEquals(listOf("mechobotto"), charactersShown())
+            assertEquals(listOf("tidelark"), charactersShown())
 
             setActiveWorld(userId, WORLD_HEROIC)
             assertEquals(listOf("Rune"), charactersShown())
@@ -182,7 +182,7 @@ class WorldLensTest {
     fun `a mode with no characters is empty rather than falling back to the other one`() {
         transaction {
             ensureUser(userId, "$userId@example.com")
-            characterWithParty("mechobotto", WORLD_INTERACTIVE)
+            characterWithParty("tidelark", WORLD_INTERACTIVE)
 
             // The tempting bug: treat "no characters here" as "not set up yet" and show everything.
             // That is the toggle silently refusing to do the one thing it does.

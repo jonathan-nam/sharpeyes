@@ -47,8 +47,8 @@ import kotlin.uuid.Uuid
 /**
  * A sign-on link, against a real Postgres.
  *
- * The claim under test is an inversion: the sender's "mechobotto runs Kalos with CraneBolton" has
- * to arrive on the recipient's account as "CraneBolton runs Kalos with mechobotto", with the seat
+ * The claim under test is an inversion: the sender's "tidelark runs Kalos with Pinewick" has
+ * to arrive on the recipient's account as "Pinewick runs Kalos with tidelark", with the seat
  * that is now theirs bound to a character row and the one that is now somebody else's not. Getting
  * that backwards produces an account that looks entirely plausible and describes the wrong person's
  * parties, which is the failure this repo exists to prevent, so it is pinned here rather than
@@ -113,11 +113,11 @@ class AccountInviteTest {
     @Test
     fun `the recipient takes a seat in the config rather than a copy of it`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            val source = config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            val source = config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
-            invite("Brock")
+            invite("Owen")
 
             // No copy. This test used to assert one, anchored on the recipient's character: two
             // rows describing one party, each with a pool and a difficulty of its own. See V75.
@@ -125,32 +125,32 @@ class AccountInviteTest {
 
             // The roster is unchanged, still the sender's, and the seat that names the recipient's
             // character now points at it.
-            assertEquals(listOf("mechobotto", "CraneBolton"), seatNamesOf(source))
-            val seat = seatFor(source, "CraneBolton")
-            assertEquals(theirCharacter(recipientId, "CraneBolton"), seat[PartyMember.linkedCharacterId])
+            assertEquals(listOf("tidelark", "Pinewick"), seatNamesOf(source))
+            val seat = seatFor(source, "Pinewick")
+            assertEquals(theirCharacter(recipientId, "Pinewick"), seat[PartyMember.linkedCharacterId])
             // Still not one of the OWNER's, which is what characterId means.
             assertNull(seat[PartyMember.characterId])
-            assertNotNull(seatFor(source, "mechobotto")[PartyMember.characterId])
+            assertNotNull(seatFor(source, "tidelark")[PartyMember.characterId])
         }
     }
 
     @Test
     fun `the difficulty, the run time and who loots are the one row's, and the member reads them`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
             val request =
                 SavePartyRequest(
                     characterId = mine.toString(),
                     bossKey = "kalos-the-guardian",
-                    members = listOf("CraneBolton"),
-                    shares = mapOf("CraneBolton" to 2),
+                    members = listOf("Pinewick"),
+                    shares = mapOf("Pinewick" to 2),
                     difficulty = "CHAOS",
                     minutes = 12,
                 )
             val source = createParty(senderId, mine, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
 
-            invite("Brock")
+            invite("Owen")
 
             // One row carries the arrangement, and the member reads it there. It used to be copied
             // onto a second row, which is the thing that could then disagree: difficulty is what
@@ -161,16 +161,16 @@ class AccountInviteTest {
             assertEquals(source.toString(), party.id)
             // The shares stay on the one row, where they always were. Nothing was copied, so there is
             // nothing that could come to disagree with them.
-            assertEquals(2, seatFor(source, "CraneBolton")[PartyMember.shares])
+            assertEquals(2, seatFor(source, "Pinewick")[PartyMember.shares])
         }
     }
 
     @Test
     fun `only the configs the recipient sits in travel`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            config(mine, "kalos-the-guardian", listOf("Pinewick"))
             // Somebody else's party, and a boss the sender runs alone. Neither is the recipient's
             // to receive: one has no seat of theirs, and the other has no seats at all.
             config(mine, "baldrix", listOf("Lynn"))
@@ -178,9 +178,9 @@ class AccountInviteTest {
             // A night run once, with the recipient in it. Not an arrangement, so not a config to
             // hand over: carrying it would say they run this boss every week on the strength of it.
             // Real data had three of these, and two of them collided with real configs.
-            oneOff(mine, "malefic-star", listOf("CraneBolton"))
+            oneOff(mine, "malefic-star", listOf("Pinewick"))
 
-            val payload = payloadFor("Brock")
+            val payload = payloadFor("Owen")
             assertEquals(listOf("kalos-the-guardian"), payload.parties.map { it.bossKey })
             // Silently, like the solo and the retired ones: leaving a one-off out is what the link
             // IS, not a config it failed to carry.
@@ -191,13 +191,13 @@ class AccountInviteTest {
     @Test
     fun `a second config on the same boss is named rather than dropped`() {
         transaction {
-            val first = addCharacter(senderId, "mechobotto", position = 0)
-            val second = addCharacter(senderId, "acmeacme", position = 1)
-            attribute("Brock", "CraneBolton")
-            config(first, "kalos-the-guardian", listOf("CraneBolton"))
-            config(second, "kalos-the-guardian", listOf("CraneBolton"))
+            val first = addCharacter(senderId, "tidelark", position = 0)
+            val second = addCharacter(senderId, "plumtwig", position = 1)
+            attribute("Owen", "Pinewick")
+            config(first, "kalos-the-guardian", listOf("Pinewick"))
+            config(second, "kalos-the-guardian", listOf("Pinewick"))
 
-            val payload = payloadFor("Brock")
+            val payload = payloadFor("Owen")
 
             // One character runs one boss, so the second cannot also become theirs. The count that
             // changed is said, which is the whole difference between this and losing a config.
@@ -206,7 +206,7 @@ class AccountInviteTest {
             assertEquals("kalos-the-guardian", payload.omitted.single().bossKey)
             assertEquals(OMITTED_DUPLICATE_BOSS, payload.omitted.single().reason)
 
-            val accepted = accept(payload, "Brock")
+            val accepted = accept(payload, "Owen")
             assertEquals(1, accepted.partiesCreated)
             assertEquals(1, accepted.omitted.size)
         }
@@ -215,13 +215,13 @@ class AccountInviteTest {
     @Test
     fun `one boss on two of the recipient's characters travels twice, told apart by the seat`() {
         transaction {
-            val first = addCharacter(senderId, "mechobotto", position = 0)
-            val second = addCharacter(senderId, "acmeacme", position = 1)
-            attribute("Brock", "CraneBolton", "Frecklynn")
-            config(first, "kalos-the-guardian", listOf("CraneBolton"))
-            config(second, "kalos-the-guardian", listOf("Frecklynn"))
+            val first = addCharacter(senderId, "tidelark", position = 0)
+            val second = addCharacter(senderId, "plumtwig", position = 1)
+            attribute("Owen", "Pinewick", "Quessa")
+            config(first, "kalos-the-guardian", listOf("Pinewick"))
+            config(second, "kalos-the-guardian", listOf("Quessa"))
 
-            val payload = payloadFor("Brock")
+            val payload = payloadFor("Owen")
 
             // The duplicate rule is one boss per CHARACTER, not per person, so both are theirs.
             assertEquals(2, payload.parties.size)
@@ -232,7 +232,7 @@ class AccountInviteTest {
             val bossKeys = payload.parties.map { it.bossKey }
             assertEquals(setOf("kalos-the-guardian"), bossKeys.toSet())
             assertEquals(
-                listOf("CraneBolton", "Frecklynn"),
+                listOf("Pinewick", "Quessa"),
                 payload.parties.map { it.ownName }.sorted(),
             )
         }
@@ -241,18 +241,18 @@ class AccountInviteTest {
     @Test
     fun `the landing page names each party by boss and by whose seat it is`() {
         transaction {
-            val first = addCharacter(senderId, "mechobotto", position = 0)
-            val second = addCharacter(senderId, "acmeacme", position = 1)
-            attribute("Brock", "CraneBolton", "Frecklynn")
-            config(first, "kalos-the-guardian", listOf("CraneBolton"))
-            config(second, "kalos-the-guardian", listOf("Frecklynn"))
+            val first = addCharacter(senderId, "tidelark", position = 0)
+            val second = addCharacter(senderId, "plumtwig", position = 1)
+            attribute("Owen", "Pinewick", "Quessa")
+            config(first, "kalos-the-guardian", listOf("Pinewick"))
+            config(second, "kalos-the-guardian", listOf("Quessa"))
 
             val labels =
-                partyLabels(payloadFor("Brock").parties, mapOf("kalos-the-guardian" to "Kalos the Guardian"))
+                partyLabels(payloadFor("Owen").parties, mapOf("kalos-the-guardian" to "Kalos the Guardian"))
 
             assertEquals(listOf("Kalos the Guardian", "Kalos the Guardian"), labels.map { it.bossName })
             assertEquals(
-                listOf("CraneBolton", "Frecklynn"),
+                listOf("Pinewick", "Quessa"),
                 labels.map { it.characterName }.sorted(),
             )
         }
@@ -261,35 +261,35 @@ class AccountInviteTest {
     @Test
     fun `a boss this build does not know is named by its key rather than dropped`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
             // A link made against a newer catalog. The count is what the page leans on, so an
             // unreadable row beats a missing one.
-            val labels = partyLabels(payloadFor("Brock").parties, emptyMap())
+            val labels = partyLabels(payloadFor("Owen").parties, emptyMap())
 
             assertEquals(listOf("kalos-the-guardian"), labels.map { it.bossName })
-            assertEquals(listOf("CraneBolton"), labels.map { it.characterName })
+            assertEquals(listOf("Pinewick"), labels.map { it.characterName })
         }
     }
 
     @Test
     fun `the people list names the sender and whoever else was in the party`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
             attribute("Chris", "Lynn")
             // Somebody the sender knows who is in none of the shared configs. The rest of an
             // address book is not part of what one friend hands another.
             attribute("Dwight", "Beetsss")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton", "Lynn"))
+            config(mine, "kalos-the-guardian", listOf("Pinewick", "Lynn"))
 
-            invite("Brock")
+            invite("Owen")
 
             val people = peopleOf(recipientId)
-            assertEquals(setOf("Jonas", "Chris"), people.keys)
-            assertEquals(listOf("mechobotto"), people.getValue("Jonas"))
+            assertEquals(setOf("Wren", "Chris"), people.keys)
+            assertEquals(listOf("tidelark"), people.getValue("Wren"))
             assertEquals(listOf("Lynn"), people.getValue("Chris"))
         }
     }
@@ -297,37 +297,37 @@ class AccountInviteTest {
     @Test
     fun `somebody you share no config with still gets you, and still gets linked`() {
         transaction {
-            addCharacter(senderId, "mechobotto", position = 0)
+            addCharacter(senderId, "tidelark", position = 0)
             // Named as somebody you run with, but in none of your configs. Found by dry-running
             // this against real data: their account came out with one character and nobody at all,
             // and the link back to the sender had no row on their side to be written onto.
-            attribute("Nabla", "Harumi")
+            attribute("Vesper", "Ottilie")
 
-            val payload = payloadFor("Nabla")
-            assertEquals(listOf("Jonas"), payload.people.map { it.name })
+            val payload = payloadFor("Vesper")
+            assertEquals(listOf("Wren"), payload.people.map { it.name })
             assertEquals(emptyList(), payload.people.single().characters)
             assertTrue(payload.people.single().isSender)
 
-            invite("Nabla")
-            assertEquals(senderId, personRow(recipientId, "Jonas")[Person.linkedUserId])
-            assertEquals(recipientId, personRow(senderId, "Nabla")[Person.linkedUserId])
+            invite("Vesper")
+            assertEquals(senderId, personRow(recipientId, "Wren")[Person.linkedUserId])
+            assertEquals(recipientId, personRow(senderId, "Vesper")[Person.linkedUserId])
         }
     }
 
     @Test
     fun `accepting links the two accounts from both ends`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            val source = config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            val source = config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
-            invite("Brock")
+            invite("Owen")
 
-            // The sender's Brock is now an account, and the recipient's copy of the sender is too.
+            // The sender's Owen is now an account, and the recipient's copy of the sender is too.
             // Written at the one moment both are known: afterwards the only thing joining them is
             // a character name, which cannot tell a shared party from a coincidence.
-            assertEquals(recipientId, personRow(senderId, "Brock")[Person.linkedUserId])
-            assertEquals(senderId, personRow(recipientId, "Jonas")[Person.linkedUserId])
+            assertEquals(recipientId, personRow(senderId, "Owen")[Person.linkedUserId])
+            assertEquals(senderId, personRow(recipientId, "Wren")[Person.linkedUserId])
 
             // And the recipient is now IN the sender's config rather than holding a copy of it.
             // One row, one pool: two rows was two pools for one night, and two difficulty columns
@@ -336,21 +336,21 @@ class AccountInviteTest {
             val seat =
                 PartyMember
                     .selectAll()
-                    .where { (PartyMember.partyId eq source) and (PartyMember.name eq "CraneBolton") }
+                    .where { (PartyMember.partyId eq source) and (PartyMember.name eq "Pinewick") }
                     .single()
-            assertEquals(theirCharacter(recipientId, "CraneBolton"), seat[PartyMember.linkedCharacterId])
+            assertEquals(theirCharacter(recipientId, "Pinewick"), seat[PartyMember.linkedCharacterId])
         }
     }
 
     @Test
     fun `a third person invited to the same party takes their own seat in it`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
             attribute("Chris", "Lynn")
-            val source = config(mine, "kalos-the-guardian", listOf("CraneBolton", "Lynn"))
+            val source = config(mine, "kalos-the-guardian", listOf("Pinewick", "Lynn"))
 
-            invite("Brock")
+            invite("Owen")
             invite("Chris", into = thirdId)
 
             // All three accounts are in ONE party, because there is only one to be in. Under the
@@ -360,10 +360,10 @@ class AccountInviteTest {
                     .selectAll()
                     .where { PartyMember.partyId eq source }
                     .associate { it[PartyMember.name] to it[PartyMember.linkedCharacterId] }
-            assertEquals(theirCharacter(recipientId, "CraneBolton"), bound["CraneBolton"])
+            assertEquals(theirCharacter(recipientId, "Pinewick"), bound["Pinewick"])
             assertEquals(theirCharacter(thirdId, "Lynn"), bound["Lynn"])
             // The sender's own seat is theirs, and is never a linked one.
-            assertNull(bound["mechobotto"])
+            assertNull(bound["tidelark"])
         }
     }
 
@@ -380,9 +380,9 @@ class AccountInviteTest {
     @Test
     fun `nothing that happened travels, only what the party is`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            config(mine, "kalos-the-guardian", listOf("Pinewick"))
             BossClear.insert {
                 it[characterId] = mine
                 it[bossCatalogId] = bossIdForKey("kalos-the-guardian")!!
@@ -391,7 +391,7 @@ class AccountInviteTest {
                 it[capturedAt] = Clock.System.now()
             }
 
-            invite("Brock")
+            invite("Owen")
 
             // A link describes the party, not the sender's record of what it did. A clear that
             // arrived with it would be this account claiming a kill it has no evidence for.
@@ -399,7 +399,7 @@ class AccountInviteTest {
             val clears =
                 BossClear
                     .selectAll()
-                    .where { BossClear.characterId eq theirCharacters.getValue("cranebolton") }
+                    .where { BossClear.characterId eq theirCharacters.getValue("pinewick") }
                     .count()
             assertEquals(0L, clears)
         }
@@ -408,14 +408,14 @@ class AccountInviteTest {
     @Test
     fun `an account that already holds things can still take a link`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            val source = config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            val source = config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
             // A recipient who signed up, looked around and added a character before clicking. This
             // used to be refused, and the refusal only appeared after they pressed the button.
             addCharacter(recipientId, "SomebodyElse", position = 0)
-            invite("Brock")
+            invite("Owen")
 
             // Their own character is untouched and the payload's is beside it, appended rather than
             // stacked on position 0.
@@ -424,12 +424,12 @@ class AccountInviteTest {
                     .selectAll()
                     .where { Characters.userId eq recipientId }
                     .associate { it[Characters.name] to it[Characters.position] }
-            assertEquals(setOf("SomebodyElse", "CraneBolton"), theirs.keys)
+            assertEquals(setOf("SomebodyElse", "Pinewick"), theirs.keys)
             assertEquals(setOf(0, 1), theirs.values.toSet())
             // And the seat on the SENDER's config is bound to the character just written.
             assertEquals(
-                theirCharacter(recipientId, "CraneBolton"),
-                seatFor(source, "CraneBolton")[PartyMember.linkedCharacterId],
+                theirCharacter(recipientId, "Pinewick"),
+                seatFor(source, "Pinewick")[PartyMember.linkedCharacterId],
             )
         }
     }
@@ -437,15 +437,15 @@ class AccountInviteTest {
     @Test
     fun `a character the recipient already has is bound rather than duplicated`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            val source = config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            val source = config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
             // They already added the character the link is about. characters has no unique index on
             // (user_id, name), so a second row would insert silently and leave ownCharacterIds
             // picking one of the two arbitrarily.
-            val already = addCharacter(recipientId, "CraneBolton", position = 0)
-            invite("Brock")
+            val already = addCharacter(recipientId, "Pinewick", position = 0)
+            invite("Owen")
 
             assertEquals(
                 1,
@@ -455,52 +455,52 @@ class AccountInviteTest {
                     .count()
                     .toInt(),
             )
-            assertEquals(already, seatFor(source, "CraneBolton")[PartyMember.linkedCharacterId])
+            assertEquals(already, seatFor(source, "Pinewick")[PartyMember.linkedCharacterId])
         }
     }
 
     @Test
     fun `a person the recipient already knows is reused, and their own attribution wins`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
-            // The recipient already knows a Jonas, and has already decided CraneBolton is
+            // The recipient already knows a Wren, and has already decided Pinewick is
             // somebody else's. person has a unique (user_id, name), so reusing is not a nicety.
             savePeople(
                 recipientId,
                 SavePeopleRequest(
                     listOf(
-                        PersonRequest(null, "Jonas", emptyList()),
-                        PersonRequest(null, "Dwight", listOf("CraneBolton")),
+                        PersonRequest(null, "Wren", emptyList()),
+                        PersonRequest(null, "Dwight", listOf("Pinewick")),
                     ),
                 ),
                 Clock.System.now(),
             )
-            invite("Brock")
+            invite("Owen")
 
             val people = peopleFor(recipientId).associate { it.name to it.characters }
-            assertEquals(setOf("Jonas", "Dwight"), people.keys)
-            // CraneBolton is NOT moved onto Jonas. Their address book is theirs, and choosing
+            assertEquals(setOf("Wren", "Dwight"), people.keys)
+            // Pinewick is NOT moved onto Wren. Their address book is theirs, and choosing
             // between two people's answers about a third is the guess this refuses to make.
-            assertEquals(listOf("CraneBolton"), people["Dwight"])
-            // The Jonas they already knew gains what the link does say: which character the
+            assertEquals(listOf("Pinewick"), people["Dwight"])
+            // The Wren they already knew gains what the link does say: which character the
             // sender plays. Reused, not inserted again, person being unique on (user_id, name).
-            assertEquals(listOf("mechobotto"), people["Jonas"])
+            assertEquals(listOf("tidelark"), people["Wren"])
         }
     }
 
     @Test
     fun `a world the recipient already chose is not overruled by a link`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
             ensureUser(recipientId, "$recipientId@example.com")
             setActiveWorld(recipientId, WORLD_HEROIC)
-            invite("Brock")
+            invite("Owen")
 
             // Somebody else's link does not move which world your whole site answers for. The
             // toggle is one click if the party is in the other one.
@@ -511,30 +511,30 @@ class AccountInviteTest {
     @Test
     fun `a character a link created is one nothing has asked Nexon about`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton"))
-            invite("Brock")
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            config(mine, "kalos-the-guardian", listOf("Pinewick"))
+            invite("Owen")
 
             // A payload names the recipient's characters and nothing else about them: the sender
             // has no row for somebody else's character, only seats naming one. So the level and job
             // come from a lookup, and a null sprite_checked_at is what both the accept route and
             // the daily job find them by.
-            assertEquals(listOf("CraneBolton"), unaskedCharacters(recipientId).map { it.name })
+            assertEquals(listOf("Pinewick"), unaskedCharacters(recipientId).map { it.name })
         }
     }
 
     @Test
     fun `a link is sent under your main character's name, and is never asked for`() {
         transaction {
-            addCharacter(senderId, "mechobotto", position = 0)
-            val main = addCharacter(senderId, "acmeacme", position = 1)
+            addCharacter(senderId, "tidelark", position = 0)
+            val main = addCharacter(senderId, "plumtwig", position = 1)
 
             // No main set yet, so the first in the carousel is the closest thing to one.
-            assertEquals("mechobotto", senderNameFor(senderId))
+            assertEquals("tidelark", senderNameFor(senderId))
 
             Users.update({ Users.id eq senderId }) { it[mainCharacterId] = main }
-            assertEquals("acmeacme", senderNameFor(senderId))
+            assertEquals("plumtwig", senderNameFor(senderId))
 
             // Nothing to send one as. That account has no people to invite either, so the route
             // refusing is the whole of what this has to do.
@@ -557,17 +557,17 @@ class AccountInviteTest {
     @Test
     fun `a sender who has not chosen a world has no link to give`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            config(mine, "kalos-the-guardian", listOf("CraneBolton"))
-            val personId = personRow(senderId, "Brock")[Person.id]
-            assertNotNull(buildInvitePayload(senderId, personId, "Jonas"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            config(mine, "kalos-the-guardian", listOf("Pinewick"))
+            val personId = personRow(senderId, "Owen")[Person.id]
+            assertNotNull(buildInvitePayload(senderId, personId, "Wren"))
 
             // Every config the link would carry was read through the sender's world. Without one
             // there is nothing to read them through, and a link built anyway would hand over an
             // arrangement its sender was never shown. See V74.
             Users.update({ Users.id eq senderId }) { it[worldType] = null }
-            assertNull(buildInvitePayload(senderId, personId, "Jonas"))
+            assertNull(buildInvitePayload(senderId, personId, "Wren"))
         }
     }
 
@@ -651,7 +651,7 @@ class AccountInviteTest {
     }
 
     private fun payloadFor(person: String): InvitePayload =
-        buildInvitePayload(senderId, personRow(senderId, person)[Person.id], senderName = "Jonas")!!
+        buildInvitePayload(senderId, personRow(senderId, person)[Person.id], senderName = "Wren")!!
 
     /**
      * Makes a link for [person] and redeems it into an empty account.
@@ -667,7 +667,7 @@ class AccountInviteTest {
         ensureUser(into, "$into@example.com")
         val personId = personRow(senderId, person)[Person.id]
         return acceptInvite(
-            buildInvitePayload(senderId, personId, "Jonas")!!,
+            buildInvitePayload(senderId, personId, "Wren")!!,
             into,
             null,
             personId,
@@ -735,32 +735,32 @@ class AccountInviteTest {
     @Test
     fun `a character the recipient did not confirm is not taken, and seats no one`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
+            val mine = addCharacter(senderId, "tidelark", position = 0)
             // One person with two characters, so attribute() is not the helper: that one appends a
             // new person each call and person is unique on (user_id, name).
             savePeople(
                 senderId,
                 SavePeopleRequest(
-                    listOf(PersonRequest(null, "Brock", listOf("CraneBolton", "NotActuallyTheirs"))),
+                    listOf(PersonRequest(null, "Owen", listOf("Pinewick", "NotActuallyTheirs"))),
                 ),
                 Clock.System.now(),
             )
-            val source = config(mine, "kalos-the-guardian", listOf("CraneBolton", "NotActuallyTheirs"))
+            val source = config(mine, "kalos-the-guardian", listOf("Pinewick", "NotActuallyTheirs"))
 
             // They tick one of the two. The sender was wrong about the other, which is the whole
             // reason to ask: these names are the SENDER's spelling of somebody else's characters.
             ensureUser(recipientId, "$recipientId@example.com")
-            val personId = personRow(senderId, "Brock")[Person.id]
+            val personId = personRow(senderId, "Owen")[Person.id]
             acceptInvite(
-                buildInvitePayload(senderId, personId, "Jonas")!!,
+                buildInvitePayload(senderId, personId, "Wren")!!,
                 recipientId,
-                listOf("CraneBolton"),
+                listOf("Pinewick"),
                 personId,
                 Clock.System.now(),
             )
 
             assertEquals(
-                listOf("CraneBolton"),
+                listOf("Pinewick"),
                 Characters
                     .selectAll()
                     .where { Characters.userId eq recipientId }
@@ -768,7 +768,7 @@ class AccountInviteTest {
             )
             // And the seat they did not claim stays unbound, so it gets them nothing: an unclaimed
             // seat is not a party they are in.
-            assertNotNull(seatFor(source, "CraneBolton")[PartyMember.linkedCharacterId])
+            assertNotNull(seatFor(source, "Pinewick")[PartyMember.linkedCharacterId])
             assertNull(seatFor(source, "NotActuallyTheirs")[PartyMember.linkedCharacterId])
         }
     }
@@ -776,23 +776,23 @@ class AccountInviteTest {
     @Test
     fun `confirming everything is the same as not being asked`() {
         transaction {
-            val mine = addCharacter(senderId, "mechobotto", position = 0)
-            attribute("Brock", "CraneBolton")
-            val source = config(mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(senderId, "tidelark", position = 0)
+            attribute("Owen", "Pinewick")
+            val source = config(mine, "kalos-the-guardian", listOf("Pinewick"))
 
             ensureUser(recipientId, "$recipientId@example.com")
-            val personId = personRow(senderId, "Brock")[Person.id]
+            val personId = personRow(senderId, "Owen")[Person.id]
             acceptInvite(
-                buildInvitePayload(senderId, personId, "Jonas")!!,
+                buildInvitePayload(senderId, personId, "Wren")!!,
                 recipientId,
                 // Their own spelling, which need not match the sender's: names are matched the way
                 // every other character name in this app is.
-                listOf("cranebolton"),
+                listOf("pinewick"),
                 personId,
                 Clock.System.now(),
             )
 
-            assertNotNull(seatFor(source, "CraneBolton")[PartyMember.linkedCharacterId])
+            assertNotNull(seatFor(source, "Pinewick")[PartyMember.linkedCharacterId])
         }
     }
 }

@@ -26,7 +26,7 @@ import kotlin.uuid.Uuid
 
 // What became of the money from selling somebody else's coupons: /api/proceeds-disposals.
 //
-// Selling a tranche of Bro's coupons out of your own pile leaves you holding Bro's money. Two things
+// Selling a tranche of Owen's coupons out of your own pile leaves you holding Owen's money. Two things
 // can happen to it and they end in different places: it comes off what he owes you, or you send it to
 // him and his debt does not move. Since V56 the card did the first one silently, which is the app
 // deciding something only the two of them can. See V61.

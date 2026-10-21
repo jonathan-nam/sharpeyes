@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  * One seat: a character somebody brought.
  *
  * `personName` is not stored on the seat. It comes from person_character, matched on the character
- * name, so "CreedBratton is Chris's" is stated once and every config that names CreedBratton shows
+ * name, so "Pinewick is Chris's" is stated once and every config that names Pinewick shows
  * it. Null means that character has not been attributed to anybody yet, which is ordinary.
  */
 @Serializable

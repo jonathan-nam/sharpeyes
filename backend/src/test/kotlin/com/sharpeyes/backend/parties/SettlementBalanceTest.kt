@@ -8,9 +8,9 @@ import kotlin.test.assertTrue
 // for. See V56__collection_balance.sql.
 class SettlementBalanceTest {
     private val self = VestigeHolder(kind = "SELF")
-    private val brock = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000001")
-    private val jarvis = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000002")
-    private val stranger = VestigeHolder(kind = "CHARACTER", characterName = "frecklynn")
+    private val owen = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000001")
+    private val felix = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000002")
+    private val stranger = VestigeHolder(kind = "CHARACTER", characterName = "quessa")
 
     private fun share(
         holder: VestigeHolder,
@@ -20,8 +20,8 @@ class SettlementBalanceTest {
     @Test
     fun `a sale may say how many of its pieces were somebody else's`() {
         // The night this exists for: 160 fell, 80 were theirs, you looted the lot and sold it.
-        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(brock, 80))))
-        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(brock, 60), share(stranger, 40))))
+        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(owen, 80))))
+        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(owen, 60), share(stranger, 40))))
         // Absent is the whole sale being your own, which is every tranche entered before V56.
         assertNull(shareRefusal(self, 160, "KEPT", emptyList()))
     }
@@ -30,18 +30,18 @@ class SettlementBalanceTest {
     fun `a sale cannot give away more than it held`() {
         // The ceiling a check constraint cannot enforce, because it needs the parent row. Crediting
         // 200 pieces out of a sale of 160 hands somebody money the lot never made.
-        assertTrue(shareRefusal(self, 160, "SOLD", listOf(share(brock, 200)))!!.contains("more pieces"))
+        assertTrue(shareRefusal(self, 160, "SOLD", listOf(share(owen, 200)))!!.contains("more pieces"))
         assertTrue(
-            shareRefusal(self, 100, "SOLD", listOf(share(brock, 60), share(jarvis, 60)))!!
+            shareRefusal(self, 100, "SOLD", listOf(share(owen, 60), share(felix, 60)))!!
                 .contains("more pieces"),
         )
         // Exactly all of it is a night where none of the coupons were yours, which happens.
-        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(brock, 160))))
+        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(owen, 160))))
     }
 
     @Test
     fun `a redemption divides nothing, having realized nothing`() {
-        assertTrue(shareRefusal(self, 80, "KEPT", listOf(share(brock, 80)))!!.contains("priced"))
+        assertTrue(shareRefusal(self, 80, "KEPT", listOf(share(owen, 80)))!!.contains("priced"))
     }
 
     @Test
@@ -49,10 +49,10 @@ class SettlementBalanceTest {
         // "I took theirs, at a price" is the whole act of keeping somebody's coupons against what they
         // owe you. Refusing the attribution left the pieces settled and the money for them stated
         // nowhere, so the debt it was meant to discharge did not move.
-        assertNull(shareRefusal(self, 80, "BOUGHT", listOf(share(brock, 80))))
+        assertNull(shareRefusal(self, 80, "BOUGHT", listOf(share(owen, 80))))
         // And the same ceiling as a sale, since the price is divided the same way.
         assertTrue(
-            shareRefusal(self, 80, "BOUGHT", listOf(share(brock, 100)))!!.contains("more pieces"),
+            shareRefusal(self, 80, "BOUGHT", listOf(share(owen, 100)))!!.contains("more pieces"),
         )
     }
 
@@ -62,7 +62,7 @@ class SettlementBalanceTest {
         // than added up, which is the quiet wrong number rather than a loud one.
         assertTrue(shareRefusal(self, 160, "SOLD", listOf(share(self, 80)))!!.contains("own pile"))
         assertTrue(
-            shareRefusal(self, 160, "SOLD", listOf(share(brock, 40), share(brock, 40)))!!
+            shareRefusal(self, 160, "SOLD", listOf(share(owen, 40), share(owen, 40)))!!
                 .contains("once"),
         )
     }
@@ -89,12 +89,12 @@ class SettlementBalanceTest {
                 listOf(share(VestigeHolder(kind = "PERSON", personId = "nope"), 1)),
             )!!.contains("not an id"),
         )
-        assertTrue(shareRefusal(self, 80, "SOLD", listOf(share(brock, 0)))!!.contains("at least 1"))
+        assertTrue(shareRefusal(self, 80, "SOLD", listOf(share(owen, 0)))!!.contains("at least 1"))
     }
 
     @Test
     fun `an entered debt needs somebody to owe it and money in it`() {
-        assertNull(debtRefusal(brock, 1_500_000_000, "Ludi loan"))
+        assertNull(debtRefusal(owen, 1_500_000_000, "Ludi loan"))
         assertNull(debtRefusal(stranger, 1, null))
 
         // A debt to yourself is not one. A tranche and a payment allow SELF because those are about
@@ -102,12 +102,12 @@ class SettlementBalanceTest {
         assertTrue(debtRefusal(self, 1, null)!!.contains("kind"))
 
         // Signed since V57: a debt of yours discharged against theirs is a negative adjustment.
-        assertNull(debtRefusal(brock, -139_548_023, "armor box share"))
-        assertTrue(debtRefusal(brock, 0, null)!!.contains("zero"))
-        assertTrue(debtRefusal(brock, 1_000_000_000_001, null)!!.contains("between"))
-        assertTrue(debtRefusal(brock, -1_000_000_000_001, null)!!.contains("between"))
-        assertTrue(debtRefusal(brock, 1, "x".repeat(121))!!.contains("120"))
-        assertNull(debtRefusal(brock, 1, "x".repeat(120)))
+        assertNull(debtRefusal(owen, -139_548_023, "armor box share"))
+        assertTrue(debtRefusal(owen, 0, null)!!.contains("zero"))
+        assertTrue(debtRefusal(owen, 1_000_000_000_001, null)!!.contains("between"))
+        assertTrue(debtRefusal(owen, -1_000_000_000_001, null)!!.contains("between"))
+        assertTrue(debtRefusal(owen, 1, "x".repeat(121))!!.contains("120"))
+        assertNull(debtRefusal(owen, 1, "x".repeat(120)))
     }
 
     @Test
@@ -115,9 +115,9 @@ class SettlementBalanceTest {
         // Splitting an old offset into its shares sends the entry's own date. Falling back to now()
         // on a date it could not read would move a history entry to today and say nothing, which is
         // the same silent re-dating the field exists to prevent.
-        assertNull(debtRefusal(brock, -139_548_023, null, "2026-08-29T15:14:30.258803Z"))
-        assertNull(debtRefusal(brock, -139_548_023, null, null))
-        assertTrue(debtRefusal(brock, 1, null, "29 August")!!.contains("timestamp"))
-        assertTrue(debtRefusal(brock, 1, null, "")!!.contains("timestamp"))
+        assertNull(debtRefusal(owen, -139_548_023, null, "2026-08-29T15:14:30.258803Z"))
+        assertNull(debtRefusal(owen, -139_548_023, null, null))
+        assertTrue(debtRefusal(owen, 1, null, "29 August")!!.contains("timestamp"))
+        assertTrue(debtRefusal(owen, 1, null, "")!!.contains("timestamp"))
     }
 }

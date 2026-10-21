@@ -243,7 +243,7 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
  * given week is a narrowing of this, not a different query. See ranIn.
  *
  * The person is matched on the seat's character NAME, account-wide and stated once, so a seat
- * naming CreedBratton shows Chris in every config without storing him on each of them. Which
+ * naming Pinewick shows Chris in every config without storing him on each of them. Which
  * names belong to whom is personCharacters' answer, not this function's: a seat and the People
  * page reading that differently is how one screen ends up owing a share to somebody the other
  * does not.
@@ -316,7 +316,7 @@ private fun ranIn(
  *
  * Read from boss_clear, the same table the clear matrix reads and a planner capture writes. That
  * is the whole of the sync between the two pages: there is one answer to "is Kalos done this week
- * on mechyfechy", and both views are looking at it rather than keeping their own.
+ * on tidelark", and both views are looking at it rather than keeping their own.
  *
  * `cleared` is null when no row exists, which is not the same as false: false means a capture or a
  * tick SAID it is not done, null means nobody has said anything this period.

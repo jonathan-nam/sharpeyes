@@ -5,8 +5,8 @@ const party = (id: string, slug: string) => ({ id, slug });
 
 describe("where a config's page is", () => {
   it("addresses it by the character and the boss", () => {
-    expect(partyHref(party("pa", "mechobotto/kalos-the-guardian"))).toBe(
-      "/bosses/parties/mechobotto/kalos-the-guardian",
+    expect(partyHref(party("pa", "tidelark/kalos-the-guardian"))).toBe(
+      "/bosses/parties/tidelark/kalos-the-guardian",
     );
   });
 

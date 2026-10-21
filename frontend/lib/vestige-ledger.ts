@@ -1110,7 +1110,7 @@ export function answeredSalesByPair(rows: TrancheRow[]): Map<string, AnsweredSal
 /**
  * One priced tranche, as far as it concerns ONE counterparty. See saleCredits.
  *
- * Their pieces and their share of the price, never the whole lot: 70 of Bro's out of a lot of 70 and
+ * Their pieces and their share of the price, never the whole lot: 70 of Owen's out of a lot of 70 and
  * 70 of his out of a lot of 200 put different money on his card.
  */
 export type CouponSale = {
@@ -1308,7 +1308,7 @@ export function receivedByHolder(rows: { holder: Holder; amount: number }[]): Ma
  * The payments no closure has already spoken for, per holder, and the ones it has.
  *
  * Mark settled says the books are closed, so the money that arrived before it is what closed them:
- * it is spent, and it cannot pay for anything entered afterwards. Bro sold 195 coupons for 4.856b,
+ * it is spent, and it cannot pay for anything entered afterwards. Owen sold 195 coupons for 4.856b,
  * sent 4.86b, and the pile was settled twenty minutes later. Counted raw, that finished 4.86b came
  * straight off the next debt entered against him, which is #350's rule ("a closed thing counts
  * towards no current total") being broken one ledger further along.

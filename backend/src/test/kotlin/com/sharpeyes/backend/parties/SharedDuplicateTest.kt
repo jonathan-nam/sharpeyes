@@ -105,17 +105,17 @@ class SharedDuplicateTest {
     @Test
     fun `starting the boss a linked owner already runs with you is offered theirs`() {
         transaction {
-            val theirs = character(owner, "warden2030")
-            val crane = character(member, "CraneBolton")
+            val theirs = character(owner, "orchid88")
+            val pine = character(member, "Pinewick")
             link(owner, "Chris", member)
-            val party = config(theirs, listOf("CraneBolton"))
+            val party = config(theirs, listOf("Pinewick"))
 
-            val dup = sharedDuplicateOf(member, crane, boss("kalos-the-guardian"), listOf("warden2030"))
+            val dup = sharedDuplicateOf(member, pine, boss("kalos-the-guardian"), listOf("orchid88"))
             assertEquals(party.id, dup?.partyId)
             // Your character already sits there, whoever you name.
             assertEquals(
                 party.id,
-                sharedDuplicateOf(member, crane, boss("kalos-the-guardian"), listOf("Someone"))?.partyId,
+                sharedDuplicateOf(member, pine, boss("kalos-the-guardian"), listOf("Someone"))?.partyId,
             )
         }
     }
@@ -123,14 +123,14 @@ class SharedDuplicateTest {
     @Test
     fun `another boss, or nobody linked, is not a duplicate`() {
         transaction {
-            val theirs = character(owner, "warden2030")
-            val crane = character(member, "CraneBolton")
+            val theirs = character(owner, "orchid88")
+            val pine = character(member, "Pinewick")
             val other = character(stranger, "Nobody")
             link(owner, "Chris", member)
-            config(theirs, listOf("CraneBolton"))
+            config(theirs, listOf("Pinewick"))
 
-            assertNull(sharedDuplicateOf(member, crane, boss("lotus"), listOf("warden2030")))
-            assertNull(sharedDuplicateOf(stranger, other, boss("kalos-the-guardian"), listOf("warden2030")))
+            assertNull(sharedDuplicateOf(member, pine, boss("lotus"), listOf("orchid88")))
+            assertNull(sharedDuplicateOf(stranger, other, boss("kalos-the-guardian"), listOf("orchid88")))
         }
     }
 }

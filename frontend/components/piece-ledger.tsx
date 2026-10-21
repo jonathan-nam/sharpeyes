@@ -148,7 +148,7 @@ function HolderCard({
   /**
    * Pieces of yours each OTHER pile is holding, so this pile's debt reads as what changes hands.
    *
-   * Netted per creditor by `owes`: owing Bro 90 while he holds 20 of yours is 70. Passed down rather
+   * Netted per creditor by `owes`: owing Owen 90 while he holds 20 of yours is 70. Passed down rather
    * than derived here, because only the page has every pile to read it off.
    */
   heldOfYours: HeldOfYours;

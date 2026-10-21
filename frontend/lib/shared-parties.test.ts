@@ -7,8 +7,8 @@ const seated = (): SeatedParty => ({
     id: "p1",
     characterId: "owner-char",
     members: [
-      { id: "s-owner", name: "warden2030", characterId: "owner-char" },
-      { id: "s-you", name: "iPager42X", characterId: null },
+      { id: "s-owner", name: "orchid88", characterId: "owner-char" },
+      { id: "s-you", name: "Moxie77Q", characterId: null },
     ],
   } as unknown as Party,
   mySeatIds: ["s-you"],

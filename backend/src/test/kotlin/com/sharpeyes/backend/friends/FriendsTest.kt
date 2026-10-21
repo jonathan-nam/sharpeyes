@@ -38,9 +38,9 @@ import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 class FriendsTest {
-    private val jonas = "user_test_friends_jonas"
-    private val brock = "user_test_friends_brock"
-    private val everyone = listOf(jonas, brock)
+    private val wren = "user_test_friends_wren"
+    private val owen = "user_test_friends_owen"
+    private val everyone = listOf(wren, owen)
 
     @BeforeTest
     fun migrate() {
@@ -68,7 +68,7 @@ class FriendsTest {
             Person.deleteWhere { Person.userId inList everyone }
             Characters.deleteWhere { Characters.userId inList everyone }
             DiscordUsername.deleteWhere { DiscordUsername.discordId inList everyone.map { "discord-$it" } }
-            exec("""DELETE FROM auth_user WHERE id IN ('$jonas', '$brock')""")
+            exec("""DELETE FROM auth_user WHERE id IN ('$wren', '$owen')""")
         }
     }
 
@@ -117,41 +117,41 @@ class FriendsTest {
     @Test
     fun `a request accepted links both accounts, reusing the person who already holds their characters`() {
         transaction {
-            val (warrior) = discordAccount(jonas, "jonasb", "warden2030")
-            val (crane) = discordAccount(brock, "brockdiscord", "CraneBolton")
+            val (warrior) = discordAccount(wren, "wrenb", "orchid88")
+            val (pine) = discordAccount(owen, "owendiscord", "Pinewick")
             savePeople(
-                jonas,
-                SavePeopleRequest(listOf(PersonRequest(null, "Brock", listOf("CraneBolton")))),
+                wren,
+                SavePeopleRequest(listOf(PersonRequest(null, "Owen", listOf("Pinewick")))),
                 Clock.System.now(),
             )
-            val request = SavePartyRequest(warrior.toString(), "kalos-the-guardian", listOf("CraneBolton"))
-            val party = createParty(jonas, warrior, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
+            val request = SavePartyRequest(warrior.toString(), "kalos-the-guardian", listOf("Pinewick"))
+            val party = createParty(wren, warrior, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
 
-            assertEquals(SendOutcome.Sent, sendFriendRequest(jonas, " @BrockDiscord ", Clock.System.now()))
-            val asked = notificationsFor(brock).notifications.single()
+            assertEquals(SendOutcome.Sent, sendFriendRequest(wren, " @OwenDiscord ", Clock.System.now()))
+            val asked = notificationsFor(owen).notifications.single()
             assertEquals(NotificationKind.FRIEND_REQUEST, asked.kind)
-            assertEquals("jonasb", asked.actor?.username)
-            assertEquals("warden2030", asked.actor?.name)
-            assertEquals(1, notificationsFor(brock).unread)
+            assertEquals("wrenb", asked.actor?.username)
+            assertEquals("orchid88", asked.actor?.name)
+            assertEquals(1, notificationsFor(owen).unread)
 
-            acceptFriendRequest(brock, Uuid.parse(asked.subjectId!!), Clock.System.now())
+            acceptFriendRequest(owen, Uuid.parse(asked.subjectId!!), Clock.System.now())
 
-            assertEquals("Brock", personOf(jonas, brock))
-            assertEquals("warden2030", personOf(brock, jonas))
+            assertEquals("Owen", personOf(wren, owen))
+            assertEquals("orchid88", personOf(owen, wren))
             val seat =
                 PartyMember
                     .selectAll()
                     .where {
                         (PartyMember.partyId eq party) and
-                            (PartyMember.name eq "CraneBolton")
+                            (PartyMember.name eq "Pinewick")
                     }.single()
-            assertEquals(crane, seat[PartyMember.linkedCharacterId])
-            assertEquals(listOf("Brock"), socialFor(jonas).friends.map { it.name })
-            // The request is answered, so it is off Brock's bell, and Jonas hears it was accepted.
-            assertEquals(emptyList(), notificationsFor(brock).notifications)
+            assertEquals(pine, seat[PartyMember.linkedCharacterId])
+            assertEquals(listOf("Owen"), socialFor(wren).friends.map { it.name })
+            // The request is answered, so it is off Owen's bell, and Wren hears it was accepted.
+            assertEquals(emptyList(), notificationsFor(owen).notifications)
             assertEquals(
                 listOf(NotificationKind.FRIEND_ACCEPTED),
-                notificationsFor(jonas).notifications.map { it.kind },
+                notificationsFor(wren).notifications.map { it.kind },
             )
         }
     }
@@ -159,62 +159,62 @@ class FriendsTest {
     @Test
     fun `asking somebody who already asked you accepts them`() {
         transaction {
-            discordAccount(jonas, "jonasb", "warden2030")
-            discordAccount(brock, "brockdiscord", "CraneBolton")
-            sendFriendRequest(jonas, "brockdiscord", Clock.System.now())
+            discordAccount(wren, "wrenb", "orchid88")
+            discordAccount(owen, "owendiscord", "Pinewick")
+            sendFriendRequest(wren, "owendiscord", Clock.System.now())
 
-            assertEquals(SendOutcome.Accepted, sendFriendRequest(brock, "jonasb", Clock.System.now()))
-            assertEquals(SendOutcome.AlreadyFriends, sendFriendRequest(jonas, "brockdiscord", Clock.System.now()))
-            assertEquals("CraneBolton", personOf(jonas, brock))
+            assertEquals(SendOutcome.Accepted, sendFriendRequest(owen, "wrenb", Clock.System.now()))
+            assertEquals(SendOutcome.AlreadyFriends, sendFriendRequest(wren, "owendiscord", Clock.System.now()))
+            assertEquals("Pinewick", personOf(wren, owen))
         }
     }
 
     @Test
     fun `declining or cancelling clears the notification, and asking twice notifies once`() {
         transaction {
-            discordAccount(jonas, "jonasb", "warden2030")
-            discordAccount(brock, "brockdiscord", "CraneBolton")
-            sendFriendRequest(jonas, "brockdiscord", Clock.System.now())
-            sendFriendRequest(jonas, "brockdiscord", Clock.System.now())
-            val asked = notificationsFor(brock).notifications.single()
+            discordAccount(wren, "wrenb", "orchid88")
+            discordAccount(owen, "owendiscord", "Pinewick")
+            sendFriendRequest(wren, "owendiscord", Clock.System.now())
+            sendFriendRequest(wren, "owendiscord", Clock.System.now())
+            val asked = notificationsFor(owen).notifications.single()
 
-            dropFriendRequest(jonas, Uuid.parse(asked.subjectId!!))
+            dropFriendRequest(wren, Uuid.parse(asked.subjectId!!))
 
-            assertEquals(emptyList(), notificationsFor(brock).notifications)
+            assertEquals(emptyList(), notificationsFor(owen).notifications)
         }
     }
 
     @Test
     fun `nobody, or yourself, is refused`() {
         transaction {
-            discordAccount(jonas, "jonasb", "warden2030")
+            discordAccount(wren, "wrenb", "orchid88")
 
-            assertEquals(SendOutcome.Unknown, sendFriendRequest(jonas, "nobody-by-this-name", Clock.System.now()))
-            assertEquals(SendOutcome.Yourself, sendFriendRequest(jonas, "JonasB", Clock.System.now()))
+            assertEquals(SendOutcome.Unknown, sendFriendRequest(wren, "nobody-by-this-name", Clock.System.now()))
+            assertEquals(SendOutcome.Yourself, sendFriendRequest(wren, "WrenB", Clock.System.now()))
         }
     }
 
     @Test
     fun `removing a friend unlinks both sides and takes the seats back`() {
         transaction {
-            val (warrior) = discordAccount(jonas, "jonasb", "warden2030")
-            discordAccount(brock, "brockdiscord", "CraneBolton")
-            val request = SavePartyRequest(warrior.toString(), "kalos-the-guardian", listOf("CraneBolton"))
-            val party = createParty(jonas, warrior, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
-            sendFriendRequest(jonas, "brockdiscord", Clock.System.now())
-            sendFriendRequest(brock, "jonasb", Clock.System.now())
-            val friend = socialFor(brock).friends.single()
+            val (warrior) = discordAccount(wren, "wrenb", "orchid88")
+            discordAccount(owen, "owendiscord", "Pinewick")
+            val request = SavePartyRequest(warrior.toString(), "kalos-the-guardian", listOf("Pinewick"))
+            val party = createParty(wren, warrior, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
+            sendFriendRequest(wren, "owendiscord", Clock.System.now())
+            sendFriendRequest(owen, "wrenb", Clock.System.now())
+            val friend = socialFor(owen).friends.single()
 
-            removeFriend(brock, Uuid.parse(friend.id))
+            removeFriend(owen, Uuid.parse(friend.id))
 
-            assertNull(personOf(jonas, brock))
-            assertNull(personOf(brock, jonas))
+            assertNull(personOf(wren, owen))
+            assertNull(personOf(owen, wren))
             val seat =
                 PartyMember
                     .selectAll()
                     .where {
                         (PartyMember.partyId eq party) and
-                            (PartyMember.name eq "CraneBolton")
+                            (PartyMember.name eq "Pinewick")
                     }.single()
             assertNull(seat[PartyMember.linkedCharacterId])
         }

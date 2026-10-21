@@ -79,12 +79,12 @@ class NexonLookupServiceTest {
             val engine =
                 jsonEngine { worldId ->
                     if (worldId == "19") {
-                        matchBody(296, "Night Lord", "https://msavatar1.nexon.net/z.png", "mechobotto")
+                        matchBody(296, "Night Lord", "https://msavatar1.nexon.net/z.png", "tidelark")
                     } else {
                         EMPTY_RANKS_BODY
                     }
                 }
-            val result = NexonLookupService(clientFor(engine)).lookup("mechobotto")
+            val result = NexonLookupService(clientFor(engine)).lookup("tidelark")
 
             assertEquals(GmsWorld.SCANIA, result?.world)
             assertEquals(WORLD_INTERACTIVE, result?.world?.worldType)
@@ -122,25 +122,25 @@ class NexonLookupServiceTest {
             val engine =
                 jsonEngine { worldId ->
                     if (worldId == "19") {
-                        matchBody(296, "Adele", "https://msavatar1.nexon.net/h.png", "HuntxKestrel")
+                        matchBody(296, "Adele", "https://msavatar1.nexon.net/h.png", "MarrowWind")
                     } else {
                         EMPTY_RANKS_BODY
                     }
                 }
 
-            assertEquals("HuntxKestrel", NexonLookupService(clientFor(engine)).lookup("huntxkestrel")?.name)
+            assertEquals("MarrowWind", NexonLookupService(clientFor(engine)).lookup("marrowwind")?.name)
         }
 
     @Test
     fun `a row for a different character than the one asked for is not a match`() =
         runBlocking {
             // Nexon truncates character_name to 12 characters (the in-game limit) before matching,
-            // so a 14-character typo comes back holding HuntxKestrel's level, job and sprite.
+            // so a 14-character typo comes back holding MarrowWind's level, job and sprite.
             // Taking it would put another player's numbers under the name that was typed.
             val engine =
-                jsonEngine { matchBody(296, "Adele", "https://msavatar1.nexon.net/h.png", "HuntxKestrel") }
+                jsonEngine { matchBody(296, "Adele", "https://msavatar1.nexon.net/h.png", "MarrowWind") }
 
-            assertNull(NexonLookupService(clientFor(engine)).lookup("huntxkestrelyz"))
+            assertNull(NexonLookupService(clientFor(engine)).lookup("marrowwindyz"))
         }
 
     @Test

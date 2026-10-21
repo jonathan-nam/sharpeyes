@@ -75,8 +75,8 @@ export function owes(ledger: HolderLedger, heldOfYours: HeldOfYours = new Map())
   }
   let total = 0;
   for (const [creditor, pieces] of byCreditor) {
-    // PER CREDITOR, and floored there. Owing Bro 90 while Bro holds 20 of yours is 70 changing
-    // hands, but owing Bro 90 while JARED holds 20 of yours is still 90: netting across two people
+    // PER CREDITOR, and floored there. Owing Owen 90 while Owen holds 20 of yours is 70 changing
+    // hands, but owing Owen 90 while FELIX holds 20 of yours is still 90: netting across two people
     // would ask one of them to settle the other's debt, which is the cross-person netting this app
     // refuses. Floored, because a creditor holding more of yours than you owe them is a debt the
     // other way and belongs on their own card.
@@ -192,7 +192,7 @@ export function distributeSale<T extends { key: string; pieces: number }>(
  */
 export function settledOf(ledger: HolderLedger, heldOfYours: HeldOfYours = new Map()): number {
   // What the spend actually consumed, rather than `ledger.answered` capped at the whole debt. That
-  // total is the PILE's, so a tranche naming Bro counted against what Jared was owed, and the header
+  // total is the PILE's, so a tranche naming Owen counted against what Felix was owed, and the header
   // could read less outstanding than its own rows came to.
   return owes(ledger, heldOfYours) - outstandingOf(ledger, heldOfYours);
 }
@@ -222,7 +222,7 @@ type Night = HolderLedger["drops"][number];
  * ONE spend of everything that has answered this pile's debt, night by night and creditor by
  * creditor. Every figure the card states about a debt comes off this.
  *
- * Three separate subtractions is how the Sale Ledger came to say a night owed Bro 60 while the
+ * Three separate subtractions is how the Sale Ledger came to say a night owed Owen 60 while the
  * Settlement Ledger said 20 off the same night, each right under its own rule: the fold here was
  * ALL-OR-NOTHING per night, so a night its credit could not finish outright was drawn GROSS;
  * `settledOf` pooled the answered pieces over the whole pile, so one creditor's sale could count

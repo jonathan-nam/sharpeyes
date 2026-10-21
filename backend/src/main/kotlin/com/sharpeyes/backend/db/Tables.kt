@@ -299,7 +299,7 @@ object Person : Table("person") {
     override val primaryKey = PrimaryKey(id)
 }
 
-// Which characters somebody else plays. An account-wide fact, stated once: CreedBratton is Chris's
+// Which characters somebody else plays. An account-wide fact, stated once: Pinewick is Chris's
 // wherever that name turns up, rather than once per seat.
 object PersonCharacter : Table("person_character") {
     val id = uuid("id")

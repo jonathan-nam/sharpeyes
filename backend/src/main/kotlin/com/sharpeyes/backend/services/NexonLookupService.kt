@@ -98,7 +98,7 @@ class NexonLookupService(
                 ?.firstOrNull()
                 // The endpoint truncates character_name to 12 characters (the in-game limit) before
                 // matching, so a longer typo answers with whoever owns its first 12: verified
-                // 2026-08-09, "huskyxkenshiyz" returns HuskyxKenshi's level, job and sprite. Only a
+                // 2026-08-09, "marrowwindyz" returns MarrowWind's level, job and sprite. Only a
                 // row spelling the name we asked for is that character. See the test.
                 ?.takeIf { it.characterName.equals(name, ignoreCase = true) }
         // The world is the one that ANSWERED, not one read off the row: the response's own worldID

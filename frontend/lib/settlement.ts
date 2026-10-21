@@ -57,8 +57,8 @@ export type HeldOfYours = {
   /**
    * True when the pile holding them owes somebody ELSE off the same night.
    *
-   * A closure is per (pile, drop), so it cannot say "settled with Bro alone". Closing a shared night
-   * would discharge Jared's coupons at the same time and say nothing, which is the silent wrong count
+   * A closure is per (pile, drop), so it cannot say "settled with Owen alone". Closing a shared night
+   * would discharge Felix's coupons at the same time and say nothing, which is the silent wrong count
    * this project exists to prevent. Such a night is left open and said as a count instead.
    */
   shared: boolean;
@@ -113,7 +113,7 @@ export type Settlement = {
   /**
    * The two above, netted: positive is coupons of theirs you hold, negative is yours they hold.
    *
-   * One figure, because one handover settles the pair. Holding 90 of Bro's while he holds 20 of yours
+   * One figure, because one handover settles the pair. Holding 90 of Owen's while he holds 20 of yours
    * is 70 changing hands, not two errands, and the card said "20 pieces · 90 to hand over" and left
    * the subtraction to whoever read it.
    *
@@ -175,7 +175,7 @@ export type Settlement = {
     /**
      * Their coupons you sold, AS FAR AS somebody has said the money comes off what they owe. Negative.
      *
-     * Only the OFFSET part of it. Selling Bro's coupons leaves you holding Bro's money, and whether
+     * Only the OFFSET part of it. Selling Owen's coupons leaves you holding Owen's money, and whether
      * that comes off his debt or gets sent to him is between the two of you. Netting all of it was
      * the app choosing, and it moved a 253.19b debt to 250.78b with nothing on screen to agree to.
      * The rest is `holding`. See V61.
@@ -187,8 +187,8 @@ export type Settlement = {
      * Mesos that have arrived from them. Negative: a payment is a debt going away.
      *
      * All of it, even past what they owe: the excess is an overpayment and lands in `owedByYou`. It
-     * used to be held apart as payment for their unpriced coupons of yours, which hid 48b Jonathan
-     * owed Bro. A coupon of yours they sell is priced by its sale (`soldOfYours`), so no payment has
+     * used to be held apart as payment for their unpriced coupons of yours, which hid 48b a user
+     * owed Owen. A coupon of yours they sell is priced by its sale (`soldOfYours`), so no payment has
      * to stand in for it.
      *
      * How much of the money LANDED, which is not what the card draws: the receipts themselves are
@@ -212,7 +212,7 @@ export type Settlement = {
    * The sales that money came out of, oldest first. See CouponSale.
    *
    * Carried so a decision about it can name the coupons it was made of: the figure alone said 2.41b
-   * came off Bro's debt and nothing said it was 130 coupons over two nights. No figure on the card is
+   * came off Owen's debt and nothing said it was 130 coupons over two nights. No figure on the card is
    * derived from these, the money being saleCredits' and the counts the tranches' own.
    */
   sales: CouponSale[];
@@ -441,7 +441,7 @@ export function buildSettlement(
     // It used to be carried only when the net ran towards you, on the reasoning that settling what
     // YOU owe is a different act and did not belong on a card about collecting. That reasoning went
     // when this card started netting both ways, and deleting the Wallet took the only other place it
-    // could be done: four shares Jonathan owed had no settle anywhere in the app. A relationship is
+    // could be done: four shares a user owed had no settle anywhere in the app. A relationship is
     // settled by ONE transfer of the difference, which marks both sides paid at once, so the lines
     // that transfer covers are all of them.
     row.lines = person.lines;
@@ -460,7 +460,7 @@ export function buildSettlement(
   //
   // It lands in `holding` and NOT in the net. Which of the two things happens to it is the pair's
   // decision: it comes off what they owe you, or you send it and their debt does not move. Netting it
-  // on arrival took Bro's 253.19b to 250.78b with nothing on screen to agree to. See V61.
+  // on arrival took Owen's 253.19b to 250.78b with nothing on screen to agree to. See V61.
   for (const [key, credit] of credits) {
     const row = rowFor(key);
     row.holding += credit.toThem;
@@ -506,7 +506,7 @@ export function buildSettlement(
 
   // Both directions are in by now, so the pair becomes the one figure that changes hands.
   for (const row of out.values()) {
-    // The COUNTS cancel, because one handover settles the pair: 50 of Bro's in your pile over 20 of
+    // The COUNTS cancel, because one handover settles the pair: 50 of Owen's in your pile over 20 of
     // yours in his is 30 changing hands. The nights do NOT: each list says what that night owed and
     // what a sale took off it, so a week filter shows the gross and not whatever the netting left.
     const wash = Math.min(row.pieces, row.piecesYouOwe);
@@ -843,7 +843,7 @@ export type PairSettlement = {
  * step along, and the fix is the same one. Close the pair or close nothing.
  *
  * A night that owes a THIRD person is left out and counted instead. A closure is keyed (pile, drop),
- * so it cannot mean "settled with Bro alone", and closing one would call Jared's coupons settled
+ * so it cannot mean "settled with Owen alone", and closing one would call Felix's coupons settled
  * without a word on any screen. Prefer a missing item over a wrong count.
  */
 export function settleThePair(row: Settlement): PairSettlement {
@@ -1037,7 +1037,7 @@ export type Offset = {
    * The shares it discharges, one row each.
    *
    * The act covers all of them or none, but it is RECORDED share by share: an offset over three
-   * nights was one entry reading "offset against Bro" and 5.6b, and which three was a fold down
+   * nights was one entry reading "offset against Owen" and 5.6b, and which three was a fold down
    * from a figure that named nothing. One row per share reads the way a single-share offset already
    * did, and takes one back without taking the other two with it.
    */

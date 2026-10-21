@@ -104,7 +104,7 @@ export function PageSwap({
    * that then rises: measured on a menu click to Drop Log, 747px of page, then the skeleton at
    * opacity 0.00 rising over 200ms. That is the flicker on a navigation, and it is invisible on a
    * refresh, where there is no outgoing page for it to be compared against. Which is exactly the
-   * difference Jonathan reported.
+   * difference that was reported.
    *
    * No wrapper either. Nothing ever overlaps here (see setLingering above), so it needs no
    * positioning context, and this is then the same markup the route boundary renders: handing over

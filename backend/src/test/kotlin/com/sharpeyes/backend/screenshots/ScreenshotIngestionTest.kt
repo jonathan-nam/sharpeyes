@@ -272,7 +272,7 @@ class ScreenshotIngestionTest {
     // A count can only ever be OVERWRITTEN by a new sighting, never cleared, unless the capture
     // is known to have shown the whole inventory. These four pin both halves of that.
     //
-    // The bug: mechobotto kept 50 Kaling pieces for 37 minutes after a capture that had none,
+    // The bug: tidelark kept 50 Kaling pieces for 37 minutes after a capture that had none,
     // because absence carried no information. The trap on the way to fixing it: two captures of
     // that same character each detected 24 items and each missed one the other found, so a naive
     // absence-means-zero would have deleted a real 830-symbol stack.

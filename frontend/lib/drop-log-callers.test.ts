@@ -65,7 +65,7 @@ describe("every caller of buildDropLog hands it the settlements", () => {
   //
   // A closure is a decision about ONE NIGHT, so it belongs in the log. A tranche is a sale, and
   // subtracting it here made every boss row's figure depend on every other party: Hard Baldrix went
-  // silent about a night looted whole because a sale crediting Brock had drained the oldest nights,
+  // silent about a night looted whole because a sale crediting Owen had drained the oldest nights,
   // and the row contradicted the "120 took, 60 due" printed under it. Selling their share does turn
   // a coupon debt into a meso one (V56); the SALE LEDGER is the one place that nets it, out of its
   // own holderLedgers, and it never went through here.

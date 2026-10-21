@@ -119,15 +119,15 @@ const coupon = (
 const pool = (partyId: string, loot: Loot[]): PartyLootPool => ({ partyId, loot });
 
 const SELF: Holder = { kind: "SELF", personId: null, characterName: null };
-const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
+const OWEN: Holder = { kind: "PERSON", personId: "p-owen", characterName: null };
 
 /** Your character loots for a trio with two strangers. */
-const trio = () => [seat("m1", "Hunt", { mine: true }), seat("m2", "Rune"), seat("m3", "Bob")];
+const trio = () => [seat("m1", "Marrow", { mine: true }), seat("m2", "Rune"), seat("m3", "Bob")];
 
 describe("who a seat belongs to", () => {
   it("is the person when somebody plays them, you when they are yours, the name otherwise", () => {
-    expect(holderOf(seat("m1", "CraneBolton", { person: ["p-brock", "Brock"] }))).toEqual(BROCK);
-    expect(holderOf(seat("m2", "Hunt", { mine: true }))).toEqual(SELF);
+    expect(holderOf(seat("m1", "Pinewick", { person: ["p-owen", "Owen"] }))).toEqual(OWEN);
+    expect(holderOf(seat("m2", "Marrow", { mine: true }))).toEqual(SELF);
     expect(holderOf(seat("m3", "Stranger"))).toEqual({
       kind: "CHARACTER",
       personId: null,
@@ -138,11 +138,11 @@ describe("who a seat belongs to", () => {
   it("folds one key per holder, so a name spelled two ways is one pile", () => {
     expect(holderKey(holderOf(seat("m1", "Rune")))).toBe(holderKey(holderOf(seat("m2", "rune"))));
     // Two of one person's characters, and two of yours, are each one key.
-    expect(holderKey(holderOf(seat("m1", "CraneBolton", { person: ["p-brock", "Brock"] })))).toBe(
-      holderKey(holderOf(seat("m2", "Frecklynn", { person: ["p-brock", "Brock"] }))),
+    expect(holderKey(holderOf(seat("m1", "Pinewick", { person: ["p-owen", "Owen"] })))).toBe(
+      holderKey(holderOf(seat("m2", "Quessa", { person: ["p-owen", "Owen"] }))),
     );
-    expect(holderKey(holderOf(seat("m3", "Hunt", { mine: true })))).toBe(
-      holderKey(holderOf(seat("m4", "moreboost7", { mine: true }))),
+    expect(holderKey(holderOf(seat("m3", "Marrow", { mine: true })))).toBe(
+      holderKey(holderOf(seat("m4", "saltgrass3", { mine: true }))),
     );
   });
 });
@@ -187,7 +187,7 @@ describe("which drops are outstanding", () => {
     );
     expect(drops).toHaveLength(1);
     expect(drops[0]!.holder).toEqual(SELF);
-    expect(drops[0]!.looterName).toBe("Hunt");
+    expect(drops[0]!.looterName).toBe("Marrow");
     // The looter holds the lot; the others hold none and are owed their share.
     expect(drops[0]!.drop.seats.map((s) => s.looted)).toEqual([60, 0, 0]);
   });
@@ -204,8 +204,8 @@ describe("which drops are outstanding", () => {
     // Two of your own characters. Somebody looted the lot, and it is already where it belongs:
     // you cannot owe yourself, and a debt on this row would be a figure nobody should act on.
     const mine = party("pa", "limbo", [
-      seat("m1", "Hunt", { mine: true }),
-      seat("m2", "moreboost7", { mine: true }),
+      seat("m1", "Marrow", { mine: true }),
+      seat("m2", "saltgrass3", { mine: true }),
     ]);
     const minesLot = coupon("l1", "limbo", 60, "2026-07-30", {
       bundles: 3,
@@ -215,8 +215,8 @@ describe("which drops are outstanding", () => {
 
     // Same for a duo that is one other person's two characters.
     const theirs = party("pb", "limbo", [
-      seat("m3", "CraneBolton", { person: ["p-brock", "Brock"] }),
-      seat("m4", "Frecklynn", { person: ["p-brock", "Brock"] }),
+      seat("m3", "Pinewick", { person: ["p-owen", "Owen"] }),
+      seat("m4", "Quessa", { person: ["p-owen", "Owen"] }),
     ]);
     const theirLot = coupon("l2", "limbo", 60, "2026-07-30", {
       bundles: 3,
@@ -233,7 +233,7 @@ describe("which drops are outstanding", () => {
     };
     expect(outstanding([p], [pool("pa", [other])], VESTIGE, ORDER)).toEqual([]);
 
-    const alone = party("pb", "limbo", [seat("m9", "Hunt", { mine: true })]);
+    const alone = party("pb", "limbo", [seat("m9", "Marrow", { mine: true })]);
     expect(
       outstanding([alone], [pool("pb", [coupon("l3", "limbo", 60, "2026-07-30")])], VESTIGE, ORDER),
     ).toEqual([]);
@@ -245,12 +245,12 @@ describe("a drop is measured against the week it fell in", () => {
   // `party.members` is whichever ONE week the page asked for, so reading the pool against it answers
   // for the wrong night. The drop carries its own week's seats, and now they are what is read.
   const roster = trio();
-  const [hunt, rune] = roster;
+  const [marrow, rune] = roster;
 
   /** The party as this week sees it, which is the duo. Every seat is still on it. */
   const thisWeekIsADuo = (): Party => ({
     ...party("pa", "limbo", roster),
-    members: [hunt!, rune!],
+    members: [marrow!, rune!],
   });
 
   it("divides July's trio three ways while this week is a duo", () => {
@@ -261,7 +261,7 @@ describe("a drop is measured against the week it fell in", () => {
     });
     const rows = outstanding([thisWeekIsADuo()], [pool("pa", [july])], VESTIGE, ORDER);
 
-    // Hunt looted the lot for three people. Read against this week it would owe Rune 30, which is
+    // Marrow looted the lot for three people. Read against this week it would owe Rune 30, which is
     // the whole of Bob's share handed to somebody else.
     expect(rows).toHaveLength(1);
     expect(rows[0]!.drop.seats.map((s) => s.name)).toEqual(["you", "Rune", "Bob"]);
@@ -280,7 +280,7 @@ describe("a drop is measured against the week it fell in", () => {
     expect(open.map((d) => d.lootId)).toEqual(["l2"]);
     expect(open[0]!.imbalance).toBe(10);
     // And the stacks may only be handed to the two who were there.
-    expect(open[0]!.seats.map((s) => s.name)).toEqual(["Hunt", "Rune"]);
+    expect(open[0]!.seats.map((s) => s.name)).toEqual(["Marrow", "Rune"]);
   });
 
   it("hands a stack to the guest who ran that night, not to this week's roster", () => {
@@ -289,7 +289,7 @@ describe("a drop is measured against the week it fell in", () => {
     const july = coupon("l1", "limbo", 60, "2026-07-30", { bundles: 3, ranThatWeek: ["m1", "m3"] });
     const open = unanswered([thisWeekIsADuo()], [pool("pa", [july])], VESTIGE);
 
-    expect(open[0]!.seats.map((s) => s.name)).toEqual(["Hunt", "Bob"]);
+    expect(open[0]!.seats.map((s) => s.name)).toEqual(["Marrow", "Bob"]);
   });
 
   it("falls back to the party when the week names nobody, rather than reading it as empty", () => {
@@ -316,11 +316,11 @@ describe("a drop is measured against the week it fell in", () => {
 
 describe("a debt is between people, not between characters", () => {
   it("nets two of your characters into one seat, so you are owed once", () => {
-    // Hunt loots 60 for a trio of you, your alt, and Jarvis. Two thirds of it is already yours.
+    // Marrow loots 60 for a trio of you, your alt, and Felix. Two thirds of it is already yours.
     const p = party("pa", "limbo", [
-      seat("m1", "Hunt", { mine: true }),
-      seat("m2", "moreboost7", { mine: true }),
-      seat("m3", "CourtLane", { person: ["p-jarvis", "Jarvis"] }),
+      seat("m1", "Marrow", { mine: true }),
+      seat("m2", "saltgrass3", { mine: true }),
+      seat("m3", "Sablemoor", { person: ["p-felix", "Felix"] }),
     ]);
     const ledgers = holderLedgers(
       outstanding(
@@ -340,17 +340,17 @@ describe("a debt is between people, not between characters", () => {
     );
 
     const limbo = ledgers[0]!.drops[0]!;
-    // One debt, to Jarvis, for a third. Keyed by character this said "owes moreboost7 20" as well,
+    // One debt, to Felix, for a third. Keyed by character this said "owes saltgrass3 20" as well,
     // which is you paying yourself.
-    expect(limbo.transfers.map((t) => [t.to, t.pieces])).toEqual([["Jarvis", 20]]);
+    expect(limbo.transfers.map((t) => [t.to, t.pieces])).toEqual([["Felix", 20]]);
   });
 
   it("counts one person's two seats as two shares, and pays them once", () => {
-    // Brock brought two characters, so he is entitled to two thirds of the drop, in one transfer.
+    // Owen brought two characters, so he is entitled to two thirds of the drop, in one transfer.
     const p = party("pa", "limbo", [
-      seat("m1", "Hunt", { mine: true }),
-      seat("m2", "CraneBolton", { person: ["p-brock", "Brock"] }),
-      seat("m3", "Frecklynn", { person: ["p-brock", "Brock"] }),
+      seat("m1", "Marrow", { mine: true }),
+      seat("m2", "Pinewick", { person: ["p-owen", "Owen"] }),
+      seat("m3", "Quessa", { person: ["p-owen", "Owen"] }),
     ]);
     const ledgers = holderLedgers(
       outstanding(
@@ -368,12 +368,12 @@ describe("a debt is between people, not between characters", () => {
       ),
       new Map(),
     );
-    expect(ledgers[0]!.drops[0]!.transfers.map((t) => [t.to, t.pieces])).toEqual([["Brock", 40]]);
+    expect(ledgers[0]!.drops[0]!.transfers.map((t) => [t.to, t.pieces])).toEqual([["Owen", 40]]);
   });
 });
 
 describe("uneven self-looting", () => {
-  const me = seat("m1", "Hunt", { mine: true });
+  const me = seat("m1", "Marrow", { mine: true });
   const them = seat("m2", "Nova", { person: ["p-nova", "Nova"] });
   const NOVA: Holder = { kind: "PERSON", personId: "p-nova", characterName: null };
   const duo = [party("pt", "baldrix", [me, them])];
@@ -453,7 +453,7 @@ describe("uneven self-looting", () => {
 });
 
 describe("the arrangement put in front of somebody", () => {
-  const me = seat("m1", "Hunt", { mine: true });
+  const me = seat("m1", "Marrow", { mine: true });
   const them = seat("m2", "Nova", { person: ["p-nova", "Nova"] });
   const NOVA_KEY = holderKey({ kind: "PERSON", personId: "p-nova", characterName: null });
 
@@ -513,20 +513,20 @@ describe("the arrangement put in front of somebody", () => {
 /**
  * A firm agreement, as against the odd stack taking turns.
  *
- * "mechobotto takes 4 stacks, Frecklynn takes 2" is a SPLIT, not a night that failed to divide.
+ * "tidelark takes 4 stacks, Quessa takes 2" is a SPLIT, not a night that failed to divide.
  * Said as shares it divides exactly, so nothing is outstanding and nobody is asked anything, which
  * is the whole difference between an agreement and a remainder.
  */
 describe("a party that has agreed an uneven split", () => {
   const mine = (name: string, shares: number) => ({ ...seat("m1", name, { mine: true }), shares });
   const theirs = (name: string, shares: number) => ({
-    ...seat("m2", name, { person: ["p-brock", "Brock"] }),
+    ...seat("m2", name, { person: ["p-owen", "Owen"] }),
     shares,
   });
 
   it("takes the stacks in the ratio it agreed, and leaves nobody owing", () => {
     // Extreme Kalos, 180 in 6 stacks of 30. 6 x 4/6 and 6 x 2/6 is four stacks and two.
-    const seats = [mine("mechobotto", 4), theirs("Frecklynn", 2)];
+    const seats = [mine("tidelark", 4), theirs("Quessa", 2)];
     const kalos = [party("pk", "kalos-the-guardian", seats)];
     const drop = [
       pool("pk", [coupon("l1", "kalos-the-guardian", 180, "2026-08-06", { bundles: 6 })]),
@@ -544,9 +544,9 @@ describe("a party that has agreed an uneven split", () => {
 
   it("lets one member keep the lot, owing nobody", () => {
     // Hard Limbo is 60 in 3 stacks of 20, and a duo cannot divide 3 stacks. On 1 and 0 there is
-    // nothing to divide: Hunt is entitled to all three, holds all three, and owes nobody. The
+    // nothing to divide: Marrow is entitled to all three, holds all three, and owes nobody. The
     // party leaves the Drop Log rather than sitting there as a night that will not come out.
-    const seats = [mine("Huntxkestrel", 1), theirs("CourtLane", 0)];
+    const seats = [mine("Marrowwind", 1), theirs("Sablemoor", 0)];
     const limbo = [party("pl", "limbo", seats)];
     const drop = [pool("pl", [coupon("l3", "limbo", 60, "2026-08-06", { bundles: 3 })])];
 
@@ -556,9 +556,9 @@ describe("a party that has agreed an uneven split", () => {
   });
 
   it("still refuses to divide when the shares cannot come out in whole stacks", () => {
-    // 3 and 1 is a weight of 4, so Hunt is entitled to 2.25 stacks. Nobody can pick that up, so
+    // 3 and 1 is a weight of 4, so Marrow is entitled to 2.25 stacks. Nobody can pick that up, so
     // it is a night that does not divide however it is looted. This is what 1 and 0 replaces.
-    const seats = [mine("Huntxkestrel", 3), theirs("CourtLane", 1)];
+    const seats = [mine("Marrowwind", 3), theirs("Sablemoor", 1)];
     const limbo = [party("pl", "limbo", seats)];
     const drop = [pool("pl", [coupon("l4", "limbo", 60, "2026-08-06", { bundles: 3 })])];
 
@@ -568,15 +568,15 @@ describe("a party that has agreed an uneven split", () => {
 
   it("reads 4 and 2 as the same agreement as 2 and 1", () => {
     // The numbers people say to each other go straight in, whichever way they say them.
-    const long = suggestArrangement(6, [mine("mechobotto", 4), theirs("Frecklynn", 2)], new Map());
-    const short = suggestArrangement(6, [mine("mechobotto", 2), theirs("Frecklynn", 1)], new Map());
+    const long = suggestArrangement(6, [mine("tidelark", 4), theirs("Quessa", 2)], new Map());
+    const short = suggestArrangement(6, [mine("tidelark", 2), theirs("Quessa", 1)], new Map());
     expect(long).toEqual(short);
   });
 
   it("settles Malefic Star the same way, where an even split could not", () => {
     // 3 stacks between two. Even, it will not divide and somebody holds 15 that are not theirs.
     // Agreed 2 to 1, it divides exactly and there is nothing to answer.
-    const seats = [mine("acmeacme", 1), theirs("CraneBolton", 2)];
+    const seats = [mine("plumtwig", 1), theirs("Pinewick", 2)];
     const star = [party("ps", "malefic-star", seats)];
     const drop = [pool("ps", [coupon("l2", "malefic-star", 90, "2026-08-06", { bundles: 3 })])];
 
@@ -592,10 +592,10 @@ describe("a party that has agreed an uneven split", () => {
 });
 
 describe("what the card is still waiting to be told", () => {
-  // The pile is 390, half of it mine, and Brock loots the lot.
+  // The pile is 390, half of it mine, and Owen loots the lot.
   const duo = () => [
-    seat("m1", "Hunt", { mine: true }),
-    seat("m2", "BrockChar", { person: ["p-brock", "Brock"] }),
+    seat("m1", "Marrow", { mine: true }),
+    seat("m2", "OwenChar", { person: ["p-owen", "Owen"] }),
   ];
 
   const ledgerFor = (
@@ -626,9 +626,9 @@ describe("what the card is still waiting to be told", () => {
 
     // Each of the three closes the gap by its own pieces, whatever it did with them.
     const part = ledgerFor([
-      { holder: BROCK, pieces: 100, amount: 2_500 * M, disposition: "SOLD" },
-      { holder: BROCK, pieces: 50, amount: null, disposition: "KEPT" },
-      { holder: BROCK, pieces: 25, amount: 600 * M, disposition: "BOUGHT" },
+      { holder: OWEN, pieces: 100, amount: 2_500 * M, disposition: "SOLD" },
+      { holder: OWEN, pieces: 50, amount: null, disposition: "KEPT" },
+      { holder: OWEN, pieces: 25, amount: 600 * M, disposition: "BOUGHT" },
     ]);
     expect([part.soldPieces, part.kept, part.bought.pieces]).toEqual([100, 50, 25]);
     expect([part.accounted, unaccounted(part)]).toEqual([175, 215]);
@@ -636,8 +636,8 @@ describe("what the card is still waiting to be told", () => {
 
   it("closes to nothing when the whole pile is spoken for", () => {
     const done = ledgerFor([
-      { holder: BROCK, pieces: 195, amount: 4_875 * M, disposition: "SOLD" },
-      { holder: BROCK, pieces: 195, amount: null, disposition: "KEPT" },
+      { holder: OWEN, pieces: 195, amount: 4_875 * M, disposition: "SOLD" },
+      { holder: OWEN, pieces: 195, amount: null, disposition: "KEPT" },
     ]);
     expect([done.accounted, unaccounted(done)]).toEqual([390, 0]);
   });
@@ -646,7 +646,7 @@ describe("what the card is still waiting to be told", () => {
     // More entered than the pile holds. Said, not clamped: the raw figures are both here so the card
     // can name the excess instead of quietly absorbing it.
     const over = ledgerFor([
-      { holder: BROCK, pieces: 400, amount: 10_000 * M, disposition: "SOLD" },
+      { holder: OWEN, pieces: 400, amount: 10_000 * M, disposition: "SOLD" },
     ]);
     expect(over.accounted).toBe(400);
     expect(unaccounted(over)).toBe(0);
@@ -659,7 +659,7 @@ describe("pieces answered with money rather than with coupons", () => {
 
   it("counts what a sale named as somebody else's, and not the rest of the lot", () => {
     const answered = answeredByHolder([
-      { holder: SELF, pieces: 60, amount: 1_500 * M, shares: [{ holder: BROCK, pieces: 30 }] },
+      { holder: SELF, pieces: 60, amount: 1_500 * M, shares: [{ holder: OWEN, pieces: 30 }] },
     ]);
     expect(answered.get("self")).toBe(30);
   });
@@ -680,7 +680,7 @@ describe("pieces answered with money rather than with coupons", () => {
         pieces: 25,
         amount: 600 * M,
         disposition: "BOUGHT",
-        shares: [{ holder: BROCK, pieces: 25 }],
+        shares: [{ holder: OWEN, pieces: 25 }],
       },
     ]);
     expect(answered.get("self")).toBe(25);
@@ -700,30 +700,30 @@ describe("pieces answered with money rather than with coupons", () => {
 
   it("caps at the tranche, so a bad cached row cannot answer for more than it held", () => {
     const answered = answeredByHolder([
-      { holder: SELF, pieces: 30, amount: 1_500 * M, shares: [{ holder: BROCK, pieces: 400 }] },
+      { holder: SELF, pieces: 30, amount: 1_500 * M, shares: [{ holder: OWEN, pieces: 400 }] },
     ]);
     expect(answered.get("self")).toBe(30);
   });
 
   it("adds up across tranches, per pile", () => {
     const answered = answeredByHolder([
-      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: BROCK, pieces: 10 }] },
+      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: OWEN, pieces: 10 }] },
       { holder: SELF, pieces: 20, amount: 500 * M, disposition: "BOUGHT" },
-      { holder: BROCK, pieces: 80, amount: 2_000 * M, shares: [{ holder: SELF, pieces: 40 }] },
+      { holder: OWEN, pieces: 80, amount: 2_000 * M, shares: [{ holder: SELF, pieces: 40 }] },
     ]);
-    expect([answered.get("self"), answered.get("person:p-brock")]).toEqual([30, 40]);
+    expect([answered.get("self"), answered.get("person:p-owen")]).toEqual([30, 40]);
   });
 });
 
 describe("the same pieces, per pile AND creditor", () => {
   const SELF: Holder = { kind: "SELF", personId: null, characterName: null };
-  const ZABBY: Holder = { kind: "CHARACTER", personId: null, characterName: "zabby" };
+  const PEMBER: Holder = { kind: "CHARACTER", personId: null, characterName: "pember" };
 
   it("keeps whose the pieces were, which the pile total throws away", () => {
     const answered = answeredByPair([
-      { holder: SELF, pieces: 70, amount: 1_298 * M, shares: [{ holder: BROCK, pieces: 70 }] },
+      { holder: SELF, pieces: 70, amount: 1_298 * M, shares: [{ holder: OWEN, pieces: 70 }] },
     ]);
-    expect(answered.get(answeredKey("self", "person:p-brock"))).toBe(70);
+    expect(answered.get(answeredKey("self", "person:p-owen"))).toBe(70);
   });
 
   it("splits one tranche between the two people it named", () => {
@@ -733,14 +733,14 @@ describe("the same pieces, per pile AND creditor", () => {
         pieces: 60,
         amount: 1_500 * M,
         shares: [
-          { holder: BROCK, pieces: 40 },
-          { holder: ZABBY, pieces: 20 },
+          { holder: OWEN, pieces: 40 },
+          { holder: PEMBER, pieces: 20 },
         ],
       },
     ]);
     expect([
-      answered.get(answeredKey("self", "person:p-brock")),
-      answered.get(answeredKey("self", "character:zabby")),
+      answered.get(answeredKey("self", "person:p-owen")),
+      answered.get(answeredKey("self", "character:pember")),
     ]).toEqual([40, 20]);
   });
 
@@ -760,16 +760,16 @@ describe("the same pieces, per pile AND creditor", () => {
         pieces: 25,
         amount: 600 * M,
         disposition: "BOUGHT",
-        shares: [{ holder: BROCK, pieces: 25 }],
+        shares: [{ holder: OWEN, pieces: 25 }],
       },
     ]);
-    expect(answered.get(answeredKey("self", "person:p-brock"))).toBe(25);
+    expect(answered.get(answeredKey("self", "person:p-owen"))).toBe(25);
   });
 
   it("counts a redemption not at all, having realized nothing", () => {
     expect(
       answeredByPair([
-        { holder: SELF, pieces: 50, amount: null, shares: [{ holder: BROCK, pieces: 50 }] },
+        { holder: SELF, pieces: 50, amount: null, shares: [{ holder: OWEN, pieces: 50 }] },
       ]),
     ).toEqual(new Map());
   });
@@ -784,12 +784,12 @@ describe("the same pieces, per pile AND creditor", () => {
         amount: 1_500 * M,
         shares: [
           { holder: SELF, pieces: 20 },
-          { holder: BROCK, pieces: 60 },
+          { holder: OWEN, pieces: 60 },
         ],
       },
     ]);
-    expect(answered.get(answeredKey("self", "character:zabby"))).toBeUndefined();
-    expect(answered.get(answeredKey("self", "person:p-brock"))).toBe(60);
+    expect(answered.get(answeredKey("self", "character:pember"))).toBeUndefined();
+    expect(answered.get(answeredKey("self", "person:p-owen"))).toBe(60);
   });
 
   it("caps at the tranche in share order, so a bad cached row answers for what fell", () => {
@@ -799,26 +799,26 @@ describe("the same pieces, per pile AND creditor", () => {
         pieces: 30,
         amount: 1_500 * M,
         shares: [
-          { holder: BROCK, pieces: 25 },
-          { holder: ZABBY, pieces: 25 },
+          { holder: OWEN, pieces: 25 },
+          { holder: PEMBER, pieces: 25 },
         ],
       },
     ]);
     expect([
-      answered.get(answeredKey("self", "person:p-brock")),
-      answered.get(answeredKey("self", "character:zabby")),
+      answered.get(answeredKey("self", "person:p-owen")),
+      answered.get(answeredKey("self", "character:pember")),
     ]).toEqual([25, 5]);
   });
 
   it("adds up across tranches, per pair", () => {
     const answered = answeredByPair([
-      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: BROCK, pieces: 10 }] },
-      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: BROCK, pieces: 15 }] },
-      { holder: BROCK, pieces: 80, amount: 2_000 * M, shares: [{ holder: SELF, pieces: 40 }] },
+      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: OWEN, pieces: 10 }] },
+      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: OWEN, pieces: 15 }] },
+      { holder: OWEN, pieces: 80, amount: 2_000 * M, shares: [{ holder: SELF, pieces: 40 }] },
     ]);
     expect([
-      answered.get(answeredKey("self", "person:p-brock")),
-      answered.get(answeredKey("person:p-brock", "self")),
+      answered.get(answeredKey("self", "person:p-owen")),
+      answered.get(answeredKey("person:p-owen", "self")),
     ]).toEqual([25, 40]);
   });
 
@@ -826,8 +826,8 @@ describe("the same pieces, per pile AND creditor", () => {
     // The two are subtracted on two different screens, so a pair total above the pile's would put the
     // Settlement Ledger back below the Sale Ledger, which is the disagreement this pair exists to end.
     const rows = [
-      { holder: SELF, pieces: 30, amount: 1_500 * M, shares: [{ holder: BROCK, pieces: 400 }] },
-      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: ZABBY, pieces: 10 }] },
+      { holder: SELF, pieces: 30, amount: 1_500 * M, shares: [{ holder: OWEN, pieces: 400 }] },
+      { holder: SELF, pieces: 40, amount: 1_000 * M, shares: [{ holder: PEMBER, pieces: 10 }] },
     ];
     const pairs = [...answeredByPair(rows).values()].reduce((sum, n) => sum + n, 0);
     expect(pairs).toBeLessThanOrEqual(answeredByHolder(rows).get("self")!);
@@ -836,8 +836,8 @@ describe("the same pieces, per pile AND creditor", () => {
 
 describe("closing the books, which no arithmetic is entitled to do", () => {
   const duo = () => [
-    seat("m1", "Hunt", { mine: true }),
-    seat("m2", "BrockChar", { person: ["p-brock", "Brock"] }),
+    seat("m1", "Marrow", { mine: true }),
+    seat("m2", "OwenChar", { person: ["p-owen", "Owen"] }),
   ];
   const week = () => ({
     parties: [party("pa", "kalos-the-guardian", duo()), party("pb", "baldrix", duo())],
@@ -864,8 +864,8 @@ describe("closing the books, which no arithmetic is entitled to do", () => {
   ) => {
     const { parties, pools } = week();
     const rows = [
-      { holder: BROCK, pieces: 150, amount: 3_750 * M, disposition: "SOLD" },
-      { holder: BROCK, pieces: 150, amount: null, disposition: "KEPT" },
+      { holder: OWEN, pieces: 150, amount: 3_750 * M, disposition: "SOLD" },
+      { holder: OWEN, pieces: 150, amount: null, disposition: "KEPT" },
     ];
     const only = pools.map((p) => ({ ...p, loot: p.loot.filter((l) => logged.includes(l.id)) }));
     return holderLedgers(
@@ -873,7 +873,7 @@ describe("closing the books, which no arithmetic is entitled to do", () => {
       salesByHolder(rows),
       keptByHolder(rows),
       boughtByHolder(rows),
-      receivedByHolder([{ holder: BROCK, amount: 3_700 * M }]),
+      receivedByHolder([{ holder: OWEN, amount: 3_700 * M }]),
       closedByHolder(settlements),
     )[0]!;
   };
@@ -892,7 +892,7 @@ describe("closing the books, which no arithmetic is entitled to do", () => {
   });
 
   it("closes the drops it names, and records what was written off", () => {
-    const done = ledgerFor([{ holder: BROCK, lootIds: ["l1", "l2"], unpaid: 50 * M }]);
+    const done = ledgerFor([{ holder: OWEN, lootIds: ["l1", "l2"], unpaid: 50 * M }]);
     expect(done.closed).toBe(true);
     expect(done.writtenOff).toBe(50 * M);
     expect(done.drops.every((d) => d.closed)).toBe(true);
@@ -900,7 +900,7 @@ describe("closing the books, which no arithmetic is entitled to do", () => {
 
   it("closes only what it names, so next week's drop reopens the card", () => {
     // The reason a settlement names DROPS and not a date: anything it did not name is still live.
-    const half = ledgerFor([{ holder: BROCK, lootIds: ["l1"], unpaid: 0 }]);
+    const half = ledgerFor([{ holder: OWEN, lootIds: ["l1"], unpaid: 0 }]);
     expect(half.closed).toBe(false);
     expect(half.drops.map((d) => [d.bossKey, d.closed])).toEqual([
       ["kalos-the-guardian", true],
@@ -909,8 +909,8 @@ describe("closing the books, which no arithmetic is entitled to do", () => {
   });
 
   it("counts only what is still open, so a paid debt is not asked for a second time", () => {
-    const half = ledgerFor([{ holder: BROCK, lootIds: ["l1"], unpaid: 0 }]);
-    // What they OWE is the open drops only: l2 alone, of which half is Hunt's. The pile itself
+    const half = ledgerFor([{ holder: OWEN, lootIds: ["l1"], unpaid: 0 }]);
+    // What they OWE is the open drops only: l2 alone, of which half is Marrow's. The pile itself
     // still counts both, because that pair is the Sale Ledger's instruction and both sides of it
     // have to come from the same set.
     expect(half.owedToYou).toBe(60);
@@ -923,19 +923,19 @@ describe("closing the books, which no arithmetic is entitled to do", () => {
   });
 
   it("is keyed per holder and drop, so one person's closure is not another's", () => {
-    expect(closureKey(BROCK, "l1")).not.toBe(closureKey(SELF, "l1"));
-    const { closed } = closedByHolder([{ holder: BROCK, lootIds: ["l1"], unpaid: 0 }]);
-    expect(closed.has(closureKey(BROCK, "l1"))).toBe(true);
+    expect(closureKey(OWEN, "l1")).not.toBe(closureKey(SELF, "l1"));
+    const { closed } = closedByHolder([{ holder: OWEN, lootIds: ["l1"], unpaid: 0 }]);
+    expect(closed.has(closureKey(OWEN, "l1"))).toBe(true);
     expect(closed.has(closureKey(SELF, "l1"))).toBe(false);
   });
 
   it("stops a closed debt tilting next week's arrangement", () => {
     const { parties, pools } = week();
     const drops = outstanding(parties, pools, VESTIGE, ORDER);
-    const { closed } = closedByHolder([{ holder: BROCK, lootIds: ["l1", "l2"], unpaid: 0 }]);
+    const { closed } = closedByHolder([{ holder: OWEN, lootIds: ["l1", "l2"], unpaid: 0 }]);
 
-    // Brock is 150 pieces over across the two nights and has paid for it, so he is no longer behind.
-    expect(runningBalance(drops).get(holderKey(BROCK))).toBe(-150);
+    // Owen is 150 pieces over across the two nights and has paid for it, so he is no longer behind.
+    expect(runningBalance(drops).get(holderKey(OWEN))).toBe(-150);
     expect(stillOpen(drops, closed)).toEqual([]);
     expect(runningBalance(stillOpen(drops, closed)).size).toBe(0);
   });
@@ -950,7 +950,7 @@ describe("the coupons you hold that owe nobody anything", () => {
   it("adds a night that divided exactly, which the debt queue leaves out", () => {
     // Three seats, one stack each, all on one share: everybody landed on their entitlement.
     const parties = [
-      party("pj", "limbo", [mine("m1", "mechobotto"), seat("m2", "Zabby"), seat("m3", "Prelude")]),
+      party("pj", "limbo", [mine("m1", "tidelark"), seat("m2", "Pember"), seat("m3", "Kettle")]),
     ];
     const pools = [
       pool("pj", [
@@ -972,7 +972,7 @@ describe("the coupons you hold that owe nobody anything", () => {
   });
 
   it("adds a boss you ran alone, where there is no arrangement to read", () => {
-    const parties = [party("ps", "limbo", [mine("m1", "mechobotto")])];
+    const parties = [party("ps", "limbo", [mine("m1", "tidelark")])];
     const pools = [pool("ps", [coupon("ls", "limbo", 180, "2026-08-06", { bundles: 3 })])];
     const queued = outstanding(parties, pools, VESTIGE, ORDER);
     expect(queued).toEqual([]);
@@ -983,7 +983,7 @@ describe("the coupons you hold that owe nobody anything", () => {
 
   it("does not count a pile the queue already has, which would double it", () => {
     // The uneven night: you took 1 stack of 3 and were due 2, so the queue already holds your pile.
-    const parties = [party("pa", "baldrix", [mine("m1", "mechobotto"), seat("m2", "Crane")])];
+    const parties = [party("pa", "baldrix", [mine("m1", "tidelark"), seat("m2", "Pine")])];
     const pools = [
       pool("pa", [
         coupon("la", "baldrix", 240, "2026-08-06", {
@@ -1003,7 +1003,7 @@ describe("the coupons you hold that owe nobody anything", () => {
   });
 
   it("leaves somebody else's balanced pile alone, since you cannot sell out of it", () => {
-    const parties = [party("pb", "limbo", [seat("m1", "Crane"), seat("m2", "Zabby")])];
+    const parties = [party("pb", "limbo", [seat("m1", "Pine"), seat("m2", "Pember")])];
     const pools = [
       pool("pb", [
         coupon("lb", "limbo", 60, "2026-08-06", {
@@ -1020,8 +1020,8 @@ describe("the coupons you hold that owe nobody anything", () => {
 
   it("comes to the whole pile once the card adds them up", () => {
     const parties = [
-      party("pa", "baldrix", [mine("m1", "mechobotto"), seat("m2", "Crane")]),
-      party("pj", "limbo", [mine("m3", "mechobotto"), seat("m4", "Zabby"), seat("m5", "Prelude")]),
+      party("pa", "baldrix", [mine("m1", "tidelark"), seat("m2", "Pine")]),
+      party("pj", "limbo", [mine("m3", "tidelark"), seat("m4", "Pember"), seat("m5", "Kettle")]),
     ];
     const pools = [
       pool("pa", [
@@ -1064,11 +1064,11 @@ describe("what the coupon piles fetched", () => {
   });
 
   it("keeps only your part of a lot that held somebody else's coupons", () => {
-    // Half the lot was Brock's, so half the price is his. The whole lot is still what there was to
+    // Half the lot was Owen's, so half the price is his. The whole lot is still what there was to
     // split, which is what the tile says it is showing.
     expect(
       couponMoney([
-        { holder: SELF, pieces: 60, amount: 1_500 * M, shares: [{ holder: BROCK, pieces: 30 }] },
+        { holder: SELF, pieces: 60, amount: 1_500 * M, shares: [{ holder: OWEN, pieces: 30 }] },
       ]),
     ).toEqual({ pooled: 1_500 * M, yourTake: 750 * M });
   });
@@ -1076,7 +1076,7 @@ describe("what the coupon piles fetched", () => {
   it("counts your share of a lot sold out of somebody else's pile, and nothing more", () => {
     expect(
       couponMoney([
-        { holder: BROCK, pieces: 80, amount: 2_000 * M, shares: [{ holder: SELF, pieces: 20 }] },
+        { holder: OWEN, pieces: 80, amount: 2_000 * M, shares: [{ holder: SELF, pieces: 20 }] },
       ]),
     ).toEqual({ pooled: 2_000 * M, yourTake: 500 * M });
   });
@@ -1085,7 +1085,7 @@ describe("what the coupon piles fetched", () => {
     const other: Holder = { kind: "PERSON", personId: "p-other", characterName: null };
     expect(
       couponMoney([
-        { holder: BROCK, pieces: 80, amount: 2_000 * M, shares: [{ holder: other, pieces: 80 }] },
+        { holder: OWEN, pieces: 80, amount: 2_000 * M, shares: [{ holder: other, pieces: 80 }] },
       ]),
     ).toEqual({ pooled: 0, yourTake: 0 });
   });
@@ -1099,7 +1099,7 @@ describe("what the coupon piles fetched", () => {
 
   it("leaves out a purchase, which is money going the other way", () => {
     // Pieces bought INTO your pile at an agreed price. Counted as a sale it would report what you
-    // paid Brock as what you made.
+    // paid Owen as what you made.
     expect(
       couponMoney([
         {
@@ -1107,7 +1107,7 @@ describe("what the coupon piles fetched", () => {
           pieces: 25,
           amount: 600 * M,
           disposition: "BOUGHT",
-          shares: [{ holder: BROCK, pieces: 25 }],
+          shares: [{ holder: OWEN, pieces: 25 }],
         },
       ]),
     ).toEqual({ pooled: 0, yourTake: 0 });
@@ -1120,9 +1120,9 @@ describe("what the coupon piles fetched", () => {
       holder: SELF,
       pieces: 7,
       amount: 1_000 * M,
-      shares: [{ holder: BROCK, pieces: 3 }],
+      shares: [{ holder: OWEN, pieces: 3 }],
     };
-    const credit = saleCredits([{ id: "t1", ...lot }]).get("person:p-brock")!;
+    const credit = saleCredits([{ id: "t1", ...lot }]).get("person:p-owen")!;
 
     expect(couponMoney([lot]).yourTake).toBe(1_000 * M - credit.toThem);
   });
@@ -1133,7 +1133,7 @@ describe("a night one person looted whole", () => {
   // the 60 owed back read as no debt at all: the reader looked for a pile on the other side, and a
   // seat that bent down for nothing has none. Only the direction you OWE was affected, which is why
   // coupons owed TO you kept reading and nothing looked broken.
-  const duo = () => [{ ...seat("m1", "Hunt", { mine: true }), shares: 2 }, seat("m2", "Rune")];
+  const duo = () => [{ ...seat("m1", "Marrow", { mine: true }), shares: 2 }, seat("m2", "Rune")];
   const night = (over: Partial<Loot>) =>
     coupon("l1", "kalos-the-guardian", 180, "2026-08-20", {
       ranThatWeek: ["m1", "m2"],
@@ -1177,7 +1177,7 @@ describe("a night one person looted whole", () => {
     // 180 across 1:2:1 is 45, 90 and 45. Holding the lot leaves you 135 over, and it is Rune's 90
     // the night owes, not Bob's 45. Both of them hold nothing, so a pile cannot tell them apart.
     const members = [
-      seat("m1", "Hunt", { mine: true }),
+      seat("m1", "Marrow", { mine: true }),
       { ...seat("m2", "Rune"), shares: 2 },
       seat("m3", "Bob"),
     ];

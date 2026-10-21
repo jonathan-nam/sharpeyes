@@ -123,7 +123,7 @@ class PartyPoolWorkTest {
             Characters.insert {
                 it[Characters.id] = mine
                 it[Characters.userId] = owner
-                it[Characters.name] = "Kestrel"
+                it[Characters.name] = "Wind"
                 it[Characters.worldType] = WORLD_INTERACTIVE
                 it[createdAt] = now
                 it[updatedAt] = now

@@ -10,17 +10,17 @@ class VestigePaymentTest {
     @Test
     fun `a payment needs a holder it can be filed against, and money in it`() {
         val self = VestigeHolder(kind = "SELF")
-        val brock = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000001")
-        val stranger = VestigeHolder(kind = "CHARACTER", characterName = "frecklynn")
+        val owen = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000001")
+        val stranger = VestigeHolder(kind = "CHARACTER", characterName = "quessa")
 
         assertNull(paymentRefusal(self, 4_875_000_000))
-        assertNull(paymentRefusal(brock, 4_875_000_000))
+        assertNull(paymentRefusal(owen, 4_875_000_000))
         assertNull(paymentRefusal(stranger, 1))
 
         // Nothing arriving is the absence of an event, not one worth a row. Negative is money you
         // sent them, which is one (V89).
         assertTrue(paymentRefusal(self, 0)!!.contains("nonzero"))
-        assertNull(paymentRefusal(bro, -1))
+        assertNull(paymentRefusal(owen, -1))
 
         // The kind and its reference cannot disagree, the same pair of checks a tranche gets: a
         // PERSON payment with no person would clear a debt belonging to nobody.

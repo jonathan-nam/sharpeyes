@@ -34,7 +34,7 @@ const VESTIGE = "vestige-of-erion";
 
 // One character's parties: a row per boss they do not solo, and who they run it with.
 //
-// The character leads because that is how the question gets asked ("what does mechyfechy run Kalos
+// The character leads because that is how the question gets asked ("what does tidelark run Kalos
 // with"), and a boss with no row is a boss that character solos. Nothing has to be said for those,
 // which is what keeps this down to the handful of lines that matter.
 

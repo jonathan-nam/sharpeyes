@@ -135,14 +135,14 @@ class VestigeTrancheTest {
             ensureUser(userId, "$userId@example.com")
             // Yours, and the partner who loots the bosses run on characters that are not on your
             // account. Both tallies are yours to enter; neither can spend the other's pieces.
-            val brock = person(userId, "Brock")
+            val owen = person(userId, "Owen")
             tranche(userId, null, 60, 1_450_000_000, hoursAgo = 3)
-            tranche(userId, brock, 20, 500_000_000, hoursAgo = 2)
+            tranche(userId, owen, 20, 500_000_000, hoursAgo = 2)
 
             val byHolder = tranchesFor(userId).groupBy { it.holder.kind }
             assertEquals(setOf("SELF", "PERSON"), byHolder.keys)
             assertEquals(60, byHolder["SELF"]!!.single().pieces)
-            assertEquals(brock.toString(), byHolder["PERSON"]!!.single().holder.personId)
+            assertEquals(owen.toString(), byHolder["PERSON"]!!.single().holder.personId)
         }
     }
 
@@ -150,10 +150,10 @@ class VestigeTrancheTest {
     fun `one person's pile survives being renamed, because it is filed by id`() {
         transaction {
             ensureUser(userId, "$userId@example.com")
-            val brock = person(userId, "Brock")
-            tranche(userId, brock, 40, 900_000_000, hoursAgo = 1)
+            val owen = person(userId, "Owen")
+            tranche(userId, owen, 40, 900_000_000, hoursAgo = 1)
 
-            Person.update({ Person.id eq brock }) { it[name] = "Brody" }
+            Person.update({ Person.id eq owen }) { it[name] = "Brody" }
 
             // The pile is still one pile. A name-keyed tally would have orphaned it here, and every
             // boss it covered would have re-priced to nothing with no error.
@@ -164,11 +164,11 @@ class VestigeTrancheTest {
     @Test
     fun `a tranche is refused rather than stored wrong`() {
         val self = VestigeHolder(kind = "SELF")
-        val brock = VestigeHolder(kind = "PERSON", personId = Uuid.random().toString())
-        val stranger = VestigeHolder(kind = "CHARACTER", characterName = "hunt")
+        val owen = VestigeHolder(kind = "PERSON", personId = Uuid.random().toString())
+        val stranger = VestigeHolder(kind = "CHARACTER", characterName = "marrow")
 
         assertNull(trancheRefusal(self, 50, 1_200_000_000))
-        assertNull(trancheRefusal(brock, 50, 1_200_000_000))
+        assertNull(trancheRefusal(owen, 50, 1_200_000_000))
         assertNull(trancheRefusal(stranger, 50, 1_200_000_000))
         // A sale for nothing is refused, and the refusal says where that stack belongs. Allowing it
         // made the creditor absorb their share of a loss the holder chose; KEPT charges the holder.
@@ -235,7 +235,7 @@ class VestigeTrancheTest {
 
     @Test
     fun `a name arrives folded, so one pile cannot come back as two`() {
-        val loud = VestigeHolder(kind = " character ", characterName = "  Hunt  ")
-        assertEquals(VestigeHolder("CHARACTER", null, "hunt"), loud.normalised())
+        val loud = VestigeHolder(kind = " character ", characterName = "  Marrow  ")
+        assertEquals(VestigeHolder("CHARACTER", null, "marrow"), loud.normalised())
     }
 }

@@ -11,7 +11,7 @@ const B = 1_000_000_000;
 const YOU: Holder = { kind: "PERSON", personId: "p-you", characterName: null };
 
 const book = (fields: Partial<SharedBook>): SharedBook => ({
-  ownerName: "Jonas",
+  ownerName: "Wren",
   personId: "p-you",
   parties: [],
   pools: [],
@@ -60,13 +60,13 @@ describe("a payment the owner sends back (V89)", () => {
     const card = sharedCard(book({ debts: [debt(-8 * B)], payments: [paid(-3 * B)] }), [])!;
     expect(card.owed).toBe(5 * B);
     expect(card.owe).toBe(0);
-    expect(card.detail.paid.find((p) => p.key === `p-${-3 * B}`)?.label).toBe("Jonathan paid you");
+    expect(card.detail.paid.find((p) => p.key === `p-${-3 * B}`)?.label).toBe("Wren paid you");
   });
 });
 
 describe("sharedCard", () => {
   it("says what the owner owes you when you overpaid them", () => {
-    // Brock's card on 2026-10-20: 187b paid against 139b, read from Brock's side.
+    // Owen's card on 2026-10-20: 187b paid against 139b, read from Owen's side.
     const card = sharedCard(book({ debts: [debt(139 * B)], payments: [paid(187 * B)] }), []);
     expect([card?.owed, card?.owe]).toEqual([48 * B, 0]);
   });
@@ -99,10 +99,10 @@ describe("sharedCard", () => {
 
   it("names the owner's rows and offers yours back", () => {
     // One book, two writers (V88): the owner's entry says it is theirs, yours can be taken back.
-    const theirs = { ...debt(139 * B), recordedByYou: false, recordedByName: "Mech" };
+    const theirs = { ...debt(139 * B), recordedByYou: false, recordedByName: "Kip" };
     const yours = { ...paid(187 * B), recordedByYou: true };
     const card = sharedCard(book({ debts: [theirs], payments: [yours] }), [])!;
-    expect(card.detail.owe[0]).toMatchObject({ by: "Mech", remove: undefined });
+    expect(card.detail.owe[0]).toMatchObject({ by: "Kip", remove: undefined });
     expect(card.detail.paid[0]).toMatchObject({
       by: null,
       remove: { kind: "payments", id: "p-187000000000" },

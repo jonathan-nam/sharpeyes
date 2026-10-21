@@ -17,8 +17,8 @@ import type { SettlementDebt, VestigeSettlement } from "@/types/vestige";
 
 const M = 1_000_000;
 const VESTIGE = "vestige-of-erion";
-const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
-const NAMES = new Map([["person:p-brock", "Brock"]]);
+const OWEN: Holder = { kind: "PERSON", personId: "p-owen", characterName: null };
+const NAMES = new Map([["person:p-owen", "Owen"]]);
 
 const TABLES: DropTables = {
   limbo: [
@@ -55,8 +55,8 @@ const mine = (id: string, name: string): PartyMember => ({
 const theirs = (id: string, name: string): PartyMember => ({
   id,
   name,
-  personId: "p-brock",
-  personName: "Brock",
+  personId: "p-owen",
+  personName: "Owen",
   characterId: null,
   linkedCharacterId: null,
   spriteImgUrl: null,
@@ -74,8 +74,8 @@ const party = (over: Partial<Party> = {}): Party => ({
   bossKey: "limbo",
   difficulty: "HARD",
   minutes: null,
-  members: [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")],
-  seats: [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")],
+  members: [mine("m1", "tidelark"), theirs("m2", "Pinewick")],
+  seats: [mine("m1", "tidelark"), theirs("m2", "Pinewick")],
   usualRoster: true,
   skippedThisPeriod: false,
   oneOff: false,
@@ -137,7 +137,7 @@ const night = (over: Partial<Loot> = {}): Loot =>
 
 const act = (over: Partial<VestigeSettlement> = {}): VestigeSettlement => ({
   id: "s1",
-  holder: BROCK,
+  holder: OWEN,
   lootIds: ["n1"],
   unpaid: 0,
   settledAt: "2026-08-10T22:00:00Z",
@@ -146,7 +146,7 @@ const act = (over: Partial<VestigeSettlement> = {}): VestigeSettlement => ({
 
 const debt = (over: Partial<SettlementDebt> = {}): SettlementDebt => ({
   id: "d1",
-  holder: BROCK,
+  holder: OWEN,
   amount: 4_000 * M,
   note: null,
   payouts: [],
@@ -199,7 +199,7 @@ describe("what one drop's history says", () => {
     expect(first.kind === "DROPPED" && [first.boss, first.at, first.ranWith]).toEqual([
       "Hard Limbo",
       "2026-08-06",
-      ["CraneBolton"],
+      ["Pinewick"],
     ]);
   });
 
@@ -226,7 +226,7 @@ describe("what one drop's history says", () => {
     const paid = auditOf([drop()])!.events.find((e) => e.kind === "PAID")!;
     expect([paid.at, paid.kind === "PAID" && paid.who]).toEqual([
       "2026-08-07T11:00:00Z",
-      "CraneBolton",
+      "Pinewick",
     ]);
   });
 
@@ -259,14 +259,14 @@ describe("what the page says about the drop itself", () => {
 
   it("names the config's own character and its world", () => {
     const audit = auditOf([drop()])!;
-    expect([audit.character, audit.worldType]).toEqual(["mechobotto", "INTERACTIVE"]);
+    expect([audit.character, audit.worldType]).toEqual(["tidelark", "INTERACTIVE"]);
   });
 
   it("still names the character on a week that character sat out", () => {
     // `members` is one week's roster and can be anybody. `seats` is every seat the config ever had,
     // which is the only list the config's own character is certainly on.
-    const audit = auditOf([drop()], { over: { members: [theirs("m2", "CraneBolton")] } })!;
-    expect(audit.character).toBe("mechobotto");
+    const audit = auditOf([drop()], { over: { members: [theirs("m2", "Pinewick")] } })!;
+    expect(audit.character).toBe("tidelark");
   });
 
   it("says nothing rather than guessing when no seat is the config's character", () => {
@@ -309,7 +309,7 @@ describe("an offset and the share it discharged", () => {
       debts: [debt({ payouts: [{ lootId: "l1", memberId: "m2" }] })],
     })!.events.find((e) => e.kind === "OFFSET")!;
     expect(offset.kind === "OFFSET" && [offset.who, offset.at]).toEqual([
-      "Brock",
+      "Owen",
       "2026-08-09T09:00:00Z",
     ]);
     expect(offset.kind === "OFFSET" && offset.amount).toBeGreaterThan(0);
@@ -331,7 +331,7 @@ describe("a coupon night", () => {
   it("says whose hands the coupons are in, and how many are yours", () => {
     const held = auditOf([night()])!.events.find((e) => e.kind === "HELD")!;
     expect(held.kind === "HELD" && [held.other, held.pieces, held.yours]).toEqual([
-      "CraneBolton",
+      "Pinewick",
       30,
       true,
     ]);
@@ -339,14 +339,14 @@ describe("a coupon night", () => {
 
   // The same night the other way round, which is the ordinary one: you bend down for all three
   // stacks. Read off `owedBy` alone this page drew no HELD row at all, and headed itself "In the
-  // pool" over 30 coupons that were Brock's.
+  // pool" over 30 coupons that were Owen's.
   const yourNight = (over: Partial<Loot> = {}) =>
     night({ bundlesBy: [{ memberId: "m1", bundles: 3 }], ...over });
 
   it("says so where it is YOU holding somebody else's share", () => {
     const held = auditOf([yourNight()])!.events.find((e) => e.kind === "HELD")!;
     expect(held.kind === "HELD" && [held.other, held.pieces, held.yours]).toEqual([
-      "Brock",
+      "Owen",
       30,
       false,
     ]);

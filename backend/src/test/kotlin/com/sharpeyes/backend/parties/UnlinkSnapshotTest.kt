@@ -103,7 +103,7 @@ class UnlinkSnapshotTest {
             Person.update({ Person.id eq id }) { it[linkedUserId] = account }
             return id
         }
-        return person(owner, "Bro", member) to person(member, "Mech", owner)
+        return person(owner, "Owen", member) to person(member, "Tide", owner)
     }
 
     private fun money(
@@ -138,27 +138,27 @@ class UnlinkSnapshotTest {
         }
     }
 
-    /** The night every test below unlinks: a shared Kalos with a sale, a drop of Bro's, money and a copied clear. */
+    /** The night every test below unlinks: a shared Kalos with a sale, a drop of Owen's, money and a copied clear. */
     private class Night(
-        val bro: Uuid,
-        val mech: Uuid,
-        val creed: Uuid,
+        val owen: Uuid,
+        val tide: Uuid,
+        val pine: Uuid,
         val party: Uuid,
         val period: LocalDate,
     )
 
     private fun night(): Night {
-        val mechy = character(owner, "mechyfechy")
-        val creed = character(member, "CreedBratton")
-        val (bro, mech) = link()
-        val request = SavePartyRequest(mechy.toString(), "kalos-the-guardian", listOf("CreedBratton"))
-        val party = Uuid.parse(findParty(createParty(owner, mechy, kalos, request, Clock.System.now()), owner)!!.id)
+        val tidelark = character(owner, "tidelark")
+        val pine = character(member, "Pinewick")
+        val (owen, tide) = link()
+        val request = SavePartyRequest(tidelark.toString(), "kalos-the-guardian", listOf("Pinewick"))
+        val party = Uuid.parse(findParty(createParty(owner, tidelark, kalos, request, Clock.System.now()), owner)!!.id)
         val seller =
             PartyMember
                 .selectAll()
                 .where {
                     (PartyMember.partyId eq party) and
-                        (PartyMember.name eq "mechyfechy")
+                        (PartyMember.name eq "tidelark")
                 }.single()[PartyMember.id]
         val now = Clock.System.now()
         val sold = addLoot(party, LootedDrop(dropIdForKey("grindstone-of-life")), kalos, todayIn(now), now)
@@ -171,24 +171,24 @@ class UnlinkSnapshotTest {
             now,
             LootSource(recordedBy = member),
         )
-        // Bro owes 10b, has paid 3b, and the owner sent 1b back.
-        money(owner, bro, debt = 10 * b, paid = 3 * b)
-        money(owner, bro, debt = null, paid = -1 * b)
+        // Owen owes 10b, has paid 3b, and the owner sent 1b back.
+        money(owner, owen, debt = 10 * b, paid = 3 * b)
+        money(owner, owen, debt = null, paid = -1 * b)
         val period = periodStartFor(WEEKLY_CADENCE, now)
-        // A copy of the owner's clear, in place of the one the drops filed for Creed.
+        // A copy of the owner's clear, in place of the one the drops filed for Pine.
         BossClear.deleteWhere {
-            (BossClear.characterId eq creed) and (BossClear.bossCatalogId eq kalos) and
+            (BossClear.characterId eq pine) and (BossClear.bossCatalogId eq kalos) and
                 (BossClear.periodStart eq period)
         }
         BossClear.insert {
-            it[characterId] = creed
+            it[characterId] = pine
             it[bossCatalogId] = kalos
             it[periodStart] = period
             it[cleared] = true
             it[capturedAt] = now
             it[viaPartyId] = party
         }
-        return Night(bro, mech, creed, party, period)
+        return Night(owen, tide, pine, party, period)
     }
 
     @Test
@@ -197,7 +197,7 @@ class UnlinkSnapshotTest {
             val night = night()
             val before = PartyLoot.selectAll().where { PartyLoot.partyId eq night.party }.count()
 
-            assertTrue(unlinkPerson(owner, night.bro))
+            assertTrue(unlinkPerson(owner, night.owen))
 
             assertEquals(before, PartyLoot.selectAll().where { PartyLoot.partyId eq night.party }.count())
             assertEquals(
@@ -208,7 +208,7 @@ class UnlinkSnapshotTest {
                         SettlementDebt.userId eq owner
                     }.map { it[SettlementDebt.amount] },
             )
-            assertEquals(listOf("CreedBratton"), namesFiledUnder(owner, night.bro))
+            assertEquals(listOf("Pinewick"), namesFiledUnder(owner, night.owen))
             assertTrue(
                 Person.selectAll().where { Person.userId inList everyone }.all { it[Person.linkedUserId] == null },
             )
@@ -221,28 +221,28 @@ class UnlinkSnapshotTest {
         transaction {
             val night = night()
 
-            assertTrue(unlinkPerson(owner, night.bro))
+            assertTrue(unlinkPerson(owner, night.owen))
 
-            // Their own Kalos, led by Creed, with the owner's character as a seat by name.
+            // Their own Kalos, led by Pine, with the owner's character as a seat by name.
             val copy = Party.selectAll().where { (Party.userId eq member) and (Party.bossCatalogId eq kalos) }.single()
-            assertEquals(night.creed, copy[Party.characterId])
+            assertEquals(night.pine, copy[Party.characterId])
             val seats =
                 PartyMember.selectAll().where { PartyMember.partyId eq copy[Party.id] }.associate {
                     it[PartyMember.name] to
                         it
                 }
-            assertEquals(night.creed, seats.getValue("CreedBratton")[PartyMember.characterId])
-            assertNull(seats.getValue("mechyfechy")[PartyMember.characterId])
-            assertNull(seats.getValue("mechyfechy")[PartyMember.linkedCharacterId])
+            assertEquals(night.pine, seats.getValue("Pinewick")[PartyMember.characterId])
+            assertNull(seats.getValue("tidelark")[PartyMember.characterId])
+            assertNull(seats.getValue("tidelark")[PartyMember.linkedCharacterId])
 
             val copied = PartyLoot.selectAll().where { PartyLoot.partyId eq copy[Party.id] }.toList()
             assertEquals(2, copied.size)
             assertTrue(copied.all { it[PartyLoot.recordedByUserId] == null })
             val sale = copied.single { it[PartyLoot.saleAmount] != null }
             assertEquals(10 * b, sale[PartyLoot.saleAmount])
-            assertEquals(seats.getValue("mechyfechy")[PartyMember.id], sale[PartyLoot.sellerMemberId])
+            assertEquals(seats.getValue("tidelark")[PartyMember.id], sale[PartyLoot.sellerMemberId])
             val payout = PartyLootPayout.selectAll().where { PartyLootPayout.lootId eq sale[PartyLoot.id] }.single()
-            assertEquals(seats.getValue("CreedBratton")[PartyMember.id], payout[PartyLootPayout.memberId])
+            assertEquals(seats.getValue("Pinewick")[PartyMember.id], payout[PartyLootPayout.memberId])
             assertEquals(false, payout[PartyLootPayout.paid])
         }
     }
@@ -252,11 +252,11 @@ class UnlinkSnapshotTest {
         transaction {
             val night = night()
 
-            assertTrue(unlinkPerson(owner, night.bro))
+            assertTrue(unlinkPerson(owner, night.owen))
 
             val debts = SettlementDebt.selectAll().where { SettlementDebt.userId eq member }.toList()
             assertEquals(listOf(-10 * b), debts.map { it[SettlementDebt.amount] })
-            assertTrue(debts.all { it[SettlementDebt.personId] == night.mech })
+            assertTrue(debts.all { it[SettlementDebt.personId] == night.tide })
             assertEquals(
                 listOf(-3 * b, 1 * b),
                 VestigePayment
@@ -265,13 +265,13 @@ class UnlinkSnapshotTest {
                     .map { it[VestigePayment.amount] }
                     .sorted(),
             )
-            assertEquals(listOf("mechyfechy"), namesFiledUnder(member, night.mech))
+            assertEquals(listOf("tidelark"), namesFiledUnder(member, night.tide))
 
             val clear =
                 BossClear
                     .selectAll()
                     .where {
-                        (BossClear.characterId eq night.creed) and
+                        (BossClear.characterId eq night.pine) and
                             (BossClear.periodStart eq night.period)
                     }.single()
             assertEquals(true, clear[BossClear.cleared])
@@ -282,19 +282,22 @@ class UnlinkSnapshotTest {
     @Test
     fun `a run both of them logged keeps the owner's copy, unless the member's has been acted on`() {
         transaction {
-            val mechy = character(owner, "mechyfechy")
-            val creed = character(member, "CreedBratton")
-            val (bro, _) = link()
-            val shared = SavePartyRequest(mechy.toString(), "kalos-the-guardian", listOf("CreedBratton"))
-            val party = Uuid.parse(findParty(createParty(owner, mechy, kalos, shared, Clock.System.now()), owner)!!.id)
-            val own = SavePartyRequest(creed.toString(), "kalos-the-guardian", listOf("Randomguy"), separate = true)
-            val theirs = Uuid.parse(findParty(createParty(member, creed, kalos, own, Clock.System.now()), member)!!.id)
+            val tidelark = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            val (owen, _) = link()
+            val shared = SavePartyRequest(tidelark.toString(), "kalos-the-guardian", listOf("Pinewick"))
+            val party =
+                Uuid.parse(
+                    findParty(createParty(owner, tidelark, kalos, shared, Clock.System.now()), owner)!!.id,
+                )
+            val own = SavePartyRequest(pine.toString(), "kalos-the-guardian", listOf("Randomguy"), separate = true)
+            val theirs = Uuid.parse(findParty(createParty(member, pine, kalos, own, Clock.System.now()), member)!!.id)
 
             val now = Clock.System.now()
             addLoot(party, LootedDrop(dropIdForKey("grindstone-of-life")), kalos, todayIn(now), now)
             val duplicate = addLoot(theirs, LootedDrop(dropIdForKey("grindstone-of-life")), kalos, todayIn(now), now)
 
-            assertTrue(unlinkPerson(owner, bro))
+            assertTrue(unlinkPerson(owner, owen))
 
             // One config per character and boss, so the copy is merged into theirs: their duplicate
             // goes, the owner's copy is there, and the owner's seat joins outside the usual roster.
@@ -305,14 +308,14 @@ class UnlinkSnapshotTest {
             val loot = PartyLoot.selectAll().where { PartyLoot.partyId eq theirs }.map { it[PartyLoot.id] }
             assertEquals(1, loot.size)
             assertTrue(duplicate !in loot)
-            val mechSeat =
+            val kipSeat =
                 PartyMember
                     .selectAll()
                     .where {
                         (PartyMember.partyId eq theirs) and
-                            (PartyMember.name eq "mechyfechy")
+                            (PartyMember.name eq "tidelark")
                     }.single()
-            assertEquals(false, mechSeat[PartyMember.standing])
+            assertEquals(false, kipSeat[PartyMember.standing])
         }
     }
 

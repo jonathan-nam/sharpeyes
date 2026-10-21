@@ -8,7 +8,7 @@ import type { Party, PartyMember } from "@/types/party";
  *
  * The claim worth a test: a config is ONE row per (character, boss) and a one-off takes it over
  * rather than making a second, so a pool spans arrangements. Reported 2026-08-30 as 540 Extreme
- * coupons sitting under a heading reading "Chaos Kalos the Guardian with iPager42X", on nights three
+ * coupons sitting under a heading reading "Chaos Kalos the Guardian with Moxie77Q", on nights three
  * people who had since left the party ran.
  */
 
@@ -75,14 +75,14 @@ const drop = (id: string, weekStart: string, over: Partial<Loot> = {}): Loot => 
   ...over,
 });
 
-const me = seat("m1", "acmeacme", true);
-const sas = seat("m2", "SAR4Q2");
-const usuns = seat("m3", "USeasOfBlue");
-const phone = seat("m4", "iPager42X");
+const me = seat("m1", "plumtwig", true);
+const zk = seat("m2", "ZK9P3T");
+const twigs = seat("m3", "TwigsAndAsh");
+const moxie = seat("m4", "Moxie77Q");
 
 describe("poolNights", () => {
   it("splits a pool into the weeks it was logged on, newest first", () => {
-    const at = party([me, phone], "CHAOS");
+    const at = party([me, moxie], "CHAOS");
     const nights = poolNights(
       [
         drop("l3", "2026-08-27", { difficulty: "CHAOS", ranThatWeek: ["m1", "m4"] }),
@@ -97,7 +97,7 @@ describe("poolNights", () => {
   });
 
   it("keeps a night's rows together whatever else fell that week", () => {
-    const at = party([me, phone], "CHAOS");
+    const at = party([me, moxie], "CHAOS");
     const nights = poolNights(
       [
         drop("coupons", "2026-08-20", { difficulty: "EXTREME" }),
@@ -129,21 +129,21 @@ describe("poolNights", () => {
   });
 
   it("names who ran the night, not who is in the party now", () => {
-    const at = party([me, phone], "CHAOS");
+    const at = party([me, moxie], "CHAOS");
     const nights = poolNights(
       [drop("l1", "2026-08-13", { difficulty: "EXTREME", ranThatWeek: ["m1", "m2", "m3"] })],
-      party([me, phone, sas, usuns], "CHAOS"),
+      party([me, moxie, zk, twigs], "CHAOS"),
     );
 
-    expect(nights[0]!.members.map((m) => m.name)).toEqual(["acmeacme", "SAR4Q2", "USeasOfBlue"]);
-    // The party as it stands tonight has iPager42X in it, and that night did not.
-    expect(nights[0]!.members.map((m) => m.name)).not.toContain("iPager42X");
-    expect(at.members.map((m) => m.name)).toContain("iPager42X");
+    expect(nights[0]!.members.map((m) => m.name)).toEqual(["plumtwig", "ZK9P3T", "TwigsAndAsh"]);
+    // The party as it stands tonight has Moxie77Q in it, and that night did not.
+    expect(nights[0]!.members.map((m) => m.name)).not.toContain("Moxie77Q");
+    expect(at.members.map((m) => m.name)).toContain("Moxie77Q");
   });
 });
 
 describe("nightLabel", () => {
-  const at = party([me, phone, sas, usuns], "CHAOS");
+  const at = party([me, moxie, zk, twigs], "CHAOS");
 
   it("says when, at what mode, and with whom", () => {
     const [night] = poolNights(
@@ -152,12 +152,12 @@ describe("nightLabel", () => {
     );
 
     // Your own character is left out, the same rule the page heading follows.
-    expect(nightLabel(night!, at)).toBe("August 13 · Extreme · SAR4Q2, USeasOfBlue");
+    expect(nightLabel(night!, at)).toBe("August 13 · Extreme · ZK9P3T, TwigsAndAsh");
   });
 
   it("leaves out a silence rather than spelling it", () => {
     const [unsaid] = poolNights([drop("l1", "2026-08-13", { ranThatWeek: ["m1", "m2"] })], at);
-    expect(nightLabel(unsaid!, at)).toBe("August 13 · SAR4Q2");
+    expect(nightLabel(unsaid!, at)).toBe("August 13 · ZK9P3T");
 
     const alone = poolNights(
       [drop("l1", "2026-08-13", { difficulty: "HARD", ranThatWeek: ["m1"] })],
@@ -168,7 +168,7 @@ describe("nightLabel", () => {
 });
 
 describe("ranAtThisMode", () => {
-  const tonight = party([me, phone], "CHAOS");
+  const tonight = party([me, moxie], "CHAOS");
   const night = (over: Partial<Loot>) => poolNights([drop("l1", "2026-08-13", over)], tonight)[0]!;
 
   it("keeps a night run at this mode", () => {
@@ -181,10 +181,10 @@ describe("ranAtThisMode", () => {
     // The reported case, both ways round. Chaos Kalos drops no vestige at all, so an Extreme
     // night's coupons under this page's heading were 540 of something this config cannot produce.
     expect(ranAtThisMode(night({ difficulty: "EXTREME" }), tonight)).toBe(false);
-    expect(ranAtThisMode(night({ difficulty: "EXTREME" }), party([me, phone], "EXTREME"))).toBe(
+    expect(ranAtThisMode(night({ difficulty: "EXTREME" }), party([me, moxie], "EXTREME"))).toBe(
       true,
     );
-    expect(ranAtThisMode(night({ difficulty: "CHAOS" }), party([me, phone], "EXTREME"))).toBe(
+    expect(ranAtThisMode(night({ difficulty: "CHAOS" }), party([me, moxie], "EXTREME"))).toBe(
       false,
     );
   });
@@ -205,6 +205,6 @@ describe("ranAtThisMode", () => {
     // the page is about.
     expect(ranAtThisMode(night({ ranThatWeek: ["m1", "m4"] }), tonight)).toBe(true);
     // Including on a config that has no mode of its own to compare against.
-    expect(ranAtThisMode(night({}), party([me, phone], null))).toBe(true);
+    expect(ranAtThisMode(night({}), party([me, moxie], null))).toBe(true);
   });
 });

@@ -114,7 +114,7 @@ internal fun syncPiecesForParty(
  * Replaces the config's difficulty, run time and members.
  *
  * The character and the boss are not editable: they are what the config IS, and changing either
- * would silently turn "Kalos on mechyfechy" into a different question with the same loot pool
+ * would silently turn "Kalos on tidelark" into a different question with the same loot pool
  * hanging off it. Delete it and make the other one instead. The difficulty is editable, because a
  * party that starts clearing Chaos is the same party.
  *

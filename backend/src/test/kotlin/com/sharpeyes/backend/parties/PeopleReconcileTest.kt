@@ -101,14 +101,14 @@ class PeopleReconcileTest {
 
     private val twin = "user_test_reconcile_twin"
 
-    /** Chris on [member]'s account and Dara on [twin]'s, both on the owner's People page. */
+    /** Chris on [member]'s account and Ines on [twin]'s, both on the owner's People page. */
     private fun twoLinked(chris: List<String> = emptyList()) {
         savePeople(
             owner,
-            SavePeopleRequest(listOf(PersonRequest(null, "Chris", chris), PersonRequest(null, "Dara", emptyList()))),
+            SavePeopleRequest(listOf(PersonRequest(null, "Chris", chris), PersonRequest(null, "Ines", emptyList()))),
             Clock.System.now(),
         )
-        for ((name, account) in listOf("Chris" to member, "Dara" to twin)) {
+        for ((name, account) in listOf("Chris" to member, "Ines" to twin)) {
             val id = Person.selectAll().where { (Person.userId eq owner) and (Person.name eq name) }.single()[Person.id]
             Person.update({ Person.id eq id }) { it[linkedUserId] = account }
         }
@@ -119,9 +119,9 @@ class PeopleReconcileTest {
     @Test
     fun `a character filed under them that their account does not hold is said`() {
         transaction {
-            character(member, "CraneBolton")
-            character(owner, "mechobotto")
-            twoLinked(chris = listOf("CraneBolton", "GhostAlt"))
+            character(member, "Pinewick")
+            character(owner, "tidelark")
+            twoLinked(chris = listOf("Pinewick", "GhostAlt"))
             assertEquals(listOf("GhostAlt"), personNamed("Chris").notOnAccount)
         }
     }
@@ -130,7 +130,7 @@ class PeopleReconcileTest {
     fun `a character two linked accounts hold is nobody's and takes no seat`() {
         transaction {
             ensureUser(twin, "$twin@example.com")
-            val theirs = character(owner, "mechobotto")
+            val theirs = character(owner, "tidelark")
             character(member, "TwinChar")
             character(twin, "TwinChar")
             twoLinked()
@@ -138,7 +138,7 @@ class PeopleReconcileTest {
 
             assertNull(seat(party, "TwinChar")!![PartyMember.linkedCharacterId])
             assertEquals(listOf("TwinChar"), personNamed("Chris").contested)
-            assertEquals(listOf("TwinChar"), personNamed("Dara").contested)
+            assertEquals(listOf("TwinChar"), personNamed("Ines").contested)
             assertEquals(emptyList(), personNamed("Chris").ownedCharacters)
         }
     }
@@ -147,12 +147,12 @@ class PeopleReconcileTest {
     fun `a character one linked account holds still takes its seat`() {
         transaction {
             ensureUser(twin, "$twin@example.com")
-            val theirs = character(owner, "mechobotto")
-            val crane = character(member, "CraneBolton")
+            val theirs = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
             twoLinked()
-            val party = config(theirs, listOf("CraneBolton"))
+            val party = config(theirs, listOf("Pinewick"))
 
-            assertEquals(crane, seat(party, "CraneBolton")!![PartyMember.linkedCharacterId])
+            assertEquals(pine, seat(party, "Pinewick")!![PartyMember.linkedCharacterId])
             assertEquals(emptyList(), personNamed("Chris").contested)
         }
     }

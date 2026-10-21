@@ -185,7 +185,7 @@ class PieceSyncTest {
         Characters.insert {
             it[Characters.id] = id
             it[Characters.userId] = owner
-            it[name] = "Hunt"
+            it[name] = "Marrow"
             it[worldType] = world
             it[createdAt] = now
             it[updatedAt] = now

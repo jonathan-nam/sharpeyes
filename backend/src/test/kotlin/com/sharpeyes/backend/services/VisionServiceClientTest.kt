@@ -45,7 +45,7 @@ class VisionServiceClientTest {
                 ok(
                     """
                     {"screenshotType":"INVENTORY",
-                     "characterHud":{"name":"acmeacme","level":287},
+                     "characterHud":{"name":"plumtwig","level":287},
                      "tokenCounts":[
                        {"tokenName":"kalos-token","quantity":21,"iconScore":0.964},
                        {"tokenName":"distorted-ambition","quantity":10,"iconScore":0.606}]}
@@ -54,7 +54,7 @@ class VisionServiceClientTest {
 
             val parsed = assertIs<ScreenshotParseOutcome.Parsed>(outcome)
             assertEquals(ScreenshotType.INVENTORY, parsed.result.screenshotType)
-            assertEquals(CharacterHud("acmeacme", 287), parsed.result.characterHud)
+            assertEquals(CharacterHud("plumtwig", 287), parsed.result.characterHud)
             assertEquals(
                 listOf(DetectedToken("kalos-token", 21), DetectedToken("distorted-ambition", 10)),
                 parsed.result.tokenCounts,
@@ -72,7 +72,7 @@ class VisionServiceClientTest {
                 ok(
                     """
                     {"screenshotType":"INVENTORY",
-                     "characterHud":{"name":"mechobotto","level":291},
+                     "characterHud":{"name":"tidelark","level":291},
                      "tokenCounts":[{"tokenName":"kalos-token","quantity":21,"iconScore":0.964}],
                      "inventoryComplete":true}
                     """.trimIndent(),
@@ -273,7 +273,7 @@ class VisionServiceClientTest {
 
             val parsed = assertIs<ScreenshotParseOutcome.Parsed>(outcome)
             assertEquals(ScreenshotType.INVENTORY, parsed.result.screenshotType)
-            assertEquals(CharacterHud("acmeacme", 287), parsed.result.characterHud)
+            assertEquals(CharacterHud("plumtwig", 287), parsed.result.characterHud)
             // The five tokens visible in test-fixtures/inventory/untradeables sample.png,
             // read off the screenshot by eye.
             assertEquals(

@@ -114,14 +114,14 @@ describe("what the card says a person owes", () => {
   });
   it("names the nights an offset discharged, off the pools", () => {
     // Without V58 the link is gone: the settle marks those shares PAID, so they leave the wallet,
-    // and the adjustment is left saying only "-139,548,023, offset against Brock".
+    // and the adjustment is left saying only "-139,548,023, offset against Owen".
     expect(source).toContain("const nightsBehind = (payouts:");
     expect(source).toContain("offsetShares.get(shareKey(share.lootId, share.memberId))");
     expect(source).toContain("function DischargeRow(");
   });
 
   it("hands the server every share, since the history is one row per share", () => {
-    // A press covering three nights wrote ONE entry: 5.6b against "offset against Brock", with which
+    // A press covering three nights wrote ONE entry: 5.6b against "offset against Owen", with which
     // three of them a fold down from a figure that named none. The rows are what the act was, and
     // writeClose is where they are written now, so what this side owes is the whole list of shares
     // with the figure the button quoted for each. See SettlementDebtRoutes.kt for the rows.
@@ -140,7 +140,7 @@ describe("what the card says a person owes", () => {
 
   it("is ONE request, every list the act moves coming off the one answer", () => {
     // It was a settle and then an entry per share, each drawn as it landed, and the state between
-    // them is the debt un-offset: Brock's card went 253.86b, 254b, 253.86b over two round trips, which
+    // them is the debt un-offset: Owen's card went 253.86b, 254b, 253.86b over two round trips, which
     // reads as a button that did nothing. A failure in the gap left it there for good.
     //
     // The coupon money was the same failure one step out, and the one that got reported: it was a
@@ -179,7 +179,7 @@ describe("what the card says a person owes", () => {
   });
 
   it("counts the held coupons off the sales the held figure is made of", () => {
-    // `piecesAnswered.theirs` counts decided sales too: Brock's card read 4735 coupons beside the
+    // `piecesAnswered.theirs` counts decided sales too: Owen's card read 4735 coupons beside the
     // money of 330.
     expect(source).toContain("held.reduce((sum, sale) => sum + sale.pieces, 0),");
     expect(source).not.toContain("countedLabel(row.piecesAnswered.theirs");
@@ -221,7 +221,7 @@ describe("what the card says a person owes", () => {
 
   it("puts the DROP on the offset's own row, not a note and a count", () => {
     // Every offset written since one-row-per-share covers one share, and the entries written before
-    // it keep the fold. A middle row reading "offset against Brock · 1 share" cost a second click to
+    // it keep the fold. A middle row reading "offset against Owen · 1 share" cost a second click to
     // reach the only fact anybody wanted: which drop that was. Where there is one share, its drop IS
     // the row, with the art the rest of the account reads drops by.
     expect(source).toContain("const one = shares.length === 1 ? shares[0]! : null;");

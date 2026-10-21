@@ -84,7 +84,7 @@ class AccountWorldTest {
         transaction {
             ensureUser(userId, "$userId@example.com")
             character("Rune", WORLD_HEROIC)
-            character("mechobotto", WORLD_INTERACTIVE)
+            character("tidelark", WORLD_INTERACTIVE)
 
             mode(WORLD_INTERACTIVE)
             assertTrue(settingsFor(userId).trades)
@@ -113,7 +113,7 @@ class AccountWorldTest {
             ensureUser(userId, "$userId@example.com")
             character("Rune", WORLD_HEROIC)
             character("Steve", WORLD_HEROIC)
-            character("mechobotto", WORLD_INTERACTIVE)
+            character("tidelark", WORLD_INTERACTIVE)
 
             mode(WORLD_INTERACTIVE)
             assertEquals(2, settingsFor(userId).otherWorldCharacters)
@@ -128,7 +128,7 @@ class AccountWorldTest {
         transaction {
             ensureUser(userId, "$userId@example.com")
             character("Rune", WORLD_HEROIC)
-            character("mechobotto", WORLD_INTERACTIVE)
+            character("tidelark", WORLD_INTERACTIVE)
 
             // What the old "Set all" control did, and what a toggle must never do: flipping to
             // Heroic to look at your Heroic characters used to convert the Interactive ones on the
@@ -142,7 +142,7 @@ class AccountWorldTest {
                     .map { it[Characters.name] to it[Characters.worldType] }
                     .toMap()
             assertEquals(WORLD_HEROIC, worlds["Rune"])
-            assertEquals(WORLD_INTERACTIVE, worlds["mechobotto"])
+            assertEquals(WORLD_INTERACTIVE, worlds["tidelark"])
         }
     }
 }

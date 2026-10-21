@@ -83,15 +83,15 @@ describe("hasStandingRoster", () => {
 
 describe("otherMembers", () => {
   it("leaves your own character out, because the config already is that character", () => {
-    const party = config("p1", "char-1", "limbo", ["CraneBolton"]);
-    expect(otherMembers(party).map((m) => m.name)).toEqual(["CraneBolton"]);
+    const party = config("p1", "char-1", "limbo", ["Pinewick"]);
+    expect(otherMembers(party).map((m) => m.name)).toEqual(["Pinewick"]);
   });
 });
 
 describe("standingMembers", () => {
-  /** A week that ran with Dwight in Crane's place, the party itself unchanged. */
+  /** A week that ran with Dwight in Pine's place, the party itself unchanged. */
   const guestWeek = (): Party => {
-    const party = config("p1", "char-1", "limbo", ["CraneBolton"]);
+    const party = config("p1", "char-1", "limbo", ["Pinewick"]);
     const dwight = { ...seat("Dwight"), guest: true };
     return {
       ...party,
@@ -103,8 +103,8 @@ describe("standingMembers", () => {
 
   it("is the party, not the week being shown", () => {
     // What the config editor prefills from. Reading the week instead would offer Dwight as a
-    // standing member and drop Crane, on a save that was only meant to change the difficulty.
-    expect(standingMembers(guestWeek()).map((m) => m.name)).toEqual(["CraneBolton"]);
+    // standing member and drop Pine, on a save that was only meant to change the difficulty.
+    expect(standingMembers(guestWeek()).map((m) => m.name)).toEqual(["Pinewick"]);
     expect(otherMembers(guestWeek()).map((m) => m.name)).toEqual(["Dwight"]);
   });
 });
@@ -208,11 +208,11 @@ describe("byCharacter", () => {
 describe("byBoss", () => {
   it("groups in catalog order, with two characters on one boss together", () => {
     const catalog = [boss("limbo", "Limbo"), boss("baldrix", "Baldrix")];
-    const mech = config("p1", "char-1", "baldrix", ["X"]);
+    const kip = config("p1", "char-1", "baldrix", ["X"]);
     const warrior = config("p2", "char-2", "limbo", ["Y"]);
     const third = config("p3", "char-3", "limbo", ["Z"]);
 
-    const groups = byBoss([mech, warrior, third], catalog);
+    const groups = byBoss([kip, warrior, third], catalog);
     expect(groups.map((g) => g.key.bossKey)).toEqual(["limbo", "baldrix"]);
     expect(groups[0]?.parties.map((p) => p.id)).toEqual(["p2", "p3"]);
   });
@@ -220,11 +220,11 @@ describe("byBoss", () => {
 
 describe("consolidate", () => {
   it("merges the same roster across bosses into one arrangement", () => {
-    // A duo with CraneBolton on three bosses is one arrangement and three runs. Each keeps its
+    // A duo with Pinewick on three bosses is one arrangement and three runs. Each keeps its
     // own config, because each has its own loot pool.
-    const kalos = config("p1", "char-1", "kalos", ["CraneBolton"]);
-    const adversary = config("p2", "char-1", "first-adversary", ["CraneBolton"]);
-    const baldrix = config("p3", "char-1", "baldrix", ["CraneBolton"]);
+    const kalos = config("p1", "char-1", "kalos", ["Pinewick"]);
+    const adversary = config("p2", "char-1", "first-adversary", ["Pinewick"]);
+    const baldrix = config("p3", "char-1", "baldrix", ["Pinewick"]);
 
     const merged = consolidate([kalos, adversary, baldrix], ["char-1"]);
     expect(merged).toHaveLength(1);
@@ -242,11 +242,11 @@ describe("consolidate", () => {
   });
 
   it("keeps different rosters and different characters apart", () => {
-    const duo = config("p1", "char-1", "kalos", ["CraneBolton"]);
-    const trio = config("p2", "char-1", "limbo", ["CraneBolton", "Lynn"]);
+    const duo = config("p1", "char-1", "kalos", ["Pinewick"]);
+    const trio = config("p2", "char-1", "limbo", ["Pinewick", "Lynn"]);
     // Same roster, but somebody else's character runs it: two arrangements, because the question
     // is what THIS character runs with.
-    const otherCharacter = config("p3", "char-2", "kalos", ["CraneBolton"]);
+    const otherCharacter = config("p3", "char-2", "kalos", ["Pinewick"]);
 
     expect(consolidate([duo, trio, otherCharacter], ["char-1", "char-2"])).toHaveLength(3);
   });
@@ -376,13 +376,13 @@ describe("knownCharacterNames", () => {
     // The datalist behind both roster editors. A seat is matched to its existing row by NAME, so a
     // spelling that misses abandons that seat and makes a second one: this is what stops it.
     const names = knownCharacterNames(
-      [{ name: "mechobotto" }],
-      [{ characters: ["CraneBolton", "Cara"] }],
+      [{ name: "tidelark" }],
+      [{ characters: ["Pinewick", "Cara"] }],
       [config("p1", "char-1", "limbo", ["Bob"])],
     );
 
     // Sorted and deduplicated: "mine" is the config's own seat, and it is a name like any other.
-    expect(names).toEqual(["Bob", "Cara", "CraneBolton", "mechobotto", "mine"]);
+    expect(names).toEqual(["Bob", "Cara", "Pinewick", "mine", "tidelark"]);
   });
 
   it("says the same name once, however many parties it sits in", () => {
@@ -436,7 +436,7 @@ describe("hasGuaranteedDrop", () => {
 
 describe("partiedBossKeys", () => {
   it("locks a boss this character has a standing party for", () => {
-    const party = config("p1", "char-1", "limbo", ["CraneBolton"]);
+    const party = config("p1", "char-1", "limbo", ["Pinewick"]);
 
     expect(Array.from(partiedBossKeys([party], "char-1"))).toEqual(["limbo"]);
     // Another character of yours runs it alone until somebody says otherwise.
@@ -485,7 +485,7 @@ describe("partiedBossKeys", () => {
     // One night with people who are not who this character runs the boss with. The config stays
     // for its pool and its week, but the boss is soloed again now, so the box has to untick.
     const spent = {
-      ...config("p1", "char-1", "baldrix", ["Bryces", "CraneBolton"]),
+      ...config("p1", "char-1", "baldrix", ["Ferrows", "Pinewick"]),
       oneOff: true,
       skippedThisPeriod: true,
     };
@@ -495,7 +495,7 @@ describe("partiedBossKeys", () => {
 
   it("locks a one-off that is on this period", () => {
     // Armed for the period the page is showing, so this period it IS who they run it with.
-    const live = { ...config("p1", "char-1", "jupiter", ["Bryces"]), oneOff: true };
+    const live = { ...config("p1", "char-1", "jupiter", ["Ferrows"]), oneOff: true };
 
     expect(Array.from(partiedBossKeys([live], "char-1"))).toEqual(["jupiter"]);
   });
@@ -505,27 +505,27 @@ describe("namedSeats", () => {
   it("keeps the order the roster was typed in", () => {
     // Seat order is position, and position is what the boxes are: writeMembers takes the list as
     // sent, so a roster that reordered itself on the way out would draw back in a different order.
-    expect(namedSeats(["Bryces", "CraneBolton", "mechobotto"])).toEqual([
-      "Bryces",
-      "CraneBolton",
-      "mechobotto",
+    expect(namedSeats(["Ferrows", "Pinewick", "tidelark"])).toEqual([
+      "Ferrows",
+      "Pinewick",
+      "tidelark",
     ]);
   });
 
   it("drops a seat nobody filled in", () => {
     // "Add Member" adds an empty box. Sending it would be refused ("a member needs a character
     // name"), which would make adding a seat and changing your mind an error to read.
-    expect(namedSeats(["Bryces", "", "CraneBolton"])).toEqual(["Bryces", "CraneBolton"]);
+    expect(namedSeats(["Ferrows", "", "Pinewick"])).toEqual(["Ferrows", "Pinewick"]);
   });
 
   it("drops a box holding only spaces", () => {
-    expect(namedSeats(["Bryces", "   "])).toEqual(["Bryces"]);
+    expect(namedSeats(["Ferrows", "   "])).toEqual(["Ferrows"]);
   });
 
   it("trims a name, because a seat is matched by one", () => {
-    // writeMembers matches an existing seat by trimmed name. " Bryces" would abandon Bryces'
+    // writeMembers matches an existing seat by trimmed name. " Ferrows" would abandon Ferrows'
     // seat and make a second one, taking the payouts pointing at it out of the roster.
-    expect(namedSeats([" Bryces ", "CraneBolton "])).toEqual(["Bryces", "CraneBolton"]);
+    expect(namedSeats([" Ferrows ", "Pinewick "])).toEqual(["Ferrows", "Pinewick"]);
   });
 
   it("says nobody for a roster of empty boxes", () => {
@@ -539,6 +539,6 @@ describe("namedSeats", () => {
     // Not deduped here. The server's "the same character twice" is the message that says what
     // happened; silently dropping one would file a night as a smaller party than was typed, and
     // divide the drop by it.
-    expect(namedSeats(["Bryces", "bryces"])).toEqual(["Bryces", "bryces"]);
+    expect(namedSeats(["Ferrows", "ferrows"])).toEqual(["Ferrows", "ferrows"]);
   });
 });

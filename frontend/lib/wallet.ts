@@ -7,7 +7,7 @@
 //
 // One unpaid share is one transfer that has not happened. A share is between two SEATS; the wallet
 // is between two PEOPLE, so shares are folded together by whoever owns the seat on the other side.
-// That fold is the whole reason the wallet is worth having: CreedBratton and CreedBratton2 are one
+// That fold is the whole reason the wallet is worth having: Pinewick and Pinewick2 are one
 // debt to Chris, and settling it is one transfer rather than two.
 
 import { formatMesos } from "./drop-split";

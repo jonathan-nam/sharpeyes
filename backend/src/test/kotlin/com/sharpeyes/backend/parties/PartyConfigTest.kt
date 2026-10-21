@@ -39,7 +39,7 @@ import kotlin.uuid.Uuid
  * Party configs, against a real Postgres.
  *
  * A config is one of your characters, on one boss, with the people that character runs it with:
- * "mechobotto runs Kalos with CraneBolton". The claims worth a database to check are the ones
+ * "tidelark runs Kalos with Pinewick". The claims worth a database to check are the ones
  * about identity, since getting them wrong is invisible: that your own character is stored as a
  * seat (a loot payout points at seats, and you are usually the seller), that a seat survives the
  * roster being reordered, that a person is attached to a CHARACTER rather than to a seat, and that
@@ -123,18 +123,18 @@ class PartyConfigTest {
     @Test
     fun `a config is your character on one boss, and stores you as the first seat`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto", sprite = "https://nexon.example/mech.png")
-            val party = config(userOneId, mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(userOneId, "tidelark", sprite = "https://nexon.example/kip.png")
+            val party = config(userOneId, mine, "kalos-the-guardian", listOf("Pinewick"))
 
             assertEquals("kalos-the-guardian", party.bossKey)
             assertEquals(mine.toString(), party.characterId)
             // You first, then the people you run it with. You are a seat because a loot payout
             // points at seats and you are usually the one who sold the drop.
-            assertEquals(listOf("mechobotto", "CraneBolton"), party.members.map { it.name })
+            assertEquals(listOf("tidelark", "Pinewick"), party.members.map { it.name })
             assertEquals(mine.toString(), party.members[0].characterId)
             // The seat is drawn from our own proxy path, not Nexon's URL, which is what stops a
             // roster refetching every sprite on every page load. See spriteProxyPath.
-            assertEquals(spriteProxyPath("https://nexon.example/mech.png"), party.members[0].spriteImgUrl)
+            assertEquals(spriteProxyPath("https://nexon.example/kip.png"), party.members[0].spriteImgUrl)
             assertNull(party.members[1].characterId)
         }
     }
@@ -142,14 +142,14 @@ class PartyConfigTest {
     @Test
     fun `whose character a member is comes from the people list, by name`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
+            val mine = addCharacter(userOneId, "tidelark")
             savePeople(
                 userOneId,
-                SavePeopleRequest(listOf(PersonRequest(name = "Chris", characters = listOf("CraneBolton")))),
+                SavePeopleRequest(listOf(PersonRequest(name = "Chris", characters = listOf("Pinewick")))),
                 Clock.System.now(),
             )
-            val kalos = config(userOneId, mine, "kalos-the-guardian", listOf("CraneBolton"))
-            val baldrix = config(userOneId, mine, "baldrix", listOf("CraneBolton"))
+            val kalos = config(userOneId, mine, "kalos-the-guardian", listOf("Pinewick"))
+            val baldrix = config(userOneId, mine, "baldrix", listOf("Pinewick"))
 
             // Said once, shown everywhere that character appears. Storing the person on the seat
             // would mean saying it again per config, and the copies would drift.
@@ -162,7 +162,7 @@ class PartyConfigTest {
     @Test
     fun `a seat survives the roster being reordered, so a payout still points at somebody`() {
         transaction {
-            val mine = addCharacter(userOneId, "warden2030")
+            val mine = addCharacter(userOneId, "orchid88")
             val party = config(userOneId, mine, "malefic-star", listOf("Lynn", "Kaiser"))
             val lynn = party.members.first { it.name == "Lynn" }
 
@@ -170,7 +170,7 @@ class PartyConfigTest {
             saveParty(userOneId, Uuid.parse(party.id), request, Clock.System.now())
 
             val saved = findParty(Uuid.parse(party.id), userOneId)!!
-            assertEquals(listOf("warden2030", "Kaiser", "Lynn"), saved.members.map { it.name })
+            assertEquals(listOf("orchid88", "Kaiser", "Lynn"), saved.members.map { it.name })
             assertEquals(lynn.id, saved.members.first { it.name == "Lynn" }.id)
         }
     }
@@ -178,7 +178,7 @@ class PartyConfigTest {
     @Test
     fun `editing a config leaves the day it was set up alone`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
+            val mine = addCharacter(userOneId, "tidelark")
             val party = config(userOneId, mine, "limbo", listOf("Lynn"))
 
             val swapped = SavePartyRequest(mine.toString(), "limbo", listOf("Kaiser"))
@@ -191,15 +191,15 @@ class PartyConfigTest {
             // was around for, and a week that was right yesterday would quietly lose rows.
             assertEquals(party.createdAt, saved.createdAt)
             assertTrue(saved.updatedAt >= party.updatedAt)
-            assertEquals(listOf("mechobotto", "Kaiser"), saved.members.map { it.name })
+            assertEquals(listOf("tidelark", "Kaiser"), saved.members.map { it.name })
         }
     }
 
     @Test
     fun `a config cannot be moved to another character or boss, so a past clear cannot be reattributed`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
-            val other = addCharacter(userOneId, "warden2030")
+            val mine = addCharacter(userOneId, "tidelark")
+            val other = addCharacter(userOneId, "orchid88")
             val party = config(userOneId, mine, "limbo", listOf("Lynn"))
 
             // Asks for both to be changed. The character and the boss are what the config IS, and
@@ -221,8 +221,8 @@ class PartyConfigTest {
     @Test
     fun `a config says which difficulty it runs, and can change its mind`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
-            val party = config(userOneId, mine, "kalos-the-guardian", listOf("CraneBolton"), difficulty = "CHAOS")
+            val mine = addCharacter(userOneId, "tidelark")
+            val party = config(userOneId, mine, "kalos-the-guardian", listOf("Pinewick"), difficulty = "CHAOS")
             assertEquals("CHAOS", party.difficulty)
 
             // Editable, unlike the character and the boss: a party that starts clearing Extreme is
@@ -230,7 +230,7 @@ class PartyConfigTest {
             saveParty(
                 userOneId,
                 Uuid.parse(party.id),
-                SavePartyRequest(mine.toString(), "kalos-the-guardian", listOf("CraneBolton"), difficulty = "EXTREME"),
+                SavePartyRequest(mine.toString(), "kalos-the-guardian", listOf("Pinewick"), difficulty = "EXTREME"),
                 Clock.System.now(),
             )
             assertEquals("EXTREME", findParty(Uuid.parse(party.id), userOneId)!!.difficulty)
@@ -240,7 +240,7 @@ class PartyConfigTest {
     @Test
     fun `a config that has not said which difficulty it runs is not given one`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
+            val mine = addCharacter(userOneId, "tidelark")
             // Null, not NORMAL. Every config predating the column is in this state, and defaulting
             // it would put a mode on screen that nobody chose.
             assertNull(config(userOneId, mine, "limbo", listOf("Lynn")).difficulty)
@@ -250,14 +250,14 @@ class PartyConfigTest {
     @Test
     fun `a config says how long it takes, and can be re-timed`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
-            val party = config(userOneId, mine, "lucid", listOf("CraneBolton"), minutes = 20)
+            val mine = addCharacter(userOneId, "tidelark")
+            val party = config(userOneId, mine, "lucid", listOf("Pinewick"), minutes = 20)
             assertEquals(20, party.minutes)
 
             saveParty(
                 userOneId,
                 Uuid.parse(party.id),
-                SavePartyRequest(mine.toString(), "lucid", listOf("CraneBolton"), minutes = 12),
+                SavePartyRequest(mine.toString(), "lucid", listOf("Pinewick"), minutes = 12),
                 Clock.System.now(),
             )
             assertEquals(12, findParty(Uuid.parse(party.id), userOneId)!!.minutes)
@@ -267,7 +267,7 @@ class PartyConfigTest {
     @Test
     fun `a config nobody has timed is not given a time`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
+            val mine = addCharacter(userOneId, "tidelark")
             // Null, not thirty. The flat estimate is Run Order's fallback and is marked there as
             // one; storing it here would turn a guess into something that reads as measured.
             assertNull(config(userOneId, mine, "limbo", listOf("Lynn")).minutes)
@@ -279,7 +279,7 @@ class PartyConfigTest {
         transaction {
             // Why the time is on the config and not the boss: one character walks Lucid and
             // another takes twenty minutes over it, and both are true at once.
-            val fast = addCharacter(userOneId, "mechobotto")
+            val fast = addCharacter(userOneId, "tidelark")
             val slow = addCharacter(userOneId, "runebae")
             assertEquals(5, config(userOneId, fast, "lucid", listOf("Lynn"), minutes = 5).minutes)
             assertEquals(20, config(userOneId, slow, "lucid", listOf("Lynn"), minutes = 20).minutes)
@@ -324,7 +324,7 @@ class PartyConfigTest {
     @Test
     fun `refuses a config that cannot be created as asked`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
+            val mine = addCharacter(userOneId, "tidelark")
             val theirs = addCharacter(userTwoId, "SomebodyElse")
             val kalos = bossIdForKey("kalos-the-guardian")
 
@@ -359,10 +359,10 @@ class PartyConfigTest {
                 Refusal("A character is listed twice. Remove one."),
                 check(mine, "kalos-the-guardian", listOf("Lynn", "lynn")),
             )
-            assertNull(check(mine, "kalos-the-guardian", listOf("CraneBolton")))
+            assertNull(check(mine, "kalos-the-guardian", listOf("Pinewick")))
 
             // And a second config for the same character and boss is two answers to one question.
-            config(userOneId, mine, "kalos-the-guardian", listOf("CraneBolton"))
+            config(userOneId, mine, "kalos-the-guardian", listOf("Pinewick"))
             assertEquals(
                 "that character already has a party for this boss",
                 validateNewParty(
@@ -379,26 +379,26 @@ class PartyConfigTest {
     @Test
     fun `two of your characters can run the same boss with different people`() {
         transaction {
-            val mech = addCharacter(userOneId, "mechobotto")
-            val warrior = addCharacter(userOneId, "warden2030")
-            config(userOneId, mech, "limbo", listOf("CraneBolton"))
+            val kip = addCharacter(userOneId, "tidelark")
+            val warrior = addCharacter(userOneId, "orchid88")
+            config(userOneId, kip, "limbo", listOf("Pinewick"))
             config(userOneId, warrior, "limbo", listOf("Lynn", "Kaiser"))
 
             // Five "Limbo carry" rows in a hand-kept sheet are five characters of yours running
             // Limbo, not five configs for one of them.
             val parties = partiesFor(userOneId).filter { it.bossKey == "limbo" }
             assertEquals(2, parties.size)
-            assertEquals(setOf(mech.toString(), warrior.toString()), parties.map { it.characterId }.toSet())
+            assertEquals(setOf(kip.toString(), warrior.toString()), parties.map { it.characterId }.toSet())
         }
     }
 
     @Test
     fun `refuses a second config that puts the same character on the same boss`() {
         transaction {
-            val mech = addCharacter(userOneId, "mechobotto")
-            val warrior = addCharacter(userOneId, "warden2030")
+            val kip = addCharacter(userOneId, "tidelark")
+            val warrior = addCharacter(userOneId, "orchid88")
             val limbo = bossIdForKey("limbo")!!
-            config(userOneId, mech, "limbo", listOf("CraneBolton", "iPager42X"))
+            config(userOneId, kip, "limbo", listOf("Pinewick", "Moxie77Q"))
 
             fun check(members: List<String>) =
                 validateBossRoster(
@@ -410,21 +410,21 @@ class PartyConfigTest {
                     oneOff = false,
                 )
 
-            // A character clears a boss once a week, so lending iPager42X to a second Limbo party
+            // A character clears a boss once a week, so lending Moxie77Q to a second Limbo party
             // states a night that cannot happen. Refused where it is written, not dropped later.
             assertEquals(
-                Refusal("iPager42X is already in mechobotto's party for this boss. Remove them from it first."),
-                check(listOf("Lynn", "iPager42X")),
+                Refusal("Moxie77Q is already in tidelark's party for this boss. Remove them from it first."),
+                check(listOf("Lynn", "Moxie77Q")),
             )
             // Case and padding are typing, not identity, the same as validateMembers.
             assertEquals(
-                Refusal("iPager42X is already in mechobotto's party for this boss. Remove them from it first."),
-                check(listOf(" ipager42x ")),
+                Refusal("Moxie77Q is already in tidelark's party for this boss. Remove them from it first."),
+                check(listOf(" moxie77q ")),
             )
             // The owner of the other config holds its slot too, from either end.
             assertEquals(
-                Refusal("mechobotto is already in mechobotto's party for this boss. Remove them from it first."),
-                check(listOf("mechobotto")),
+                Refusal("tidelark is already in tidelark's party for this boss. Remove them from it first."),
+                check(listOf("tidelark")),
             )
             // Different people is still the whole point: this is what a second character is for.
             assertNull(check(listOf("Lynn", "Kaiser")))
@@ -435,14 +435,14 @@ class PartyConfigTest {
                     userOneId,
                     lotus,
                     null,
-                    rosterOf(warrior, listOf("iPager42X")),
+                    rosterOf(warrior, listOf("Moxie77Q")),
                     Clock.System.now(),
                     oneOff = false,
                 ),
             )
             // And another account's configs are not competition.
             assertNull(
-                validateBossRoster(userTwoId, limbo, null, listOf("iPager42X"), Clock.System.now(), oneOff = false),
+                validateBossRoster(userTwoId, limbo, null, listOf("Moxie77Q"), Clock.System.now(), oneOff = false),
             )
         }
     }
@@ -450,15 +450,15 @@ class PartyConfigTest {
     @Test
     fun `a seat somebody has left does not hold their slot on that boss`() {
         transaction {
-            val warrior = addCharacter(userOneId, "warden2030")
-            val mech = addCharacter(userOneId, "mechobotto")
+            val warrior = addCharacter(userOneId, "orchid88")
+            val kip = addCharacter(userOneId, "tidelark")
             val kalos = bossIdForKey("kalos-the-guardian")!!
-            val party = config(userOneId, warrior, "kalos-the-guardian", listOf("Frecklynn", "iPager42X"))
+            val party = config(userOneId, warrior, "kalos-the-guardian", listOf("Quessa", "Moxie77Q"))
 
-            // Frecklynn leaves that party. The seat is RETIRED rather than deleted, because a
+            // Quessa leaves that party. The seat is RETIRED rather than deleted, because a
             // payout or a past week can point at it, and it drops out of the roster the page draws.
             PartyMember.update({
-                (PartyMember.partyId eq Uuid.parse(party.id)) and (PartyMember.name eq "Frecklynn")
+                (PartyMember.partyId eq Uuid.parse(party.id)) and (PartyMember.name eq "Quessa")
             }) { it[standing] = false }
 
             // So she is free to run the boss with somebody else. Counting the retired seat refused
@@ -468,7 +468,7 @@ class PartyConfigTest {
                     userOneId,
                     kalos,
                     null,
-                    rosterOf(mech, listOf("Frecklynn")),
+                    rosterOf(kip, listOf("Quessa")),
                     Clock.System.now(),
                     oneOff = false,
                 ),
@@ -476,12 +476,12 @@ class PartyConfigTest {
 
             // Somebody still in that roster is still competition, which is the rule's whole point.
             assertEquals(
-                Refusal("iPager42X is already in warden2030's party for this boss. Remove them from it first."),
+                Refusal("Moxie77Q is already in orchid88's party for this boss. Remove them from it first."),
                 validateBossRoster(
                     userOneId,
                     kalos,
                     null,
-                    rosterOf(mech, listOf("iPager42X")),
+                    rosterOf(kip, listOf("Moxie77Q")),
                     Clock.System.now(),
                     oneOff = false,
                 ),
@@ -492,9 +492,9 @@ class PartyConfigTest {
     @Test
     fun `a config is not competition with itself when it is edited`() {
         transaction {
-            val mech = addCharacter(userOneId, "mechobotto")
+            val kip = addCharacter(userOneId, "tidelark")
             val limbo = bossIdForKey("limbo")!!
-            val party = config(userOneId, mech, "limbo", listOf("CraneBolton"))
+            val party = config(userOneId, kip, "limbo", listOf("Pinewick"))
 
             // Re-saving the same roster would otherwise trip over the seats it already owns, which
             // would make every config holding a member uneditable.
@@ -503,7 +503,7 @@ class PartyConfigTest {
                     userOneId,
                     limbo,
                     exclude = Uuid.parse(party.id),
-                    rosterOf(mech, listOf("CraneBolton")),
+                    rosterOf(kip, listOf("Pinewick")),
                     Clock.System.now(),
                     oneOff = false,
                 ),
@@ -514,10 +514,10 @@ class PartyConfigTest {
     @Test
     fun `a week can lend somebody the party they were dropped from`() {
         transaction {
-            val mech = addCharacter(userOneId, "mechobotto")
-            val warrior = addCharacter(userOneId, "warden2030")
+            val kip = addCharacter(userOneId, "tidelark")
+            val warrior = addCharacter(userOneId, "orchid88")
             val limbo = bossIdForKey("limbo")!!
-            val lender = config(userOneId, mech, "limbo", listOf("CraneBolton"))
+            val lender = config(userOneId, kip, "limbo", listOf("Pinewick"))
             val borrower = config(userOneId, warrior, "limbo", listOf("Lynn"))
             val week = currentWeek()
 
@@ -530,32 +530,32 @@ class PartyConfigTest {
                     rosterOf(warrior, members),
                 )
 
-            // While Crane is in the other party's week, they are holding its Limbo clear.
+            // While Pine is in the other party's week, they are holding its Limbo clear.
             assertEquals(
-                Refusal("CraneBolton already ran this boss this week. Remove them from this week."),
-                check(listOf("Lynn", "CraneBolton")),
+                Refusal("Pinewick already ran this boss this week. Remove them from this week."),
+                check(listOf("Lynn", "Pinewick")),
             )
 
-            // Dropped from that week, Crane's clear is free, so the other party can have them. The
+            // Dropped from that week, Pine's clear is free, so the other party can have them. The
             // standing rosters have not moved, which is why this reads through rostersFor.
             saveWeekRoster(
                 Uuid.parse(lender.id),
-                mech,
+                kip,
                 week,
                 listOf<String>(),
                 SeatContext(userOneId, emptyMap(), Clock.System.now()),
             )
-            assertNull(check(listOf("Lynn", "CraneBolton")))
+            assertNull(check(listOf("Lynn", "Pinewick")))
         }
     }
 
     @Test
     fun `a week the party was taken off is a week its members were free`() {
         transaction {
-            val mech = addCharacter(userOneId, "mechobotto")
-            val warrior = addCharacter(userOneId, "warden2030")
+            val kip = addCharacter(userOneId, "tidelark")
+            val warrior = addCharacter(userOneId, "orchid88")
             val limbo = bossIdForKey("limbo")!!
-            val lender = config(userOneId, mech, "limbo", listOf("CraneBolton"))
+            val lender = config(userOneId, kip, "limbo", listOf("Pinewick"))
             val borrower = config(userOneId, warrior, "limbo", listOf("Lynn"))
             val week = currentWeek()
 
@@ -565,12 +565,12 @@ class PartyConfigTest {
                     limbo,
                     exclude = Uuid.parse(borrower.id),
                     week,
-                    rosterOf(warrior, listOf("Lynn", "CraneBolton")),
+                    rosterOf(warrior, listOf("Lynn", "Pinewick")),
                 )
 
-            assertEquals(Refusal("CraneBolton already ran this boss this week. Remove them from this week."), check())
+            assertEquals(Refusal("Pinewick already ran this boss this week. Remove them from this week."), check())
 
-            // The party did not run this week at all, so nothing in it ran the boss and Crane's
+            // The party did not run this week at all, so nothing in it ran the boss and Pine's
             // clear is free. The config is untouched and holds him again next week.
             setRunsInPeriod(Uuid.parse(lender.id), oneOff = false, week, runs = false, now = Clock.System.now())
             assertNull(check())
@@ -584,8 +584,8 @@ class PartyConfigTest {
             val clash =
                 SavePeopleRequest(
                     listOf(
-                        PersonRequest(name = "Chris", characters = listOf("CraneBolton")),
-                        PersonRequest(name = "Jarvis", characters = listOf("cranebolton")),
+                        PersonRequest(name = "Chris", characters = listOf("Pinewick")),
+                        PersonRequest(name = "Felix", characters = listOf("pinewick")),
                     ),
                 )
             // Character names are unique in a world, so two owners is a mistake, and letting it
@@ -601,13 +601,13 @@ class PartyConfigTest {
     @Test
     fun `removing a person leaves the configs that named their characters alone`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
+            val mine = addCharacter(userOneId, "tidelark")
             savePeople(
                 userOneId,
-                SavePeopleRequest(listOf(PersonRequest(name = "Chris", characters = listOf("CraneBolton")))),
+                SavePeopleRequest(listOf(PersonRequest(name = "Chris", characters = listOf("Pinewick")))),
                 Clock.System.now(),
             )
-            val party = config(userOneId, mine, "baldrix", listOf("CraneBolton"))
+            val party = config(userOneId, mine, "baldrix", listOf("Pinewick"))
             assertEquals("Chris", party.members[1].personName)
 
             savePeople(userOneId, SavePeopleRequest(emptyList()), Clock.System.now())
@@ -615,7 +615,7 @@ class PartyConfigTest {
             val after = findParty(Uuid.parse(party.id), userOneId)!!
             // The seat is untouched: the people list says whose a character is, and taking that
             // back is not the same as saying the character was not there.
-            assertEquals("CraneBolton", after.members[1].name)
+            assertEquals("Pinewick", after.members[1].name)
             assertNull(after.members[1].personName)
             assertTrue(peopleFor(userOneId).isEmpty())
         }
@@ -624,8 +624,8 @@ class PartyConfigTest {
     @Test
     fun `a config and the clear matrix are the same row, read from both ends`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
-            val party = config(userOneId, mine, "kalos-the-guardian", listOf("CraneBolton"))
+            val mine = addCharacter(userOneId, "tidelark")
+            val party = config(userOneId, mine, "kalos-the-guardian", listOf("Pinewick"))
             // Nobody has said anything this period, which is not the same as "not cleared".
             assertNull(party.cleared)
 
@@ -658,8 +658,8 @@ class PartyConfigTest {
     @Test
     fun `a planner capture shows up in the party view without being told twice`() {
         transaction {
-            val mine = addCharacter(userOneId, "mechobotto")
-            val party = config(userOneId, mine, "limbo", listOf("CraneBolton"))
+            val mine = addCharacter(userOneId, "tidelark")
+            val party = config(userOneId, mine, "limbo", listOf("Pinewick"))
             val shot = Uuid.random()
             Screenshots.insert {
                 it[Screenshots.id] = shot

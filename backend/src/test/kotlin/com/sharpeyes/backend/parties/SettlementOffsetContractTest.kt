@@ -24,8 +24,8 @@ class SettlementOffsetContractTest {
             json.decodeFromString<OffsetSharesRequest>(
                 """
                 {
-                  "holder": { "kind": "PERSON", "personId": "p-brock", "characterName": null },
-                  "note": "offset against Brock",
+                  "holder": { "kind": "PERSON", "personId": "p-owen", "characterName": null },
+                  "note": "offset against Owen",
                   "parts": [
                     { "lootId": "l1", "memberId": "m1", "amount": 703703488 }
                   ],
@@ -34,7 +34,7 @@ class SettlementOffsetContractTest {
                 """.trimIndent(),
             )
         assertEquals("PERSON", request.holder.kind)
-        assertEquals("offset against Brock", request.note)
+        assertEquals("offset against Owen", request.note)
         // The second pot, in the same request as the first. Both move on one press, and as two
         // requests the card drew what they owe you down twice for it.
         assertEquals(2_412_222_150, request.holding)
@@ -52,7 +52,7 @@ class SettlementOffsetContractTest {
             json.decodeFromString<OffsetSharesRequest>(
                 """
                 {
-                  "holder": { "kind": "PERSON", "personId": "p-brock", "characterName": null },
+                  "holder": { "kind": "PERSON", "personId": "p-owen", "characterName": null },
                   "parts": [{ "lootId": "l1", "memberId": "m1", "amount": 1 }]
                 }
                 """.trimIndent(),

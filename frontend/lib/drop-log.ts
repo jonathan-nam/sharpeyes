@@ -129,7 +129,7 @@ export type DropEntry = {
    * A fact about THIS NIGHT, and nothing else moves it. This file used to spend it down by the
    * coupons you had since sold on that person's behalf, which is an account-wide fact: a boss row's
    * figure then depended on every other party, so Hard Baldrix went silent about a night you looted
-   * whole because a tranche crediting Bro had drained the oldest nights, and the row contradicted
+   * whole because a tranche crediting Owen had drained the oldest nights, and the row contradicted
    * the "120 took, 60 due" printed directly under it. Selling their share does turn a coupon debt
    * into a meso one (V56), and the SALE LEDGER is the one place that nets it. Nothing else should.
    */
@@ -550,7 +550,7 @@ function totalsOf(entries: DropEntry[]): DropLogTotals {
  *
  * It used to read the LEDGER pair, which is the same gap spent down by coupons already sold on that
  * person's behalf. Those sales are account-wide, so a row's figure moved for reasons nowhere near
- * it: Hard Baldrix said nothing about a night you looted whole because a tranche crediting Bro had
+ * it: Hard Baldrix said nothing about a night you looted whole because a tranche crediting Owen had
  * drained the oldest nights, while Hard Kaling still asked for 30, and which of one evening's three
  * nights kept its debt came down to the order their ids happened to sort in.
  *

@@ -131,7 +131,7 @@ internal fun senderNameFor(userId: String): String? {
  * And **not a one-off**, which is the one that is easy to miss: a one-off is a boss run once, on
  * for the periods it is armed for and off in every other, so it is not an arrangement to hand over.
  * Carrying one would create it on the recipient's account as a permanent config, which says
- * "CreedBratton runs Jupiter every week" on the strength of a single night in August.
+ * "Pinewick runs Jupiter every week" on the strength of a single night in August.
  *
  * Found by dry-running this against real data: three of the sender's configs were spent one-offs,
  * and two of them collided with real configs and were reported as dropped, which made an artefact

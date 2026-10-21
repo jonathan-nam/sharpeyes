@@ -128,14 +128,14 @@ class LinkedPersonCharactersTest {
     @Test
     fun `a linked person brings the characters their own account holds`() {
         transaction {
-            val own = character(mine, "mechobotto")
-            character(theirs, "CraneBolton")
+            val own = character(mine, "tidelark")
+            character(theirs, "Pinewick")
             // Nothing attributed by hand. Before the link this seat belonged to nobody.
             val chris = people("Chris" to emptyList()).getValue("Chris")
             link(chris, theirs)
-            val party = config(own, listOf("CraneBolton"))
+            val party = config(own, listOf("Pinewick"))
 
-            assertEquals(listOf("CraneBolton"), peopleFor(mine).single().ownedCharacters)
+            assertEquals(listOf("Pinewick"), peopleFor(mine).single().ownedCharacters)
             assertEquals(emptyList(), peopleFor(mine).single().characters)
             // And the seat says so without anyone having said it.
             assertEquals("Chris", party.members[1].personName)
@@ -146,7 +146,7 @@ class LinkedPersonCharactersTest {
     @Test
     fun `an unlinked person is unchanged, and still whatever this account said`() {
         transaction {
-            val own = character(mine, "mechobotto")
+            val own = character(mine, "tidelark")
             people("Dwight" to listOf("Schrute"))
             val party = config(own, listOf("Schrute"))
 
@@ -160,48 +160,48 @@ class LinkedPersonCharactersTest {
     @Test
     fun `their roster is theirs, and only what this account already seats comes across`() {
         transaction {
-            val own = character(mine, "mechobotto")
-            character(theirs, "CraneBolton", position = 0)
+            val own = character(mine, "tidelark")
+            character(theirs, "Pinewick", position = 0)
             // A mule of theirs that has never been in one of my parties. Linking is not a window
             // onto their account, it is an answer to a question I had already asked.
-            character(theirs, "CranesMule", position = 1)
+            character(theirs, "PinesMule", position = 1)
             link(people("Chris" to emptyList()).getValue("Chris"), theirs)
-            config(own, listOf("CraneBolton"))
+            config(own, listOf("Pinewick"))
 
-            assertEquals(listOf("CraneBolton"), peopleFor(mine).single().ownedCharacters)
+            assertEquals(listOf("Pinewick"), peopleFor(mine).single().ownedCharacters)
         }
     }
 
     @Test
     fun `their account's answer beats what this one guessed`() {
         transaction {
-            val own = character(mine, "mechobotto")
-            character(theirs, "CraneBolton")
-            // I said CraneBolton was Dwight's. Chris's account says it is his, and it is his
+            val own = character(mine, "tidelark")
+            character(theirs, "Pinewick")
+            // I said Pinewick was Dwight's. Chris's account says it is his, and it is his
             // account: the guess loses to the character actually sitting on a roster.
-            val ids = people("Dwight" to listOf("CraneBolton"), "Chris" to emptyList())
+            val ids = people("Dwight" to listOf("Pinewick"), "Chris" to emptyList())
             val chris = ids.getValue("Chris")
             link(chris, theirs)
-            val party = config(own, listOf("CraneBolton"))
+            val party = config(own, listOf("Pinewick"))
 
             assertEquals(chris.toString(), party.members[1].personId)
             assertEquals("Chris", party.members[1].personName)
             // The attribution is left in the database rather than deleted behind my back. It is
             // still the answer if the link ever goes away.
             val dwight = peopleFor(mine).single { it.name == "Dwight" }
-            assertEquals(listOf("CraneBolton"), dwight.characters)
+            assertEquals(listOf("Pinewick"), dwight.characters)
         }
     }
 
     @Test
     fun `a character in the other world is not the seat in front of you`() {
         transaction {
-            val own = character(mine, "mechobotto")
+            val own = character(mine, "tidelark")
             // Same name, their account, wrong world. Narrowing by world is what every other
             // account-wide read does, and a party is in one world.
-            character(theirs, "CraneBolton", world = WORLD_HEROIC)
+            character(theirs, "Pinewick", world = WORLD_HEROIC)
             link(people("Chris" to emptyList()).getValue("Chris"), theirs)
-            config(own, listOf("CraneBolton"))
+            config(own, listOf("Pinewick"))
 
             assertEquals(emptyList(), peopleFor(mine).single().ownedCharacters)
         }
@@ -210,10 +210,10 @@ class LinkedPersonCharactersTest {
     @Test
     fun `a seat that is their real character points at it`() {
         transaction {
-            val own = character(mine, "mechobotto")
-            val theirCharacter = character(theirs, "CraneBolton")
+            val own = character(mine, "tidelark")
+            val theirCharacter = character(theirs, "Pinewick")
             link(people("Chris" to emptyList()).getValue("Chris"), theirs)
-            val party = config(own, listOf("CraneBolton"))
+            val party = config(own, listOf("Pinewick"))
 
             val seat = party.members[1]
             assertEquals(theirCharacter.toString(), seat.linkedCharacterId)
@@ -226,7 +226,7 @@ class LinkedPersonCharactersTest {
     @Test
     fun `my own seat is mine and is not a linked one`() {
         transaction {
-            val own = character(mine, "mechobotto")
+            val own = character(mine, "tidelark")
             val party = config(own, listOf("Steve"))
 
             val me = party.members[0]
@@ -238,7 +238,7 @@ class LinkedPersonCharactersTest {
     @Test
     fun `a seat that is only a name points at nothing`() {
         transaction {
-            val own = character(mine, "mechobotto")
+            val own = character(mine, "tidelark")
             // Attributed by hand to somebody with no account. A name is all this seat has ever
             // been, and stage one does not change that.
             people("Dwight" to listOf("Schrute"))
@@ -252,25 +252,25 @@ class LinkedPersonCharactersTest {
     @Test
     fun `their account's sprite beats this account's copy of it`() {
         transaction {
-            val own = character(mine, "mechobotto")
-            character(theirs, "CraneBolton", sprite = "https://nexon.example/crane-now.png")
+            val own = character(mine, "tidelark")
+            character(theirs, "Pinewick", sprite = "https://nexon.example/pine-now.png")
             link(people("Chris" to emptyList()).getValue("Chris"), theirs)
-            val party = config(own, listOf("CraneBolton"))
+            val party = config(own, listOf("Pinewick"))
             // A copy this account looked up earlier, which is what the seat would otherwise show.
             // Their account refreshes the character's own sprite, so the copy is the stale one.
             PartyMember.update({ PartyMember.id eq Uuid.parse(party.members[1].id) }) {
-                it[spriteImgUrl] = "https://nexon.example/crane-stale.png"
+                it[spriteImgUrl] = "https://nexon.example/pine-stale.png"
             }
 
             val seat = findParty(Uuid.parse(party.id), mine)!!.members[1]
-            assertEquals(spriteProxyPath("https://nexon.example/crane-now.png"), seat.spriteImgUrl)
+            assertEquals(spriteProxyPath("https://nexon.example/pine-now.png"), seat.spriteImgUrl)
         }
     }
 
     @Test
     fun `a seat with no character behind it still shows the copy`() {
         transaction {
-            val own = character(mine, "mechobotto")
+            val own = character(mine, "tidelark")
             val party = config(own, listOf("Schrute"))
             PartyMember.update({ PartyMember.id eq Uuid.parse(party.members[1].id) }) {
                 it[spriteImgUrl] = "https://nexon.example/schrute.png"
