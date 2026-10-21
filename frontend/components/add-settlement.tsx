@@ -168,11 +168,32 @@ export function AddSettlement({
       addLabel: `Add a payment from ${one.name}`,
       add: (mesos: number, text: string) => onAddPayment(one.holder, mesos, text),
     })),
-    ...shared.map((one) =>
+    // The other way (V89), negative: you paying them. Only a linked person, the one kind a shared
+    // book can leave you owing outside a drop share, which Mark Sent pays.
+    ...people
+      .filter((person) => person.linked)
+      .map((person) =>
+        sharedChoice(
+          `sent:${person.id}`,
+          `You paid ${person.name}`,
+          person.image ?? null,
+          (mesos, text) =>
+            onAddPayment(
+              { kind: "PERSON", personId: person.id, characterName: null },
+              -mesos,
+              text,
+            ),
+        ),
+      ),
+    // Their book counts a payment from you as positive, and one from them to you as negative.
+    ...shared.flatMap((one) => [
       sharedChoice(`paid:${one.personId}`, `You paid ${one.name}`, one.image, (mesos, text) =>
         onShared(one.personId, "payments", mesos, text),
       ),
-    ),
+      sharedChoice(`got:${one.personId}`, `${one.name} paid you`, one.image, (mesos, text) =>
+        onShared(one.personId, "payments", -mesos, text),
+      ),
+    ]),
   ];
   const debtor = debts.find((one) => one.key === owedTo) ?? debts[0];
   const payer = receipts.find((one) => one.key === paidBy) ?? receipts[0];

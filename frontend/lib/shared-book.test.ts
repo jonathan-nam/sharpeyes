@@ -40,6 +40,16 @@ const paid = (amount: number) => ({
   receivedAt: "2026-10-02T00:00:00Z",
 });
 
+describe("a payment the owner sends back (V89)", () => {
+  it("comes off what the owner owes you, and says who paid whom", () => {
+    // You entered 8b they owe you; they paid 3b of it back, a negative row in their book.
+    const card = sharedCard(book({ debts: [debt(-8 * B)], payments: [paid(-3 * B)] }), [])!;
+    expect(card.owed).toBe(5 * B);
+    expect(card.owe).toBe(0);
+    expect(card.detail.paid.find((p) => p.key === `p-${-3 * B}`)?.label).toBe("Jonathan paid you");
+  });
+});
+
 describe("sharedCard", () => {
   it("says what the owner owes you when you overpaid them", () => {
     // Bro's card on 2026-10-20: 187b paid against 139b, read from Bro's side.

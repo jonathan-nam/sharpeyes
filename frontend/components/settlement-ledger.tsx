@@ -1511,7 +1511,11 @@ function DischargeRow({
         {act.by == null && (
           <ArmedRemove
             busy={busy}
-            label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}
+            label={
+              act.amount < 0
+                ? `Undo the ${formatMesos(-act.amount, true)} you paid ${name}`
+                : `Undo ${formatMesos(act.amount, true)} off what ${name} owes you`
+            }
             onRemove={onRemove}
           />
         )}

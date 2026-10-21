@@ -785,8 +785,9 @@ export function moneyRows(
     discharges.push({
       id: got.id,
       source: "PAYMENT",
+      // Signed (V89): negative is you paying them, which puts back on their side what it took off yours.
       amount: got.amount,
-      label: got.note ?? "paid",
+      label: got.note ?? (got.amount < 0 ? "you paid" : "paid"),
       at: got.receivedAt,
       payouts: [],
       sales: [],

@@ -27,9 +27,8 @@ describe("the rows under `owed` take two clicks to remove", () => {
     expect(ledger).toContain("label={`Remove ${formatMesos(entry.amount, true)} against ${name}`}");
     expect(ledger).toContain("label={`Remove the ${formatMesos(got.amount, true)} payment`}");
     // An offset is deleted outright, with nothing that keeps its amount, so it takes two clicks too.
-    expect(ledger).toContain(
-      "label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}",
-    );
+    expect(ledger).toContain("`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`");
+    expect(ledger).toContain("`Undo the ${formatMesos(-act.amount, true)} you paid ${name}`");
     expect(ledger.match(/<ArmedRemove/g)).toHaveLength(3);
   });
 
