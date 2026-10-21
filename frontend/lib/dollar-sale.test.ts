@@ -295,7 +295,7 @@ describe("what the closing actions say they move", () => {
   it("puts the collecting act on the line, the aggregate that hid it being gone", () => {
     // It used to be the aggregate Settle, whose caption named only the mesos and so said nothing
     // about the $333.33 it also collected. See settlement-figure for why that button went entirely.
-    expect(source).toContain('line.direction === "owed" ? "Mark Received" : "Mark Sent"');
+    expect(source).toContain('{line.direction === "owed" && (');
     expect(source).not.toContain("{collectable && (");
   });
 

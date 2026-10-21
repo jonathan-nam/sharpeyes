@@ -106,7 +106,8 @@ describe("what the card says a person owes", () => {
   it("puts the act on the line it is about, named for that line's own direction", () => {
     // The same write either way. What differs is which way the money went, and the line knows.
     expect(source).toContain("onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }])");
-    expect(source).toContain('line.direction === "owed" ? "Mark Received" : "Mark Sent"');
+    // Only what they owe you is marked on its own line. What you send is the lot's act.
+    expect(source).toContain('{line.direction === "owed" && (');
     // The Closing Actions face, not the paid pill's. They are the same kind of thing, and a pill
     // beside a squared button read as a different one.
     expect(source).toContain('className="party-save ledger-line-act"');
