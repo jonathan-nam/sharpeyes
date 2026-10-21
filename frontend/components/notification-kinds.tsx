@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
+import { BOSS_ART, BOSS_ART_2X } from "@/lib/boss-art";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { shortMesos } from "@/lib/drop-split";
 import { formatDollars } from "@/lib/money";
@@ -32,6 +33,8 @@ type Kind = {
   text?: (payload: Payload, who: string) => string;
   /** Backend-relative art for what changed. */
   icon?: (payload: Payload) => string | null;
+  /** Set on the icon, for art that is not a 46px drop icon. */
+  iconClass?: string;
   href?: (payload: Payload) => string;
 };
 
@@ -41,6 +44,12 @@ const str = (value: unknown) => (typeof value === "string" ? value : "");
 const num = (value: unknown) => (typeof value === "number" ? value : 0);
 
 const artOf = (p: Payload) => str(p.icon) || null;
+
+/** The 80px portrait for the 26px one the payload names, which is drawn here at a drop's 46. */
+function bossArtOf(p: Payload): string | null {
+  const key = Object.keys(BOSS_ART).find((k) => BOSS_ART[k] === p.icon);
+  return (key && BOSS_ART_2X[key]) || artOf(p);
+}
 const partyPage = (p: Payload) => `/bosses/parties/${encodeURIComponent(str(p.partyId))}`;
 
 function priceOf(p: Payload): string {
@@ -89,7 +98,7 @@ const KINDS: Record<string, Kind> = {
     icon: artOf,
     href: partyPage,
   },
-  CLEAR_MARKED: { text: clearText, icon: artOf, href: partyPage },
+  CLEAR_MARKED: { text: clearText, icon: bossArtOf, iconClass: "is-boss", href: partyPage },
   LEDGER_ENTRY: { text: ledgerText, href: () => "/bosses/drops" },
 };
 
