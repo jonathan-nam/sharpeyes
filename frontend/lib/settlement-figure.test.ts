@@ -435,10 +435,10 @@ describe("a receipt on the card", () => {
   });
 
   it("goes under the step this account already calls what came off the debt", () => {
-    // DROPS, at Jonathan's call (2026-10-03): the list is read by the drop each row names. It holds
-    // anything that came off, a payment included, so the fold counts rows and each names its act.
-    expect(source).toContain('<span className="ledger-heading">Drops</span>');
-    expect(source).toContain('plural(discharges.length, "drop")');
+    // PAID, at Jonathan's call (2026-10-21), replacing Drops: it pairs with Owed beside it. It holds
+    // anything that came off, a drop included, so the fold counts rows and each names its act.
+    expect(source).toContain('<span className="ledger-heading">Paid</span>');
+    expect(source).toContain('plural(discharges.length, "payment")');
   });
 
   it("is removable where it is drawn, since this is the only screen that records one", () => {
