@@ -26,6 +26,7 @@ export function SettlementStage({
   page,
   view,
   writes,
+  sharedOwners = [],
 }: {
   page: Pick<
     DropLogPage,
@@ -33,6 +34,11 @@ export function SettlementStage({
   >;
   view: ReturnType<typeof settlementView>;
   writes: DropLogWrites;
+  /**
+   * Your people whose account keeps a shared book with you. Their debts and payments go on that
+   * book's card, where both of you see them, so these boxes do not offer them. See ownBookRefusal.
+   */
+  sharedOwners?: string[];
 }) {
   const { settlement, totals, wallet, offsetShares } = view;
   const { busy } = writes;
@@ -53,12 +59,14 @@ export function SettlementStage({
           person, so the boxes inside one did not have to; out here the picker does, and it offers
           the unclaimed characters a card can be keyed by as well as the people list. */}
       <AddSettlement
-        people={page.people}
-        holders={settlement.map((row) => ({
-          key: row.key,
-          name: row.name,
-          holder: row.holder,
-        }))}
+        people={page.people.filter((person) => !sharedOwners.includes(person.id))}
+        holders={settlement
+          .filter((row) => !sharedOwners.some((id) => row.key === `person:${id}`))
+          .map((row) => ({
+            key: row.key,
+            name: row.name,
+            holder: row.holder,
+          }))}
         busy={busy}
         onAddDebt={(holder: Holder, amount, note) =>
           writes.debtWrite(DEBTS_KEY, {

@@ -2,26 +2,56 @@
 
 import { useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
-import { formatMesos } from "@/lib/drop-split";
+import { ArmedRemove } from "@/components/settlement-ledger";
+import { failureText } from "@/lib/api";
+import { formatMesos, parseMesos } from "@/lib/drop-split";
 import { formatDollars, formatMoney } from "@/lib/money";
 import type { SharedCard, SharedPart } from "@/lib/shared-book";
 
-// Your side of other owners' books, read-only. Every write on a debt is the book owner's, so these
-// cards carry no buttons: settling one is done with them, on their page. See lib/shared-book.ts.
-export function SharedCards({ cards }: { cards: SharedCard[] }) {
+// Your side of other owners' books. Between two linked accounts the book is shared (V88): every figure
+// is the owner's own, under the label turned round, and either of you writes into it. A row says who
+// wrote it, and each of you takes back only your own. See lib/shared-book.ts.
+
+/** What a card can write into the book it reads. Each answers once the page has read it back. */
+export type SharedWrites = {
+  busy: boolean;
+  /** POST /api/shared-books/{personId}/{debts|payments}. */
+  add: (
+    personId: string,
+    kind: "debts" | "payments",
+    amount: number,
+    note: string,
+  ) => Promise<void>;
+  remove: (personId: string, kind: "debts" | "payments", id: string) => Promise<void>;
+  /** Marks a share of a drop you sold as sent. */
+  send: (to: NonNullable<SharedPart["send"]>) => Promise<void>;
+};
+
+export function SharedCards({ cards, writes }: { cards: SharedCard[]; writes: SharedWrites }) {
   if (cards.length === 0) return null;
   return (
     <section className="loot-pool">
       <h2 className="loot-pool-title">Shared Parties</h2>
       {cards.map((card) => (
-        <SharedCardView key={card.name} card={card} />
+        <SharedCardView key={card.personId} card={card} writes={writes} />
       ))}
     </section>
   );
 }
 
-function SharedCardView({ card }: { card: SharedCard }) {
+function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrites }) {
   const { detail } = card;
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const act = (action: Promise<void>) => {
+    setRefusal(null);
+    action.catch((e) => setRefusal(failureText(e, "That didn't save. Try again.")));
+  };
+  const controls = {
+    busy: writes.busy,
+    onRemove: (part: SharedPart) =>
+      part.remove && act(writes.remove(card.personId, part.remove.kind, part.remove.id)),
+    onSend: (part: SharedPart) => part.send && act(writes.send(part.send)),
+  };
   return (
     <section className="ledger-card">
       <header className="ledger-head">
@@ -46,10 +76,16 @@ function SharedCardView({ card }: { card: SharedCard }) {
       {(detail.owe.length > 0 || detail.paid.length > 0) && (
         <div className="ledger-pair">
           {detail.owe.length > 0 && (
-            <Fold title="You Owe" amount={detail.oweTotal} rows={detail.owe} />
+            <Fold title="You Owe" amount={detail.oweTotal} rows={detail.owe} {...controls} />
           )}
           {detail.paid.length > 0 && (
-            <Fold title="Paid" amount={-detail.paidTotal} rows={detail.paid} negative />
+            <Fold
+              title="Paid"
+              amount={-detail.paidTotal}
+              rows={detail.paid}
+              negative
+              {...controls}
+            />
           )}
         </div>
       )}
@@ -68,9 +104,150 @@ function SharedCardView({ card }: { card: SharedCard }) {
               ? [{ key: "holding", label: "Your coupon sales they hold", mesos: detail.holding }]
               : []),
           ]}
+          {...controls}
         />
       )}
+
+      <SharedEntry card={card} writes={writes} onError={setRefusal} />
+      {refusal && <span className="split-error">{refusal}</span>}
     </section>
+  );
+}
+
+/**
+ * A debt either way, or a payment you sent, written into their book. The same boxes as Add
+ * Settlement, with the direction said: in a shared book "who owes you" is only half of it.
+ */
+function SharedEntry({
+  card,
+  writes,
+  onError,
+}: {
+  card: SharedCard;
+  writes: SharedWrites;
+  onError: (refusal: string | null) => void;
+}) {
+  const [youOwe, setYouOwe] = useState(true);
+  const [owed, setOwed] = useState("");
+  const [note, setNote] = useState("");
+  const [sent, setSent] = useState("");
+  const [sentNote, setSentNote] = useState("");
+  const debt = parseMesos(owed);
+  const paid = parseMesos(sent);
+  const save = (action: Promise<void>, clear: () => void) => {
+    onError(null);
+    action.then(clear, (e) => onError(failureText(e, "That didn't save. Try again.")));
+  };
+  return (
+    <>
+      <div className="ledger-entry">
+        <span className="ledger-heading">Add Debt</span>
+        <form
+          className="ledger-sale"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (debt === null || debt < 1) return;
+            // Their book counts what you owe them as positive. See SettlementDebt.amount.
+            save(writes.add(card.personId, "debts", youOwe ? debt : -debt, note.trim()), () => {
+              setOwed("");
+              setNote("");
+            });
+          }}
+        >
+          <label className="loot-share-input is-stacked">
+            Who
+            <select
+              className="split-input"
+              value={youOwe ? "you" : "them"}
+              onChange={(e) => setYouOwe(e.target.value === "you")}
+              disabled={writes.busy}
+            >
+              <option value="you">You owe {card.name}</option>
+              <option value="them">{card.name} owes you</option>
+            </select>
+          </label>
+          <label className="loot-share-input is-stacked">
+            Amount
+            <input
+              className="split-input"
+              value={owed}
+              onChange={(e) => setOwed(e.target.value)}
+              placeholder="1.5b"
+              inputMode="decimal"
+              aria-label="Amount"
+            />
+          </label>
+          <label className="loot-share-input is-grow is-stacked">
+            Description
+            <input
+              className="split-input"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={120}
+              aria-label="Description, optional"
+            />
+          </label>
+          <button
+            type="submit"
+            className="party-save ledger-add"
+            disabled={writes.busy || debt === null || debt < 1}
+            aria-label={`Add a debt with ${card.name}`}
+          >
+            +
+          </button>
+        </form>
+      </div>
+      <div className="ledger-entry">
+        <span className="ledger-heading">Add Payment</span>
+        <form
+          className="ledger-sale"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (paid === null || paid < 1) return;
+            save(writes.add(card.personId, "payments", paid, sentNote.trim()), () => {
+              setSent("");
+              setSentNote("");
+            });
+          }}
+        >
+          <label className="loot-share-input is-stacked">
+            Who
+            <select className="split-input" value="you" disabled>
+              <option value="you">You paid {card.name}</option>
+            </select>
+          </label>
+          <label className="loot-share-input is-stacked">
+            Amount
+            <input
+              className="split-input"
+              value={sent}
+              onChange={(e) => setSent(e.target.value)}
+              placeholder="1.5b"
+              inputMode="decimal"
+              aria-label={`Amount you paid ${card.name}`}
+            />
+          </label>
+          <label className="loot-share-input is-grow is-stacked">
+            Description
+            <input
+              className="split-input"
+              value={sentNote}
+              onChange={(e) => setSentNote(e.target.value)}
+              maxLength={120}
+              aria-label="Description, optional"
+            />
+          </label>
+          <button
+            type="submit"
+            className="party-save ledger-add"
+            disabled={writes.busy || paid === null || paid < 1}
+            aria-label={`Add a payment to ${card.name}`}
+          >
+            +
+          </button>
+        </form>
+      </div>
+    </>
   );
 }
 
@@ -80,11 +257,17 @@ function Fold({
   amount,
   rows,
   negative = false,
+  busy,
+  onRemove,
+  onSend,
 }: {
   title: string;
   amount?: number;
   rows: (SharedPart & { money?: string })[];
   negative?: boolean;
+  busy: boolean;
+  onRemove: (part: SharedPart) => void;
+  onSend: (part: SharedPart) => void;
 }) {
   const [open, setOpen] = useState(false);
   const signed = (value: number) => `${value > 0 ? "+" : ""}${formatMesos(value, true)}`;
@@ -108,10 +291,30 @@ function Fold({
           {rows.map((row) => (
             <li key={row.key} className="ledger-drop">
               <div className="ledger-drop-head">
-                <span className="loot-name">{row.label}</span>
+                <span className="loot-name">
+                  {row.label}
+                  {row.by && <span className="loot-meta"> · {row.by}</span>}
+                </span>
                 <span className="ledger-amount">
                   {row.money ?? signed(negative ? -row.mesos : row.mesos)}
                 </span>
+                {row.send && (
+                  <button
+                    type="button"
+                    className="party-save"
+                    disabled={busy}
+                    onClick={() => onSend(row)}
+                  >
+                    Mark Sent
+                  </button>
+                )}
+                {row.remove && (
+                  <ArmedRemove
+                    label={`Remove ${row.label}`}
+                    busy={busy}
+                    onRemove={() => onRemove(row)}
+                  />
+                )}
               </div>
             </li>
           ))}

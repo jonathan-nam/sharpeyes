@@ -64,11 +64,25 @@ describe("sharedCard", () => {
   it("itemises the figure: what you owe, less what came off, is the net either way", () => {
     // The same arithmetic SettlementCard's Owed and Drops lists come to. See settlement.test.ts.
     const card = sharedCard(book({ debts: [debt(139 * B)], payments: [paid(187 * B)] }), [])!;
-    expect(card.detail.owe).toEqual([{ key: "d-139000000000", label: "Entered", mesos: 139 * B }]);
-    expect(card.detail.paid).toEqual([
+    expect(card.detail.owe).toMatchObject([
+      { key: "d-139000000000", label: "Entered", mesos: 139 * B },
+    ]);
+    expect(card.detail.paid).toMatchObject([
       { key: "p-187000000000", label: "You paid", mesos: 187 * B },
     ]);
     expect(card.detail.oweTotal - card.detail.paidTotal).toBe(card.owe - card.owed);
+  });
+
+  it("names the owner's rows and offers yours back", () => {
+    // One book, two writers (V88): the owner's entry says it is theirs, yours can be taken back.
+    const theirs = { ...debt(139 * B), recordedByYou: false, recordedByName: "Mech" };
+    const yours = { ...paid(187 * B), recordedByYou: true };
+    const card = sharedCard(book({ debts: [theirs], payments: [yours] }), [])!;
+    expect(card.detail.owe[0]).toMatchObject({ by: "Mech", remove: undefined });
+    expect(card.detail.paid[0]).toMatchObject({
+      by: null,
+      remove: { kind: "payments", id: "p-187000000000" },
+    });
   });
 
   it("is nothing when the book says nothing about you", () => {

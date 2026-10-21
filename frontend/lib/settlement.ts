@@ -25,7 +25,12 @@ import { SELF_KEY, answeredKey, holderFromKey, holderKey } from "./vestige-ledge
 import type { CouponSale, Holder, HolderLedger, SaleCredit } from "./vestige-ledger";
 import type { Currency } from "./money";
 import type { Owings, Wallet, WalletLine } from "./wallet";
-import type { ProceedsDisposal, SettlementDebt, SettlementDebtPayout } from "@/types/vestige";
+import type {
+  ProceedsDisposal,
+  SettlementDebt,
+  SettlementDebtPayout,
+  WrittenBy,
+} from "@/types/vestige";
 
 /** One night's coupons sitting in the wrong inventory, in whichever direction it runs. */
 export type HeldOfYours = {
@@ -592,6 +597,8 @@ export type Discharge = {
    * sales cannot be told: see couponSalesBehind.
    */
   sales: CouponSale[];
+  /** Who wrote it, when the other side of a shared book did: theirs to take back, not yours. V88. */
+  by?: string | null;
 };
 
 /**
@@ -713,9 +720,19 @@ export function undecidedSales(row: Pick<Settlement, "sales" | "holding">): Coup
  * "received" line saying only the sum, and what the money answered was legible only on a pill under
  * the form. The receipts rather than their sum, because one row cannot carry two notes.
  */
+/** The other side of a shared book, when they wrote this row; null when you did. See V88. */
+function writerOf(row: WrittenBy): string | null {
+  return row.recordedByYou === false ? (row.recordedByName ?? "") : null;
+}
+
 export function moneyRows(
   row: Settlement,
-  received: { id: string; amount: number; note: string | null; receivedAt: string }[] = [],
+  received: ({
+    id: string;
+    amount: number;
+    note: string | null;
+    receivedAt: string;
+  } & WrittenBy)[] = [],
 ): {
   /** Debts somebody typed, in the order they were entered. */
   typed: SettlementDebt[];
@@ -740,6 +757,7 @@ export function moneyRows(
       at: entry.incurredAt,
       payouts: entry.payouts,
       sales: [],
+      by: writerOf(entry),
     });
   }
 
@@ -772,6 +790,7 @@ export function moneyRows(
       at: got.receivedAt,
       payouts: [],
       sales: [],
+      by: writerOf(got),
     });
   }
 

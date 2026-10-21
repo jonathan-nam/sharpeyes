@@ -80,7 +80,7 @@ import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
 import type { Loot, LogDropBody, PartyLootPool } from "@/types/loot";
 import type { DropLogPage, SharedBook } from "@/types/page";
-import { SharedCards } from "@/components/shared-cards";
+import { SharedCards, type SharedWrites } from "@/components/shared-cards";
 import { OthersSales } from "@/components/others-sales";
 import { splitByLogger } from "@/lib/sale-logger";
 import { useLive } from "@/lib/use-live";
@@ -185,6 +185,42 @@ export default function DropLogPage() {
     if (patch.people) setPeople(patch.people);
   });
   const { busy } = writes;
+
+  /**
+   * Writes into another owner's book, which is shared between the two of you (V88). Read back with
+   * the whole page, since the book arrives through the shared books and not through your own lists.
+   */
+  const sharedWrites: SharedWrites = {
+    busy,
+    add: (personId, kind, amount, note) =>
+      writes.track(async () => {
+        await apiFetch<unknown>(
+          `/api/shared-books/${encodeURIComponent(personId)}/${kind}`,
+          { method: "POST", body: JSON.stringify({ amount, note: note || undefined }) },
+          getToken,
+        );
+        await readBack(load);
+      }),
+    remove: (personId, kind, id) =>
+      writes.track(async () => {
+        await apiFetch<unknown>(
+          `/api/shared-books/${encodeURIComponent(personId)}/${kind}/${encodeURIComponent(id)}`,
+          { method: "DELETE" },
+          getToken,
+        );
+        await readBack(load);
+      }),
+    // The payout route, which lets the seller mark their own drop's share sent. See LootPermissions.
+    send: (to) =>
+      writes.track(async () => {
+        await apiFetch<unknown>(
+          `/api/parties/${to.partyId}/loot/${to.lootId}/payouts/${to.payeeId}`,
+          { method: "PUT", body: JSON.stringify({ paid: true }) },
+          getToken,
+        );
+        await readBack(load);
+      }),
+  };
 
   /**
    * Every read this page needs, in one request. See types/page.ts for why it is one.
@@ -717,11 +753,15 @@ export default function DropLogPage() {
                 }}
                 view={view}
                 writes={writes}
+                sharedOwners={sharedBooks.flatMap((book) => book.ownerPersonId ?? [])}
               />
             )}
 
             {shown === "settlement" && (
-              <SharedCards cards={sharedBooks.flatMap((book) => sharedCard(book, bosses) ?? [])} />
+              <SharedCards
+                cards={sharedBooks.flatMap((book) => sharedCard(book, bosses) ?? [])}
+                writes={sharedWrites}
+              />
             )}
 
             {/* The end of the pipeline, and it only runs one way: nothing here is waiting on
