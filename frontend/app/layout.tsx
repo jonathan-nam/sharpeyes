@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { LiveEvents } from "@/components/live-events";
 import { NavPending } from "@/components/nav-pending";
 import { SiteFooter } from "@/components/site-footer";
 import { SetupGate } from "@/components/setup-gate";
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <WorldVeil />
         {/* Above the header so it covers every link on the page, the header's included. */}
         <NavPending />
+        <LiveEvents />
         <SiteHeader />
         <SetupGate />
         {children}

@@ -1,6 +1,8 @@
 package com.sharpeyes.backend.notifications
 
 import com.sharpeyes.backend.db.Notification
+import com.sharpeyes.backend.events.Topic
+import com.sharpeyes.backend.events.publish
 import com.sharpeyes.backend.friends.discordUsernameOf
 import com.sharpeyes.backend.friends.faceOf
 import kotlinx.serialization.json.JsonElement
@@ -41,6 +43,7 @@ internal fun notify(
         it[Notification.payload] = payload
         it[createdAt] = now
     }
+    publish(listOf(userId), Topic.NOTIFICATIONS)
 }
 
 /** Clears every notification about [subjectIds], for whoever it was sent to. */
@@ -49,6 +52,12 @@ internal fun resolve(
     subjectIds: Collection<Uuid>,
 ) {
     if (subjectIds.isEmpty()) return
+    val told =
+        Notification
+            .selectAll()
+            .where { (Notification.kind eq kind) and (Notification.subjectId inList subjectIds) }
+            .map { it[Notification.userId] }
+    publish(told, Topic.NOTIFICATIONS)
     Notification.deleteWhere { (Notification.kind eq kind) and (Notification.subjectId inList subjectIds) }
 }
 

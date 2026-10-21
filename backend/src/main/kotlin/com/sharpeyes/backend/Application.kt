@@ -1,6 +1,7 @@
 package com.sharpeyes.backend
 
 import com.sharpeyes.backend.config.Env
+import com.sharpeyes.backend.events.startEventHub
 import com.sharpeyes.backend.plugins.configureCompression
 import com.sharpeyes.backend.plugins.configureCors
 import com.sharpeyes.backend.plugins.configureDatabase
@@ -37,6 +38,7 @@ fun Application.module() {
     configureCors()
     val signingKeys = configureSecurity()
     configureDatabase()
+    startEventHub()
 
     val nexonHttpClient = createNexonHttpClient()
     monitor.subscribe(ApplicationStopped) { nexonHttpClient.close() }

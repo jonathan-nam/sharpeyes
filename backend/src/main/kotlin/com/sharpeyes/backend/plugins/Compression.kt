@@ -23,5 +23,7 @@ fun Application.configureCompression() {
         deflate()
         minimumSize(MIN_COMPRESS_BYTES)
         excludeContentType(ContentType.Image.Any)
+        // A live event stream: gzip holds bytes back until a frame fills, so no event would arrive.
+        excludeContentType(ContentType.Text.EventStream)
     }
 }

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.bosses.clearChanged
 import com.sharpeyes.backend.bosses.clearSkipsOfSeats
 import com.sharpeyes.backend.bosses.periodAfter
 import com.sharpeyes.backend.bosses.periodOf
@@ -14,7 +15,6 @@ import com.sharpeyes.backend.db.PartyPiecePile
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.PersonCharacter
 import com.sharpeyes.backend.db.PieceClearCredit
-import com.sharpeyes.backend.tokens.syncPiecesForClear
 import com.sharpeyes.backend.tokens.syncSeated
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -90,7 +90,7 @@ internal fun syncPiecesForParty(
     val config = Party.selectAll().where { Party.id eq partyId }.firstOrNull() ?: return
     val bossId = config[Party.bossCatalogId]
     val week = period ?: periodStartFor(bossResetOf(bossId) ?: return, now)
-    syncPiecesForClear(config[Party.characterId], bossId, week, now)
+    clearChanged(config[Party.characterId], bossId, week, now)
     // Your other characters with a seat read this party's mode too (see seatedParty), and one taken
     // off the roster has to lose what it gave them. Credited ones as well as seated ones: a seat
     // nothing points at is deleted on the way out, and it takes the only record of who sat in it.
@@ -184,6 +184,7 @@ internal fun setPartyClear(
         row[BossClear.cleared] = cleared
         row[capturedAt] = now
         row[sourceScreenshotId] = null
+        row[viaPartyId] = null
     }
     // What the clear guarantees on a boss run alone, or taking it back. Nothing for a party, whose
     // coupons are typed: the gate is lootFromClear's. See LootFromClear.kt.
@@ -194,7 +195,7 @@ internal fun setPartyClear(
     } else {
         unlootFromClear(own, bossCatalogId, reset, today)
     }
-    syncPiecesForClear(own, bossCatalogId, periodStartFor(reset, now), now)
+    clearChanged(own, bossCatalogId, periodStartFor(reset, now), now)
 }
 
 /** Today, as the clock the periods are measured on sees it. */
@@ -241,8 +242,9 @@ internal fun clearFromDrop(
         row[cleared] = true
         row[capturedAt] = now
         row[sourceScreenshotId] = null
+        row[viaPartyId] = null
     }
-    syncPiecesForClear(characterId, bossCatalogId, period, now)
+    clearChanged(characterId, bossCatalogId, period, now)
 }
 
 /** What taking a config off Party View did to it. */

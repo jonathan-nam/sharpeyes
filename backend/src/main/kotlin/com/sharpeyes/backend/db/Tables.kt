@@ -184,6 +184,9 @@ object BossClear : Table("boss_clear") {
     val capturedAt = timestamp("captured_at")
     val sourceScreenshotId = optReference("source_screenshot_id", Screenshots.id)
 
+    // Set when this is a party owner's clear copied onto a member's character. See V87.
+    val viaPartyId = uuid("via_party_id").nullable()
+
     override val primaryKey = PrimaryKey(characterId, bossCatalogId, periodStart)
 }
 

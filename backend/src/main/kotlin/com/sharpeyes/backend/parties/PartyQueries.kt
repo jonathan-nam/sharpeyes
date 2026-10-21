@@ -379,7 +379,10 @@ private fun clearStateFor(
 
     return wanted.mapValues { (_, key) ->
         val row = found[key]
-        ClearState(row?.get(BossClear.cleared), row != null && row[BossClear.sourceScreenshotId] == null)
+        ClearState(
+            row?.get(BossClear.cleared),
+            row != null && row[BossClear.sourceScreenshotId] == null && row[BossClear.viaPartyId] == null,
+        )
     }
 }
 

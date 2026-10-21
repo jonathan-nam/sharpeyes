@@ -2,6 +2,7 @@ package com.sharpeyes.backend.plugins
 
 import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
+import com.sharpeyes.backend.events.eventRoutes
 import com.sharpeyes.backend.friends.friendRoutes
 import com.sharpeyes.backend.invites.inviteRoutes
 import com.sharpeyes.backend.invites.joinRoutes
@@ -156,12 +157,18 @@ fun Application.configureRouting(
                 settingsRoutes()
             }
 
-            route("/api/friends") { friendRoutes() }
-            route("/api/notifications") { notificationRoutes() }
+            socialRoutes()
 
             route("/api/invites") {
                 inviteRoutes(nexonLookupService, spriteCache)
             }
         }
     }
+}
+
+/** Other accounts, and what they do that reaches yours. */
+private fun Route.socialRoutes() {
+    route("/api/friends") { friendRoutes() }
+    route("/api/notifications") { notificationRoutes() }
+    route("/api/events") { eventRoutes() }
 }
