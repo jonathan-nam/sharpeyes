@@ -387,6 +387,26 @@ export default function PartiesPage() {
   }
 
   /**
+   * The same tick on a party somebody else keeps the book for. It is one run, so it clears it for
+   * the whole party, the owner's character included, and reaches their screen live. Read back with
+   * the week, which is where a shared row's clear comes from.
+   */
+  async function toggleSharedClear(party: Party, cleared: boolean) {
+    try {
+      await write(party.id, async () => {
+        await apiFetch<Party>(
+          `${PARTIES_KEY}/${party.id}/clear`,
+          { method: "PUT", body: JSON.stringify({ cleared }) },
+          getToken,
+        );
+        await loadWeek(week, { clearsOptional: true });
+      });
+    } catch {
+      // Leaving the old state up beats showing a tick that did not save.
+    }
+  }
+
+  /**
    * Changes how this party splits its coupons, tonight's included.
    *
    * Through the party's own save, which is the one route that writes a standing share, so the
@@ -804,10 +824,10 @@ export default function PartiesPage() {
   );
 
   /**
-   * A party somebody else owns, as a row among yours: the same card, with none of its writes. The
-   * pool, the clear and the roster are its owner's, and the party's own page is where a member
-   * records into it. Coupons owed are reckoned over your own pools, which this is not one of, so
-   * the badge is absent rather than claiming none are out.
+   * A party somebody else owns, as a row among yours. The clear is the one write it carries, being
+   * the whole party's run (see toggleSharedClear). The pool and the roster are its owner's, and the
+   * party's own page is where a member records into it. Coupons owed are reckoned over your own
+   * pools, which this is not one of, so the badge is absent rather than claiming none are out.
    */
   function sharedCard(party: Party, heading: ReactNode) {
     return (
@@ -817,6 +837,8 @@ export default function PartiesPage() {
         clear={clearOf(party)}
         coupons={NOTHING_OUTSTANDING}
         heading={heading}
+        busy={isSaving(party.id)}
+        onToggleClear={history ? undefined : (cleared) => toggleSharedClear(party, cleared)}
       />
     );
   }

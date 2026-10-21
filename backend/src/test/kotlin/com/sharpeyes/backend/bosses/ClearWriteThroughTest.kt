@@ -17,6 +17,7 @@ import com.sharpeyes.backend.parties.createParty
 import com.sharpeyes.backend.parties.findParty
 import com.sharpeyes.backend.parties.partiesSeatedIn
 import com.sharpeyes.backend.parties.savePeople
+import com.sharpeyes.backend.parties.setPartyClear
 import com.sharpeyes.backend.parties.unlinkPerson
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
@@ -206,6 +207,28 @@ class ClearWriteThroughTest {
 
             assertEquals(true, memberSees())
             assertEquals(first, clearOf(pine)?.get(BossClear.capturedAt), "a second pass writes nothing")
+        }
+    }
+
+    @Test
+    fun `a member ticking the party clears it for the whole party, and unticking takes it back`() {
+        transaction {
+            val (warrior, pine, party) = shared()
+            val now = Clock.System.now()
+            val boss = BossCatalog.selectAll().where { BossCatalog.bossKey eq kalos }.single()
+            // What the route does for a member: the party as they read it, which still names the
+            // owner's character as the one whose clear it is.
+            val asMember = findParty(party, member)!!
+            assertEquals(false, asMember.yours)
+
+            setPartyClear(asMember, boss[BossCatalog.id], boss[BossCatalog.reset], true, now)
+            assertEquals(true, clearOf(warrior)!![BossClear.cleared])
+            assertEquals(party, clearOf(pine)!![BossClear.viaPartyId])
+            assertEquals(true, memberSees())
+
+            setPartyClear(asMember, boss[BossCatalog.id], boss[BossCatalog.reset], false, now)
+            assertEquals(false, clearOf(warrior)!![BossClear.cleared])
+            assertNull(clearOf(pine))
         }
     }
 

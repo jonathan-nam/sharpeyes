@@ -3,6 +3,7 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.events.Topic
+import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
@@ -323,9 +324,10 @@ private suspend fun RoutingContext.setClearRoute() {
     val party =
         dbQuery {
             ensureUser(userId, email)
-            // Yours only. findParty answers for a party you are merely seated in, and the clear
-            // this writes is the OWNER's character's: see setPartyClear.
-            val found = findParty(partyId, userId)?.takeIf { it.yours }
+            // Yours, or one you have a seat in: it is one run, so a member's tick is the whole
+            // party's. It writes the OWNER's character's clear (see setPartyClear), which copies
+            // onto every linked seat, and the whole party hears of it, the owner included.
+            val found = findParty(partyId, userId)?.takeIf { it.yours || canEditParty(partyId, userId) }
             if (found != null) {
                 val boss =
                     BossCatalog
@@ -333,6 +335,7 @@ private suspend fun RoutingContext.setClearRoute() {
                         .where { BossCatalog.bossKey eq found.bossKey }
                         .first()
                 setPartyClear(found, boss[BossCatalog.id], boss[BossCatalog.reset], request.cleared, Clock.System.now())
+                publishToParty(partyId, Topic.CLEARS)
             }
             if (found == null) null else findParty(partyId, userId)
         }
