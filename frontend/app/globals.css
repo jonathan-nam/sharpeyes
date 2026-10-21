@@ -410,6 +410,12 @@ body:has(.nav-pending) main {
   animation: page-swap-in 280ms ease-out both;
 }
 
+/* What the two wrappers become once the fade is done: no box, so layout is as if they were gone,
+   while the elements themselves stay put and the page under them is not remounted. */
+.page-swap-done {
+  display: contents;
+}
+
 @keyframes page-swap-in {
   from {
     opacity: 0;

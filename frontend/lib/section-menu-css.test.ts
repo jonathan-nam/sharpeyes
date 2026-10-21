@@ -102,7 +102,9 @@ describe("the wait for a page that has been asked for", () => {
     const swap = readFileSync(join(__dirname, "..", "components", "page-swap.tsx"), "utf8");
     // Bare, and no wrapper: the boundary and the page then render the same thing, so handing over
     // from loading.tsx to the page's own wait changes nothing on screen.
-    expect(swap).toMatch(/if \(shaped\) return <>\{placeholder\}<\/>/);
+    expect(swap).toMatch(
+      /if \(shaped\) return waiting \? <>\{placeholder\}<\/> : <>\{children\}<\/>/,
+    );
   });
 
   // The other end of the same transition, and the half that was got wrong first. Fading the
@@ -144,6 +146,17 @@ describe("the wait for a page that has been asked for", () => {
   it("starts the handover immediately", () => {
     const shorthand = /\.page-swap-in \{[^}]*animation:\s*([^;]+);/.exec(css)?.[1];
     expect(shorthand?.match(/\d+m?s\b/g)).toHaveLength(1);
+  });
+
+  // The fade ending must not change the tree's shape. Returning bare children once it was over made
+  // React remount the whole page, so a confirm armed or a box typed into in the first 280ms was lost
+  // (seen 2026-10-20). The wrappers stay and stop being boxes instead.
+  it("keeps the page mounted when the crossfade ends", () => {
+    const source = readFileSync(join(__dirname, "..", "components", "page-swap.tsx"), "utf8");
+    expect(source).not.toMatch(/if \(!holding\) return/);
+    expect(source).toMatch(/className=\{holding \? "page-swap" : "page-swap-done"\}/);
+    expect(source).toMatch(/className=\{lingering \? "page-swap-in" : "page-swap-done"\}/);
+    expect(/\.page-swap-done \{\s*display:\s*contents;/.test(css)).toBe(true);
   });
 
   // The placeholder must not hold the content down while it leaves, or the page settles upward
