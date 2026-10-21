@@ -1,5 +1,5 @@
 import { bossLabel } from "@/lib/boss-difficulty";
-import { moneyRows } from "@/lib/settlement";
+import { moneyRows, type SettlementTotals } from "@/lib/settlement";
 import { settlementView } from "@/lib/settlement-view";
 import { paymentsSinceClosing } from "@/lib/vestige-ledger";
 import type { Owings, WalletLine } from "@/lib/wallet";
@@ -157,5 +157,20 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
         .map((line) => ({ ...line, name: where(line) })),
       holding: row.holding,
     },
+  };
+}
+
+/** [totals] with every shared card added in, so the tiles cover each book you are owed or owe in. */
+export function withSharedCards(totals: SettlementTotals, cards: SharedCard[]): SettlementTotals {
+  const owed = totals.owed + cards.reduce((sum, card) => sum + card.owed, 0);
+  const owe = totals.owe + cards.reduce((sum, card) => sum + card.owe, 0);
+  const usdOwed = totals.usd.owed + cards.reduce((sum, card) => sum + card.usd.owed, 0);
+  const usdOwe = totals.usd.owe + cards.reduce((sum, card) => sum + card.usd.owe, 0);
+  return {
+    owed,
+    owe,
+    net: owed - owe,
+    people: totals.people + cards.length,
+    usd: { owed: usdOwed, owe: usdOwe, net: usdOwed - usdOwe },
   };
 }

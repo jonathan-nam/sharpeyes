@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sharedCard } from "@/lib/shared-book";
+import { sharedCard, withSharedCards } from "@/lib/shared-book";
 import { settlementView } from "@/lib/settlement-view";
 import type { Holder } from "@/lib/vestige-ledger";
 import type { SharedBook } from "@/types/page";
@@ -87,5 +87,24 @@ describe("sharedCard", () => {
 
   it("is nothing when the book says nothing about you", () => {
     expect(sharedCard(book({}), [])).toBeNull();
+  });
+});
+
+describe("the summary tiles with a shared book in them", () => {
+  it("adds each card to your own book's totals", () => {
+    // You owe 139b on their card and they hold a 187b payment of yours: 48b their way.
+    const card = sharedCard(book({ debts: [debt(139 * B)], payments: [paid(187 * B)] }), [])!;
+    const none = { owed: 0, owe: 0, net: 0, people: 0, usd: { owed: 0, owe: 0, net: 0 } };
+    const totals = withSharedCards(none, [card]);
+    expect(totals).toMatchObject({ owed: card.owed, owe: card.owe, people: 1 });
+    expect(totals.net).toBe(card.owed - card.owe);
+    const own = {
+      owed: 10 * B,
+      owe: 4 * B,
+      net: 6 * B,
+      people: 2,
+      usd: { owed: 0, owe: 0, net: 0 },
+    };
+    expect(withSharedCards(own, [card]).net).toBe(6 * B + card.owed - card.owe);
   });
 });

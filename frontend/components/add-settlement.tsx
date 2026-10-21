@@ -21,12 +21,31 @@ import type { Person } from "@/types/party";
 /** Somebody a payment can arrive from, or a debt be entered against. */
 type Payer = { key: string; name: string; holder: Holder };
 
+/** One option of a picker, and what saving it writes. */
+type Choice = {
+  key: string;
+  label: string;
+  amountLabel: string;
+  addLabel: string;
+  add: (amount: number, note: string) => Promise<void>;
+};
+
+const sharedChoice = (key: string, label: string, add: Choice["add"]): Choice => ({
+  key,
+  label,
+  amountLabel: label,
+  addLabel: `Add: ${label}`,
+  add,
+});
+
 export function AddSettlement({
   people,
   holders,
   busy,
   onAddDebt,
   onAddPayment,
+  shared = [],
+  onShared = async () => {},
 }: {
   /** The account's people list, in its own order. A debt is entered against one of these. */
   people: Person[];
@@ -40,6 +59,17 @@ export function AddSettlement({
   busy: boolean;
   onAddDebt: (holder: Holder, amount: number, note: string) => Promise<void>;
   onAddPayment: (holder: Holder, amount: number, note: string) => Promise<void>;
+  /**
+   * Owners whose book you share, by your person row in it. Their entries go into that book (V88), and
+   * either way round: between a member and an owner it is usually the member who owes.
+   */
+  shared?: { personId: string; name: string }[];
+  onShared?: (
+    personId: string,
+    kind: "debts" | "payments",
+    amount: number,
+    note: string,
+  ) => Promise<void>;
 }) {
   const [owedTo, setOwedTo] = useState("");
   const [owed, setOwed] = useState("");
@@ -71,11 +101,44 @@ export function AddSettlement({
   const amount = entered !== null && entered >= 1 ? entered : null;
   const payment = parseMesos(got);
   const paid = payment !== null && payment >= 1 ? payment : null;
-  const debtor = debtors.find((one) => one.key === owedTo) ?? debtors[0];
-  const payer = payers.find((one) => one.key === paidBy) ?? payers[0];
+  // Every option of each picker, with the write it makes. A shared owner's direction is the option.
+  const debts: Choice[] = [
+    ...debtors.map((one) => ({
+      key: one.key,
+      label: one.name,
+      amountLabel: `Amount ${one.name} owes you`,
+      addLabel: `Add what ${one.name} owes you`,
+      add: (mesos: number, text: string) => onAddDebt(one.holder, mesos, text),
+    })),
+    // Their book counts what you owe them as positive. See SettlementDebt.amount.
+    ...shared.flatMap((one) => [
+      sharedChoice(`owe:${one.personId}`, `You owe ${one.name}`, (mesos, text) =>
+        onShared(one.personId, "debts", mesos, text),
+      ),
+      sharedChoice(`owed:${one.personId}`, `${one.name} owes you`, (mesos, text) =>
+        onShared(one.personId, "debts", -mesos, text),
+      ),
+    ]),
+  ];
+  const receipts: Choice[] = [
+    ...payers.map((one) => ({
+      key: one.key,
+      label: one.name,
+      amountLabel: `Amount ${one.name} has paid you`,
+      addLabel: `Add a payment from ${one.name}`,
+      add: (mesos: number, text: string) => onAddPayment(one.holder, mesos, text),
+    })),
+    ...shared.map((one) =>
+      sharedChoice(`paid:${one.personId}`, `You paid ${one.name}`, (mesos, text) =>
+        onShared(one.personId, "payments", mesos, text),
+      ),
+    ),
+  ];
+  const debtor = debts.find((one) => one.key === owedTo) ?? debts[0];
+  const payer = receipts.find((one) => one.key === paidBy) ?? receipts[0];
 
   // A picker of nobody is a control that cannot be completed, which is worse than no control.
-  if (payers.length === 0) return null;
+  if (receipts.length === 0) return null;
 
   async function write(action: Promise<void>, clear: () => void) {
     setRefusal(null);
@@ -103,7 +166,7 @@ export function AddSettlement({
             onSubmit={(e) => {
               e.preventDefault();
               if (!amount) return;
-              void write(onAddDebt(debtor.holder, amount, note.trim()), () => {
+              void write(debtor.add(amount, note.trim()), () => {
                 setOwed("");
                 setNote("");
               });
@@ -118,9 +181,9 @@ export function AddSettlement({
                 aria-label="Who owes you"
                 disabled={busy}
               >
-                {debtors.map((one) => (
+                {debts.map((one) => (
                   <option key={one.key} value={one.key}>
-                    {one.name}
+                    {one.label}
                   </option>
                 ))}
               </select>
@@ -133,7 +196,7 @@ export function AddSettlement({
                 onChange={(e) => setOwed(e.target.value)}
                 placeholder="1.5b"
                 inputMode="decimal"
-                aria-label={`Amount ${debtor.name} owes you`}
+                aria-label={debtor.amountLabel}
               />
             </label>
             <label className="loot-share-input is-grow is-stacked">
@@ -152,7 +215,7 @@ export function AddSettlement({
               type="submit"
               className="party-save ledger-add"
               disabled={busy || amount === null}
-              aria-label={`Add what ${debtor.name} owes you`}
+              aria-label={debtor.addLabel}
             >
               +
             </button>
@@ -170,7 +233,7 @@ export function AddSettlement({
             onSubmit={(e) => {
               e.preventDefault();
               if (!paid) return;
-              void write(onAddPayment(payer.holder, paid, gotNote.trim()), () => {
+              void write(payer.add(paid, gotNote.trim()), () => {
                 setGot("");
                 setGotNote("");
               });
@@ -185,9 +248,9 @@ export function AddSettlement({
                 aria-label="Who paid you"
                 disabled={busy}
               >
-                {payers.map((one) => (
+                {receipts.map((one) => (
                   <option key={one.key} value={one.key}>
-                    {one.name}
+                    {one.label}
                   </option>
                 ))}
               </select>
@@ -200,7 +263,7 @@ export function AddSettlement({
                 onChange={(e) => setGot(e.target.value)}
                 placeholder="1.5b"
                 inputMode="decimal"
-                aria-label={`Amount ${payer.name} has paid you`}
+                aria-label={payer.amountLabel}
               />
             </label>
             {/* The same box the entry above it carries, in the same words. A receipt that cannot say
@@ -219,7 +282,7 @@ export function AddSettlement({
               type="submit"
               className="party-save ledger-add"
               disabled={busy || paid === null}
-              aria-label={`Add a payment from ${payer.name}`}
+              aria-label={payer.addLabel}
             >
               +
             </button>

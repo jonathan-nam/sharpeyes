@@ -1,6 +1,6 @@
 "use client";
 
-import type { Settlement, SettlementTotals } from "@/lib/settlement";
+import type { SettlementTotals } from "@/lib/settlement";
 import { formatMesos } from "@/lib/drop-split";
 import { formatDollars } from "@/lib/money";
 
@@ -13,14 +13,9 @@ import { formatDollars } from "@/lib/money";
 // Every figure is summed off the CARDS. The Wallet had its own pass over the pools, which is how two
 // surfaces come to give two answers.
 
-export function SettlementSummary({
-  rows,
-  totals,
-}: {
-  rows: Settlement[];
-  totals: SettlementTotals;
-}) {
-  if (rows.length === 0) return null;
+export function SettlementSummary({ totals }: { totals: SettlementTotals }) {
+  // Your own cards and every shared one. See withSharedCards.
+  if (totals.people === 0) return null;
 
   return (
     <div className="stat-row">

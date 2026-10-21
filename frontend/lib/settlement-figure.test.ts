@@ -351,7 +351,7 @@ describe("what the card says a person owes", () => {
     // A line per person went here and came straight back out: the cards below say the same thing, at
     // more length and with something to do about it, so it was a second list of the same names half
     // a screen above the first.
-    expect(stage).toContain("<SettlementSummary rows={settlement} totals={totals} />");
+    expect(stage).toContain("<SettlementSummary totals={withSharedCards(totals, sharedCards)} />");
     expect(summary).not.toContain("settlement-strip");
     expect(css).not.toContain(".settlement-strip");
   });
@@ -361,7 +361,8 @@ describe("what the card says a person owes", () => {
     // answers. A strip disagreeing with the list under it is the same bug with a shorter walk.
     // Asserted on the IMPORTS, not on the prose: the comment above it has to be free to name the
     // pools in order to say why it does not read them.
-    expect(summary).toContain("rows: Settlement[]");
+    // Totals only: settlementTotals over your cards, plus the shared ones (withSharedCards).
+    expect(summary).toContain("{ totals: SettlementTotals }");
     expect(summary).not.toMatch(/^import .*(wallet|types\/loot)/m);
   });
 
@@ -388,7 +389,7 @@ describe("what the card says a person owes", () => {
     // The two halves of one conversation were recorded differently: a debt could say "for the Kalos
     // run" and the money arriving back could not say which debt it answered. Same box, same words,
     // and optional on both, so neither form waits on it. Both boxes are the entry card's now.
-    expect(entry).toContain("onAddPayment(payer.holder, paid, gotNote.trim())");
+    expect(entry).toContain("payer.add(paid, gotNote.trim())");
     expect(entry).toContain("const [gotNote, setGotNote] = useState");
     // Its own state. One box shared between the two forms would clear a half-typed note in the
     // other the moment either saved.

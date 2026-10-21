@@ -244,7 +244,7 @@ class SharedBooksTest {
             )
 
             // A second copy of the same debt, in the member's own book, is refused.
-            assertEquals("Mech keeps your shared book. Add it on their card.", ownBookRefusal(member, mech))
+            assertEquals("Mech keeps your shared book. Reload and pick them again.", ownBookRefusal(member, mech))
             assertNull(ownBookRefusal(owner, chris), "the owner's book is the shared one")
 
             // Each side takes back only its own.
