@@ -140,7 +140,12 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
         const row = writtenBy(act.id, act.source);
         return {
           key: act.id,
-          label: act.label === "paid" || act.label === "offset" ? paidLabel[act.source] : act.label,
+          label:
+            act.label === "you paid"
+              ? `${book.ownerName} paid you`
+              : act.label === "paid" || act.label === "offset"
+                ? paidLabel[act.source]
+                : act.label,
           mesos: act.amount,
           by: row?.recordedByYou === false ? (row.recordedByName ?? book.ownerName) : null,
           // Only a typed credit or a receipt: an offset is the owner's act on their own shares.
