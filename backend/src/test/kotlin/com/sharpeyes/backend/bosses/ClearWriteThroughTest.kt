@@ -210,7 +210,7 @@ class ClearWriteThroughTest {
     }
 
     @Test
-    fun `unlinking takes the member's copies with the seats`() {
+    fun `unlinking leaves the member their copy, as a clear of their own`() {
         transaction {
             val (warrior, creed, _) = shared()
             setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
@@ -218,7 +218,10 @@ class ClearWriteThroughTest {
 
             unlinkPerson(owner, bro)
 
-            assertNull(clearOf(creed))
+            // It was their clear in the game. The seats going does not un-clear it. See SharedSlice.kt.
+            val kept = clearOf(creed)!!
+            assertEquals(true, kept[BossClear.cleared])
+            assertNull(kept[BossClear.viaPartyId])
         }
     }
 

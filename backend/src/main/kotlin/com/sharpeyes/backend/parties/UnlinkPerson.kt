@@ -33,7 +33,8 @@ import kotlin.uuid.Uuid
  * other account still reading the party, its roster, its nights and what they sold for. An unlink
  * that does not revoke is worse than none, because it looks like it worked.
  *
- * The person stays, with whatever this account attributed to them by hand. Unlinking says "that is
+ * The person stays, with whatever this account attributed to them by hand, and each side keeps a
+ * copy of what it shared (SharedSlice.kt). Unlinking says "that is
  * not their account", not "I do not know them": deleting the person would take the attributions
  * with it and a payout still points at the seats.
  *
@@ -54,6 +55,10 @@ internal fun unlinkPerson(
     // above being the answer worth having.
     val account = person[Person.linkedUserId]
     if (account != null) {
+        // Each side keeps a copy of what it reached through the other. Both read before either is
+        // written, and before the seats that say what was shared are revoked. See SharedSlice.kt.
+        val now = Clock.System.now()
+        listOf(sliceOf(userId, account), sliceOf(account, userId)).forEach { writeSnapshot(it, now) }
         unlinkSide(userId, account)
         unlinkSide(account, userId)
     }
