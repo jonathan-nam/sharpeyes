@@ -764,7 +764,7 @@ object AuthAccount : Table("auth_account") {
     val accountId = text("accountId")
 }
 
-// Better Auth's user row, read only for the Discord avatar it was signed up with.
+// Better Auth's user row, read only for the Discord avatar the auth service keeps current.
 object AuthUser : Table("auth_user") {
     val id = text("id")
     val image = text("image").nullable()

@@ -5,6 +5,7 @@ import { CarouselFrame } from "@/components/carousel-frame";
 import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-characters";
 import { spriteUrl } from "@/lib/api";
 import { useCarousel } from "@/lib/use-carousel";
+import { ConfirmAct } from "@/components/confirm-act";
 import {
   type PersonDraft,
   characterNote,
@@ -166,15 +167,16 @@ export function PeopleBoard({
                     )}
                     {/* Only where there is an account to take off. A link is a bearer token, so one
                     that reached the wrong person is taken back here rather than being permanent. */}
+                    {/* Asks first: it ends the link on both sides at once, and only a new invite
+                        undoes it. */}
                     {row.linked && row.id != null && (
-                      <button
-                        type="button"
-                        className="party-delete"
-                        disabled={busy}
-                        onClick={() => onUnlink(row.id as string)}
-                      >
-                        Unlink
-                      </button>
+                      <ConfirmAct
+                        label="Unlink"
+                        question={`Unlink ${row.name}?`}
+                        keep="Keep"
+                        busy={busy}
+                        onConfirm={() => onUnlink(row.id as string)}
+                      />
                     )}
                     <button
                       type="button"

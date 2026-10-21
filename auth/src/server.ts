@@ -3,7 +3,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { toNodeHandler } from "better-auth/node";
 
 import { auth, PASSWORD_LOGIN, pool, TRUSTED_ORIGINS } from "./auth.js";
-import { backfillDiscordUsernames } from "./backfill.js";
+import { SYNC_EVERY_MS, syncDiscordProfiles } from "./discord-profiles.js";
 import { assertCanSendEmail } from "./email.js";
 import { env, optionalEnv } from "./env.js";
 
@@ -53,21 +53,24 @@ function applyCors(request: IncomingMessage, response: ServerResponse): boolean 
 }
 
 /**
- * The backfill, retried until its table exists.
+ * The first profile sync, retried until its table exists, then one every SYNC_EVERY_MS.
  *
  * This service starts BEFORE the backend (backend depends_on auth), and the backend is what runs the
- * migration that creates discord_username. So on the deploy that adds it, the first try always fails.
+ * migration that creates discord_username. So on a deploy that adds a table, the first try can fail.
  */
-async function backfillWhenMigrated() {
+async function syncWhenMigrated() {
   for (;;) {
     try {
-      await backfillDiscordUsernames(pool);
-      return;
+      await syncDiscordProfiles(pool);
+      break;
     } catch (e) {
-      console.error("Discord username backfill will retry in a minute", e);
+      console.error("Discord profile sync will retry in a minute", e);
       await new Promise((resolve) => setTimeout(resolve, 60_000));
     }
   }
+  setInterval(() => {
+    syncDiscordProfiles(pool).catch((e) => console.error("Discord profile sync failed", e));
+  }, SYNC_EVERY_MS);
 }
 
 const server = createServer((request, response) => {
@@ -87,5 +90,5 @@ server.listen(port, () => {
   // Named at startup because the one thing that silently breaks the backend is this service
   // serving a JWKS the backend is not reading. Both values in one line make that mismatch visible.
   console.log(`auth listening on :${port}, issuing for ${env("AUTH_BASE_URL")}`);
-  void backfillWhenMigrated();
+  void syncWhenMigrated();
 });

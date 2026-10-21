@@ -125,7 +125,7 @@ data class PartyResponse(
 data class PartyAccountResponse(
     /** As the viewer calls them. Null for the viewer themself. See loggerNames. */
     val name: String?,
-    /** Their Discord avatar, as Better Auth stored it at sign-up. Null when Discord had none. */
+    /** Their current Discord avatar, kept so by the auth service (discord-profiles.ts). */
     val image: String?,
     val leader: Boolean,
     val you: Boolean,
