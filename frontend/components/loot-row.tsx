@@ -251,9 +251,12 @@ export function LootRow({
         </div>
       )}
 
+      {/* Whoever logged a drop sells it: the rest of the party reads the row without the form.
+          See LootPermissions.kt. */}
       {loot.status === "PENDING" &&
         canSell &&
         !pieces &&
+        loot.recordedByYou !== false &&
         (!readOnly || sellers.length > 0) &&
         (selling ? (
           <LootSaleForm

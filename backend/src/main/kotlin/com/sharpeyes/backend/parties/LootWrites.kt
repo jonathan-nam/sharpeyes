@@ -139,6 +139,7 @@ internal fun sellLoot(
     partyId: Uuid,
     now: Instant,
 ) {
+    poolChanged(partyId)
     val row =
         PartyLoot
             .selectAll()
@@ -205,6 +206,7 @@ internal fun unsellLoot(
     lootId: Uuid,
     now: Instant,
 ) {
+    poolOfLootChanged(lootId)
     PartyLootPayout.deleteWhere { PartyLootPayout.lootId eq lootId }
     PartyLoot.update({ PartyLoot.id eq lootId }) {
         it[soldAt] = null
@@ -230,6 +232,7 @@ internal fun setLootTakenBy(
     memberId: Uuid?,
     now: Instant,
 ) {
+    poolOfLootChanged(lootId)
     PartyLoot.update({ PartyLoot.id eq lootId }) {
         it[takenByMemberId] = memberId
         it[updatedAt] = now
@@ -380,9 +383,12 @@ private fun lotRowRefusal(
     dropKey: String,
     row: LotRow,
 ): String? {
-    val loot = if (ownsParty(row.partyId, userId)) findLoot(row.lootId, row.partyId) else null
+    // A member's rows as well as the owner's, on the single sale's own terms: see sellRefusal.
+    val loot = if (canEditParty(row.partyId, userId)) findLoot(row.lootId, row.partyId, userId) else null
     return when {
         loot == null -> "a drop named here is not in your parties any more"
+        sellRefusal(row.partyId, userId, row.sellerMemberId, loot) != null ->
+            sellRefusal(row.partyId, userId, row.sellerMemberId, loot)!!.refusal
         !partyCanSell(row.partyId) -> "Heroic worlds do not trade, so this cannot be sold."
         loot.dropKey != dropKey -> "every row of a lot has to be the same drop"
         loot.soldAt != null -> "a drop named here has sold since this list was drawn, so reload it"
@@ -397,4 +403,7 @@ private fun lotRowRefusal(
 internal fun deleteLoot(
     lootId: Uuid,
     partyId: Uuid,
-): Boolean = PartyLoot.deleteWhere { (PartyLoot.id eq lootId) and (PartyLoot.partyId eq partyId) } > 0
+): Boolean {
+    poolChanged(partyId)
+    return PartyLoot.deleteWhere { (PartyLoot.id eq lootId) and (PartyLoot.partyId eq partyId) } > 0
+}

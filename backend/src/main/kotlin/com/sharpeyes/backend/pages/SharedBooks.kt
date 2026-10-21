@@ -55,7 +55,8 @@ internal fun bookBetween(
     val ids = parties.map { it.id }.toSet()
     val lootIds = mutableSetOf<String>()
     val pools =
-        allLootFor(owner)
+        // Who logged each drop is answered as the member: the one who logged it is who sells it.
+        allLootFor(owner, viewer = member)
             .filter { it.partyId in ids }
             .onEach { pool -> pool.loot.forEach { lootIds += it.id } }
 

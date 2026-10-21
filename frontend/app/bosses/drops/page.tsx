@@ -81,6 +81,9 @@ import type { DropTables } from "@/types/drop";
 import type { Loot, LogDropBody, PartyLootPool } from "@/types/loot";
 import type { DropLogPage, SharedBook } from "@/types/page";
 import { SharedCards } from "@/components/shared-cards";
+import { OthersSales } from "@/components/others-sales";
+import { splitByLogger } from "@/lib/sale-logger";
+import { useLive } from "@/lib/use-live";
 import { sharedCard } from "@/lib/shared-book";
 import { sharedHistory } from "@/lib/shared-history";
 import type { Party, Person } from "@/types/party";
@@ -285,6 +288,22 @@ export default function DropLogPage() {
     });
   }
 
+  // A sale into somebody else's pool is read back with the whole page: the writes above refresh
+  // your own pools, and theirs arrive through the shared books.
+  const saleWrites = {
+    ...writes,
+    lotSale: async (body: Parameters<typeof writes.lotSale>[0]) => {
+      await writes.lotSale(body);
+      await load().catch(() => {});
+    },
+    rowSale: async (...args: Parameters<typeof writes.rowSale>) => {
+      await writes.rowSale(...args);
+      await load().catch(() => {});
+    },
+  };
+  // A drop logged or sold by anybody in a party of yours, on screen without a reload.
+  useLive("loot", () => void load().catch(() => {}));
+
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
   const characterById = new Map(characters.map((c) => [c.id, c]));
   // Roster order, as /api/characters returns it (Characters.position). The same list the party
@@ -440,7 +459,12 @@ export default function DropLogPage() {
   // The piles of interchangeable drops waiting to be priced. Yours: a lot is filed against the seat
   // that sold it, and only your own seats are ones you can name as seller. A partner's pile stays on
   // its rows, where each names its own seller.
-  const { lots, alone } = saleQueues(parties, pools, dropTables, SELF_KEY);
+  // Every pool you ran in, other owners' included, cut by who logged each drop: that is who sells it.
+  // Yours go to the forms, the rest are listed. See lib/sale-logger.ts.
+  const byLogger = splitByLogger(logPools);
+  const { lots, alone } = saleQueues(logParties, byLogger.yours, dropTables, SELF_KEY);
+  const othersLog = saleQueues(logParties, byLogger.theirs, dropTables, SELF_KEY);
+  const loggedByOthers = [...othersLog.lots.flatMap((lot) => lot.queue), ...othersLog.alone];
   // The drops that price alone (an accessory, a hammer, a ring) come with them: yours for the same
   // reason a lot is, and one card each, because a queue of them could only guess which copy went.
   // Whether the sale boxes will draw anything, which decides with the coupon piles whether there is
@@ -646,16 +670,22 @@ export default function DropLogPage() {
                       and both lists leave those pools out anyway. */}
                     {money && (
                       <SaleCards
-                        page={{ parties, bosses, characters }}
+                        page={{ parties: logParties, bosses, characters }}
                         lots={lots}
                         alone={alone}
-                        writes={writes}
+                        writes={saleWrites}
                       />
                     )}
 
                     <PieceLedger ledgers={drawn} {...pileCard} />
                   </section>
                 )}
+
+                <OthersSales
+                  rows={money ? loggedByOthers : []}
+                  bossByKey={bossByKey}
+                  partyById={new Map(logParties.map((p) => [p.id, p]))}
+                />
 
                 {/* Last, and the one real boundary on this tab: every card above takes a sale, and this
                   one cannot be acted on for money at all. It names the nights whose arrangement

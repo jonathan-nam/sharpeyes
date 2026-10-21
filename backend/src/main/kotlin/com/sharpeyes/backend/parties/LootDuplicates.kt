@@ -68,5 +68,6 @@ internal fun addPoolDrop(
     if (duplicate != null) return Duplicate(duplicate)
     val lootId = addLoot(partyId, item, bossId, droppedOn, Clock.System.now(), LootSource(recordedBy = userId))
     addedBundles(lootId, partyId, request.bundles)
+    poolChanged(partyId)
     return findLoot(lootId, partyId, userId)!!
 }

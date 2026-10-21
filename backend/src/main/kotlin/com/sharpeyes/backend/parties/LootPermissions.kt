@@ -7,7 +7,10 @@ import kotlin.uuid.Uuid
 // every check here. A member acts only as their own seat, so a debt is never recorded in somebody
 // else's name. See docs/shared-parties-plan.md. Inside a transaction, like the rest.
 
-/** Selling as [sellerId], or correcting a sale already on [loot]: a member's own sales only. */
+/**
+ * Selling as [sellerId], or correcting a sale already on [loot]: only a drop you logged (see
+ * loggerRefusal), and a member only as their own seat.
+ */
 internal fun sellRefusal(
     partyId: Uuid,
     userId: String,
@@ -16,8 +19,16 @@ internal fun sellRefusal(
 ): Refusal? {
     val theirs = loot.sellerMemberId?.let(Uuid::parse)
     val allowed = mayActAs(partyId, userId, sellerId) && (theirs == null || mayActAs(partyId, userId, theirs))
-    return if (allowed) null else Refusal("You can only record your own sales. Pick yourself as the seller.")
+    return loggerRefusal(loot)
+        ?: if (allowed) null else Refusal("You can only record your own sales. Pick yourself as the seller.")
 }
+
+/**
+ * Selling [loot] at all: whoever logged it sells it, owner or member, and the rest of the party
+ * reads it. A drop logged before V84 has no recorder and is the owner's.
+ */
+internal fun loggerRefusal(loot: LootResponse): Refusal? =
+    if (loot.recordedByYou) null else Refusal("Someone else logged this drop. They record its sale.")
 
 /** Undoing [loot]'s sale: its seller or the owner. */
 internal fun unsellRefusal(

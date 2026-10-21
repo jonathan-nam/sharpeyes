@@ -179,8 +179,13 @@ internal fun lootFor(
  * For the wallet, which nets what you owe against what you are owed and so has to see all of them
  * at once. The rows are the same ones lootFor() returns, ungrouped and re-grouped here: a second
  * shape for the same drop is a second thing to keep in step.
+ *
+ * `recordedByYou` is answered for [viewer], the owner unless said: a shared book asks as the member.
  */
-internal fun allLootFor(userId: String): List<PartyLootPoolResponse> {
+internal fun allLootFor(
+    userId: String,
+    viewer: String = userId,
+): List<PartyLootPoolResponse> {
     val rows =
         lootWithCatalog()
             // For the world lens only. The pool itself needs nothing from the character, but the
@@ -205,13 +210,14 @@ internal fun allLootFor(userId: String): List<PartyLootPoolResponse> {
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
     val mine = ownSeatsIn(rows.map { it[PartyLoot.partyId] }.distinct())
     val response = { row: ResultRow ->
-        row.toLootResponse(
-            payoutsByLoot[row[PartyLoot.id]].orEmpty(),
-            ranByLoot[row[PartyLoot.id]].orEmpty(),
-            sharesByLoot[row[PartyLoot.id]].orEmpty(),
-            bundlesByLoot[row[PartyLoot.id]].orEmpty(),
-            mine,
-        )
+        row
+            .toLootResponse(
+                payoutsByLoot[row[PartyLoot.id]].orEmpty(),
+                ranByLoot[row[PartyLoot.id]].orEmpty(),
+                sharesByLoot[row[PartyLoot.id]].orEmpty(),
+                bundlesByLoot[row[PartyLoot.id]].orEmpty(),
+                mine,
+            ).copy(recordedByYou = (row[PartyLoot.recordedByUserId] ?: userId) == viewer)
     }
     // groupBy keeps the order rows arrived in, so each pool stays newest-first.
     return rows
