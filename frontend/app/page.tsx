@@ -5,7 +5,7 @@ import { type ReactNode } from "react";
 import { HeroFold } from "@/components/hero-fold";
 import { PageMark, SectionMark } from "@/components/section-mark";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
-import { SignInButton } from "@/components/sign-in-button";
+import { SignedOutHero } from "@/components/signed-out-hero";
 import { spriteUrl } from "@/lib/api";
 import { homeSections, sectionHref } from "@/lib/drop-sections";
 import { HOME_ROWS, type HomeRow } from "@/lib/section-menu";
@@ -88,11 +88,7 @@ export default function Home() {
           </nav>
         </section>
       ) : (
-        <section className="hero">
-          <SharpEyesMark size={96} />
-          <h1>SharpEyes</h1>
-          <SignInButton />
-        </section>
+        <SignedOutHero />
       )}
     </main>
   );

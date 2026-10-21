@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthField, AuthForm } from "@/components/auth-form";
 import { SignInButton } from "@/components/sign-in-button";
+import { SignedOutHero } from "@/components/signed-out-hero";
 import { authClient, PASSWORD_LOGIN } from "@/lib/auth-client";
 
 export default function SignIn() {
@@ -31,10 +32,7 @@ export default function SignIn() {
   if (!PASSWORD_LOGIN) {
     return (
       <main className="page">
-        <section className="auth-panel">
-          <h1>Sign In</h1>
-          <SignInButton />
-        </section>
+        <SignedOutHero />
       </main>
     );
   }

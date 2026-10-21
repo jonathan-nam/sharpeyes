@@ -7777,6 +7777,12 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   color: var(--bad);
 }
 
+/* Under the hero's Discord button, where `.hero p` would grey it out. */
+.hero .auth-error {
+  margin: 10px 0 0;
+  color: var(--bad);
+}
+
 .auth-done,
 .auth-footer {
   margin: 12px 0 0;
