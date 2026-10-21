@@ -38,12 +38,12 @@ internal class MoneyRow(
 internal class TrancheRow(
     /** True when the owner's own pile sold it; false when it was the reader's. */
     val ownersPile: Boolean,
-    val pieces: Int,
+    val pieces: Double,
     val disposition: String,
     val amount: Long?,
     val soldAt: Instant,
     /** Pieces of it that were the OTHER side's: the reader's on the owner's pile, and the other way. */
-    val otherSides: Int,
+    val otherSides: Double,
 )
 
 internal class ClosureRow(
@@ -66,13 +66,13 @@ internal class SharedMoney(
 
 /**
  * One side's share of a priced sale, as saleCredits in lib/vestige-ledger.ts rounds it: to the meso,
- * half up. Integer arithmetic, so the two cannot disagree by a float.
+ * half up, which is what Math.round does in both languages.
  */
 internal fun shareOfSale(
-    sharePieces: Int,
+    sharePieces: Double,
     amount: Long,
-    pieces: Int,
-): Long = (2 * sharePieces * amount + pieces) / (2L * pieces)
+    pieces: Double,
+): Long = Math.round(sharePieces * amount / pieces)
 
 /** What [owner]'s book files under [person], and the coupon acts between the two piles. */
 internal fun readMoney(
@@ -289,7 +289,7 @@ private fun writeTranche(
         it[soldAt] = tranche.soldAt
         it[createdAt] = now
     }
-    if (tranche.otherSides == 0) return
+    if (tranche.otherSides <= 0) return
     VestigeTrancheShare.insert {
         it[VestigeTrancheShare.id] = Uuid.random()
         it[trancheId] = id

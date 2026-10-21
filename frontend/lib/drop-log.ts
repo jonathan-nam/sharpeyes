@@ -16,6 +16,7 @@
 // party member bought it for, which no fee came off. It is the only cross-basis sum that means one
 // thing.
 
+import { formatPieces } from "./piece-ledger";
 import { formatWeekStart } from "./boss-clears";
 import { saleMoney, splitOf, statusLabel } from "./loot";
 import type { Currency } from "./money";
@@ -492,7 +493,7 @@ export function couponNote(entry: DropEntry): string | null {
   const side = couponSide(entry);
   if (side === null) return null;
   if (!side.youHold) return `${side.name} looted`;
-  return entry.owedByYou > 0 ? `${entry.owedByYou} of ${side.name}'s` : null;
+  return entry.owedByYou > 0 ? `${formatPieces(entry.owedByYou)} of ${side.name}'s` : null;
 }
 
 /**

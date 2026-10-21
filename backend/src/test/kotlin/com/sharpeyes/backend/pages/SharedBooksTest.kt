@@ -229,7 +229,7 @@ class SharedBooksTest {
             insertSharedTranche(
                 book,
                 member,
-                TrancheEntry(60, 3_000_000_000, SOLD, listOf(VestigeTrancheShareRow(VestigeHolder(SELF), 30))),
+                TrancheEntry(60.0, 3_000_000_000, SOLD, listOf(VestigeTrancheShareRow(VestigeHolder(SELF), 30.0))),
                 now,
             )
 
@@ -239,7 +239,7 @@ class SharedBooksTest {
             assertEquals(listOf(true), asMember.debts.map { it.recordedByYou })
             assertEquals(listOf(true), asMember.payments.map { it.recordedByYou })
             assertEquals(
-                listOf(30),
+                listOf(30.0),
                 asMember.tranches
                     .single()
                     .shares

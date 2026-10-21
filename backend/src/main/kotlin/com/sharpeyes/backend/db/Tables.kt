@@ -541,7 +541,7 @@ object VestigeTranche : Table("vestige_tranche") {
     val holderKind = text("holder_kind")
     val personId = optReference("person_id", Person.id)
     val characterName = text("character_name").nullable()
-    val pieces = integer("pieces")
+    val pieces = double("pieces")
 
     // SOLD or KEPT. A redemption is a sale minus the money, and its pieces come out of the pile
     // every price is derived from rather than being priced at nothing. See V46.
@@ -571,7 +571,7 @@ object VestigeTrancheShare : Table("vestige_tranche_share") {
     val personId = optReference("person_id", Person.id)
     val characterName = text("character_name").nullable()
 
-    val pieces = integer("pieces")
+    val pieces = double("pieces")
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)

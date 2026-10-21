@@ -31,11 +31,13 @@ describe("what each seat was entitled to", () => {
     expect([...share.values()]).toEqual([45, 45, 45, 45]);
   });
 
-  it("hands the odd pieces out rather than losing them", () => {
-    // 181 across four is 45.25 each. Somebody gets the 46th piece, and the four still add to 181.
-    const share = entitlements(181, kalos([181, 0, 0, 0]));
-    expect([...share.values()].reduce((a, b) => a + b, 0)).toBe(181);
-    expect([...share.values()].sort((a, b) => b - a)).toEqual([46, 45, 45, 45]);
+  it("leaves a share that does not divide exact, rather than handing somebody the odd piece", () => {
+    // 181 across four is 45.25 each, and the ledger says so. Coupons trade whole, so the quarters are
+    // the four of them to settle. Normal Jupiter's 45 across two is 22.5, not 23 and 22.
+    expect([...entitlements(181, kalos([181, 0, 0, 0])).values()]).toEqual([
+      45.25, 45.25, 45.25, 45.25,
+    ]);
+    expect([...entitlements(45, [seat("a", 45), seat("b", 0)]).values()]).toEqual([22.5, 22.5]);
   });
 
   it.each([
@@ -48,7 +50,8 @@ describe("what each seat was entitled to", () => {
   ])("always adds up to what dropped: %i across %i", (total, size) => {
     const seats = Array.from({ length: size }, (_, i) => seat(`s${i}`, 0));
     const share = entitlements(total, seats);
-    expect([...share.values()].reduce((a, b) => a + b, 0)).toBe(total);
+    // To the millionth a share is held to. See pieces().
+    expect([...share.values()].reduce((a, b) => a + b, 0)).toBeCloseTo(total, 5);
   });
 
   it("gives a bigger weight a bigger entitlement", () => {
@@ -368,5 +371,40 @@ describe("placeSales", () => {
   it("refuses a sale the nights cannot cover, rather than placing part of it", () => {
     const big = { pieces: 500, recordedAt: "2026-09-01T00:00:00Z" };
     expect(placeSales(nights, [big]).get(big)).toBeNull();
+  });
+});
+
+describe("a night that does not divide", () => {
+  // Normal Jupiter: 45 coupons in three stacks of 15, two of them. It said 23 owed, which handed one
+  // of them the other's half a coupon.
+  const jupiter = (looted: [number, number]) => ({
+    id: "jupiter",
+    weekStart: "2026-10-15",
+    order: 0,
+    total: 45,
+    seats: [seat("Mech", looted[0]), seat("Bro", looted[1])],
+  });
+
+  it("owes the exact half, whoever looted the lot", () => {
+    expect(transfersOf(jupiter([45, 0])).map((t) => [t.from, t.to, t.pieces])).toEqual([
+      ["Mech", "Bro", 22.5],
+    ]);
+  });
+
+  it("owes what is over the share when the stacks were split two and one", () => {
+    expect(transfersOf(jupiter([30, 15])).map((t) => t.pieces)).toEqual([7.5]);
+  });
+
+  it("clears a third without leaving any of a coupon behind", () => {
+    const night = {
+      ...jupiter([45, 0]),
+      total: 61,
+      seats: [seat("a", 61), seat("b", 0), seat("c", 0)],
+    };
+    const moved = transfersOf(night).map((t) => t.pieces);
+    expect(moved).toEqual([20.333333, 20.333334]);
+    expect(balances(61, night.seats).map((b) => b.balance)).toEqual([
+      -40.666667, 20.333333, 20.333334,
+    ]);
   });
 });

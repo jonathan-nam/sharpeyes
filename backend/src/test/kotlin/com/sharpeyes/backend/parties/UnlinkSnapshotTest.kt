@@ -330,9 +330,9 @@ class UnlinkSnapshotTest {
 class ShareOfSaleTest {
     @Test
     fun `rounds to the meso, half up, like Math round`() {
-        assertEquals(6_000_000_000, shareOfSale(30, 12_000_000_000, 60))
-        assertEquals(3, shareOfSale(1, 10, 3)) // 3.33
-        assertEquals(3, shareOfSale(1, 5, 2)) // 2.5, up
-        assertEquals(7, shareOfSale(2, 10, 3)) // 6.67
+        assertEquals(6_000_000_000, shareOfSale(30.0, 12_000_000_000, 60.0))
+        assertEquals(3, shareOfSale(1.0, 10, 3.0)) // 3.33
+        assertEquals(3, shareOfSale(1.0, 5, 2.0)) // 2.5, up
+        assertEquals(7, shareOfSale(2.0, 10, 3.0)) // 6.67
     }
 }
