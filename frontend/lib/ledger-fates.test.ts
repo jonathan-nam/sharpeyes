@@ -758,7 +758,7 @@ describe("the piles the ledger holds back", () => {
   });
 
   it("counts only what draws, so the empty line is not held off by a card nobody sees", () => {
-    expect(page).toMatch(/holders: drawn\.length,/);
+    expect(page).toMatch(/holders: drawn\.length \+ sharedPiles\.length,/);
   });
 });
 

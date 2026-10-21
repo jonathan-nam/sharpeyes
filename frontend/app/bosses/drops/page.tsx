@@ -24,7 +24,7 @@ import {
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { decidedSales, splittableDebts, yourPiles } from "@/lib/settlement";
-import { heldOfYoursBy, stillAsking, worthDrawing } from "@/lib/ledger-fates";
+import { heldOfYoursBy, outstandingOf, stillAsking, worthDrawing } from "@/lib/ledger-fates";
 import { settlementView, VESTIGE, vestigeOf } from "@/lib/settlement-view";
 import {
   DEBTS_KEY,
@@ -85,7 +85,9 @@ import { OthersSales } from "@/components/others-sales";
 import { splitByLogger } from "@/lib/sale-logger";
 import { useLive } from "@/lib/use-live";
 import { sharedCard } from "@/lib/shared-book";
+import { loggedTwice, withoutLoot } from "@/lib/duplicate-runs";
 import { sharedHistory } from "@/lib/shared-history";
+import { sharedPile } from "@/lib/shared-pile";
 import type { Party, Person } from "@/types/party";
 import type {
   ProceedsDisposal,
@@ -348,9 +350,21 @@ export default function DropLogPage() {
   // The ledger reads the WHOLE account, not the filtered log. A pile is one person's, spanning
   // every boss any of their characters loots for, so showing the part of it that falls in the
   // chosen month would price those bosses off a fraction of the sales that paid for them.
+  // Other owners' books from your side, so a drop you ran in their party is in your log and your
+  // settled record. Read-only: nothing below that writes is handed these.
+  const shared = sharedHistory(sharedBooks);
+  // A run in both your party and theirs counts once, as the owner's copy. Yours of it counts nowhere.
+  const twice = loggedTwice(
+    { parties, pools },
+    {
+      ...shared,
+      ownerOf: new Map(sharedBooks.flatMap((b) => b.parties.map((p) => [p.id, b.ownerName]))),
+    },
+  );
+  const counted = withoutLoot(pools, twice);
   const view = settlementView({
     parties,
-    pools,
+    pools: counted,
     bosses,
     people,
     tranches,
@@ -360,11 +374,8 @@ export default function DropLogPage() {
     disposals,
   });
   const { closures, settled, ledgers, holderNames, offsetShares, credits } = view;
-  // Other owners' books from your side, so a drop you ran in their party is in your log and your
-  // settled record. Read-only: nothing below that writes is handed these.
-  const shared = sharedHistory(sharedBooks);
   const logParties = [...parties, ...shared.parties];
-  const logPools = [...pools, ...shared.pools];
+  const logPools = [...counted, ...shared.pools];
   const closedInLog = new Set([...closures.closed, ...closedByHolder(shared.settlements).closed]);
   // The whole log is kept alongside the filtered one so the toolbar does not come and go: which
   // controls exist is a property of the account, not of what the filter currently leaves.
@@ -456,7 +467,7 @@ export default function DropLogPage() {
   // tranche ledger or the view is every sale but the vestiges. See SettledTotals.pooled.
   const settledCounts = settledTotals(settledRows, couponMoney(tranches));
   const settledOrphans = orphansOf(whole.entries, [...settlements, ...shared.settlements]);
-  const open = unanswered(parties, pools, VESTIGE);
+  const open = unanswered(parties, counted, VESTIGE);
   // Only the drops still open tilt the rotation: a debt that has been closed was compensated, so it
   // has no business suggesting against the same person forever. See V52.
   const behind = runningBalance(stillOpen(settled, closures.closed));
@@ -555,12 +566,27 @@ export default function DropLogPage() {
     onRemoveSale: (trancheId: string) =>
       writes.saleWrite(`${TRANCHES_KEY}/${trancheId}`, { method: "DELETE" }),
   };
+  // Your pile in each book you share, drawn with the same card and written into THAT book: a coupon
+  // sale out of it is the owner's ledger's row, which both of you read. See lib/shared-pile.ts.
+  const sharedPiles = sharedBooks
+    .flatMap((book) => sharedPile(book, bosses) ?? [])
+    .filter((pile) => outstandingOf(pile.ledger, pile.heldOfYours) > 0);
+  const intoBook = (personId: string, path: string, init: RequestInit) =>
+    writes.track(async () => {
+      await apiFetch<unknown>(
+        `/api/shared-books/${encodeURIComponent(personId)}/${path}`,
+        init,
+        getToken,
+      );
+      await readBack(load);
+    });
+  const tranche = (body: object): RequestInit => ({ method: "POST", body: JSON.stringify(body) });
   // Whether either ledger has anything on it, which is what decides between its cards and one line
   // saying there are none. All three tabs are always offered. See lib/drop-sections.ts.
   const hasSales =
     saleCards({
       unanswered: open.length,
-      holders: drawn.length,
+      holders: drawn.length + sharedPiles.length,
       lots: money ? lots.length : 0,
       rows: money ? alone.length : 0,
     }) > 0;
@@ -683,6 +709,17 @@ export default function DropLogPage() {
                   />
                 ))}
 
+                {twice.size > 0 && (
+                  <ul className="ledger-notes">
+                    {[...Map.groupBy(twice.values(), (owner) => owner)].map(([owner, rows]) => (
+                      <li key={owner}>
+                        {rows.length} {rows.length === 1 ? "drop" : "drops"} also in {owner}&apos;s
+                        party, counted there.
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 {/* A split that cannot be read is money missing from a total, so it is said where the
                   totals are, which is the Settled View. Said here it named an absence from figures
                   this tab no longer states. */}
@@ -698,7 +735,7 @@ export default function DropLogPage() {
                   more of the same thing and there is nothing there to divide. */}
                 {/* Gated on what will actually draw, not on there being ledgers at all: a pile held
                   back for owing nobody leaves the heading standing over nothing. */}
-                {(anythingToPrice || drawn.length > 0) && (
+                {(anythingToPrice || drawn.length > 0 || sharedPiles.length > 0) && (
                   <section className="loot-pool">
                     <h2 className="loot-pool-title">Outstanding Sales</h2>
 
@@ -714,6 +751,46 @@ export default function DropLogPage() {
                     )}
 
                     <PieceLedger ledgers={drawn} {...pileCard} />
+                    {sharedPiles.map((pile) => (
+                      <PieceLedger
+                        key={pile.personId}
+                        ledgers={[pile.ledger]}
+                        heldOfYours={pile.heldOfYours}
+                        tranches={pile.tranches}
+                        decided={pile.decided}
+                        bossByKey={bossByKey}
+                        partyById={new Map(logParties.map((p) => [p.id, p]))}
+                        iconUrl={vestigeIcon}
+                        busy={busy}
+                        // The holder is the book's to set: always your person row in it.
+                        onAddSale={(_holder, pieces, amount, shares) =>
+                          intoBook(
+                            pile.personId,
+                            "tranches",
+                            tranche({ pieces, amount, disposition: "SOLD", shares }),
+                          )
+                        }
+                        onAddKept={(_holder, pieces) =>
+                          intoBook(
+                            pile.personId,
+                            "tranches",
+                            tranche({ pieces, disposition: "KEPT" }),
+                          )
+                        }
+                        onAddBought={(_holder, pieces, amount, shares) =>
+                          intoBook(
+                            pile.personId,
+                            "tranches",
+                            tranche({ pieces, amount, disposition: "BOUGHT", shares }),
+                          )
+                        }
+                        onRemoveSale={(id) =>
+                          intoBook(pile.personId, `tranches/${encodeURIComponent(id)}`, {
+                            method: "DELETE",
+                          })
+                        }
+                      />
+                    ))}
                   </section>
                 )}
 

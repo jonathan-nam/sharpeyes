@@ -57,7 +57,8 @@ describe("the way in for somebody with no card", () => {
     // box inside that card was the only place a payment from them could be entered. A people-only
     // picker out here would have dropped the act, silently.
     expect(component).toContain('one.holder.kind !== "PERSON"');
-    expect(stage).toContain("holders={settlement.map((row) => ({");
+    // Every card's holder, less the people whose shared book takes their entries instead.
+    expect(stage).toMatch(/holders=\{settlement\s+\.filter\(\(row\) => !sharedOwners/);
     // A debt is still against a PERSON: that is what the holder fold has meant since V39.
     expect(component).toContain("const debtors: Payer[] = people.map((person) => ({");
   });
