@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.bosses.partySeatsChanged
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
@@ -87,11 +88,21 @@ private fun revokeSeats(
                 .selectAll()
                 .where { Party.userId eq userId }
                 .map { it[Party.id] }
-        if (myParties.isNotEmpty()) {
+        val touched =
+            PartyMember
+                .selectAll()
+                .where {
+                    (PartyMember.partyId inList myParties) and
+                        (PartyMember.linkedCharacterId inList theirCharacters)
+                }.map { it[PartyMember.partyId] }
+                .toSet()
+        if (touched.isNotEmpty()) {
             PartyMember.update({
-                (PartyMember.partyId inList myParties) and
+                (PartyMember.partyId inList touched.toList()) and
                     (PartyMember.linkedCharacterId inList theirCharacters)
             }) { it[linkedCharacterId] = null }
+            // Their copies of your clears go with the seats. See ClearWriteThrough.kt.
+            touched.forEach { partySeatsChanged(it, Clock.System.now()) }
         }
     }
 }

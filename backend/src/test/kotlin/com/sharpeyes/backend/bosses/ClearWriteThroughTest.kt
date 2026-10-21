@@ -8,6 +8,7 @@ import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.PartyWeekSeat
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.invites.seatInLinkedParties
 import com.sharpeyes.backend.parties.PersonRequest
 import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.SavePeopleRequest
@@ -16,6 +17,7 @@ import com.sharpeyes.backend.parties.createParty
 import com.sharpeyes.backend.parties.findParty
 import com.sharpeyes.backend.parties.partiesSeatedIn
 import com.sharpeyes.backend.parties.savePeople
+import com.sharpeyes.backend.parties.unlinkPerson
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
@@ -169,6 +171,54 @@ class ClearWriteThroughTest {
             own(cleared = true, at = now + 3.hours)
             setBossClearByHand(owner, warrior, kalos, false, now + 4.hours)
             assertEquals(true, memberSees())
+        }
+    }
+
+    @Test
+    fun `a member linked after the owner cleared gets it as their seat is bound`() {
+        transaction {
+            val warrior = character(owner, "warrior2020")
+            val creed = character(member, "CreedBratton")
+            val request = SavePartyRequest(warrior.toString(), kalos, listOf("CreedBratton"))
+            createParty(owner, warrior, bossIdForKey(kalos)!!, request, Clock.System.now())
+            setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
+            assertNull(clearOf(creed), "nobody is linked yet")
+
+            savePeople(owner, SavePeopleRequest(listOf(PersonRequest(null, "Bro", emptyList()))), Clock.System.now())
+            Person.update({ Person.userId eq owner }) { it[linkedUserId] = member }
+            seatInLinkedParties(member, creed, "CreedBratton", WORLD_INTERACTIVE)
+
+            assertEquals(true, memberSees())
+        }
+    }
+
+    @Test
+    fun `the boot pass copies a clear from before the copies existed, once`() {
+        transaction {
+            val (warrior, creed, _) = shared()
+            setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
+            // As every clear recorded before V87 is: no copy behind it.
+            BossClear.deleteWhere { BossClear.characterId eq creed }
+
+            copyCurrentClears(Clock.System.now())
+            val first = clearOf(creed)?.get(BossClear.capturedAt)
+            copyCurrentClears(Clock.System.now())
+
+            assertEquals(true, memberSees())
+            assertEquals(first, clearOf(creed)?.get(BossClear.capturedAt), "a second pass writes nothing")
+        }
+    }
+
+    @Test
+    fun `unlinking takes the member's copies with the seats`() {
+        transaction {
+            val (warrior, creed, _) = shared()
+            setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
+            val bro = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
+
+            unlinkPerson(owner, bro)
+
+            assertNull(clearOf(creed))
         }
     }
 
