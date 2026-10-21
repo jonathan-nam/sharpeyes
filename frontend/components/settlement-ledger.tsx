@@ -4,6 +4,7 @@ import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { Fragment, useState } from "react";
 import { DiscordAvatar } from "@/components/discord-avatar";
+import { WeekFilter } from "@/components/week-stepper";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import {
@@ -877,22 +878,8 @@ function SettlementCard({
                 <div className="ledger-offsets-panel" id={`off-${row.key}`}>
                   {weeks.length > 1 && (
                     <div className="ledger-filter">
-                      <label className="ledger-step" htmlFor={`off-week-${row.key}`}>
-                        Filter By
-                      </label>
-                      <select
-                        id={`off-week-${row.key}`}
-                        className="ledger-week"
-                        value={weekShown}
-                        onChange={(e) => setWeek(e.target.value)}
-                      >
-                        <option value="">All Weeks</option>
-                        {weeks.map((w) => (
-                          <option key={w} value={w}>
-                            Week of {formatWeekStart(w)}
-                          </option>
-                        ))}
-                      </select>
+                      <span className="ledger-step">Filter By</span>
+                      <WeekFilter weeks={weeks} shown={weekShown} onSelect={setWeek} />
                     </div>
                   )}
                   <ul className="ledger-queue">
@@ -1197,22 +1184,12 @@ function SettlementCard({
                 <div className="ledger-offsets-panel" id={`nights-${row.key}`}>
                   {nightWeeks.length > 1 && (
                     <div className="ledger-filter">
-                      <label className="ledger-step" htmlFor={`nights-week-${row.key}`}>
-                        Filter By
-                      </label>
-                      <select
-                        id={`nights-week-${row.key}`}
-                        className="ledger-week"
-                        value={nightWeekShown}
-                        onChange={(e) => setNightWeek(e.target.value)}
-                      >
-                        <option value="">All Weeks</option>
-                        {nightWeeks.map((w) => (
-                          <option key={w} value={w}>
-                            Week of {formatWeekStart(w)}
-                          </option>
-                        ))}
-                      </select>
+                      <span className="ledger-step">Filter By</span>
+                      <WeekFilter
+                        weeks={nightWeeks}
+                        shown={nightWeekShown}
+                        onSelect={setNightWeek}
+                      />
                     </div>
                   )}
                   {/* Whose inventory, and ONLY where that is a question.
