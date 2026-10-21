@@ -53,11 +53,11 @@ describe("a pool somebody else keeps", () => {
     expect(row).toContain("{readOnly ? ( <span");
   });
 
-  it("lists a shared party with no writes at all", () => {
-    // The card a party somebody else owns is drawn with on Party View: every write is its owner's,
-    // and recording into it is done on its own page.
+  it("lists a shared party with the clear as its one write", () => {
+    // The card a party somebody else owns is drawn with on Party View. The clear is the whole
+    // party's run, so anybody in it may tick it; every other write is done on its own page.
     const card = /function sharedCard\([\s\S]*?\); \}/.exec(list)?.[0] ?? "";
     expect(card).toContain("<PartyCard");
-    expect(card.match(/ on[A-Z]\w+=/g)).toBeNull();
+    expect(card.match(/ on[A-Z]\w+=/g)).toEqual([" onToggleClear="]);
   });
 });
