@@ -31,6 +31,8 @@ data class FriendView(
     val username: String?,
     val name: String?,
     val spriteImgUrl: String?,
+    /** Their current Discord avatar. See imagesOf. */
+    val image: String? = null,
 )
 
 @Serializable

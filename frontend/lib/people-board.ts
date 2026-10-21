@@ -13,6 +13,8 @@ export type PersonDraft = {
   characters: string[];
   owned: string[];
   linked?: boolean;
+  /** Their Discord avatar, when linked. Read-only, from the server. */
+  image?: string | null;
   /** Filed under them, not on their account. Read-only, from the server. See PersonResponse. */
   notOnAccount?: string[];
   /** Theirs, and also on another account you are linked to. */
@@ -145,6 +147,7 @@ export function toDraft(rows: Person[]): PersonDraft[] {
     characters: [...(person.characters ?? [])],
     owned: [...(person.ownedCharacters ?? [])],
     linked: person.linked ?? false,
+    image: person.image ?? null,
     notOnAccount: [...(person.notOnAccount ?? [])],
     contested: [...(person.contested ?? [])],
   }));
@@ -190,4 +193,18 @@ export function characterNote(row: PersonDraft, name: string): string | null {
 export function contestedOffCard(row: PersonDraft): string[] {
   const shown = new Set([...row.characters, ...row.owned].map(key));
   return (row.contested ?? []).filter((name) => !shown.has(key(name)));
+}
+
+/**
+ * The rows split by whether they sign in as an account of their own, each keeping its index in
+ * [people], which is what every edit is addressed by. A section with nobody in it is left out.
+ */
+export function sectionsOf(
+  people: PersonDraft[],
+): { title: "Verified" | "Unverified"; rows: { row: PersonDraft; index: number }[] }[] {
+  const indexed = people.map((row, index) => ({ row, index }));
+  return [
+    { title: "Verified" as const, rows: indexed.filter(({ row }) => row.linked) },
+    { title: "Unverified" as const, rows: indexed.filter(({ row }) => !row.linked) },
+  ].filter((section) => section.rows.length > 0);
 }

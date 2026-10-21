@@ -427,7 +427,8 @@ describe("a receipt on the card", () => {
   it("is an act in the history, beside the offsets that also came off", () => {
     expect(source).toContain("moneyRows(row, payments.counted)");
     expect(settlement).toContain('source: "PAYMENT"');
-    expect(settlement).toContain('label: got.note ?? "paid"');
+    // Either way round (V89): a negative receipt is one you sent.
+    expect(settlement).toContain('label: got.note ?? (got.amount < 0 ? "you paid" : "paid")');
   });
 
   it("is not also folded into a received line, which said the sum and nothing else", () => {

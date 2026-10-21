@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
+import { DiscordAvatar } from "@/components/discord-avatar";
 import { ArmedRemove } from "@/components/settlement-ledger";
 import { failureText } from "@/lib/api";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
@@ -56,7 +57,10 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
     <section className="ledger-card">
       <header className="ledger-head">
         <span className="loot-title">
-          <span className="loot-name">{card.name}</span>
+          <span className="loot-name ledger-who">
+            <DiscordAvatar image={card.image} size="sm" />
+            {card.name}
+          </span>
           <span className="loot-meta ledger-summary is-open">
             {card.owed > 0 && (
               <CopyAmount value={card.owed} display={`${formatMesos(card.owed, true)} owed`} />

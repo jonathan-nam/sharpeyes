@@ -2,6 +2,7 @@ package com.sharpeyes.backend.friends
 
 import com.sharpeyes.backend.db.FriendRequest
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.parties.imageOf
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
@@ -17,7 +18,7 @@ private fun view(
     name: String? = null,
 ): FriendView {
     val (main, sprite) = faceOf(account)
-    return FriendView(id.toString(), discordUsernameOf(account), name ?: main, sprite)
+    return FriendView(id.toString(), discordUsernameOf(account), name ?: main, sprite, imageOf(account))
 }
 
 private fun requests(

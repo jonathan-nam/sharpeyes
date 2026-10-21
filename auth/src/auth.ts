@@ -52,20 +52,34 @@ export const pool = new Pool({
 });
 
 /**
- * The Discord username, which is what a friend request is addressed to. See V86.
+ * The Discord username, which is what a friend request is addressed to (V86), and the avatar every
+ * shared party and the People page draw.
  *
- * Every sign-in, because a username can change. A failure is logged and the sign-in goes ahead:
- * nobody should be locked out over a name used only for finding friends.
+ * At every sign-in and on discord-profiles.ts's timer, because both can change. The avatar is
+ * written to an EXISTING account's user row: Better Auth only sets it at sign-up, and on a sign-up
+ * there is no account yet, so this touches nothing and Better Auth's own write stands. A failure is
+ * logged and the sign-in goes ahead: nobody should be locked out over a name or a picture.
  */
-export async function recordDiscordUsername(db: Pool, discordId: string, username: string) {
+export async function recordDiscordProfile(
+  db: Pool,
+  discordId: string,
+  username: string,
+  image: string | null,
+) {
   try {
     await db.query(
       `INSERT INTO discord_username (discord_id, username, updated_at) VALUES ($1, $2, now())
        ON CONFLICT (discord_id) DO UPDATE SET username = EXCLUDED.username, updated_at = now()`,
       [discordId, username],
     );
+    await db.query(
+      `UPDATE auth_user SET image = $2, "updatedAt" = now()
+        WHERE id IN (SELECT "userId" FROM auth_account WHERE "providerId" = 'discord' AND "accountId" = $1)
+          AND image IS DISTINCT FROM $2`,
+      [discordId, image],
+    );
   } catch (e) {
-    console.error("could not record the Discord username", e);
+    console.error("could not record the Discord profile", e);
   }
 }
 
@@ -131,7 +145,7 @@ export const auth = betterAuth({
       // snowflake, which is stable and unique. Left unverified on purpose: `emailVerified` is what
       // account linking matches on, and a made-up address must never link two people together.
       mapProfileToUser: async (profile) => {
-        await recordDiscordUsername(pool, profile.id, profile.username);
+        await recordDiscordProfile(pool, profile.id, profile.username, profile.image_url);
         return profile.email
           ? {}
           : { email: `${profile.id}@${NO_EMAIL_DOMAIN}`, emailVerified: false };

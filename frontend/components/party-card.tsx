@@ -30,6 +30,7 @@ import type { BossDrop, DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Party } from "@/types/party";
 import { partyHref } from "@/lib/party-path";
+import { PartyAccounts } from "@/components/party-accounts";
 
 // One config: who ran this boss this week, and what its pool is up to.
 //
@@ -243,6 +244,7 @@ export function PartyCard({
           {heading}
         </Link>
         <span className="party-row-label">{partySizeLabel(party.members.length)}</span>
+        <PartyAccounts accounts={party.accounts ?? []} />
 
         {/* A boss that drops vestige coupons, said with the coupon itself. A fact about the boss and
             its difficulty rather than about anything that has happened, so it does not come and go

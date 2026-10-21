@@ -87,12 +87,23 @@ export function SettlementStage({
             body: JSON.stringify({ holder, amount, note: note || undefined }),
           })
         }
-        shared={sharedCards.map((card) => ({ personId: card.personId, name: card.name }))}
+        shared={sharedCards.map((card) => ({
+          personId: card.personId,
+          name: card.name,
+          image: card.image,
+        }))}
         onShared={onShared}
       />
 
       <SettlementLedger
         rows={settlement}
+        images={
+          new Map(
+            page.people.flatMap((person) =>
+              person.image ? [[`person:${person.id}`, person.image] as const] : [],
+            ),
+          )
+        }
         bossByKey={bossByKey}
         partyById={partyById}
         offsetShares={offsetShares}

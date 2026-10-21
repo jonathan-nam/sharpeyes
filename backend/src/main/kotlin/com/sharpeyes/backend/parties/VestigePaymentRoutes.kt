@@ -26,6 +26,7 @@ import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import kotlin.math.abs
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -163,7 +164,8 @@ internal fun paymentRefusal(
             "a CHARACTER holder needs a characterName, and nothing else does"
         holder.personId != null && runCatching { Uuid.parse(holder.personId) }.isFailure ->
             "personId is not an id"
-        amount < 1 || amount > MAX_AMOUNT -> "amount must be between 1 and $MAX_AMOUNT"
+        // Signed (V89): negative is money YOU sent them, which is what they are owed less by.
+        amount == 0L || abs(amount) > MAX_AMOUNT -> "amount must be nonzero and at most $MAX_AMOUNT either way"
         note != null && note.length > MAX_NOTE -> "note must be at most $MAX_NOTE characters"
         else -> null
     }

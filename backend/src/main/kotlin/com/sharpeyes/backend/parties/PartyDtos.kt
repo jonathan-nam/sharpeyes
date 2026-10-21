@@ -114,8 +114,21 @@ data class PartyResponse(
     val yours: Boolean = true,
     // The seats a member acts as, which is all a member may sell or keep as. Empty for the owner.
     val yourSeats: List<String> = emptyList(),
+    // Every account the party reaches, owner first. Empty unless somebody besides you is linked.
+    val accounts: List<PartyAccountResponse> = emptyList(),
     val createdAt: String,
     val updatedAt: String,
+)
+
+/** One account a party reaches: what to draw for it, and whether it keeps the party's book. See accountsFor. */
+@Serializable
+data class PartyAccountResponse(
+    /** As the viewer calls them. Null for the viewer themself. See loggerNames. */
+    val name: String?,
+    /** Their current Discord avatar, kept so by the auth service (discord-profiles.ts). */
+    val image: String?,
+    val leader: Boolean,
+    val you: Boolean,
 )
 
 /** A person, and the characters of theirs you have named. */
@@ -141,6 +154,8 @@ data class PersonResponse(
      * empty one and would read as unlinked. Which account it is stays unsent.
      */
     val linked: Boolean = false,
+    /** Their account's Discord avatar, when linked and Discord had one. */
+    val image: String? = null,
     /** Characters you filed under them that their own account does not hold. Theirs to explain. */
     val notOnAccount: List<String> = emptyList(),
     /** Characters of theirs that another account you are linked to also holds: nobody's, until fixed. */
