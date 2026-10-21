@@ -12,11 +12,13 @@ import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { buildDropAudit } from "@/lib/drop-audit";
 import { buildDropLog } from "@/lib/drop-log";
+import { sharedHistory } from "@/lib/shared-history";
 import { closedByHolder, foldSeats } from "@/lib/vestige-ledger";
 import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { PartyLootPool } from "@/types/loot";
 import type { Party, Person } from "@/types/party";
+import type { SharedBook } from "@/types/page";
 import type { SettlementDebt, VestigeSettlement } from "@/types/vestige";
 
 // What happened to one drop. Reached from the Settled tab and from an offset on the Settlement
@@ -38,6 +40,7 @@ const DROPS_KEY = "/api/bosses/drops";
 const SETTLEMENTS_KEY = "/api/vestige-settlements";
 const DEBTS_KEY = "/api/settlement-debts";
 const PEOPLE_KEY = "/api/people";
+const SHARED_KEY = "/api/pages/shared-books";
 
 export default function DropAuditPage() {
   const { getToken, isLoaded } = useAuth();
@@ -51,6 +54,7 @@ export default function DropAuditPage() {
   const [settlements, setSettlements] = useState<VestigeSettlement[]>([]);
   const [debts, setDebts] = useState<SettlementDebt[]>([]);
   const [people, setPeople] = useState<Person[]>(peek<Person[]>(PEOPLE_KEY) ?? []);
+  const [sharedBooks, setSharedBooks] = useState<SharedBook[]>([]);
   const [state, setState] = useState<LoadState>("loading");
 
   useEffect(() => {
@@ -69,6 +73,8 @@ export default function DropAuditPage() {
           apiFetch<SettlementDebt[]>(DEBTS_KEY, { method: "GET" }, withToken),
           // Only to NAME an act. Somebody an offset or a settlement names may have no seat left.
           apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, withToken).catch(() => null),
+          // A drop in somebody else's party, reached from your Drop Log. Additive, as it is there.
+          apiFetch<SharedBook[]>(SHARED_KEY, { method: "GET" }, withToken).catch(() => []),
         ]);
       })
       .then(
@@ -80,6 +86,7 @@ export default function DropAuditPage() {
           settlementResult,
           debtResult,
           peopleResult,
+          sharedResult,
         ]) => {
           setParties(partyResult);
           setPools(poolResult);
@@ -87,6 +94,7 @@ export default function DropAuditPage() {
           setDropTables(dropResult);
           setSettlements(settlementResult);
           setDebts(debtResult);
+          setSharedBooks(sharedResult);
           if (peopleResult) {
             setPeople(peopleResult);
             put(PEOPLE_KEY, peopleResult);
@@ -102,22 +110,28 @@ export default function DropAuditPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lootId, isLoaded]);
 
-  const log = buildDropLog(parties, pools, dropTables, closedByHolder(settlements).closed);
+  // The Drop Log's own lists, shared books included, so a row opens to the figures it showed.
+  const shared = sharedHistory(sharedBooks);
+  const allParties = [...parties, ...shared.parties];
+  const allPools = [...pools, ...shared.pools];
+  const allSettlements = [...settlements, ...shared.settlements];
+  const log = buildDropLog(allParties, allPools, dropTables, closedByHolder(allSettlements).closed);
   // The people list first, so somebody is named even after their seat has left every party. Seats
   // then win, because a seat carries the name as this account spells it. Same order as the Drop Log.
   const holderNames = new Map<string, string>();
   for (const person of people) holderNames.set(`person:${person.id}`, person.name);
-  for (const party of parties) {
+  for (const [key, name] of shared.names) holderNames.set(key, name);
+  for (const party of allParties) {
     for (const seat of foldSeats(party.seats)) holderNames.set(seat.key, seat.name);
   }
   const audit = buildDropAudit(
     lootId,
     log.entries,
-    pools,
-    parties,
+    allPools,
+    allParties,
     new Map(bosses.map((b) => [b.bossKey, b])),
-    settlements,
-    debts,
+    allSettlements,
+    [...debts, ...shared.debts],
     holderNames,
     bossLabel,
   );

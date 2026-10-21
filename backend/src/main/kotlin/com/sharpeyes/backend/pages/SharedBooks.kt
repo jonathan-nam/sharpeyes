@@ -71,9 +71,11 @@ internal fun bookBetween(
             .map { it.copy(lootIds = it.lootIds.filter { id -> id in lootIds }) }
             .filter { names(it.holder) || it.lootIds.isNotEmpty() }
 
+    val yours = personFor(member, owner)
     return SharedBookResponse(
-        ownerName = nameFor(member, owner),
+        ownerName = yours?.get(Person.name) ?: senderNameFor(owner) ?: "Party owner",
         personId = personId,
+        ownerPersonId = yours?.get(Person.id)?.toString(),
         parties = parties,
         pools = pools,
         tranches = tranches,
@@ -84,18 +86,14 @@ internal fun bookBetween(
     )
 }
 
-/** What [member] calls [owner]: their own person row for that account, else the owner's main. */
-private fun nameFor(
+/** [member]'s own person row for [owner]'s account, if they have one. */
+private fun personFor(
     member: String,
     owner: String,
-): String =
-    Person
-        .selectAll()
-        .where { (Person.userId eq member) and (Person.linkedUserId eq owner) }
-        .firstOrNull()
-        ?.get(Person.name)
-        ?: senderNameFor(owner)
-        ?: "Party owner"
+) = Person
+    .selectAll()
+    .where { (Person.userId eq member) and (Person.linkedUserId eq owner) }
+    .firstOrNull()
 
 /** GET /api/pages/shared-books. */
 internal suspend fun RoutingContext.sharedBooksPage() {

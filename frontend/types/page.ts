@@ -45,6 +45,8 @@ export type DropLogPage = {
 export type SharedBook = {
   ownerName: string;
   personId: string;
+  /** Your person row for the owner. Optional for a cached book from before the field. */
+  ownerPersonId?: string | null;
   parties: Party[];
   pools: PartyLootPool[];
   tranches: VestigeTranche[];

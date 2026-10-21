@@ -30,6 +30,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -165,6 +166,24 @@ class SharedBooksTest {
             assertEquals(listOf(withChris.id), book.parties.map { it.id })
             assertEquals(listOf(48_000_000_000), book.debts.map { it.amount })
             assertEquals("mechyfechy", book.ownerName)
+            assertNull(book.ownerPersonId)
+        }
+    }
+
+    @Test
+    fun `the owner is the member's own person row for them`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            link(owner, "Chris", member)
+            link(member, "Mech", owner)
+            config(theirs, listOf("CreedBratton"))
+
+            val book = sharedBooksFor(member).single()
+
+            val mech = Person.selectAll().where { Person.userId eq member }.single()
+            assertEquals("Mech", book.ownerName)
+            assertEquals(mech[Person.id].toString(), book.ownerPersonId)
         }
     }
 
