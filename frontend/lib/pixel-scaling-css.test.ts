@@ -39,6 +39,7 @@ const NATURAL: Record<string, number> = {
   ".boss-portrait": 26, // planner portrait, the game's own size
   ".boss-portrait.is-small": 26,
   ".run-art": 80, // the @2x portrait, BOSS_ART_2X
+  ".notification-icon.is-boss": 80, // the @2x portrait, smoothed down to 46
   ".tile-sprite": 96, // Nexon avatar render, and the one size a strip's sprite is drawn at
   ".boss-char-sprite": 96,
   ".roster-sprite": 96,

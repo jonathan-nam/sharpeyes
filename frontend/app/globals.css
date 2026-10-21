@@ -8148,10 +8148,10 @@ img.notification-face {
 
 /* Centred in the width an icon takes, so every row's sentence starts in the same column. */
 .notification-menu .notification-face {
-  margin: 0 5px;
+  margin: 0 4px;
 }
 
-/* A drop's or a boss's art at its own size (46 and 26), with the changer's face on its corner. */
+/* A drop's or a boss's art, with the changer's face on its corner. */
 .notification-art {
   position: relative;
   flex: none;
@@ -8159,6 +8159,14 @@ img.notification-face {
   place-items: center;
   width: 46px;
   height: 46px;
+}
+
+/* The 80px portrait (BOSS_ART_2X) at a drop icon's size, smoothed: 0.575x has no whole ratio. */
+.notification-icon.is-boss {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-sm);
+  image-rendering: auto;
 }
 
 .notification-badge {
