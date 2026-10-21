@@ -5,6 +5,7 @@ import { InviteLink } from "@/components/invite-link";
 import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
 import { PeopleBoard } from "@/components/people-board";
 import { useAuth } from "@/lib/use-auth";
+import { useLive } from "@/lib/use-live";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, failureText } from "@/lib/api";
@@ -82,6 +83,19 @@ export default function PeoplePage() {
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
+
+  // An account linked or unlinked from the other side moves who is whose. Only while nothing here
+  // is unsaved: re-reading under a half-edited board would throw the edit away.
+  useLive("party", () => {
+    if (JSON.stringify(draft) !== JSON.stringify(toDraft(people))) return;
+    void apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, getToken)
+      .then((saved) => {
+        setPeople(saved);
+        setDraft(toDraft(saved));
+        put(PEOPLE_KEY, saved);
+      })
+      .catch(() => {});
+  });
 
   /**
    * Takes the account off a person, on both sides, and the seats each holds of the other with it.

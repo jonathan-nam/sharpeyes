@@ -1,6 +1,8 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.events.Topic
+import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -25,6 +27,8 @@ import kotlin.time.Clock
 // this says whose they are, once, for every config that names them.
 
 fun Route.peopleRoutes() {
+    // An unlink ends a shared party and a shared book from both sides. See TellLinked.kt.
+    tellLinkedOnWrite(Topic.PARTY, Topic.SETTLEMENT)
     get { listPeople() }
     put { savePeopleRoute() }
     put("/{personId}/pinned") { pinPersonRoute() }

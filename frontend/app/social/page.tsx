@@ -8,6 +8,7 @@ import { invalidate } from "@/lib/cache";
 import { friendsChanged, onFriendsChanged } from "@/lib/friends-changed";
 import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
+import { useLive } from "@/lib/use-live";
 import type { FriendView, Social } from "@/types/social";
 
 const SOCIAL_KEY = "/api/friends";
@@ -35,6 +36,9 @@ export default function SocialPage() {
       .catch(() => setFailed(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
+
+  // Something the other side did: a request answered, a friend removed.
+  useLive(["friends", "notifications"], () => void load().catch(() => {}));
 
   // A request accepted from the bell is a new friend here.
   // eslint-disable-next-line react-hooks/exhaustive-deps

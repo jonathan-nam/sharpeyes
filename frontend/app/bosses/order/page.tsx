@@ -28,6 +28,7 @@ import {
   type CandidateRun,
   EMPTY_PLAN,
   type EligibleRun,
+  needsFixing,
   planNight,
   screenRuns,
   tradeOffs,
@@ -534,18 +535,20 @@ export default function RunOrderPage() {
     [running, shown.away],
   );
 
-  // Only the eligible half is read. screenRuns still reports what it rejected, and the page no
-  // longer shows it: a run nobody can staff now just does not appear.
+  // The eligible half is the plan. Of the rejected half only what the data got wrong is said (see
+  // needsFixing): those parties used to vanish with nothing on the page to say they existed.
   //
   // Nothing until the night has been asked for, which is what keeps the search, the plan and
   // "Left Out" all empty rather than each needing its own gate.
-  const searched = useMemo(
+  const screening = useMemo(
     () =>
       planning
-        ? screenRuns(allRuns, hereAll, { everyoneOn: shown.everyoneOn, everyone: here }).eligible
-        : NO_RUNS,
+        ? screenRuns(allRuns, hereAll, { everyoneOn: shown.everyoneOn, everyone: here })
+        : { eligible: NO_RUNS, rejected: [] },
     [planning, allRuns, hereAll, here, shown.everyoneOn],
   );
+  const searched = screening.eligible;
+  const unplannable = needsFixing(screening.rejected);
   const eligible = useMemo(() => searched.filter((run) => !hidden.has(run.id)), [searched, hidden]);
 
   // Nothing on screen marks the wait. Fading the old plan through it was tried and removed: at the
@@ -601,7 +604,7 @@ export default function RunOrderPage() {
   // A clear moving on any party tonight, yours or one you are in, is on the plan without a reload.
   // The runs already on screen are kept in the night first, as a tick from here keeps its run (see
   // stillToRun): a clear arriving from the party's owner marks a run done, it does not take it away.
-  useLive("clears", () => {
+  useLive(["clears", "party", "loot"], () => {
     plan.runs.forEach((planned) => keepInNight(planned.run.id));
     void apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, getToken)
       .then((next) => {
@@ -610,6 +613,12 @@ export default function RunOrderPage() {
       })
       .catch(() => {});
     void refetchSeated();
+    void apiFetch<PartyLootPool[]>(POOLS_KEY, { method: "GET" }, getToken)
+      .then((next) => {
+        setPools(next);
+        put(POOLS_KEY, next);
+      })
+      .catch(() => {});
   });
 
   const scheduled = new Set(plan.runs.map((planned) => planned.run.id));
@@ -1015,6 +1024,31 @@ export default function RunOrderPage() {
                 {bossLabel(run.bossName, run.difficulty)}
                 <span className="night-leftover-seats">
                   {run.seats.map((seat) => seat.character).join(", ")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Parties the plan cannot place because of how they are set up, said so they can be fixed.
+          See needsFixing for why only these two reasons. */}
+      {unplannable.length > 0 && (
+        <section className="night-section" aria-busy={stale}>
+          <h2 className="night-heading">Can&apos;t Plan</h2>
+          <ul className="night-leftovers">
+            {unplannable.map(({ run, reason, detail }) => (
+              <li key={run.id}>
+                {bossLabel(run.bossName, run.difficulty)}
+                <span className="night-leftover-seats">
+                  {reason === "person-twice" ? (
+                    `One person plays ${detail.join(" and ")}.`
+                  ) : (
+                    <>
+                      Nobody plays {detail.join(", ")}.{" "}
+                      <Link href="/bosses/people">Set them on People.</Link>
+                    </>
+                  )}
                 </span>
               </li>
             ))}

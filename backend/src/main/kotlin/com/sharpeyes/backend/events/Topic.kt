@@ -11,6 +11,15 @@ object Topic {
     /** A party's pool moved: a drop logged, sold, kept or removed. */
     const val LOOT = "loot"
 
+    /** A party's configuration or who is in it moved: an edit, a week's roster, a skip, a link. */
+    const val PARTY = "party"
+
+    /** A Settlement ledger moved: a debt, a payment, an offset, Mark Sent, a coupon sale. */
+    const val SETTLEMENT = "settlement"
+
+    /** A friend request or a friendship moved. */
+    const val FRIENDS = "friends"
+
     /** Something arrived on your bell. */
     const val NOTIFICATIONS = "notifications"
 }

@@ -71,6 +71,8 @@ export type LotRow = {
    * from one that does.
    */
   ran: PartyMember[];
+  /** Who logged it, when somebody other than you did. See LootResponse.recordedByName. */
+  loggedBy?: string | null;
 };
 
 /**
@@ -125,6 +127,7 @@ function sellableRows(
         sellerMemberId: seller.id,
         sellerName: seller.name,
         ran,
+        loggedBy: loot.recordedByYou === false ? (loot.recordedByName ?? null) : null,
       });
     }
   }
