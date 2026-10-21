@@ -745,7 +745,9 @@ export function moneyRows(
   const discharges: Discharge[] = [];
 
   for (const entry of row.entries) {
-    if (entry.payouts.length === 0 && entry.amount >= 0) {
+    // Either sign. A negative one is them saying you owe them (V88), which is a debt and not
+    // something that came off one. Only an offset names the shares it discharged.
+    if (entry.payouts.length === 0) {
       typed.push(entry);
       continue;
     }
@@ -785,8 +787,9 @@ export function moneyRows(
     discharges.push({
       id: got.id,
       source: "PAYMENT",
+      // Signed (V89): negative is you paying them, which puts back on their side what it took off yours.
       amount: got.amount,
-      label: got.note ?? "paid",
+      label: got.note ?? (got.amount < 0 ? "you paid" : "paid"),
       at: got.receivedAt,
       payouts: [],
       sales: [],

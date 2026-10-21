@@ -67,7 +67,7 @@ internal fun ownBookRefusal(
                 .selectAll()
                 .where { (Party.userId eq other) and (PartyMember.linkedCharacterId inList mine) }
                 .empty()
-    return if (keeps) "${person[Person.name]} keeps your shared book. Add it on their card." else null
+    return if (keeps) "${person[Person.name]} keeps your shared book. Reload and pick them again." else null
 }
 
 internal fun insertSharedTranche(

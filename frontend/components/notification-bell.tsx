@@ -123,7 +123,10 @@ function NotificationItem({
   const { actor } = notification;
   return (
     <div className={fresh ? "notification-item is-fresh" : "notification-item"}>
-      {actor?.spriteImgUrl ? (
+      {/* The account that did it, so its Discord face first; their main's sprite where none. */}
+      {actor?.image ? (
+        <img className="notification-face" src={actor.image} alt="" />
+      ) : actor?.spriteImgUrl ? (
         <span
           className="notification-face sprite-face"
           style={{ backgroundImage: `url("${spriteUrl(actor.spriteImgUrl)}")` }}

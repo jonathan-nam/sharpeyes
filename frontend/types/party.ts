@@ -101,8 +101,22 @@ export type Party = {
   yours?: boolean;
   // The seats a member acts as. Empty for the owner. Absent on a payload cached from before it.
   yourSeats?: string[];
+  // Every account the party reaches, leader first. Empty unless somebody besides you is linked, and
+  // absent on a cached payload, so read it `?? []`.
+  accounts?: PartyAccount[];
   createdAt: string;
   updatedAt: string;
+};
+
+/** One account in a party. Mirrors the backend's PartyAccountResponse. */
+export type PartyAccount = {
+  /** As you call them. Null for you. */
+  name: string | null;
+  /** Their Discord avatar. Null when Discord had none. */
+  image: string | null;
+  /** Keeps the party's book: whoever made it. */
+  leader: boolean;
+  you: boolean;
 };
 
 // A person, and the characters of theirs you have named.
@@ -118,6 +132,8 @@ export type Person = {
   // ownedCharacters: that list only holds characters this account already seats, so somebody linked
   // who shares no party yet has an empty one.
   linked: boolean;
+  // Their account's Discord avatar, when linked. Absent on a cached payload.
+  image?: string | null;
   // Their Settlement Ledger card is drawn with nothing outstanding. Set by hand. See V59.
   pinned: boolean;
   // Characters you filed under them that their own account does not hold, and characters of theirs

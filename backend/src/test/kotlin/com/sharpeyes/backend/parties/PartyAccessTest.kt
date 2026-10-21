@@ -160,6 +160,37 @@ class PartyAccessTest {
     }
 
     @Test
+    fun `a shared party names every account in it, leader first, and a lone one names nobody`() {
+        transaction {
+            exec(
+                """INSERT INTO auth_user (id, name, email, "emailVerified", image)
+                   VALUES ('$member', 'x', '$member@example.com', true, 'https://cdn.discordapp.com/a.png')""",
+            )
+            val party = shared()
+            val alone = config(character(owner, "warrior2020", position = 1), listOf("Baldrix"))
+
+            val asOwner = partiesFor(owner).associate { it.id to it.accounts }
+            assertEquals(
+                listOf(
+                    PartyAccountResponse(name = null, image = null, leader = true, you = true),
+                    PartyAccountResponse(
+                        name = "Chris",
+                        image = "https://cdn.discordapp.com/a.png",
+                        leader = false,
+                        you = false,
+                    ),
+                ),
+                asOwner[party.id],
+            )
+            assertEquals(emptyList(), asOwner[alone.id])
+            val asMember = findParty(Uuid.parse(party.id), member)!!.accounts
+            assertEquals(listOf(true to false, false to true), asMember.map { it.leader to it.you })
+            assertEquals("mechyfechy", asMember.first().name)
+            exec("DELETE FROM auth_user WHERE id = '$member'")
+        }
+    }
+
+    @Test
     fun `a member marks a share paid from either end of it, and no other`() {
         transaction {
             val party = shared()

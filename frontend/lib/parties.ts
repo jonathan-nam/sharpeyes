@@ -363,24 +363,6 @@ export function configFor(
 }
 
 /**
- * The drop this boss gives for certain at the mode a party runs, or null.
- *
- * Read off the boss's own table, so it is a fact about the boss rather than about anything that has
- * happened: vestige coupons drop every time it dies, and the amount is per (boss, difficulty, world).
- * Null when nobody has said which difficulty, since a boss that drops them at Extreme drops none at
- * Chaos, and read against the party's own world, since a mode can give a pile in one and nothing in
- * the other.
- */
-export function guaranteedDrop(
-  table: BossDrop[] | undefined,
-  difficulty: string | null,
-  world: string,
-): BossDrop | null {
-  if (!table || difficulty === null) return null;
-  return table.find((drop) => (drop.pieces?.[world]?.[difficulty] ?? 0) > 0) ?? null;
-}
-
-/**
  * Whether a clear on this boss can say anything about what fell, at any mode.
  *
  * What decides whether the mode is worth asking for. A clear on a boss run ALONE files what the

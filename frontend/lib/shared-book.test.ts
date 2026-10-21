@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sharedCard } from "@/lib/shared-book";
+import { sharedCard, withSharedCards } from "@/lib/shared-book";
 import { settlementView } from "@/lib/settlement-view";
 import type { Holder } from "@/lib/vestige-ledger";
 import type { SharedBook } from "@/types/page";
@@ -38,6 +38,30 @@ const paid = (amount: number) => ({
   amount,
   note: null,
   receivedAt: "2026-10-02T00:00:00Z",
+});
+
+describe("a debt entered each way", () => {
+  it("lists what they owe you under them, and what you owe under you, never under paid", () => {
+    // Their book: you owe them 10b, and you said they owe you 8b (negative there).
+    const card = sharedCard(
+      book({ debts: [debt(10 * B), { ...debt(-8 * B), note: "dinner" }] }),
+      [],
+    )!;
+    expect(card.detail.owe.map((p) => p.mesos)).toEqual([10 * B]);
+    expect(card.detail.theyOweEntered.map((p) => [p.label, p.mesos])).toEqual([["dinner", 8 * B]]);
+    expect(card.detail.paid).toEqual([]);
+    expect(card.owe).toBe(2 * B);
+  });
+});
+
+describe("a payment the owner sends back (V89)", () => {
+  it("comes off what the owner owes you, and says who paid whom", () => {
+    // You entered 8b they owe you; they paid 3b of it back, a negative row in their book.
+    const card = sharedCard(book({ debts: [debt(-8 * B)], payments: [paid(-3 * B)] }), [])!;
+    expect(card.owed).toBe(5 * B);
+    expect(card.owe).toBe(0);
+    expect(card.detail.paid.find((p) => p.key === `p-${-3 * B}`)?.label).toBe("Jonathan paid you");
+  });
 });
 
 describe("sharedCard", () => {
@@ -87,5 +111,24 @@ describe("sharedCard", () => {
 
   it("is nothing when the book says nothing about you", () => {
     expect(sharedCard(book({}), [])).toBeNull();
+  });
+});
+
+describe("the summary tiles with a shared book in them", () => {
+  it("adds each card to your own book's totals", () => {
+    // You owe 139b on their card and they hold a 187b payment of yours: 48b their way.
+    const card = sharedCard(book({ debts: [debt(139 * B)], payments: [paid(187 * B)] }), [])!;
+    const none = { owed: 0, owe: 0, net: 0, people: 0, usd: { owed: 0, owe: 0, net: 0 } };
+    const totals = withSharedCards(none, [card]);
+    expect(totals).toMatchObject({ owed: card.owed, owe: card.owe, people: 1 });
+    expect(totals.net).toBe(card.owed - card.owe);
+    const own = {
+      owed: 10 * B,
+      owe: 4 * B,
+      net: 6 * B,
+      people: 2,
+      usd: { owed: 0, owe: 0, net: 0 },
+    };
+    expect(withSharedCards(own, [card]).net).toBe(6 * B + card.owed - card.owe);
   });
 });

@@ -568,6 +568,7 @@ export default function DropLogPage() {
   };
   // Your pile in each book you share, drawn with the same card and written into THAT book: a coupon
   // sale out of it is the owner's ledger's row, which both of you read. See lib/shared-pile.ts.
+  const sharedCards = sharedBooks.flatMap((book) => sharedCard(book, bosses) ?? []);
   const sharedPiles = sharedBooks
     .flatMap((book) => sharedPile(book, bosses) ?? [])
     .filter((pile) => outstandingOf(pile.ledger, pile.heldOfYours) > 0);
@@ -832,15 +833,12 @@ export default function DropLogPage() {
                 view={view}
                 writes={writes}
                 sharedOwners={sharedBooks.flatMap((book) => book.ownerPersonId ?? [])}
+                sharedCards={sharedCards}
+                onShared={sharedWrites.add}
               />
             )}
 
-            {shown === "settlement" && (
-              <SharedCards
-                cards={sharedBooks.flatMap((book) => sharedCard(book, bosses) ?? [])}
-                writes={sharedWrites}
-              />
-            )}
+            {shown === "settlement" && <SharedCards cards={sharedCards} writes={sharedWrites} />}
 
             {/* The end of the pipeline, and it only runs one way: nothing here is waiting on
               anybody, and nothing here can be taken back.

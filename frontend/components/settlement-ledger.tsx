@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useState } from "react";
+import { DiscordAvatar } from "@/components/discord-avatar";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import {
@@ -95,8 +96,11 @@ export function SettlementLedger({
   onPin,
   onOffsetAll,
   onSendAll,
+  images = new Map(),
 }: {
   rows: Settlement[];
+  /** Linked people's Discord avatars, keyed by their card's key (`person:<id>`). */
+  images?: Map<string, string>;
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   /** The shares an offset discharged, resolved, keyed by shareKey(). See V58. */
@@ -170,6 +174,7 @@ export function SettlementLedger({
         <SettlementCard
           key={row.key}
           row={row}
+          image={images.get(row.key) ?? null}
           bossByKey={bossByKey}
           partyById={partyById}
           offsetShares={offsetShares}
@@ -214,8 +219,11 @@ function SettlementCard({
   onPin,
   onOffsetAll,
   onSendAll,
+  image,
 }: {
   row: Settlement;
+  /** Their Discord avatar, when they are linked. */
+  image: string | null;
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   /** The shares an offset discharged, resolved, keyed by shareKey(). See V58. */
@@ -285,6 +293,7 @@ function SettlementCard({
   // Whether the parts of what is unsettled are open, and the sales behind the held half with them.
   // Folded, like the offsets history: the figure is what you act on and the rows are the check on it.
   const [showUnsettled, setShowUnsettled] = useState(false);
+  const [showYouOwe, setShowYouOwe] = useState(false);
   // Closed to start, the way the held sales above are. The step says the count, which is the fact
   // this section is read for; WHICH nights it came off is the follow-up question.
   const [showNights, setShowNights] = useState(false);
@@ -400,9 +409,14 @@ function SettlementCard({
   // What builds the debt, and what has already come off it. Two questions, so two lists: see
   // moneyRows for why one list could not hold both.
   const { typed, discharges, discharged } = moneyRows(row, payments.counted);
+  // An entry running your way (a member saying you owe them, V88) is a debt of yours, so it is under
+  // You Owe, never `owed` as a negative. Not Unsettled Amounts either: that figure is what Offset moves.
+  const theirEntries = typed.filter((entry) => entry.amount >= 0);
+  const yourEntries = typed.filter((entry) => entry.amount < 0);
+  const youOweEntered = -yourEntries.reduce((sum, entry) => sum + entry.amount, 0);
   // How many rows the `owed` list holds, which is what decides whether it folds at all and what the
   // folded line says is inside it.
-  const owedParts = parts.length + typed.length;
+  const owedParts = parts.length + theirEntries.length;
   const openOwed = showOwed || owedParts === 0;
   /**
    * What the rows under `owed` come to, which is the debt BEFORE anything came off it.
@@ -414,7 +428,7 @@ function SettlementCard({
    */
   const owedTotal =
     parts.reduce((sum, part) => sum + part.mesos, 0) +
-    typed.reduce((sum, entry) => sum + entry.amount, 0);
+    theirEntries.reduce((sum, entry) => sum + entry.amount, 0);
   // Whether the left half holds anything at all. The two entry forms left the card, so with nothing
   // priced and no spent receipt it is an empty box, and an empty box in the pair is still 12px of
   // padding and a rule under it: the card read as a gap between its header and the next section.
@@ -672,7 +686,10 @@ function SettlementCard({
           </button>
         )}
         <span className="loot-title">
-          <span className="loot-name">{row.name}</span>
+          <span className="loot-name ledger-who">
+            <DiscordAvatar image={image} size="sm" />
+            {row.name}
+          </span>
           {/* The direction the whole card runs, coloured as the parts below it are, so the headline
               and its own arithmetic never read as two different kinds of thing.
 
@@ -761,7 +778,7 @@ function SettlementCard({
                 </div>
               )}
               <div className="ledger-fold" id={`owed-${row.key}`} hidden={!openOwed}>
-                {(parts.length > 0 || typed.length > 0) && (
+                {(parts.length > 0 || theirEntries.length > 0) && (
                   <ul className="ledger-queue">
                     {parts.map((part) => (
                       <li key={part.key} className="ledger-drop">
@@ -776,7 +793,7 @@ function SettlementCard({
                         </div>
                       </li>
                     ))}
-                    {typed.map((entry) => (
+                    {theirEntries.map((entry) => (
                       <EnteredRow
                         key={entry.id}
                         entry={entry}
@@ -908,6 +925,42 @@ function SettlementCard({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {yourEntries.length > 0 && (
+        <div className="ledger-entry">
+          <div className="ledger-step-line">
+            <span className="ledger-heading">You Owe</span>
+            <button
+              type="button"
+              className="party-row-toggle"
+              aria-expanded={showYouOwe}
+              aria-controls={`you-owe-${row.key}`}
+              onClick={() => setShowYouOwe((o) => !o)}
+            >
+              <span className="party-row-chevron" aria-hidden="true" />
+              <span className="visually-hidden">
+                {showYouOwe ? `Hide what you owe ${row.name}` : `Show what you owe ${row.name}`}
+              </span>
+            </button>
+            <span className="ledger-amount">{formatMesos(youOweEntered, true)}</span>
+          </div>
+          <div className="ledger-fold" id={`you-owe-${row.key}`} hidden={!showYouOwe}>
+            <ul className="ledger-queue">
+              {yourEntries.map((entry) => (
+                <EnteredRow
+                  key={entry.id}
+                  entry={entry}
+                  name={row.name}
+                  busy={busy}
+                  // Unsigned: every row here runs the one way, which the heading says.
+                  signed={(mesos) => formatMesos(-mesos, true)}
+                  onRemove={() => void write(onRemoveDebt(entry.id), null)}
+                />
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
@@ -1500,7 +1553,11 @@ function DischargeRow({
         {act.by == null && (
           <ArmedRemove
             busy={busy}
-            label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}
+            label={
+              act.amount < 0
+                ? `Undo the ${formatMesos(-act.amount, true)} you paid ${name}`
+                : `Undo ${formatMesos(act.amount, true)} off what ${name} owes you`
+            }
             onRemove={onRemove}
           />
         )}

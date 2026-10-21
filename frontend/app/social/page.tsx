@@ -10,6 +10,7 @@ import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
 import type { FriendView, Social } from "@/types/social";
+import { DiscordAvatar } from "@/components/discord-avatar";
 
 const SOCIAL_KEY = "/api/friends";
 
@@ -172,7 +173,10 @@ function FriendCard({ friend, children }: { friend: FriendView; children: ReactN
         <span className="tile-sprite" aria-hidden="true" />
       )}
       <span className="tile-plate">
-        <span className="tile-name">{friend.name ?? friend.username ?? "?"}</span>
+        <span className="tile-name ledger-who">
+          <DiscordAvatar image={friend.image} size="sm" />
+          {friend.name ?? friend.username ?? "?"}
+        </span>
         {friend.username && <span className="tile-meta">@{friend.username}</span>}
       </span>
       <span className="character-card-actions">{children}</span>

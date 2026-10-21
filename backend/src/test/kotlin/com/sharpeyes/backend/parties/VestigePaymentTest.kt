@@ -17,9 +17,10 @@ class VestigePaymentTest {
         assertNull(paymentRefusal(brock, 4_875_000_000))
         assertNull(paymentRefusal(stranger, 1))
 
-        // Nothing arriving is the absence of an event, not one worth a row.
-        assertTrue(paymentRefusal(self, 0)!!.contains("between 1"))
-        assertTrue(paymentRefusal(self, -1)!!.contains("between 1"))
+        // Nothing arriving is the absence of an event, not one worth a row. Negative is money you
+        // sent them, which is one (V89).
+        assertTrue(paymentRefusal(self, 0)!!.contains("nonzero"))
+        assertNull(paymentRefusal(bro, -1))
 
         // The kind and its reference cannot disagree, the same pair of checks a tranche gets: a
         // PERSON payment with no person would clear a debt belonging to nobody.
@@ -50,6 +51,7 @@ class VestigePaymentTest {
         // payment refused for exceeding it would be a true fact turned away, and one that became
         // enterable again on the next edit. Overpayment is said on the card instead.
         assertNull(paymentRefusal(self, 1_000_000_000_000))
-        assertTrue(paymentRefusal(self, 1_000_000_000_001)!!.contains("between 1"))
+        assertTrue(paymentRefusal(self, 1_000_000_000_001)!!.contains("nonzero"))
+        assertTrue(paymentRefusal(self, -1_000_000_000_001)!!.contains("nonzero"))
     }
 }

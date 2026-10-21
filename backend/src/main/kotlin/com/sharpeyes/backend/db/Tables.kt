@@ -764,6 +764,12 @@ object AuthAccount : Table("auth_account") {
     val accountId = text("accountId")
 }
 
+// Better Auth's user row, read only for the Discord avatar the auth service keeps current.
+object AuthUser : Table("auth_user") {
+    val id = text("id")
+    val image = text("image").nullable()
+}
+
 // A friend request, until it is accepted, declined or cancelled. See V86.
 object FriendRequest : Table("friend_request") {
     val id = uuid("id")

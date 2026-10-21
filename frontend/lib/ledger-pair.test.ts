@@ -83,7 +83,7 @@ describe("folding `owed`", () => {
   it("draws no chevron where there is no list to fold", () => {
     // The card's rule everywhere else: a row that does not fold draws none. With nothing priced the
     // step is two forms, and they stay reachable.
-    expect(ledger).toContain("const owedParts = parts.length + typed.length;");
+    expect(ledger).toContain("const owedParts = parts.length + theirEntries.length;");
     expect(ledger).toContain("const openOwed = showOwed || owedParts === 0;");
     expect(ledger).toContain("{owedParts > 0 && (");
   });
@@ -94,7 +94,7 @@ describe("folding `owed`", () => {
     // worked out a second way, because two spellings of one number is how they come to disagree.
     expect(ledger).toContain("const owedTotal =");
     expect(ledger).toContain("parts.reduce((sum, part) => sum + part.mesos, 0) +");
-    expect(ledger).toContain("typed.reduce((sum, entry) => sum + entry.amount, 0);");
+    expect(ledger).toContain("theirEntries.reduce((sum, entry) => sum + entry.amount, 0);");
     expect(ledger).toContain('<span className="ledger-amount">{signed(owedTotal)}</span>');
   });
 
