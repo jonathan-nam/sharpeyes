@@ -4565,6 +4565,25 @@ button.link:disabled {
   height: 23px;
 }
 
+/* The same picker with Discord avatars in it: photos, so round, smooth and smaller than item art. */
+.drop-select-list.is-avatars .drop-select-icon,
+.drop-select-list.is-avatars .drop-select-blank {
+  width: 22px;
+  height: 22px;
+}
+
+.drop-select-list.is-avatars .drop-select-icon,
+.drop-select.is-avatars > .drop-select-icon {
+  border-radius: 50%;
+  object-fit: cover;
+  image-rendering: auto;
+}
+
+.drop-select.is-avatars > .drop-select-icon {
+  width: 18px;
+  height: 18px;
+}
+
 .drop-select-label {
   min-width: 0;
   overflow: hidden;

@@ -87,7 +87,11 @@ export function SettlementStage({
             body: JSON.stringify({ holder, amount, note: note || undefined }),
           })
         }
-        shared={sharedCards.map((card) => ({ personId: card.personId, name: card.name }))}
+        shared={sharedCards.map((card) => ({
+          personId: card.personId,
+          name: card.name,
+          image: card.image,
+        }))}
         onShared={onShared}
       />
 

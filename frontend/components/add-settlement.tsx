@@ -1,5 +1,6 @@
 "use client";
 
+import { IconSelect } from "@/components/icon-select";
 import { failureText } from "@/lib/api";
 import { useState } from "react";
 import { parseMesos } from "@/lib/drop-split";
@@ -25,18 +26,53 @@ type Payer = { key: string; name: string; holder: Holder };
 type Choice = {
   key: string;
   label: string;
+  /** Their Discord avatar, for a linked account. */
+  image: string | null;
   amountLabel: string;
   addLabel: string;
   add: (amount: number, note: string) => Promise<void>;
 };
 
-const sharedChoice = (key: string, label: string, add: Choice["add"]): Choice => ({
+const sharedChoice = (
+  key: string,
+  label: string,
+  image: string | null,
+  add: Choice["add"],
+): Choice => ({
   key,
   label,
+  image,
   amountLabel: label,
   addLabel: `Add: ${label}`,
   add,
 });
+
+/** A picker of [choices], each row with its avatar. */
+function Who({
+  choices,
+  value,
+  onChange,
+  label,
+  busy,
+}: {
+  choices: Choice[];
+  value: string;
+  onChange: (key: string) => void;
+  label: string;
+  busy: boolean;
+}) {
+  return (
+    <IconSelect
+      options={choices.map((one) => ({ value: one.key, label: one.label, iconUrl: one.image }))}
+      placeholder={{ value: "", label: "", iconUrl: null }}
+      value={value}
+      onChange={onChange}
+      label={label}
+      avatars
+      disabled={busy}
+    />
+  );
+}
 
 export function AddSettlement({
   people,
@@ -63,7 +99,7 @@ export function AddSettlement({
    * Owners whose book you share, by your person row in it. Their entries go into that book (V88), and
    * either way round: between a member and an owner it is usually the member who owes.
    */
-  shared?: { personId: string; name: string }[];
+  shared?: { personId: string; name: string; image: string | null }[];
   onShared?: (
     personId: string,
     kind: "debts" | "payments",
@@ -101,21 +137,24 @@ export function AddSettlement({
   const amount = entered !== null && entered >= 1 ? entered : null;
   const payment = parseMesos(got);
   const paid = payment !== null && payment >= 1 ? payment : null;
+  const imageOf = (key: string) =>
+    people.find((person) => `person:${person.id}` === key)?.image ?? null;
   // Every option of each picker, with the write it makes. A shared owner's direction is the option.
   const debts: Choice[] = [
     ...debtors.map((one) => ({
       key: one.key,
       label: one.name,
+      image: imageOf(one.key),
       amountLabel: `Amount ${one.name} owes you`,
       addLabel: `Add what ${one.name} owes you`,
       add: (mesos: number, text: string) => onAddDebt(one.holder, mesos, text),
     })),
     // Their book counts what you owe them as positive. See SettlementDebt.amount.
     ...shared.flatMap((one) => [
-      sharedChoice(`owe:${one.personId}`, `You owe ${one.name}`, (mesos, text) =>
+      sharedChoice(`owe:${one.personId}`, `You owe ${one.name}`, one.image, (mesos, text) =>
         onShared(one.personId, "debts", mesos, text),
       ),
-      sharedChoice(`owed:${one.personId}`, `${one.name} owes you`, (mesos, text) =>
+      sharedChoice(`owed:${one.personId}`, `${one.name} owes you`, one.image, (mesos, text) =>
         onShared(one.personId, "debts", -mesos, text),
       ),
     ]),
@@ -124,12 +163,13 @@ export function AddSettlement({
     ...payers.map((one) => ({
       key: one.key,
       label: one.name,
+      image: imageOf(one.key),
       amountLabel: `Amount ${one.name} has paid you`,
       addLabel: `Add a payment from ${one.name}`,
       add: (mesos: number, text: string) => onAddPayment(one.holder, mesos, text),
     })),
     ...shared.map((one) =>
-      sharedChoice(`paid:${one.personId}`, `You paid ${one.name}`, (mesos, text) =>
+      sharedChoice(`paid:${one.personId}`, `You paid ${one.name}`, one.image, (mesos, text) =>
         onShared(one.personId, "payments", mesos, text),
       ),
     ),
@@ -174,19 +214,13 @@ export function AddSettlement({
           >
             <label className="loot-share-input is-stacked">
               Who
-              <select
-                className="split-input"
+              <Who
+                choices={debts}
                 value={debtor.key}
-                onChange={(e) => setOwedTo(e.target.value)}
-                aria-label="Who owes you"
-                disabled={busy}
-              >
-                {debts.map((one) => (
-                  <option key={one.key} value={one.key}>
-                    {one.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setOwedTo}
+                label="Who owes you"
+                busy={busy}
+              />
             </label>
             <label className="loot-share-input is-stacked">
               Amount
@@ -241,19 +275,13 @@ export function AddSettlement({
           >
             <label className="loot-share-input is-stacked">
               Who
-              <select
-                className="split-input"
+              <Who
+                choices={receipts}
                 value={payer.key}
-                onChange={(e) => setPaidBy(e.target.value)}
-                aria-label="Who paid you"
-                disabled={busy}
-              >
-                {receipts.map((one) => (
-                  <option key={one.key} value={one.key}>
-                    {one.label}
-                  </option>
-                ))}
-              </select>
+                onChange={setPaidBy}
+                label="Who paid you"
+                busy={busy}
+              />
             </label>
             <label className="loot-share-input is-stacked">
               Amount
