@@ -104,14 +104,14 @@ data class VestigeHolder(
 data class VestigeTrancheShareRow(
     /** The CREDITOR, in the same holder shape the pile uses. Never the pile's own holder. */
     val holder: VestigeHolder,
-    val pieces: Int,
+    val pieces: Double,
 )
 
 @Serializable
 data class VestigeTrancheResponse(
     val id: String,
     val holder: VestigeHolder,
-    val pieces: Int,
+    val pieces: Double,
     /**
      * Mesos for the whole tranche. The per-piece figure is derived by the client, never stored.
      *
@@ -133,7 +133,7 @@ data class VestigeTrancheResponse(
 @Serializable
 data class AddVestigeTrancheRequest(
     val holder: VestigeHolder,
-    val pieces: Int,
+    val pieces: Double,
     val amount: Long? = null,
     /** Defaults to a sale, which is what every tranche was before V46. */
     val disposition: String = SOLD,
@@ -310,7 +310,7 @@ internal fun ownsPerson(
 /** Why this tranche cannot be recorded, or null. */
 internal fun trancheRefusal(
     holder: VestigeHolder,
-    pieces: Int,
+    pieces: Double,
     amount: Long?,
     disposition: String = SOLD,
 ): String? =
@@ -331,7 +331,7 @@ internal fun trancheRefusal(
             "a $CHARACTER holder needs a characterName, and nothing else does"
         holder.personId != null && runCatching { Uuid.parse(holder.personId) }.isFailure ->
             "personId is not an id"
-        pieces < 1 || pieces > MAX_PIECES -> "pieces must be between 1 and $MAX_PIECES"
+        pieces <= 0 || pieces > MAX_PIECES -> "pieces must be above 0 and at most $MAX_PIECES"
         // Zero is refused, where V38 documented it as how a stack handed over rather than sold was
         // recorded. It prices those pieces at nothing and folds that into the pro rata average, so
         // the creditor absorbs their share of a loss the holder chose. $KEPT is the same event with

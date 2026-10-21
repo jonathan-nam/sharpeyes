@@ -1,3 +1,4 @@
+import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { apiAssetUrl } from "@/lib/api";
 import { formatWeekStart } from "@/lib/boss-clears";
@@ -56,8 +57,8 @@ function detail(event: AuditEvent, audit: DropAudit): React.ReactNode {
       );
     case "HELD":
       return event.yours
-        ? `${event.other} picked up ${event.pieces} of yours`
-        : `you picked up ${event.pieces} of ${event.other}'s`;
+        ? `${event.other} picked up ${formatPieces(event.pieces)} of yours`
+        : `you picked up ${formatPieces(event.pieces)} of ${event.other}'s`;
     case "SOLD": {
       const price = formatMoney(event.amount, event.currency, true);
       const by = event.seller ?? "somebody who has left";
@@ -86,7 +87,7 @@ function figure(event: AuditEvent): React.ReactNode {
     case "HELD":
       return (
         <>
-          <span className="droplog-take">{event.pieces}</span>
+          <span className="droplog-take">{formatPieces(event.pieces)}</span>
           <span className="loot-share-nets">coupons</span>
         </>
       );
@@ -120,7 +121,7 @@ function figure(event: AuditEvent): React.ReactNode {
     case "SETTLED":
       return (
         <>
-          <span className="droplog-take">{event.pieces}</span>
+          <span className="droplog-take">{formatPieces(event.pieces)}</span>
           <span className="loot-share-nets">
             {event.writtenOff > 0
               ? `coupons, ${formatMesos(event.writtenOff, true)} written off`

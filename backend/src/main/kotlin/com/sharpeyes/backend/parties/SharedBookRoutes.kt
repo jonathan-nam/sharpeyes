@@ -25,7 +25,7 @@ import kotlin.uuid.Uuid
 
 @Serializable
 data class SharedTrancheRequest(
-    val pieces: Int,
+    val pieces: Double,
     val amount: Long? = null,
     val disposition: String = SOLD,
     /** Pieces of the sale that were somebody else's, in the owner's book's holder shape. */

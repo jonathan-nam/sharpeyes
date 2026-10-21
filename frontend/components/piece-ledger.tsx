@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { useState } from "react";
 import { Field } from "@/components/add-field";
@@ -211,7 +212,7 @@ function HolderCard({
   /** Caps as it is typed, so a number over the room never reaches the button. */
   const clamp = (typed: string, cap: number) => {
     const n = Number(typed.trim());
-    return typed.trim() === "" || !Number.isInteger(n) || n <= cap ? typed : String(cap);
+    return typed.trim() === "" || !Number.isFinite(n) || n <= cap ? typed : String(cap);
   };
 
   const count = Number(pieces.trim());
@@ -224,7 +225,8 @@ function HolderCard({
    * button greys out rather than round-tripping.
    */
   const entry =
-    Number.isInteger(count) && count >= 1 && count <= Math.min(MAX_PIECES, room)
+    // Not whole: a share of a night can be 22.5 (see entitlements), and so can what answers it.
+    Number.isFinite(count) && count > 0 && count <= Math.min(MAX_PIECES, room)
       ? fate === "KEPT"
         ? { pieces: count, amount: null }
         : total !== null && total >= 1
@@ -298,8 +300,8 @@ function HolderCard({
           {outstanding > 0 && (
             <span className="loot-meta">
               {answered > 0
-                ? `owes ${outstanding} pieces to ${owed.map((c) => c.name).join(", ")}`
-                : `owes ${owed.map((c) => `${c.pieces} to ${c.name}`).join(" \u00b7 ")}`}
+                ? `owes ${formatPieces(outstanding)} pieces to ${owed.map((c) => c.name).join(", ")}`
+                : `owes ${owed.map((c) => `${formatPieces(c.pieces)} to ${c.name}`).join(" \u00b7 ")}`}
             </span>
           )}
         </span>
@@ -321,7 +323,7 @@ function HolderCard({
             went quiet about it would be hiding what it dropped rather than saying it short. */}
         {overEntered > 0 && (
           <span className="ledger-progress">
-            {`all ${ledger.pieces} accounted for, ${overEntered} over`}
+            {`all ${formatPieces(ledger.pieces)} accounted for, ${formatPieces(overEntered)} over`}
           </span>
         )}
 
@@ -375,8 +377,8 @@ function HolderCard({
                 // offering 1495 asked about the pile when the question was about 40. Where there is
                 // none the box is open because somebody asked for it, and it names itself rather
                 // than guessing.
-                placeholder={suggested > 0 ? String(suggested) : "pieces"}
-                inputMode="numeric"
+                placeholder={suggested > 0 ? formatPieces(suggested) : "pieces"}
+                inputMode="decimal"
                 aria-label={`Pieces, at most ${room}`}
               />
             </Field>
@@ -441,7 +443,7 @@ function HolderCard({
                   : 0;
               return (
                 <span key={share.key} className="loot-share-input">
-                  {`${share.pieces} to ${share.name}`}
+                  {`${formatPieces(share.pieces)} to ${share.name}`}
                   {worth > 0 && <span className="loot-share-nets">{shortMesos(worth)}</span>}
                 </span>
               );
@@ -467,8 +469,8 @@ function HolderCard({
                   which it is: two rows of "60 @ 25m" that settle differently would be one row
                   repeated. See V50. */}
               {tranche.amount === null
-                ? `${tranche.pieces} kept`
-                : `${tranche.pieces} @ ${shortMesos(tranche.amount / tranche.pieces)}${
+                ? `${formatPieces(tranche.pieces)} kept`
+                : `${formatPieces(tranche.pieces)} @ ${shortMesos(tranche.amount / tranche.pieces)}${
                     tranche.disposition === "BOUGHT" ? " taken" : ""
                   }`}
               {/* Whose pieces it was, where it was not all the seller's. On the row rather than in
@@ -476,7 +478,7 @@ function HolderCard({
                   that person moves the moment this row goes. */}
               {(tranche.shares ?? []).map((share) => (
                 <span key={holderKey(share.holder)} className="loot-share-nets">
-                  {`${share.pieces} ${creditorNames.get(holderKey(share.holder)) ?? "theirs"}`}
+                  {`${formatPieces(share.pieces)} ${creditorNames.get(holderKey(share.holder)) ?? "theirs"}`}
                 </span>
               ))}
               <button
@@ -486,8 +488,8 @@ function HolderCard({
                 onClick={() => void write(onRemoveSale(tranche.id), null)}
                 aria-label={
                   tranche.amount === null
-                    ? `Remove ${tranche.pieces} kept pieces`
-                    : `Remove ${tranche.pieces} pieces for ${formatMesos(tranche.amount, true)}`
+                    ? `Remove ${formatPieces(tranche.pieces)} kept pieces`
+                    : `Remove ${formatPieces(tranche.pieces)} pieces for ${formatMesos(tranche.amount, true)}`
                 }
               >
                 ×
@@ -517,7 +519,7 @@ function HolderCard({
                       one fact that fold would otherwise lose. */}
                   {drop.looterName} · week of {formatWeekStart(drop.weekStart)}
                 </span>
-                <span className="loot-share-nets">{drop.pieces}</span>
+                <span className="loot-share-nets">{formatPieces(drop.pieces)}</span>
               </div>
 
               {/* Pieces of this night that are somebody else's, in counts. No price: only the holder
@@ -526,7 +528,7 @@ function HolderCard({
                 {drop.transfers.map((transfer) => (
                   <li key={transferKey(transfer)}>
                     <span className="loot-share-name">owes {transfer.to}</span>
-                    <span className="loot-share-nets">{transfer.pieces} pieces</span>
+                    <span className="loot-share-nets">{formatPieces(transfer.pieces)} pieces</span>
                   </li>
                 ))}
               </ul>

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPieces } from "@/lib/piece-ledger";
 import { DropLogSkeleton } from "@/components/drop-log-skeleton";
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
@@ -967,7 +968,7 @@ function DropRow({
               <>
                 <span className="loot-name">
                   {line.name}
-                  <span className="loot-count"> ×{line.yours}</span>
+                  <span className="loot-count"> ×{formatPieces(line.yours)}</span>
                 </span>
                 <button
                   type="button"
@@ -985,7 +986,7 @@ function DropRow({
               // in is every drop that boss ever gave you. The way back to the party is on that page.
               <Link href={`/bosses/drops/${entry.lootId}`} className="loot-name">
                 {line.name}
-                {line.yours > 1 && <span className="loot-count"> ×{line.yours}</span>}
+                {line.yours > 1 && <span className="loot-count"> ×{formatPieces(line.yours)}</span>}
               </Link>
             )}
           </span>
@@ -1052,7 +1053,7 @@ function RunGroup({
         <span className="droplog-name-line">
           <span className="loot-name">
             {name}
-            <span className="loot-count"> ×{fold.yours}</span>
+            <span className="loot-count"> ×{formatPieces(fold.yours)}</span>
           </span>
           <button
             type="button"
@@ -1128,7 +1129,7 @@ function RunRow({
         {label}
         {/* Yours, the same as the line above sums. Counting what fell here made a fold of 440
             open onto runs adding up to 900. */}
-        {entry.yours > 1 && <span className="loot-count"> ×{entry.yours}</span>}
+        {entry.yours > 1 && <span className="loot-count"> ×{formatPieces(entry.yours)}</span>}
       </Link>
       <span className="loot-meta">{meta.join(" · ")}</span>
       <Stage label={dropStatusLabel(entry)} statusClass={entry.status.toLowerCase()} />

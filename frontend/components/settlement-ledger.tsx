@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { Fragment, useState } from "react";
 import { DiscordAvatar } from "@/components/discord-avatar";
@@ -316,7 +317,7 @@ function SettlementCard({
    * away. Absent on the rows that carry no count: a leading zero would read as a debt of nothing.
    */
   const countedLabel = (pieces: number, label: string) =>
-    pieces > 0 ? `${pieces} ${label}` : label;
+    pieces > 0 ? `${formatPieces(pieces)} ${label}` : label;
 
   async function write(action: Promise<void>, clear: null | (() => void)) {
     setRefusal(null);
@@ -1050,7 +1051,9 @@ function SettlementCard({
                     )}
                     <div className="ledger-offset-text">
                       <span className="loot-share-name">
-                        {couponName ? `${sale.pieces} ${couponName}` : `${sale.pieces} coupons`}
+                        {couponName
+                          ? `${formatPieces(sale.pieces)} ${couponName}`
+                          : `${formatPieces(sale.pieces)} coupons`}
                       </span>
                       <span className="ledger-offset-sub">
                         <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
@@ -1269,13 +1272,13 @@ function SettlementCard({
                 <span className="ledger-tranches">
                   {keptRows.map((tranche) => (
                     <span key={tranche.id} className="ledger-tranche">
-                      {`${tranche.pieces} kept for ${formatMesos(tranche.amount ?? 0, true)}`}
+                      {`${formatPieces(tranche.pieces)} kept for ${formatMesos(tranche.amount ?? 0, true)}`}
                       <button
                         type="button"
                         className="link ledger-drop-sale"
                         disabled={busy}
                         onClick={() => void write(onRemoveKeep(tranche.id), null)}
-                        aria-label={`Remove ${tranche.pieces} coupons ${row.name} kept`}
+                        aria-label={`Remove ${formatPieces(tranche.pieces)} coupons ${row.name} kept`}
                       >
                         ×
                       </button>
@@ -1293,14 +1296,14 @@ function SettlementCard({
                   }}
                 >
                   <label className="loot-share-input">
-                    {`${row.name} keeps ${row.pieces} for`}
+                    {`${row.name} keeps ${formatPieces(row.pieces)} for`}
                     <input
                       className="split-input"
                       value={kept}
                       onChange={(e) => setKept(e.target.value)}
                       placeholder="400m"
                       inputMode="decimal"
-                      aria-label={`What ${row.name} pays to keep the ${row.pieces} coupons of yours`}
+                      aria-label={`What ${row.name} pays to keep the ${formatPieces(row.pieces)} coupons of yours`}
                     />
                   </label>
                   <button type="submit" className="party-save" disabled={busy || keeps === null}>
@@ -1481,7 +1484,7 @@ function DischargeRow({
             // lot was theirs the two figures are one, so quoting both would say it twice.
             oneSale.pieces === oneSale.lot.pieces
               ? "the whole lot"
-              : `${oneSale.pieces} of a ${oneSale.lot.pieces} coupon lot`,
+              : `${formatPieces(oneSale.pieces)} of a ${oneSale.lot.pieces} coupon lot`,
             `sold for ${formatMesos(oneSale.lot.amount, true)}`,
           ]
         : [
@@ -1514,7 +1517,7 @@ function DischargeRow({
             </Link>
           ) : (
             <span className="loot-name has-detail">
-              {one ? one.item : pieces > 0 ? `${pieces} coupons sold` : act.label}
+              {one ? one.item : pieces > 0 ? `${formatPieces(pieces)} coupons sold` : act.label}
               {act.by != null && <span className="loot-meta"> · {act.by || name}</span>}
             </span>
           )}
@@ -1601,7 +1604,7 @@ function DischargeRow({
                   <span className="loot-icon" aria-hidden="true" />
                 )}
                 <div className="ledger-offset-text">
-                  <span className="loot-share-name">{`${sale.pieces} coupons`}</span>
+                  <span className="loot-share-name">{`${formatPieces(sale.pieces)} coupons`}</span>
                   <span className="ledger-offset-sub">
                     <span className="ledger-amount">{signed(-sale.mesos)}</span>
                   </span>

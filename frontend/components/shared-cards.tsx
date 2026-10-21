@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPieces } from "@/lib/piece-ledger";
 import { useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
 import { DiscordAvatar } from "@/components/discord-avatar";
@@ -71,8 +72,12 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
             {card.holding > 0 && (
               <span>{`holding ${formatMesos(card.holding, true)} of yours`}</span>
             )}
-            {card.piecesOwed > 0 && <span>{`${card.piecesOwed} of your coupons`}</span>}
-            {card.piecesOwe > 0 && <span>{`${card.piecesOwe} of their coupons`}</span>}
+            {card.piecesOwed > 0 && (
+              <span>{`${formatPieces(card.piecesOwed)} of your coupons`}</span>
+            )}
+            {card.piecesOwe > 0 && (
+              <span>{`${formatPieces(card.piecesOwe)} of their coupons`}</span>
+            )}
           </span>
         </span>
       </header>

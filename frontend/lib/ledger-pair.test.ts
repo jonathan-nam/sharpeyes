@@ -203,7 +203,7 @@ describe("one section for what is unsettled", () => {
     // "130 coupons" is the count and not what was sold. One item behaves this way, so the card can
     // spell it, and reading the name off the same drop row as the icon is what stops it drawing one
     // item and naming another.
-    expect(ledger).toContain("`${sale.pieces} ${couponName}`");
+    expect(ledger).toContain("`${formatPieces(sale.pieces)} ${couponName}`");
     expect(view).toContain(".find((drop) => drop.dropKey === VESTIGE) ?? null");
     expect(stage).toContain("const vestige = vestigeOf(page.drops);");
     expect(stage).toContain("iconUrl={vestige?.iconUrl ?? null}");

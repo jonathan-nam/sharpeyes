@@ -5,6 +5,7 @@
 // its input, and the payout rows say who is in it. A second implementation of the split is the one
 // thing this feature must not grow, because two answers to "what do I send you" is worse than none.
 
+import { formatPieces } from "./piece-ledger";
 import { type AmountBasis, FEE_STANDARD, type Split, splitDrop } from "./drop-split";
 import type { Currency, Money } from "./money";
 import type { Loot } from "@/types/loot";
@@ -287,7 +288,7 @@ export function poolLabel(
   const outstanding = [
     counts.pendingLoot > 0 ? `${counts.pendingLoot} in the pool` : null,
     counts.awaitingPayout > 0 ? `${counts.awaitingPayout} awaiting payout` : null,
-    coupons.toYou > 0 ? `${coupons.toYou} coupons owed` : null,
+    coupons.toYou > 0 ? `${formatPieces(coupons.toYou)} coupons owed` : null,
   ].filter(Boolean);
 
   if (outstanding.length > 0) return { text: outstanding.join(" \u00b7 "), done: false };

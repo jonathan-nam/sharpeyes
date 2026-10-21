@@ -1,5 +1,6 @@
 "use client";
 
+import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { useState } from "react";
 import { apiAssetUrl } from "@/lib/api";
@@ -66,7 +67,7 @@ function SettledNights({
             {/* The same wrapper the Drop Log's runs put their figures in, so the counts line up down
                 the right the way those do. */}
             <span className="droplog-amounts">
-              <span className="droplog-take">{row.pieces}</span>
+              <span className="droplog-take">{formatPieces(row.pieces)}</span>
               <span className="loot-share-nets">coupons</span>
             </span>
           </li>
@@ -156,7 +157,7 @@ function SettledRow({
             </>
           ) : row.kind === "PIECES" ? (
             <>
-              <span className="droplog-take">{line.pieces}</span>
+              <span className="droplog-take">{formatPieces(line.pieces)}</span>
               <span className="loot-share-nets">
                 {/* A write-off is a decision, so it is said on the line it was made about, which for
                     a fold is the act that made it. */}

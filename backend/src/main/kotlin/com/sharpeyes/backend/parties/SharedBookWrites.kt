@@ -104,7 +104,7 @@ internal fun insertSharedTranche(
 
 /** A tranche as typed, already checked. */
 internal data class TrancheEntry(
-    val pieces: Int,
+    val pieces: Double,
     val amount: Long?,
     val disposition: String,
     val shares: List<VestigeTrancheShareRow>,

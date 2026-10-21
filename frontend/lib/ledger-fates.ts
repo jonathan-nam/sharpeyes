@@ -15,7 +15,7 @@
 // apportioning, no debt is derived from these rows, so a pile that owes nobody gets the same figures
 // whatever it is told. Asking it to account for itself is work with no reader.
 
-import { spendOldestFirst, spendSales } from "./piece-ledger";
+import { pieces as roundPieces, spendOldestFirst, spendSales } from "./piece-ledger";
 import type { AnsweredSale } from "./piece-ledger";
 import { SELF_KEY, holderKey, unaccounted } from "./vestige-ledger";
 import type { Holder, HolderLedger } from "./vestige-ledger";
@@ -159,7 +159,8 @@ export function distributeSale<T extends { key: string; pieces: number }>(
   pieces: number,
   creditors: T[],
 ): { creditor: T; pieces: number }[] {
-  let left = Math.max(0, Math.floor(pieces));
+  // Exact, as the debts it pays are. See entitlements.
+  let left = Math.max(0, pieces);
   const out: { creditor: T; pieces: number }[] = [];
   for (const creditor of [...creditors].sort(
     (a, b) => b.pieces - a.pieces || a.key.localeCompare(b.key),
@@ -168,7 +169,7 @@ export function distributeSale<T extends { key: string; pieces: number }>(
     const cut = Math.min(left, creditor.pieces);
     if (cut <= 0) continue;
     out.push({ creditor, pieces: cut });
-    left -= cut;
+    left = roundPieces(left - cut);
   }
   return out;
 }

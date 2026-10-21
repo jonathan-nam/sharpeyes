@@ -15,33 +15,33 @@ class SettlementBalanceTest {
     private fun share(
         holder: VestigeHolder,
         pieces: Int,
-    ) = VestigeTrancheShareRow(holder, pieces)
+    ) = VestigeTrancheShareRow(holder, pieces.toDouble())
 
     @Test
     fun `a sale may say how many of its pieces were somebody else's`() {
         // The night this exists for: 160 fell, 80 were theirs, you looted the lot and sold it.
-        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(bro, 80))))
-        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(bro, 60), share(stranger, 40))))
+        assertNull(shareRefusal(self, 160.0, "SOLD", listOf(share(bro, 80))))
+        assertNull(shareRefusal(self, 160.0, "SOLD", listOf(share(bro, 60), share(stranger, 40))))
         // Absent is the whole sale being your own, which is every tranche entered before V56.
-        assertNull(shareRefusal(self, 160, "KEPT", emptyList()))
+        assertNull(shareRefusal(self, 160.0, "KEPT", emptyList()))
     }
 
     @Test
     fun `a sale cannot give away more than it held`() {
         // The ceiling a check constraint cannot enforce, because it needs the parent row. Crediting
         // 200 pieces out of a sale of 160 hands somebody money the lot never made.
-        assertTrue(shareRefusal(self, 160, "SOLD", listOf(share(bro, 200)))!!.contains("more pieces"))
+        assertTrue(shareRefusal(self, 160.0, "SOLD", listOf(share(bro, 200)))!!.contains("more pieces"))
         assertTrue(
-            shareRefusal(self, 100, "SOLD", listOf(share(bro, 60), share(jared, 60)))!!
+            shareRefusal(self, 100.0, "SOLD", listOf(share(bro, 60), share(jared, 60)))!!
                 .contains("more pieces"),
         )
         // Exactly all of it is a night where none of the coupons were yours, which happens.
-        assertNull(shareRefusal(self, 160, "SOLD", listOf(share(bro, 160))))
+        assertNull(shareRefusal(self, 160.0, "SOLD", listOf(share(bro, 160))))
     }
 
     @Test
     fun `a redemption divides nothing, having realized nothing`() {
-        assertTrue(shareRefusal(self, 80, "KEPT", listOf(share(bro, 80)))!!.contains("priced"))
+        assertTrue(shareRefusal(self, 80.0, "KEPT", listOf(share(bro, 80)))!!.contains("priced"))
     }
 
     @Test
@@ -49,10 +49,10 @@ class SettlementBalanceTest {
         // "I took theirs, at a price" is the whole act of keeping somebody's coupons against what they
         // owe you. Refusing the attribution left the pieces settled and the money for them stated
         // nowhere, so the debt it was meant to discharge did not move.
-        assertNull(shareRefusal(self, 80, "BOUGHT", listOf(share(bro, 80))))
+        assertNull(shareRefusal(self, 80.0, "BOUGHT", listOf(share(bro, 80))))
         // And the same ceiling as a sale, since the price is divided the same way.
         assertTrue(
-            shareRefusal(self, 80, "BOUGHT", listOf(share(bro, 100)))!!.contains("more pieces"),
+            shareRefusal(self, 80.0, "BOUGHT", listOf(share(bro, 100)))!!.contains("more pieces"),
         )
     }
 
@@ -60,9 +60,9 @@ class SettlementBalanceTest {
     fun `a sale cannot owe its own pile, nor one person twice`() {
         // Owing yourself is not a debt. The same creditor on two rows would be counted twice rather
         // than added up, which is the quiet wrong number rather than a loud one.
-        assertTrue(shareRefusal(self, 160, "SOLD", listOf(share(self, 80)))!!.contains("own pile"))
+        assertTrue(shareRefusal(self, 160.0, "SOLD", listOf(share(self, 80)))!!.contains("own pile"))
         assertTrue(
-            shareRefusal(self, 160, "SOLD", listOf(share(bro, 40), share(bro, 40)))!!
+            shareRefusal(self, 160.0, "SOLD", listOf(share(bro, 40), share(bro, 40)))!!
                 .contains("once"),
         )
     }
@@ -70,26 +70,26 @@ class SettlementBalanceTest {
     @Test
     fun `a share names a creditor the same way a pile names a holder`() {
         assertTrue(
-            shareRefusal(self, 80, "SOLD", listOf(share(VestigeHolder(kind = "NOBODY"), 1)))!!
+            shareRefusal(self, 80.0, "SOLD", listOf(share(VestigeHolder(kind = "NOBODY"), 1)))!!
                 .contains("kind"),
         )
         assertTrue(
-            shareRefusal(self, 80, "SOLD", listOf(share(VestigeHolder(kind = "PERSON"), 1)))!!
+            shareRefusal(self, 80.0, "SOLD", listOf(share(VestigeHolder(kind = "PERSON"), 1)))!!
                 .contains("personId"),
         )
         assertTrue(
-            shareRefusal(self, 80, "SOLD", listOf(share(VestigeHolder(kind = "CHARACTER"), 1)))!!
+            shareRefusal(self, 80.0, "SOLD", listOf(share(VestigeHolder(kind = "CHARACTER"), 1)))!!
                 .contains("characterName"),
         )
         assertTrue(
             shareRefusal(
                 self,
-                80,
+                80.0,
                 "SOLD",
                 listOf(share(VestigeHolder(kind = "PERSON", personId = "nope"), 1)),
             )!!.contains("not an id"),
         )
-        assertTrue(shareRefusal(self, 80, "SOLD", listOf(share(bro, 0)))!!.contains("at least 1"))
+        assertTrue(shareRefusal(self, 80.0, "SOLD", listOf(share(bro, 0)))!!.contains("above 0"))
     }
 
     @Test
