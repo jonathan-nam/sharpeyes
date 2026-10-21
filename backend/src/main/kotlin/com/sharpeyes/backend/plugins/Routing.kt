@@ -2,7 +2,9 @@ package com.sharpeyes.backend.plugins
 
 import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
+import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.eventRoutes
+import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.friends.friendRoutes
 import com.sharpeyes.backend.invites.inviteRoutes
 import com.sharpeyes.backend.invites.joinRoutes
@@ -168,7 +170,10 @@ fun Application.configureRouting(
 
 /** Other accounts, and what they do that reaches yours. */
 private fun Route.socialRoutes() {
-    route("/api/friends") { friendRoutes() }
+    route("/api/friends") {
+        tellLinkedOnWrite(Topic.FRIENDS, Topic.PARTY, Topic.SETTLEMENT)
+        friendRoutes()
+    }
     route("/api/notifications") { notificationRoutes() }
     route("/api/events") { eventRoutes() }
 }

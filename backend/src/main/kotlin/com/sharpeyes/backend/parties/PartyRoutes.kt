@@ -2,6 +2,8 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.events.Topic
+import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -33,6 +35,8 @@ fun Route.partyRoutes(
     nexonLookupService: NexonLookupService,
     spriteCache: SpriteCache,
 ) {
+    // A pool, a roster, a split or a paid share: any of them is on a member's screen. See TellLinked.kt.
+    tellLinkedOnWrite(Topic.PARTY, Topic.LOOT, Topic.SETTLEMENT)
     get { listParties() }
     post { createPartyRoute(nexonLookupService, spriteCache) }
     // The parties somebody ELSE owns that a character of yours sits in. A read of its own rather

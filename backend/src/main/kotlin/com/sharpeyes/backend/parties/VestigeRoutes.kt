@@ -3,6 +3,8 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.db.VestigeTrancheShare
+import com.sharpeyes.backend.events.Topic
+import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -146,11 +148,20 @@ data class AddVestigeTrancheRequest(
  * anything.
  */
 fun Route.vestigeLedgerRoutes() {
-    route("/api/vestige-tranches") { vestigeRoutes() }
-    route("/api/vestige-payments") { vestigePaymentRoutes() }
-    route("/api/vestige-settlements") { vestigeSettlementRoutes() }
-    route("/api/settlement-debts") { settlementDebtRoutes() }
-    route("/api/proceeds-disposals") { proceedsDisposalRoutes() }
+    ledgerRoute("/api/vestige-tranches") { vestigeRoutes() }
+    ledgerRoute("/api/vestige-payments") { vestigePaymentRoutes() }
+    ledgerRoute("/api/vestige-settlements") { vestigeSettlementRoutes() }
+    ledgerRoute("/api/settlement-debts") { settlementDebtRoutes() }
+    ledgerRoute("/api/proceeds-disposals") { proceedsDisposalRoutes() }
+}
+
+/** Every one of these is the other side's Settlement card too. See TellLinked.kt. */
+private fun Route.ledgerRoute(
+    path: String,
+    mount: Route.() -> Unit,
+) = route(path) {
+    tellLinkedOnWrite(Topic.SETTLEMENT, Topic.LOOT)
+    mount()
 }
 
 fun Route.vestigeRoutes() {

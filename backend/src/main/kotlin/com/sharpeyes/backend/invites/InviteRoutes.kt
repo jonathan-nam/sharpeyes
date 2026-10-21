@@ -4,6 +4,8 @@ import com.sharpeyes.backend.db.AccountInvite
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.events.Topic
+import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.refuse
@@ -51,6 +53,8 @@ fun Route.inviteRoutes(
     nexonLookupService: NexonLookupService,
     spriteCache: SpriteCache,
 ) {
+    // Accepting links two accounts and seats one in the other's parties. See TellLinked.kt.
+    tellLinkedOnWrite(Topic.PARTY, Topic.SETTLEMENT, Topic.FRIENDS)
     get { listInvitesRoute() }
     post { createInviteRoute() }
     post("/{token}/accept") { acceptInviteRoute(nexonLookupService, spriteCache) }

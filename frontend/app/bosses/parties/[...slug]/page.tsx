@@ -156,9 +156,14 @@ export default function PartyPage() {
   }, [slug, isLoaded]);
 
   // Its clear, ticked by whoever owns it or written through from them, is on screen without a reload.
-  useLive("clears", () => {
-    if (state === "loaded")
-      void apiFetch<Party>(partyUrl, { method: "GET" }, getToken).then(setParty, () => {});
+  useLive(["clears", "party", "loot"], () => {
+    if (state !== "loaded") return;
+    void apiFetch<Party>(partyUrl, { method: "GET" }, getToken)
+      .then((next) => {
+        setParty(next);
+        return loadLoot(next.id);
+      })
+      .catch(() => {});
   });
 
   // Every mutation refetches the pool rather than patching it in place: status is derived from the

@@ -95,7 +95,7 @@ export default function BossesPage() {
   }
 
   // A clear written through from a party, or ticked in another tab, is on screen without a reload.
-  useLive("clears", () => void loadClears(week).catch(() => {}));
+  useLive(["clears", "party"], () => void loadClears(week).catch(() => {}));
 
   /**
    * Answers one cell by hand, for when there is no planner capture to hand.

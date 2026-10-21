@@ -255,7 +255,10 @@ export default function PartiesPage() {
   }
 
   // A party member ticking a clear, or one written through to you, is on screen without a reload.
-  useLive("clears", () => void loadWeek(week, { clearsOptional: true }).catch(() => {}));
+  useLive(
+    ["clears", "loot", "party"],
+    () => void loadWeek(week, { clearsOptional: true }).catch(() => {}),
+  );
 
   async function selectWeek(target: string | null) {
     setStepping(true);
