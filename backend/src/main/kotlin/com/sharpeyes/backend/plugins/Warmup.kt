@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.plugins
 
 import com.sharpeyes.backend.bosses.WEEKLY_CADENCE
+import com.sharpeyes.backend.bosses.copyCurrentClears
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.Users
@@ -103,4 +104,12 @@ internal fun JdbcTransaction.busiestAccount(): String? {
             .limit(1)
             .firstOrNull()
             ?.get(Users.id)
+}
+
+/**
+ * Clears recorded before their party's members were linked, copied on (bosses/ClearWriteThrough.kt).
+ * On the boot thread like the rest of this file. A no-op once every copy exists.
+ */
+fun copyClearsAtBoot() {
+    transaction { copyCurrentClears(Clock.System.now()) }
 }

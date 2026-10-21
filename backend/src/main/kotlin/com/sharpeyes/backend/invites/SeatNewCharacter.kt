@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.invites
 
 import com.sharpeyes.backend.bosses.clearSkipsOfSeats
+import com.sharpeyes.backend.bosses.partySeatsChanged
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
@@ -14,6 +15,7 @@ import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
@@ -55,6 +57,9 @@ internal fun seatInLinkedParties(
                     PartyMember.characterId.isNull() and
                     PartyMember.linkedCharacterId.isNull()
             }) { it[linkedCharacterId] = characterId }
-        if (bound > 0) clearSkipsOfSeats(partyId)
+        if (bound > 0) {
+            clearSkipsOfSeats(partyId)
+            partySeatsChanged(partyId, Clock.System.now())
+        }
     }
 }

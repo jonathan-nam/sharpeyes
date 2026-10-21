@@ -1,7 +1,9 @@
 package com.sharpeyes.backend.bosses
 
+import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.parties.linkedSeatsOn
@@ -11,6 +13,8 @@ import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -39,6 +43,52 @@ internal fun clearChanged(
 ) {
     syncPiecesForClear(characterId, bossCatalogId, period, now, capture)
     writeClearThrough(characterId, bossCatalogId, period, now)
+}
+
+/**
+ * Re-copies [partyId]'s owner's clear for the period it is in now. For a seat newly bound to a
+ * member's character: the owner may have cleared before the member was linked, and nothing else
+ * would write again until the next clear.
+ */
+internal fun partySeatsChanged(
+    partyId: Uuid,
+    now: Instant,
+) {
+    val party =
+        Party
+            .innerJoin(BossCatalog)
+            .selectAll()
+            .where { Party.id eq partyId }
+            .firstOrNull() ?: return
+    clearChanged(
+        party[Party.characterId],
+        party[Party.bossCatalogId],
+        periodStartFor(party[BossCatalog.reset], now),
+        now,
+    )
+}
+
+/**
+ * Copies every own clear of the periods running now onto its parties. At boot, so clears recorded
+ * before V87 reach their members. Idempotent: a copy already there is left, so after the first
+ * boot this writes nothing.
+ */
+internal fun copyCurrentClears(now: Instant) {
+    val current = BossCatalog.selectAll().associate { it[BossCatalog.id] to periodStartFor(it[BossCatalog.reset], now) }
+    val shared =
+        Party
+            .innerJoin(PartyMember)
+            .selectAll()
+            .where {
+                (Party.standing eq true) and (Party.solo eq false) and PartyMember.linkedCharacterId.isNotNull() and
+                    (PartyMember.standing eq true)
+            }.mapTo(mutableSetOf()) { it[Party.characterId] to it[Party.bossCatalogId] }
+    BossClear
+        .selectAll()
+        .where { (BossClear.cleared eq true) and BossClear.viaPartyId.isNull() }
+        .map { Triple(it[BossClear.characterId], it[BossClear.bossCatalogId], it[BossClear.periodStart]) }
+        .filter { (character, boss, period) -> current[boss] == period && (character to boss) in shared }
+        .forEach { (character, boss, period) -> writeClearThrough(character, boss, period, now) }
 }
 
 private fun writeClearThrough(
