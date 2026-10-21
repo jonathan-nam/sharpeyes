@@ -9,6 +9,8 @@ import type { SharedBook } from "@/types/page";
 /** Your card in somebody else's book, from your side. Every figure is theirs, swapped. */
 export type SharedCard = {
   name: string;
+  /** Your person row in their book: where your writes into it go (/api/shared-books/{personId}). */
+  personId: string;
   /** Mesos they owe you: what their card says they owe you, netted or as unpaid shares. */
   owed: number;
   /** Mesos you owe them. */
@@ -23,7 +25,17 @@ export type SharedCard = {
 };
 
 /** One row of a detail list: what it was, and its mesos. */
-export type SharedPart = { key: string; label: string; mesos: number };
+export type SharedPart = {
+  key: string;
+  label: string;
+  mesos: number;
+  /** Who wrote it, when it was the owner and not you. See V88. */
+  by?: string | null;
+  /** A row you wrote, which you may take back: which list, and its id. */
+  remove?: { kind: "debts" | "payments"; id: string };
+  /** A share of a drop you sold, still unsent: the payout to mark. */
+  send?: { partyId: string; lootId: string; payeeId: string };
+};
 
 /**
  * What your card in their book is made of, from your side. Read-only: every figure is one the
@@ -83,25 +95,35 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     (line) => line.direction === "owed" && line.currency === "MESO",
   );
   const itemised = yourLines.reduce((sum, line) => sum + line.pay, 0) === row.parts.shares;
-  const shares = itemised
+  const shares: SharedPart[] = itemised
     ? yourLines.map((line) => ({
         key: `${line.lootId}:${line.theirsId}`,
         label: where(line),
         mesos: line.pay,
+        // A share of a drop YOU sold is yours to send, which the payout route lets the seller mark.
+        send: { partyId: line.partyId, lootId: line.lootId, payeeId: line.payeeId },
       }))
     : [{ key: "shares", label: "Your shares", mesos: row.parts.shares }];
-  const owe = [
+  // Who wrote each typed row and each receipt, so the card can name the owner's and offer your own back.
+  const debtsById = new Map(book.debts.map((d) => [d.id, d]));
+  const paymentsById = new Map(book.payments.map((p) => [p.id, p]));
+  const owe: SharedPart[] = [
     ...shares,
     { key: "sold", label: `Coupons of ${book.ownerName}'s you sold`, mesos: row.parts.soldOfYours },
     ...typed.map((entry) => ({
       key: entry.id,
       label: entry.note ?? "Entered",
       mesos: entry.amount,
+      by: entry.recordedByYou === false ? (entry.recordedByName ?? book.ownerName) : null,
+      remove: entry.recordedByYou === true ? { kind: "debts" as const, id: entry.id } : undefined,
     })),
   ].filter((part) => part.mesos !== 0);
   const paidLabel = { PAYMENT: "You paid", DEBT: "Offset", PROCEEDS: "Coupon sale" } as const;
+  const writtenBy = (id: string, source: string) =>
+    source === "PAYMENT" ? paymentsById.get(id) : source === "DEBT" ? debtsById.get(id) : undefined;
   return {
     name: book.ownerName,
+    personId: book.personId,
     owed: row.owedByYou + row.sharesYouOwe,
     owe: row.mesos,
     holding: row.holding,
@@ -111,11 +133,23 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     detail: {
       owe,
       oweTotal: owe.reduce((sum, part) => sum + part.mesos, 0),
-      paid: discharges.map((act) => ({
-        key: act.id,
-        label: act.label === "paid" || act.label === "offset" ? paidLabel[act.source] : act.label,
-        mesos: act.amount,
-      })),
+      paid: discharges.map((act) => {
+        const row = writtenBy(act.id, act.source);
+        return {
+          key: act.id,
+          label: act.label === "paid" || act.label === "offset" ? paidLabel[act.source] : act.label,
+          mesos: act.amount,
+          by: row?.recordedByYou === false ? (row.recordedByName ?? book.ownerName) : null,
+          // Only a typed credit or a receipt: an offset is the owner's act on their own shares.
+          remove:
+            row?.recordedByYou === true && (act.source === "PAYMENT" || act.payouts.length === 0)
+              ? {
+                  kind: act.source === "PAYMENT" ? ("payments" as const) : ("debts" as const),
+                  id: act.id,
+                }
+              : undefined,
+        };
+      }),
       paidTotal: discharged,
       // "owe" in their book is them owing you.
       theyOwe: row.lines

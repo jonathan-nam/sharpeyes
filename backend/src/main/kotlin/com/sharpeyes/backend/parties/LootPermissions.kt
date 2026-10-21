@@ -55,7 +55,23 @@ internal fun keptRefusal(
         Refusal("You can only mark a drop kept by yourself.")
     }
 
-/** Deleting [loot]: the owner, or a member taking back a drop they logged that nobody has sold or kept. */
+/**
+ * Marking [memberId]'s share of [loot] paid, or unpaid: the owner, or a member on either end of it,
+ * since the shared book is both sides' to keep.
+ */
+internal fun payoutRefusal(
+    partyId: Uuid,
+    userId: String,
+    memberId: Uuid,
+    loot: LootResponse,
+): Refusal? =
+    if (mayActAs(partyId, userId, memberId) || mayActAs(partyId, userId, loot.sellerMemberId?.let(Uuid::parse))) {
+        null
+    } else {
+        Refusal("You can only mark a share you sent or were sent.")
+    }
+
+/** Deleting [loot]:the owner, or a member taking back a drop they logged that nobody has sold or kept. */
 internal fun mayDeleteLoot(
     partyId: Uuid,
     userId: String,

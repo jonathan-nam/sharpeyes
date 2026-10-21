@@ -1462,6 +1462,7 @@ function DischargeRow({
           ) : (
             <span className="loot-name has-detail">
               {one ? one.item : pieces > 0 ? `${pieces} coupons sold` : act.label}
+              {act.by != null && <span className="loot-meta"> · {act.by || name}</span>}
             </span>
           )}
 
@@ -1495,11 +1496,14 @@ function DischargeRow({
           </button>
         )}
 
-        <ArmedRemove
-          busy={busy}
-          label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}
-          onRemove={onRemove}
-        />
+        {/* A row the other side of a shared book wrote is theirs to take back (V88). */}
+        {act.by == null && (
+          <ArmedRemove
+            busy={busy}
+            label={`Undo ${formatMesos(act.amount, true)} off what ${name} owes you`}
+            onRemove={onRemove}
+          />
+        )}
       </div>
 
       {open && folds && (
@@ -1659,7 +1663,7 @@ function PieceNights({
  * armed behind it, and the WORD changes: hover already paints the button red, so colour alone
  * could not have said which state it was in.
  */
-function ArmedRemove({
+export function ArmedRemove({
   label,
   busy,
   onRemove,
@@ -1730,13 +1734,21 @@ function EnteredRow({
         {/* No empty toggle frame. It was kept to line this up with a folded row, but the folds are
             all under `offsets` and nothing in THIS list has one, so the frame indented the only row
             wearing it by 28px (18px of toggle and the head's 10px gap) past the parts above it. */}
-        <span className="loot-name">{entry.note ?? "entered"}</span>
+        <span className="loot-name">
+          {entry.note ?? "entered"}
+          {/* Written into your book by the other side of it, which is theirs to take back. V88. */}
+          {entry.recordedByYou === false && (
+            <span className="loot-meta"> · {entry.recordedByName ?? name}</span>
+          )}
+        </span>
         <span className="ledger-amount">{signed(entry.amount)}</span>
-        <ArmedRemove
-          busy={busy}
-          label={`Remove ${formatMesos(entry.amount, true)} against ${name}`}
-          onRemove={onRemove}
-        />
+        {entry.recordedByYou !== false && (
+          <ArmedRemove
+            busy={busy}
+            label={`Remove ${formatMesos(entry.amount, true)} against ${name}`}
+            onRemove={onRemove}
+          />
+        )}
       </div>
     </li>
   );

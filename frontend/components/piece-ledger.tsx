@@ -69,6 +69,7 @@ export function PieceLedger({
   onAddKept,
   onAddBought,
   onRemoveSale,
+  yours = false,
 }: {
   ledgers: HolderLedger[];
   /** Pieces of yours the other piles hold, netted into each pile's debt. See HolderCard. */
@@ -96,6 +97,8 @@ export function PieceLedger({
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
   onRemoveSale: (trancheId: string) => Promise<void>;
+  /** Your own pile though another book keeps it, so it reads in the first person. See sharedPile. */
+  yours?: boolean;
 }) {
   if (ledgers.length === 0) return null;
   // A settled pile does not reach here: worthDrawing holds it back, because it is finished and
@@ -119,6 +122,7 @@ export function PieceLedger({
           onAddKept={onAddKept}
           onAddBought={onAddBought}
           onRemoveSale={onRemoveSale}
+          yours={yours || ledger.holder.kind === "SELF"}
         />
       ))}
     </>
@@ -138,6 +142,7 @@ function HolderCard({
   onAddKept,
   onAddBought,
   onRemoveSale,
+  yours,
 }: {
   ledger: HolderLedger;
   /**
@@ -167,6 +172,7 @@ function HolderCard({
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
   onRemoveSale: (trancheId: string) => Promise<void>;
+  yours: boolean;
 }) {
   const [pieces, setPieces] = useState("");
   const [amount, setAmount] = useState("");
@@ -389,7 +395,7 @@ function HolderCard({
                     can only be sold": a pile you meant to keep never reached all-accounted-for. */}
                 {FATES.map((f) => (
                   <option key={f} value={f}>
-                    {ledger.holder.kind === "SELF" ? LABELS[f].yours : LABELS[f].theirs}
+                    {yours ? LABELS[f].yours : LABELS[f].theirs}
                   </option>
                 ))}
               </select>

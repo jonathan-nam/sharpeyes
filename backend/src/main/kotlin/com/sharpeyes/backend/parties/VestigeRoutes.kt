@@ -5,9 +5,11 @@ import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.db.VestigeTrancheShare
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.tellLinkedOnWrite
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -20,10 +22,13 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -119,6 +124,10 @@ data class VestigeTrancheResponse(
     /** Whose pieces this sale was, where any of them were not the seller's. Empty is all their own. */
     val shares: List<VestigeTrancheShareRow> = emptyList(),
     val soldAt: String,
+    /** The reader wrote it, which is what lets them take it back. See V88. */
+    val recordedByYou: Boolean = true,
+    /** Who did, as the reader calls them, when it was not the reader. */
+    val recordedByName: String? = null,
 )
 
 @Serializable
@@ -191,6 +200,9 @@ private suspend fun RoutingContext.addTrancheRoute() {
         trancheRefusal(holder, request.pieces, request.amount, disposition)
             ?: shareRefusal(holder, request.pieces, disposition, shares)
     if (refusal != null) return call.respond(HttpStatusCode.BadRequest, refusal)
+    // A pile somebody keeps in their own shared book is recorded there. See ownBookRefusal.
+    val shared = dbQuery { ownBookRefusal(userId, holder.personId?.let(Uuid::parseOrNull)) }
+    if (shared != null) return call.refuse(HttpStatusCode.Conflict, Refusal(shared))
 
     val result =
         dbQuery {
@@ -255,7 +267,9 @@ private suspend fun RoutingContext.deleteTrancheRoute() {
             ensureUser(userId, email)
             val gone =
                 VestigeTranche.deleteWhere {
-                    (VestigeTranche.id eq trancheId) and (VestigeTranche.userId eq userId)
+                    // Not a row a member wrote into this book: each side takes back only its own. V88.
+                    (VestigeTranche.id eq trancheId) and (VestigeTranche.userId eq userId) and
+                        (VestigeTranche.recordedByUserId.isNull() or (VestigeTranche.recordedByUserId eq userId))
                 } > 0
             if (gone) tranchesFor(userId) else null
         }
@@ -336,7 +350,10 @@ internal fun trancheRefusal(
  *
  * Must run inside a transaction.
  */
-internal fun tranchesFor(userId: String): List<VestigeTrancheResponse> {
+internal fun tranchesFor(
+    userId: String,
+    viewer: String = userId,
+): List<VestigeTrancheResponse> {
     val rows =
         VestigeTranche
             .selectAll()
@@ -363,6 +380,8 @@ internal fun tranchesFor(userId: String): List<VestigeTrancheResponse> {
                 VestigeTrancheShareRow(creditor, it[VestigeTrancheShare.pieces])
             }
 
+    val writer = { row: ResultRow -> row[VestigeTranche.recordedByUserId] ?: userId }
+    val names = loggerNames(viewer, rows.map(writer))
     return rows.map {
         val holder =
             VestigeHolder(
@@ -378,6 +397,8 @@ internal fun tranchesFor(userId: String): List<VestigeTrancheResponse> {
             disposition = it[VestigeTranche.disposition],
             shares = shares[it[VestigeTranche.id]] ?: emptyList(),
             soldAt = it[VestigeTranche.soldAt].toString(),
+            recordedByYou = writer(it) == viewer,
+            recordedByName = names[writer(it)],
         )
     }
 }

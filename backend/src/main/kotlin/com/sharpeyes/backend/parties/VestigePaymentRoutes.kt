@@ -1,9 +1,11 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.VestigePayment
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
+import com.sharpeyes.backend.plugins.refuse
 import com.sharpeyes.backend.users.ensureUser
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
@@ -15,9 +17,12 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -47,6 +52,10 @@ data class VestigePaymentResponse(
     val amount: Long,
     val note: String? = null,
     val receivedAt: String,
+    /** The reader wrote it, which is what lets them take it back. See V88. */
+    val recordedByYou: Boolean = true,
+    /** Who did, as the reader calls them, when it was not the reader. */
+    val recordedByName: String? = null,
 )
 
 @Serializable
@@ -80,6 +89,9 @@ private suspend fun RoutingContext.addPaymentRoute() {
 
     val refusal = paymentRefusal(holder, request.amount, note)
     if (refusal != null) return call.respond(HttpStatusCode.BadRequest, refusal)
+    // It belongs in a shared book instead. See ownBookRefusal.
+    val shared = dbQuery { ownBookRefusal(userId, holder.personId?.let(Uuid::parseOrNull)) }
+    if (shared != null) return call.refuse(HttpStatusCode.Conflict, Refusal(shared))
 
     val result =
         dbQuery {
@@ -119,7 +131,9 @@ private suspend fun RoutingContext.deletePaymentRoute() {
             ensureUser(userId, email)
             val gone =
                 VestigePayment.deleteWhere {
-                    (VestigePayment.id eq paymentId) and (VestigePayment.userId eq userId)
+                    // Not a row a member wrote into this book: each side takes back only its own. V88.
+                    (VestigePayment.id eq paymentId) and (VestigePayment.userId eq userId) and
+                        (VestigePayment.recordedByUserId.isNull() or (VestigePayment.recordedByUserId eq userId))
                 } > 0
             if (gone) paymentsFor(userId) else null
         }
@@ -162,25 +176,35 @@ internal fun paymentRefusal(
  *
  * Must run inside a transaction.
  */
-internal fun paymentsFor(userId: String): List<VestigePaymentResponse> =
-    VestigePayment
-        .selectAll()
-        .where { VestigePayment.userId eq userId }
-        .orderBy(
-            VestigePayment.receivedAt to SortOrder.ASC,
-            VestigePayment.createdAt to SortOrder.ASC,
-        ).map {
-            val holder =
-                VestigeHolder(
-                    kind = it[VestigePayment.holderKind],
-                    personId = it[VestigePayment.personId]?.toString(),
-                    characterName = it[VestigePayment.characterName],
-                )
-            VestigePaymentResponse(
-                id = it[VestigePayment.id].toString(),
-                holder = holder,
-                amount = it[VestigePayment.amount],
-                note = it[VestigePayment.note],
-                receivedAt = it[VestigePayment.receivedAt].toString(),
+internal fun paymentsFor(
+    userId: String,
+    viewer: String = userId,
+): List<VestigePaymentResponse> {
+    val rows =
+        VestigePayment
+            .selectAll()
+            .where { VestigePayment.userId eq userId }
+            .orderBy(
+                VestigePayment.receivedAt to SortOrder.ASC,
+                VestigePayment.createdAt to SortOrder.ASC,
+            ).toList()
+    val writer = { row: ResultRow -> row[VestigePayment.recordedByUserId] ?: userId }
+    val names = loggerNames(viewer, rows.map(writer))
+    return rows.map {
+        val holder =
+            VestigeHolder(
+                kind = it[VestigePayment.holderKind],
+                personId = it[VestigePayment.personId]?.toString(),
+                characterName = it[VestigePayment.characterName],
             )
-        }
+        VestigePaymentResponse(
+            id = it[VestigePayment.id].toString(),
+            holder = holder,
+            amount = it[VestigePayment.amount],
+            note = it[VestigePayment.note],
+            receivedAt = it[VestigePayment.receivedAt].toString(),
+            recordedByYou = writer(it) == viewer,
+            recordedByName = names[writer(it)],
+        )
+    }
+}

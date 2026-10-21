@@ -18,10 +18,13 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -82,6 +85,10 @@ data class SettlementDebtResponse(
     /** The shares this discharged. Empty on a hand-entered debt, which is most of them. See V58. */
     val payouts: List<SettlementDebtPayoutRow> = emptyList(),
     val incurredAt: String,
+    /** The reader wrote it, which is what lets them take it back. See V88. */
+    val recordedByYou: Boolean = true,
+    /** Who did, as the reader calls them, when it was not the reader. */
+    val recordedByName: String? = null,
 )
 
 @Serializable
@@ -122,8 +129,28 @@ private suspend fun RoutingContext.listDebts() {
 }
 
 private suspend fun RoutingContext.addDebtRoute() {
-    val (userId, email) = call.principalIdAndEmail()
+    val (userId, _) = call.principalIdAndEmail()
     val request = call.receive<AddSettlementDebtRequest>()
+    // A typed entry against somebody who keeps a shared book with you belongs there. An offset
+    // (payouts) is this book's own act on its own shares. See ownBookRefusal.
+    val shared =
+        if (request.payouts.isEmpty()) {
+            dbQuery {
+                ownBookRefusal(
+                    userId,
+                    request.holder.personId
+                        ?.trim()
+                        ?.let(Uuid::parseOrNull),
+                )
+            }
+        } else {
+            null
+        }
+    if (shared == null) writeDebt(request) else call.refuse(HttpStatusCode.Conflict, Refusal(shared))
+}
+
+private suspend fun RoutingContext.writeDebt(request: AddSettlementDebtRequest) {
+    val (userId, email) = call.principalIdAndEmail()
     val holder = request.holder.normalised()
     val note = request.note?.trim()?.takeIf { it.isNotEmpty() }
 
@@ -139,7 +166,6 @@ private suspend fun RoutingContext.addDebtRoute() {
     if (payouts.any { (loot, member) -> loot == null || member == null }) {
         return call.respond(HttpStatusCode.BadRequest, "malformed lootId or memberId")
     }
-
     val result =
         dbQuery {
             ensureUser(userId, email)
@@ -196,7 +222,9 @@ private suspend fun RoutingContext.deleteDebtRoute() {
             ensureUser(userId, email)
             val gone =
                 SettlementDebt.deleteWhere {
-                    (SettlementDebt.id eq debtId) and (SettlementDebt.userId eq userId)
+                    // Not a row a member wrote into this book: each side takes back only its own. V88.
+                    (SettlementDebt.id eq debtId) and (SettlementDebt.userId eq userId) and
+                        (SettlementDebt.recordedByUserId.isNull() or (SettlementDebt.recordedByUserId eq userId))
                 } > 0
             if (gone) debtsFor(userId) else null
         }
@@ -266,7 +294,10 @@ internal fun debtRefusal(
  *
  * Must run inside a transaction.
  */
-internal fun debtsFor(userId: String): List<SettlementDebtResponse> {
+internal fun debtsFor(
+    userId: String,
+    viewer: String = userId,
+): List<SettlementDebtResponse> {
     val rows =
         SettlementDebt
             .selectAll()
@@ -290,6 +321,8 @@ internal fun debtsFor(userId: String): List<SettlementDebtResponse> {
                 )
             }
 
+    val writer = { row: ResultRow -> row[SettlementDebt.recordedByUserId] ?: userId }
+    val names = loggerNames(viewer, rows.map(writer))
     return rows.map {
         val holder =
             VestigeHolder(
@@ -304,6 +337,8 @@ internal fun debtsFor(userId: String): List<SettlementDebtResponse> {
             note = it[SettlementDebt.note],
             payouts = shares[it[SettlementDebt.id]] ?: emptyList(),
             incurredAt = it[SettlementDebt.incurredAt].toString(),
+            recordedByYou = writer(it) == viewer,
+            recordedByName = names[writer(it)],
         )
     }
 }

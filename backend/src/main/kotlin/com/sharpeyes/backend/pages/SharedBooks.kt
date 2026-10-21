@@ -63,7 +63,8 @@ internal fun bookBetween(
     // Their own pile's sales stay whole, because a sale out of it re-prices every coupon in it, but
     // a share naming somebody else is not yours to read. A sale out of your pile is yours.
     val tranches =
-        tranchesFor(owner)
+        // Read as the member throughout, so each row says whether they wrote it. See V88.
+        tranchesFor(owner, viewer = member)
             .filter { it.holder.kind == SELF || names(it.holder) }
             .map { tranche -> tranche.copy(shares = tranche.shares.filter { selfOrYou(it.holder) }) }
     val settlements =
@@ -80,9 +81,9 @@ internal fun bookBetween(
         parties = parties,
         pools = pools,
         tranches = tranches,
-        payments = paymentsFor(owner).filter { names(it.holder) },
+        payments = paymentsFor(owner, viewer = member).filter { names(it.holder) },
         settlements = settlements,
-        debts = debtsFor(owner).filter { names(it.holder) },
+        debts = debtsFor(owner, viewer = member).filter { names(it.holder) },
         disposals = disposalsFor(owner).filter { names(it.holder) },
     )
 }

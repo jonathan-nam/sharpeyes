@@ -12,6 +12,7 @@ import com.sharpeyes.backend.notifications.notificationRoutes
 import com.sharpeyes.backend.pages.pageRoutes
 import com.sharpeyes.backend.parties.partyRoutes
 import com.sharpeyes.backend.parties.peopleRoutes
+import com.sharpeyes.backend.parties.sharedBookRoutes
 import com.sharpeyes.backend.parties.vestigeLedgerRoutes
 import com.sharpeyes.backend.screenshots.screenshotRoutes
 import com.sharpeyes.backend.services.NexonLookupService
@@ -176,4 +177,6 @@ private fun Route.socialRoutes() {
     }
     route("/api/notifications") { notificationRoutes() }
     route("/api/events") { eventRoutes() }
+    // A member's writes into the owner's book. See SharedBookWrites.kt.
+    route("/api/shared-books") { sharedBookRoutes() }
 }

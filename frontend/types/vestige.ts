@@ -21,6 +21,16 @@ export type VestigeTranche = {
   // which is every tranche entered before V56.
   shares: VestigeTrancheShare[];
   soldAt: string;
+} & WrittenBy;
+
+/**
+ * Who wrote a ledger row. Between two linked accounts the book is shared and either side writes into
+ * it (V88). Absent on a payload from before the fields, which was always yours.
+ */
+export type WrittenBy = {
+  recordedByYou?: boolean;
+  /** Who did, as you call them, when it was not you. */
+  recordedByName?: string | null;
 };
 
 /**
@@ -71,7 +81,7 @@ export type VestigePayment = {
   // so this labels the receipt rather than saying which piece of it went. See V64.
   note: string | null;
   receivedAt: string;
-};
+} & WrittenBy;
 
 // POST /api/vestige-payments. Answers with the whole tally, not the row added.
 export type AddVestigePaymentBody = {
@@ -110,7 +120,7 @@ export type SettlementDebt = {
   // The shares an OFFSET discharged. Empty on a hand-entered debt, which is most of them. See V58.
   payouts: SettlementDebtPayout[];
   incurredAt: string;
-};
+} & WrittenBy;
 
 // What a closing act moved: the shares it marked paid, the entries it was recorded as, and what it
 // decided about their coupon money. See V57 and V61.

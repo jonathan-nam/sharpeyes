@@ -553,6 +553,9 @@ object VestigeTranche : Table("vestige_tranche") {
     val soldAt = timestamp("sold_at")
     val createdAt = timestamp("created_at")
 
+    // Who wrote it, when not the book's owner. See V88.
+    val recordedByUserId = optReference("recorded_by_user_id", Users.id)
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -590,6 +593,9 @@ object SettlementDebt : Table("settlement_debt") {
     val incurredAt = timestamp("incurred_at")
     val createdAt = timestamp("created_at")
 
+    // Who wrote it, when not the book's owner. See V88.
+    val recordedByUserId = optReference("recorded_by_user_id", Users.id)
+
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -622,6 +628,9 @@ object VestigePayment : Table("vestige_payment") {
     val note = text("note").nullable()
     val receivedAt = timestamp("received_at")
     val createdAt = timestamp("created_at")
+
+    // Who wrote it, when not the book's owner. See V88.
+    val recordedByUserId = optReference("recorded_by_user_id", Users.id)
 
     override val primaryKey = PrimaryKey(id)
 }
