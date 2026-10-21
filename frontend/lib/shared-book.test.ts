@@ -61,6 +61,16 @@ describe("sharedCard", () => {
     expect([yours.owed, yours.owe]).toEqual([theirs.owedByYou + theirs.sharesYouOwe, theirs.mesos]);
   });
 
+  it("itemises the figure: what you owe, less what came off, is the net either way", () => {
+    // The same arithmetic SettlementCard's Owed and Drops lists come to. See settlement.test.ts.
+    const card = sharedCard(book({ debts: [debt(139 * B)], payments: [paid(187 * B)] }), [])!;
+    expect(card.detail.owe).toEqual([{ key: "d-139000000000", label: "Entered", mesos: 139 * B }]);
+    expect(card.detail.paid).toEqual([
+      { key: "p-187000000000", label: "You paid", mesos: 187 * B },
+    ]);
+    expect(card.detail.oweTotal - card.detail.paidTotal).toBe(card.owe - card.owed);
+  });
+
   it("is nothing when the book says nothing about you", () => {
     expect(sharedCard(book({}), [])).toBeNull();
   });
