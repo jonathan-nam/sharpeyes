@@ -26,6 +26,7 @@ import {
 } from "@/lib/settlement";
 import { apiAssetUrl, failureText } from "@/lib/api";
 import { CopyAmount } from "@/components/copy-amount";
+import { SharpEyesMark } from "@/components/sharp-eyes-mark";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
 import { copyText, formatDollars, formatMoney } from "@/lib/money";
 import type { Currency } from "@/lib/money";
@@ -1523,12 +1524,8 @@ function DischargeRow({
           </span>
         </div>
 
-        {/* When the DROP fell, because that is what the week filter and the week total answer to:
-            the day for one night, the first and last reset week for a sale spread over several.
-            Only an act with no drop behind it (a typed credit, a payment) falls back to the day it
-            was recorded. Its own column between the text and the controls, so it reads before them. */}
-        <span className="ledger-when">{when}</span>
-
+        {/* Before the date, not after it: only some rows fold, and a chevron between the date and
+            the × put those rows' dates out of line with the rest. */}
         {folds && (
           <button
             type="button"
@@ -1547,6 +1544,12 @@ function DischargeRow({
             </span>
           </button>
         )}
+
+        {/* When the DROP fell, because that is what the week filter and the week total answer to:
+            the day for one night, the first and last reset week for a sale spread over several.
+            Only an act with no drop behind it (a typed credit, a payment) falls back to the day it
+            was recorded. */}
+        <span className="ledger-when">{when}</span>
 
         {/* A row the other side of a shared book wrote is theirs to take back (V88). */}
         {act.by == null && (
@@ -1790,6 +1793,10 @@ function EnteredRow({
         {/* No empty toggle frame. It was kept to line this up with a folded row, but the folds are
             all under `offsets` and nothing in THIS list has one, so the frame indented the only row
             wearing it by 28px (18px of toggle and the head's 10px gap) past the parts above it. */}
+        {/* No drop behind a typed debt, so no drop art: the app's own mark holds the icon slot. */}
+        <span className="loot-icon" aria-hidden="true">
+          <SharpEyesMark size={32} />
+        </span>
         <span className="loot-name">
           {entry.note ?? "entered"}
           {/* Written into your book by the other side of it, which is theirs to take back. V88. */}
