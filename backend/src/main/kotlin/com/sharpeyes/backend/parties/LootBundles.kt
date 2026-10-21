@@ -102,17 +102,20 @@ internal suspend fun RoutingContext.setBundlesRoute() {
     val outcome =
         dbQuery {
             ensureUser(userId, email)
-            val loot = findLoot(lootId, partyId)
+            val loot = findLoot(lootId, partyId, userId)
             when {
-                !ownsParty(partyId, userId) -> null
+                !canEditParty(partyId, userId) -> null
                 loot == null -> null
+                stacksRefusal(partyId, userId, loot) != null -> stacksRefusal(partyId, userId, loot)
                 request.bundles.keys.any { Uuid.parseOrNull(it) == null } -> "malformed memberId"
                 settledAlready(lootId) -> SETTLED_STANDS
                 bundlesRefusal(request.bundles, loot.ranThatWeek, loot.bundles) != null ->
                     bundlesRefusal(request.bundles, loot.ranThatWeek, loot.bundles)
                 else -> {
                     setLootBundles(lootId, request.bundles.mapKeys { Uuid.parse(it.key) })
-                    findLoot(lootId, partyId)!!
+                    // The other side's screen too, now that either of them can make this change.
+                    poolChanged(partyId)
+                    findLoot(lootId, partyId, userId)!!
                 }
             }
         }

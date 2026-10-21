@@ -163,7 +163,9 @@ describe("the pool page can show the nights behind a coupon debt", () => {
     expect(page).toContain("locked: new Set(mine.filter((entry) => entry.closed)");
     expect(list).toContain("!pickup.locked?.has(item.id)");
     // And the way in is not offered at all when every night is settled.
-    expect(pool).toContain("pickup.drops.some((drop) => !pickup.locked?.has(drop.lootId))");
+    expect(pool).toContain(
+      "(drop) => !pickup.locked?.has(drop.lootId) && (!readOnly || mine.has(drop.lootId))",
+    );
   });
 
   it("opens the boxes behind an Edit rather than leaving them out", () => {

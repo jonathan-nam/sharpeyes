@@ -30,6 +30,18 @@ internal fun sellRefusal(
 internal fun loggerRefusal(loot: LootResponse): Refusal? =
     if (loot.recordedByYou) null else Refusal("Someone else logged this drop. They record its sale.")
 
+/** Saying who picked up which stacks of [loot]: the owner, or whoever logged it, as they sell it. */
+internal fun stacksRefusal(
+    partyId: Uuid,
+    userId: String,
+    loot: LootResponse,
+): Refusal? =
+    if (ownsParty(partyId, userId) || loot.recordedByYou) {
+        null
+    } else {
+        Refusal("Someone else logged this drop. They say who picked up which stacks.")
+    }
+
 /** Undoing [loot]'s sale: its seller or the owner. */
 internal fun unsellRefusal(
     partyId: Uuid,

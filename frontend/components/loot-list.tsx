@@ -290,8 +290,13 @@ function LootGroup({
           const night = pickup?.drops.find((d) => d.lootId === item.id);
           // Boxes only where there is a write to take them and the night is not history. A settled
           // night is history whatever the pool is doing: see NightPickup.locked.
+          // In somebody else's pool, only a night you logged: see setBundlesRoute.
           const answerable = Boolean(
-            night && (editing ?? false) && pickup?.onSave && !pickup.locked?.has(item.id),
+            night &&
+            (editing ?? false) &&
+            pickup?.onSave &&
+            !pickup.locked?.has(item.id) &&
+            (!readOnly || item.recordedByYou === true),
           );
           return (
             <LootRow

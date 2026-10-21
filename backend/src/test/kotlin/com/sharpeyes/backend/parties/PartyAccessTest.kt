@@ -212,6 +212,23 @@ class PartyAccessTest {
     }
 
     @Test
+    fun `whoever logged a drop says who picked up its stacks, and the owner always may`() {
+        transaction {
+            val party = shared()
+            val partyId = Uuid.parse(party.id)
+            val theirs = findLoot(Uuid.parse(grindstone(party, member).id), partyId, member)!!
+            val ours = findLoot(Uuid.parse(grindstone(party, owner).id), partyId, member)!!
+
+            assertNull(stacksRefusal(partyId, member, theirs))
+            assertEquals(
+                "Someone else logged this drop. They say who picked up which stacks.",
+                stacksRefusal(partyId, member, ours)?.refusal,
+            )
+            assertNull(stacksRefusal(partyId, owner, findLoot(Uuid.parse(theirs.id), partyId, owner)!!))
+        }
+    }
+
+    @Test
     fun `the owner's own pools say which drops a member logged`() {
         transaction {
             val party = shared()
