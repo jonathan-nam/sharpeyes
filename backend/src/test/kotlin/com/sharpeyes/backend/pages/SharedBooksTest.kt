@@ -5,14 +5,29 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.SettlementDebt
+import com.sharpeyes.backend.db.VestigePayment
+import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.parties.PartyResponse
 import com.sharpeyes.backend.parties.PersonRequest
+import com.sharpeyes.backend.parties.SELF
+import com.sharpeyes.backend.parties.SOLD
 import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.SavePeopleRequest
+import com.sharpeyes.backend.parties.SharedRow
+import com.sharpeyes.backend.parties.TrancheEntry
+import com.sharpeyes.backend.parties.VestigeHolder
+import com.sharpeyes.backend.parties.VestigeTrancheShareRow
 import com.sharpeyes.backend.parties.bossIdForKey
 import com.sharpeyes.backend.parties.createParty
+import com.sharpeyes.backend.parties.debtsFor
+import com.sharpeyes.backend.parties.deleteSharedRow
 import com.sharpeyes.backend.parties.findParty
+import com.sharpeyes.backend.parties.insertSharedDebt
+import com.sharpeyes.backend.parties.insertSharedPayment
+import com.sharpeyes.backend.parties.insertSharedTranche
+import com.sharpeyes.backend.parties.ownBookRefusal
 import com.sharpeyes.backend.parties.savePeople
+import com.sharpeyes.backend.parties.sharedBookAt
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
@@ -30,7 +45,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -62,6 +79,8 @@ class SharedBooksTest {
         val owners = everyone
         transaction {
             SettlementDebt.deleteWhere { SettlementDebt.userId inList owners }
+            VestigePayment.deleteWhere { VestigePayment.userId inList owners }
+            VestigeTranche.deleteWhere { VestigeTranche.userId inList owners }
             Party.deleteWhere { Party.userId inList owners }
             Person.deleteWhere { Person.userId inList owners }
             Characters.deleteWhere { Characters.userId inList owners }
@@ -184,6 +203,61 @@ class SharedBooksTest {
             val mech = Person.selectAll().where { Person.userId eq member }.single()
             assertEquals("Mech", book.ownerName)
             assertEquals(mech[Person.id].toString(), book.ownerPersonId)
+        }
+    }
+
+    @Test
+    fun `a member writes into the owner's book, and each side takes back only its own`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            character(member, "CreedBratton")
+            character(stranger, "Nobody")
+            link(owner, "Chris", member)
+            link(member, "Mech", owner)
+            config(theirs, listOf("CreedBratton"))
+            val chris = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
+            val mech = Person.selectAll().where { Person.userId eq member }.single()[Person.id]
+            assertNull(sharedBookAt(chris, stranger), "only the person it names writes into it")
+            val book = sharedBookAt(chris, member)!!
+            val now = Clock.System.now()
+
+            insertSharedDebt(book, member, 10_000_000_000, "carried over", now)
+            insertSharedPayment(book, member, 5_000_000_000, null, now)
+            insertSharedTranche(
+                book,
+                member,
+                TrancheEntry(60, 3_000_000_000, SOLD, listOf(VestigeTrancheShareRow(VestigeHolder(SELF), 30))),
+                now,
+            )
+
+            // The owner's book names the member as the writer; read as the member, the rows are theirs.
+            assertEquals(listOf(false to "Chris"), debtsFor(owner).map { it.recordedByYou to it.recordedByName })
+            val asMember = bookBetween(owner, member, chris.toString())
+            assertEquals(listOf(true), asMember.debts.map { it.recordedByYou })
+            assertEquals(listOf(true), asMember.payments.map { it.recordedByYou })
+            assertEquals(
+                listOf(30),
+                asMember.tranches
+                    .single()
+                    .shares
+                    .map { it.pieces },
+            )
+
+            // A second copy of the same debt, in the member's own book, is refused.
+            assertEquals("Mech keeps your shared book. Add it on their card.", ownBookRefusal(member, mech))
+            assertNull(ownBookRefusal(owner, chris), "the owner's book is the shared one")
+
+            // Each side takes back only its own.
+            debt("Chris", 7)
+            val ownersDebt = SettlementDebt.selectAll().where { SettlementDebt.amount eq 7 }.single()[SettlementDebt.id]
+            val membersDebt =
+                SettlementDebt
+                    .selectAll()
+                    .where {
+                        SettlementDebt.amount eq 10_000_000_000
+                    }.single()[SettlementDebt.id]
+            assertFalse(deleteSharedRow(book, member, SharedRow.DEBT, ownersDebt))
+            assertTrue(deleteSharedRow(book, member, SharedRow.DEBT, membersDebt))
         }
     }
 
