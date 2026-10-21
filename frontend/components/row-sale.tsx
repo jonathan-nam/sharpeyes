@@ -10,6 +10,7 @@ import type { SellLootBody } from "@/types/loot";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { Party } from "@/types/party";
+import { sellersOf } from "@/lib/sale-logger";
 
 // One card per unsold drop that prices ALONE, and the form that prices it.
 //
@@ -121,6 +122,7 @@ function RowCard({
         // The seats that RAN the week it fell, not the party as it stands now: the sale route
         // refuses a seller who was not there.
         ran={row.ran}
+        sellers={sellersOf(row.ran, party.yours === false)}
         busy={busy}
         labelled
         onSell={(body) => void sell(body)}

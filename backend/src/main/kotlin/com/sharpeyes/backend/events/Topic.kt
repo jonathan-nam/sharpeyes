@@ -8,6 +8,9 @@ object Topic {
     /** A clear moved on a character of yours, or on a party you are in. */
     const val CLEARS = "clears"
 
+    /** A party's pool moved: a drop logged, sold, kept or removed. */
+    const val LOOT = "loot"
+
     /** Something arrived on your bell. */
     const val NOTIFICATIONS = "notifications"
 }

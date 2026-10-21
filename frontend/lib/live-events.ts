@@ -5,7 +5,7 @@
 // a reload.
 
 /** The topics the backend sends. See events/Topic.kt. A name not here is ignored. */
-export const TOPICS = ["clears", "notifications"] as const;
+export const TOPICS = ["clears", "loot", "notifications"] as const;
 export type Topic = (typeof TOPICS)[number];
 
 const EVENT = "sharpeyes:live";

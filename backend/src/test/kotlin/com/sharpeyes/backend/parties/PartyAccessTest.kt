@@ -120,6 +120,59 @@ class PartyAccessTest {
         return config(theirs, listOf("CreedBratton", "Baldrix"))
     }
 
+    /** A Grindstone in [party]'s pool, logged by [by]. */
+    private fun grindstone(
+        party: PartyResponse,
+        by: String,
+    ): LootResponse {
+        val id =
+            addLoot(
+                Uuid.parse(party.id),
+                LootedDrop(dropIdForKey("grindstone-of-life")),
+                bossIdForKey("kalos-the-guardian"),
+                todayIn(Clock.System.now()),
+                Clock.System.now(),
+                LootSource(recordedBy = by),
+            )
+        return findLoot(id, Uuid.parse(party.id), by)!!
+    }
+
+    @Test
+    fun `whoever logged a drop sells it, and nobody else`() {
+        transaction {
+            val party = shared()
+            val creed = seat(party, "CreedBratton")!![PartyMember.id]
+            val mechy = seat(party, "mechyfechy")!![PartyMember.id]
+            val theirs = grindstone(party, member)
+            val ours = grindstone(party, owner)
+            val partyId = Uuid.parse(party.id)
+
+            assertNull(sellRefusal(partyId, member, creed, findLoot(Uuid.parse(theirs.id), partyId, member)!!))
+            assertEquals(
+                "Someone else logged this drop. They record its sale.",
+                sellRefusal(partyId, member, creed, findLoot(Uuid.parse(ours.id), partyId, member)!!)?.refusal,
+            )
+            assertEquals(
+                "Someone else logged this drop. They record its sale.",
+                sellRefusal(partyId, owner, mechy, findLoot(Uuid.parse(theirs.id), partyId, owner)!!)?.refusal,
+            )
+        }
+    }
+
+    @Test
+    fun `the owner's own pools say which drops a member logged`() {
+        transaction {
+            val party = shared()
+            val theirs = grindstone(party, member)
+            val ours = grindstone(party, owner)
+
+            val read = allLootFor(owner).single().loot.associate { it.id to it.recordedByYou }
+            assertEquals(mapOf(theirs.id to false, ours.id to true), read)
+            val asMember = allLootFor(owner, viewer = member).single().loot.associate { it.id to it.recordedByYou }
+            assertEquals(mapOf(theirs.id to true, ours.id to false), asMember)
+        }
+    }
+
     @Test
     fun `a member who has joined may write, and sees the seats they act as`() {
         transaction {
