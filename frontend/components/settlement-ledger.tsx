@@ -1099,29 +1099,25 @@ function SettlementCard({
                         <span className="ledger-amount">
                           {signed(line.direction === "owe" ? -line.pay : line.pay, line.currency)}
                         </span>
-                        {/* The act, on the line it is about.
-
-                            One transfer of the difference is what the aggregate Settle assumed, and
-                            it cannot hold across units: no rate exists to net $333.33 against 2.32b,
-                            so collecting one and recording the other as sent are two things that
-                            happen on two days. Named for its own direction, because the same write
-                            means "I received it" on one line and "I sent it" on the next. */}
-                        <button
-                          type="button"
-                          className="party-save ledger-line-act"
-                          disabled={busy}
-                          onClick={() =>
-                            void write(
-                              onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }]),
-                              null,
-                            )
-                          }
-                          aria-label={`Mark the ${line.name} share ${
-                            line.direction === "owed" ? "received from" : "sent to"
-                          } ${line.theirs}`}
-                        >
-                          {line.direction === "owed" ? "Mark Received" : "Mark Sent"}
-                        </button>
+                        {/* Received, on the line it is about: collecting one share is its own day.
+                            What you send is Closing Actions' "Mark Sent" for the lot, not a button
+                            per drop (Jonathan, 2026-10-21). */}
+                        {line.direction === "owed" && (
+                          <button
+                            type="button"
+                            className="party-save ledger-line-act"
+                            disabled={busy}
+                            onClick={() =>
+                              void write(
+                                onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }]),
+                                null,
+                              )
+                            }
+                            aria-label={`Mark the ${line.name} share received from ${line.theirs}`}
+                          >
+                            Mark Received
+                          </button>
+                        )}
                       </div>
                     </li>
                   );

@@ -268,7 +268,9 @@ describe("every act in one step", () => {
     expect(ledger).toContain("`Mark ${movedBoth(owes, row.usd.owe)} Sent`");
     expect(ledger.match(/^\s*Settle Both Sides$/gm)).toHaveLength(1);
     expect(ledger).not.toMatch(/^\s*Settle$/gm);
-    expect(ledger).toContain('"Mark Received" : "Mark Sent"');
+    // Received on the line; sent only for the lot, under Closing Actions.
+    expect(ledger).toContain("Mark Received");
+    expect(ledger).not.toContain('"Mark Received" : "Mark Sent"');
     expect(ledger).not.toContain("Mark received");
     expect(ledger).not.toContain("Mark sent");
     expect(ledger).not.toContain("Mark Settled");

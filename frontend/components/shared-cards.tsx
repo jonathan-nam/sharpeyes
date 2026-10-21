@@ -52,7 +52,12 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
     busy: writes.busy,
     onRemove: (part: SharedPart) =>
       part.remove && act(writes.remove(card.personId, part.remove.kind, part.remove.id)),
-    onSend: (part: SharedPart) => part.send && act(writes.send(part.send)),
+  };
+  // Every share of a drop you sold that you still owe, sent in one press rather than one per drop.
+  // One at a time: each answers with the whole book, and racing them redraws off the last to land.
+  const sendable = detail.owe.flatMap((part) => (part.send ? [part] : []));
+  const sendAll = async () => {
+    for (const part of sendable) await writes.send(part.send!);
   };
   return (
     <section className="ledger-card">
@@ -118,6 +123,20 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
         />
       )}
 
+      {sendable.length > 0 && (
+        <button
+          type="button"
+          className="party-save"
+          disabled={writes.busy}
+          onClick={() => act(sendAll())}
+        >
+          {`Mark ${formatMesos(
+            sendable.reduce((sum, part) => sum + part.mesos, 0),
+            true,
+          )} Sent`}
+        </button>
+      )}
+
       {refusal && <span className="split-error">{refusal}</span>}
     </section>
   );
@@ -131,7 +150,6 @@ function Fold({
   negative = false,
   busy,
   onRemove,
-  onSend,
 }: {
   title: string;
   amount?: number;
@@ -139,7 +157,6 @@ function Fold({
   negative?: boolean;
   busy: boolean;
   onRemove: (part: SharedPart) => void;
-  onSend: (part: SharedPart) => void;
 }) {
   const [open, setOpen] = useState(false);
   const signed = (value: number) => `${value > 0 ? "+" : ""}${formatMesos(value, true)}`;
@@ -170,16 +187,6 @@ function Fold({
                 <span className="ledger-amount">
                   {row.money ?? signed(negative ? -row.mesos : row.mesos)}
                 </span>
-                {row.send && (
-                  <button
-                    type="button"
-                    className="party-save"
-                    disabled={busy}
-                    onClick={() => onSend(row)}
-                  >
-                    Mark Sent
-                  </button>
-                )}
                 {row.remove && (
                   <ArmedRemove
                     label={`Remove ${row.label}`}
