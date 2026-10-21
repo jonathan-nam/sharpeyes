@@ -1479,7 +1479,11 @@ function DischargeRow({
         {art ? (
           <img className="loot-icon" src={apiAssetUrl(art)} alt="" />
         ) : (
-          <span className="loot-icon" aria-hidden="true" />
+          <span className="loot-icon" aria-hidden="true">
+            {/* No drop and no coupons behind it (a payment, a typed credit), so the mark EnteredRow
+                wears. */}
+            {shares.length === 0 && pieces === 0 && <SharpEyesMark size={32} />}
+          </span>
         )}
 
         <div className="ledger-offset-text">
