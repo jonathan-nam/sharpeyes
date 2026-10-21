@@ -84,7 +84,7 @@ export default function PeoplePage() {
   }, [isLoaded]);
 
   /**
-   * Takes the account off a person, and their seats in your parties with it.
+   * Takes the account off a person, on both sides, and the seats each holds of the other with it.
    *
    * The server answers with the whole people list, so the row redraws from what is now true rather
    * than from an assumption about what the press did. Their seats stop being theirs at the same

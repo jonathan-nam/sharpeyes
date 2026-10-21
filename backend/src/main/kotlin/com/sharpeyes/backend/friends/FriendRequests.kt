@@ -92,29 +92,18 @@ internal fun dropFriendRequest(
     return dropped
 }
 
-/**
- * Ends a friendship from both sides, seats included. False when [personId] is not a friend of yours.
- *
- * Both, unlike Unlink on People: a friendship is the two of you agreeing, so one side ending it ends
- * it for both. unlinkPerson is what takes the seats back on each side.
- */
+/** Ends a friendship from both sides, seats included. False when [personId] is not a friend of yours. */
 internal fun removeFriend(
     userId: String,
     personId: Uuid,
 ): Boolean {
-    val friend =
+    val linked =
         Person
             .selectAll()
             .where { (Person.id eq personId) and (Person.userId eq userId) }
             .firstOrNull()
-            ?.get(Person.linkedUserId) ?: return false
-    unlinkPerson(userId, personId)
-    Person
-        .selectAll()
-        .where { (Person.userId eq friend) and (Person.linkedUserId eq userId) }
-        .map { it[Person.id] }
-        .forEach { unlinkPerson(friend, it) }
-    return true
+            ?.get(Person.linkedUserId) != null
+    return linked && unlinkPerson(userId, personId)
 }
 
 private fun between(

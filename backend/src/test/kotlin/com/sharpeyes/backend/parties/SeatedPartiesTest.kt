@@ -112,10 +112,11 @@ class SeatedPartiesTest {
     private fun config(
         ownCharacter: Uuid,
         members: List<String>,
+        userId: String = owner,
     ): PartyResponse {
         val request = SavePartyRequest(ownCharacter.toString(), "kalos-the-guardian", members)
-        val id = createParty(owner, ownCharacter, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
-        return findParty(id, owner)!!
+        val id = createParty(userId, ownCharacter, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
+        return findParty(id, userId)!!
     }
 
     @Test
@@ -404,6 +405,30 @@ class SeatedPartiesTest {
                     .where { PartyMember.id eq Uuid.parse(party.members[1].id) }
                     .single()[PartyMember.linkedCharacterId],
             )
+        }
+    }
+
+    @Test
+    fun `unlinking ends it on their side too`() {
+        transaction {
+            val theirs = character(owner, "mechyfechy")
+            val creed = character(member, "CreedBratton")
+            link(owner, "Chris", member)
+            config(theirs, listOf("CreedBratton"))
+            // The member's own half: a person for the owner, and a party seating the owner's character.
+            savePeople(member, SavePeopleRequest(listOf(PersonRequest(null, "Mech", emptyList()))), Clock.System.now())
+            Person.update({ Person.userId eq member }) { it[linkedUserId] = owner }
+            val theirsSeated = config(creed, listOf("mechyfechy"), userId = member)
+            PartyMember.update({ PartyMember.id eq Uuid.parse(theirsSeated.members[1].id) }) {
+                it[linkedCharacterId] = theirs
+            }
+            assertTrue(partiesSeatedIn(owner).isNotEmpty(), "the owner should be seated in the member's party first")
+
+            val chris = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
+            unlinkPerson(owner, chris)
+
+            assertNull(Person.selectAll().where { Person.userId eq member }.single()[Person.linkedUserId])
+            assertEquals(emptyList(), partiesSeatedIn(owner))
         }
     }
 
