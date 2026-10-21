@@ -4,9 +4,12 @@ import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.DiscordUsername
 import com.sharpeyes.backend.db.FriendRequest
+import com.sharpeyes.backend.db.Notification
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.notifications.NotificationKind
+import com.sharpeyes.backend.notifications.notificationsFor
 import com.sharpeyes.backend.parties.PersonRequest
 import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.SavePeopleRequest
@@ -60,6 +63,7 @@ class FriendsTest {
     fun cleanUp() {
         transaction {
             FriendRequest.deleteWhere { FriendRequest.fromUserId inList everyone }
+            Notification.deleteWhere { Notification.userId inList everyone }
             Party.deleteWhere { Party.userId inList everyone }
             Person.deleteWhere { Person.userId inList everyone }
             Characters.deleteWhere { Characters.userId inList everyone }
@@ -124,11 +128,13 @@ class FriendsTest {
             val party = createParty(jon, warrior, bossIdForKey("kalos-the-guardian")!!, request, Clock.System.now())
 
             assertEquals(SendOutcome.Sent, sendFriendRequest(jon, " @BroDiscord ", Clock.System.now()))
-            val incoming = socialFor(bro).incoming.single()
-            assertEquals("jonnam", incoming.username)
-            assertEquals("warrior2020", incoming.name)
+            val asked = notificationsFor(bro).notifications.single()
+            assertEquals(NotificationKind.FRIEND_REQUEST, asked.kind)
+            assertEquals("jonnam", asked.actor?.username)
+            assertEquals("warrior2020", asked.actor?.name)
+            assertEquals(1, notificationsFor(bro).unread)
 
-            acceptFriendRequest(bro, Uuid.parse(incoming.id), Clock.System.now())
+            acceptFriendRequest(bro, Uuid.parse(asked.subjectId!!), Clock.System.now())
 
             assertEquals("Bro", personOf(jon, bro))
             assertEquals("warrior2020", personOf(bro, jon))
@@ -141,7 +147,9 @@ class FriendsTest {
                     }.single()
             assertEquals(creed, seat[PartyMember.linkedCharacterId])
             assertEquals(listOf("Bro"), socialFor(jon).friends.map { it.name })
-            assertEquals(emptyList(), socialFor(bro).incoming)
+            // The request is answered, so it is off Bro's bell, and Jon hears it was accepted.
+            assertEquals(emptyList(), notificationsFor(bro).notifications)
+            assertEquals(listOf(NotificationKind.FRIEND_ACCEPTED), notificationsFor(jon).notifications.map { it.kind })
         }
     }
 
@@ -155,6 +163,21 @@ class FriendsTest {
             assertEquals(SendOutcome.Accepted, sendFriendRequest(bro, "jonnam", Clock.System.now()))
             assertEquals(SendOutcome.AlreadyFriends, sendFriendRequest(jon, "brodiscord", Clock.System.now()))
             assertEquals("CreedBratton", personOf(jon, bro))
+        }
+    }
+
+    @Test
+    fun `declining or cancelling clears the notification, and asking twice notifies once`() {
+        transaction {
+            discordAccount(jon, "jonnam", "warrior2020")
+            discordAccount(bro, "brodiscord", "CreedBratton")
+            sendFriendRequest(jon, "brodiscord", Clock.System.now())
+            sendFriendRequest(jon, "brodiscord", Clock.System.now())
+            val asked = notificationsFor(bro).notifications.single()
+
+            dropFriendRequest(jon, Uuid.parse(asked.subjectId!!))
+
+            assertEquals(emptyList(), notificationsFor(bro).notifications)
         }
     }
 

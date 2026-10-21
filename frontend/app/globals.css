@@ -7910,3 +7910,159 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 .welcome-head .welcome-steps {
   justify-content: center;
 }
+
+/* The bell and the account button share the right end of the bar. */
+.site-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notification-bell {
+  position: relative;
+  display: flex;
+}
+
+/* The hamburger's chrome: no frame, a surface on hover. The avatar's 32px, so the bar keeps its
+   height: the mark's 36px canvas overhangs by its own transparent margin (the bell is 26x31). */
+.notification-bell-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  background: none;
+  cursor: pointer;
+}
+
+.notification-bell-btn:hover,
+.notification-bell-btn[aria-expanded="true"] {
+  background: var(--surface-2);
+}
+
+.notification-bell-btn .tab-art {
+  margin: -2px;
+}
+
+.notification-bell-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.notification-bell-btn.is-reserved {
+  visibility: hidden;
+}
+
+.notification-count {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 50%;
+  background: var(--bad);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notification-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.notification-empty {
+  margin: 0;
+  padding: 8px;
+  color: var(--muted);
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+}
+
+.notification-face {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background-color: var(--surface-2);
+}
+
+.notification-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.notification-title {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.notification-who,
+.notification-handle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notification-who {
+  color: var(--ink-strong);
+}
+
+.notification-handle {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.notification-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.notification-item.is-fresh {
+  background: var(--surface-2);
+}
+
+.notification-dismiss {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  font-size: var(--text-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.notification-dismiss:hover {
+  background: var(--surface-2);
+  color: var(--ink-strong);
+}

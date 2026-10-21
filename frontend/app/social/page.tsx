@@ -5,13 +5,15 @@ import { ConfirmAct } from "@/components/confirm-act";
 import { PageSwap } from "@/components/page-swap";
 import { apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
+import { friendsChanged, onFriendsChanged } from "@/lib/friends-changed";
 import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
 import type { FriendView, Social } from "@/types/social";
 
 const SOCIAL_KEY = "/api/friends";
 
-// Friends: other accounts, found by Discord username. Accepting links the two accounts the way an
+// Friends: other accounts, found by Discord username. Requests TO you are answered from the bell
+// (NotificationBell). Accepting links the two accounts the way an
 // invite does, so a friend is also a linked person on People and shares the parties that seat them.
 export default function SocialPage() {
   const { getToken, isLoaded } = useAuth();
@@ -21,17 +23,22 @@ export default function SocialPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function load() {
+    return apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken).then(setSocial);
+  }
+
   useEffect(() => {
     // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
     if (!isLoaded) return;
-    apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken)
-      .then((loaded) => {
-        setSocial(loaded);
-        reportDataReady();
-      })
+    load()
+      .then(() => reportDataReady())
       .catch(() => setFailed(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
+
+  // A request accepted from the bell is a new friend here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => onFriendsChanged(() => void load().catch(() => {})), []);
 
   /** One write, answered with the whole page. A friendship changes people and parties as well. */
   async function act(path: string, init: RequestInit, fallback: string): Promise<boolean> {
@@ -41,6 +48,8 @@ export default function SocialPage() {
       setSocial(await apiFetch<Social>(path, init, getToken));
       invalidate("/api/people");
       invalidate("/api/parties");
+      // Asking somebody who had asked you accepts them, which takes their request off the bell.
+      friendsChanged();
       return true;
     } catch (e) {
       setError(failureText(e, fallback));
@@ -93,35 +102,6 @@ export default function SocialPage() {
               </button>
             </form>
             {error && <p className="routine-error">{error}</p>}
-
-            {social.incoming.length > 0 && (
-              <FriendGroup title="Requests">
-                {social.incoming.map((f) => (
-                  <FriendCard key={f.id} friend={f}>
-                    <button
-                      type="button"
-                      className="party-save"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(`${request(f.id)}/accept`, { method: "POST" }, "Couldn't accept.")
-                      }
-                    >
-                      Accept
-                    </button>
-                    <button
-                      type="button"
-                      className="party-cancel"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(request(f.id), { method: "DELETE" }, "Couldn't decline.")
-                      }
-                    >
-                      Decline
-                    </button>
-                  </FriendCard>
-                ))}
-              </FriendGroup>
-            )}
 
             {social.outgoing.length > 0 && (
               <FriendGroup title="Sent">

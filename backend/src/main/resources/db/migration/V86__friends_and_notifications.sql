@@ -28,3 +28,23 @@ CREATE TABLE friend_request
 );
 
 CREATE INDEX friend_request_to_idx ON friend_request (to_user_id);
+
+-- Notifications, for any feature: a friend request now, a sale later. What a kind means is the
+-- code's (notifications/NotificationKinds.kt); this only stores who, what about, and whether seen.
+CREATE TABLE notification
+(
+    id         UUID PRIMARY KEY,
+    user_id    TEXT        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    kind       TEXT        NOT NULL,
+    -- The row it is about (a friend_request, a party_loot), so answering it can clear it. No FK,
+    -- because it points at a different table per kind.
+    subject_id UUID,
+    -- The account that caused it, shown as their main character.
+    actor_id   TEXT REFERENCES users (id) ON DELETE CASCADE,
+    payload    JSONB       NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL,
+    read_at    TIMESTAMPTZ
+);
+
+CREATE INDEX notification_user_idx ON notification (user_id, created_at DESC);
+CREATE INDEX notification_subject_idx ON notification (kind, subject_id);

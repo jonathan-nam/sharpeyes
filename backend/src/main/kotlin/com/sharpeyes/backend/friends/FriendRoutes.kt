@@ -1,7 +1,5 @@
 package com.sharpeyes.backend.friends
 
-import com.sharpeyes.backend.db.FriendRequest
-import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -17,10 +15,6 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
-import org.jetbrains.exposed.v1.core.Column
-import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.selectAll
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -44,7 +38,6 @@ data class SocialResponse(
     /** Yours, so you can tell a friend what to type. Null until you sign in with Discord. */
     val username: String?,
     val friends: List<FriendView>,
-    val incoming: List<FriendView>,
     val outgoing: List<FriendView>,
 )
 
@@ -68,31 +61,6 @@ fun Route.friendRoutes() {
     post("/requests/{id}/accept") { acceptRoute() }
     delete("/requests/{id}") { dropRoute() }
     delete("/{personId}") { removeRoute() }
-}
-
-/** Must be called from inside a `transaction { }` block. */
-internal fun socialFor(userId: String): SocialResponse {
-    fun view(
-        id: Uuid,
-        account: String,
-        name: String? = null,
-    ): FriendView {
-        val (main, sprite) = faceOf(account)
-        return FriendView(id.toString(), discordUsernameOf(account), name ?: main, sprite)
-    }
-    val names = Person.selectAll().where { Person.userId eq userId }.associate { it[Person.id] to it[Person.name] }
-
-    fun requests(mine: Column<String>) =
-        FriendRequest
-            .selectAll()
-            .where { mine eq userId }
-            .orderBy(FriendRequest.createdAt, SortOrder.DESC)
-    return SocialResponse(
-        username = discordUsernameOf(userId),
-        friends = friendsOf(userId).map { (person, account) -> view(person, account, names[person]) },
-        incoming = requests(FriendRequest.toUserId).map { view(it[FriendRequest.id], it[FriendRequest.fromUserId]) },
-        outgoing = requests(FriendRequest.fromUserId).map { view(it[FriendRequest.id], it[FriendRequest.toUserId]) },
-    )
 }
 
 /** GET /api/friends. */

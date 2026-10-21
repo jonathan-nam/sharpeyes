@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useDismiss } from "@/lib/use-dismiss";
 import { activeHref, MENU_HREFS, sectionsFor } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 
@@ -46,22 +47,7 @@ export function SectionMenu() {
     setOpen(false);
   }
 
-  // Close on an outside click or Escape, the two ways a menu should always be dismissable.
-  useEffect(() => {
-    if (!open) return;
-    function onDown(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useDismiss(ref, open, () => setOpen(false));
 
   return (
     <div className="section-menu" ref={ref}>

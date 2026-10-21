@@ -14,6 +14,5 @@ export type Social = {
   /** Yours. Null until you have signed in with Discord. */
   username: string | null;
   friends: FriendView[];
-  incoming: FriendView[];
   outgoing: FriendView[];
 };

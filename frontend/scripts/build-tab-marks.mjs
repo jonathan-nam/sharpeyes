@@ -73,6 +73,9 @@ const MARKS = [
     name: "Follow the Lead",
   },
   { key: "treasure-map", id: 3994353, name: "Pirate King's Treasure Map <1st Piece>" },
+  // The header's notifications. The plain jingle bell, not the Golden Bell with holly (4001475),
+  // which says Christmas before it says bell.
+  { key: "golden-bell", id: 4031191, name: "Golden Bell" },
   // The home screen's Bossing row. A boss portrait, so it is cut from a planner capture rather than
   // fetched: see vision/app/cv/build_boss_portraits.py.
   { key: "jupiter", file: join(BOSS_ART, "jupiter.png") },
