@@ -102,15 +102,15 @@ class ClearWriteThroughTest {
         return id
     }
 
-    /** The owner's Kalos with Creed in it, Creed's account linked to the owner's. */
+    /** The owner's Kalos with Crane in it, Crane's account linked to the owner's. */
     private fun shared(): Triple<Uuid, Uuid, Uuid> {
-        val warrior = character(owner, "warrior2020")
-        val creed = character(member, "CreedBratton")
-        savePeople(owner, SavePeopleRequest(listOf(PersonRequest(null, "Bro", emptyList()))), Clock.System.now())
+        val warrior = character(owner, "warden2030")
+        val crane = character(member, "CraneBolton")
+        savePeople(owner, SavePeopleRequest(listOf(PersonRequest(null, "Brock", emptyList()))), Clock.System.now())
         Person.update({ Person.userId eq owner }) { it[linkedUserId] = member }
-        val request = SavePartyRequest(warrior.toString(), kalos, listOf("CreedBratton"))
+        val request = SavePartyRequest(warrior.toString(), kalos, listOf("CraneBolton"))
         val party = createParty(owner, warrior, bossIdForKey(kalos)!!, request, Clock.System.now())
-        return Triple(warrior, creed, party)
+        return Triple(warrior, crane, party)
     }
 
     private fun memberSees(): Boolean? = partiesSeatedIn(member).single().party.cleared
@@ -127,29 +127,29 @@ class ClearWriteThroughTest {
     @Test
     fun `the owner's clear is the member's, and taking it back takes theirs`() {
         transaction {
-            val (warrior, creed, party) = shared()
+            val (warrior, crane, party) = shared()
             assertEquals(null, memberSees())
 
             setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
             assertEquals(true, memberSees())
-            assertEquals(party, clearOf(creed)?.get(BossClear.viaPartyId))
+            assertEquals(party, clearOf(crane)?.get(BossClear.viaPartyId))
 
             setBossClearByHand(owner, warrior, kalos, false, Clock.System.now())
-            assertNull(clearOf(creed), "a copy goes with the clear behind it, not to a false of its own")
+            assertNull(clearOf(crane), "a copy goes with the clear behind it, not to a false of its own")
         }
     }
 
     @Test
     fun `a member's own clear is never overwritten, and an own pending only by a later clear`() {
         transaction {
-            val (warrior, creed, _) = shared()
+            val (warrior, crane, _) = shared()
             val now = Clock.System.now()
 
             fun own(
                 cleared: Boolean,
                 at: Instant,
             ) = BossClear.upsert(BossClear.characterId, BossClear.bossCatalogId, BossClear.periodStart) {
-                it[characterId] = creed
+                it[characterId] = crane
                 it[bossCatalogId] = bossIdForKey(kalos)!!
                 it[periodStart] = period(now)
                 it[BossClear.cleared] = cleared
@@ -163,11 +163,11 @@ class ClearWriteThroughTest {
             setBossClearByHand(owner, warrior, kalos, true, now)
             assertEquals(true, memberSees())
 
-            // Creed's own answer recorded after the owner's says pending: that is theirs, and it stands.
+            // Crane's own answer recorded after the owner's says pending: that is theirs, and it stands.
             own(cleared = false, at = now + 1.hours)
             assertEquals(false, memberSees())
 
-            // Creed's own clear stays when the owner takes theirs back.
+            // Crane's own clear stays when the owner takes theirs back.
             own(cleared = true, at = now + 3.hours)
             setBossClearByHand(owner, warrior, kalos, false, now + 4.hours)
             assertEquals(true, memberSees())
@@ -177,16 +177,16 @@ class ClearWriteThroughTest {
     @Test
     fun `a member linked after the owner cleared gets it as their seat is bound`() {
         transaction {
-            val warrior = character(owner, "warrior2020")
-            val creed = character(member, "CreedBratton")
-            val request = SavePartyRequest(warrior.toString(), kalos, listOf("CreedBratton"))
+            val warrior = character(owner, "warden2030")
+            val crane = character(member, "CraneBolton")
+            val request = SavePartyRequest(warrior.toString(), kalos, listOf("CraneBolton"))
             createParty(owner, warrior, bossIdForKey(kalos)!!, request, Clock.System.now())
             setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
-            assertNull(clearOf(creed), "nobody is linked yet")
+            assertNull(clearOf(crane), "nobody is linked yet")
 
-            savePeople(owner, SavePeopleRequest(listOf(PersonRequest(null, "Bro", emptyList()))), Clock.System.now())
+            savePeople(owner, SavePeopleRequest(listOf(PersonRequest(null, "Brock", emptyList()))), Clock.System.now())
             Person.update({ Person.userId eq owner }) { it[linkedUserId] = member }
-            seatInLinkedParties(member, creed, "CreedBratton", WORLD_INTERACTIVE)
+            seatInLinkedParties(member, crane, "CraneBolton", WORLD_INTERACTIVE)
 
             assertEquals(true, memberSees())
         }
@@ -195,39 +195,39 @@ class ClearWriteThroughTest {
     @Test
     fun `the boot pass copies a clear from before the copies existed, once`() {
         transaction {
-            val (warrior, creed, _) = shared()
+            val (warrior, crane, _) = shared()
             setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
             // As every clear recorded before V87 is: no copy behind it.
-            BossClear.deleteWhere { BossClear.characterId eq creed }
+            BossClear.deleteWhere { BossClear.characterId eq crane }
 
             copyCurrentClears(Clock.System.now())
-            val first = clearOf(creed)?.get(BossClear.capturedAt)
+            val first = clearOf(crane)?.get(BossClear.capturedAt)
             copyCurrentClears(Clock.System.now())
 
             assertEquals(true, memberSees())
-            assertEquals(first, clearOf(creed)?.get(BossClear.capturedAt), "a second pass writes nothing")
+            assertEquals(first, clearOf(crane)?.get(BossClear.capturedAt), "a second pass writes nothing")
         }
     }
 
     @Test
     fun `unlinking takes the member's copies with the seats`() {
         transaction {
-            val (warrior, creed, _) = shared()
+            val (warrior, crane, _) = shared()
             setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
-            val bro = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
+            val brock = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
 
-            unlinkPerson(owner, bro)
+            unlinkPerson(owner, brock)
 
-            assertNull(clearOf(creed))
+            assertNull(clearOf(crane))
         }
     }
 
     @Test
     fun `a member left off this week's roster gets nothing`() {
         transaction {
-            val (warrior, creed, party) = shared()
+            val (warrior, crane, party) = shared()
             val now = Clock.System.now()
-            val ownSeat = findParty(party, owner)!!.seats.first { it.name == "warrior2020" }.id
+            val ownSeat = findParty(party, owner)!!.seats.first { it.name == "warden2030" }.id
             // This week spelled out as the owner alone.
             PartyWeekSeat.insert {
                 it[partyId] = party
@@ -237,29 +237,29 @@ class ClearWriteThroughTest {
 
             setBossClearByHand(owner, warrior, kalos, true, now)
 
-            assertNull(clearOf(creed))
+            assertNull(clearOf(crane))
         }
     }
 
     @Test
     fun `a copy is not copied on`() {
         transaction {
-            val (warrior, creed, _) = shared()
-            // Creed's account owns a Kalos of its own that seats the owner's warrior.
+            val (warrior, crane, _) = shared()
+            // Crane's account owns a Kalos of its own that seats the owner's warrior.
             savePeople(member, SavePeopleRequest(listOf(PersonRequest(null, "Mech", emptyList()))), Clock.System.now())
             Person.update({ Person.userId eq member }) { it[linkedUserId] = owner }
-            val theirs = SavePartyRequest(creed.toString(), kalos, listOf("warrior2020"))
-            val theirParty = createParty(member, creed, bossIdForKey(kalos)!!, theirs, Clock.System.now())
+            val theirs = SavePartyRequest(crane.toString(), kalos, listOf("warden2030"))
+            val theirParty = createParty(member, crane, bossIdForKey(kalos)!!, theirs, Clock.System.now())
             PartyMember.update({
-                (PartyMember.partyId eq theirParty) and (PartyMember.name eq "warrior2020") and
+                (PartyMember.partyId eq theirParty) and (PartyMember.name eq "warden2030") and
                     PartyMember.characterId.isNull()
             }) { it[linkedCharacterId] = warrior }
 
             setBossClearByHand(owner, warrior, kalos, true, Clock.System.now())
 
-            // The owner's warrior keeps its own row, and Creed's copy did not flow back over it.
+            // The owner's warrior keeps its own row, and Crane's copy did not flow back over it.
             assertEquals(null, clearOf(warrior)?.get(BossClear.viaPartyId))
-            assertEquals(true, clearOf(creed)?.get(BossClear.cleared))
+            assertEquals(true, clearOf(crane)?.get(BossClear.cleared))
         }
     }
 }

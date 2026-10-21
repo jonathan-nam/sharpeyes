@@ -139,7 +139,7 @@ const sold = (pieces: number, recordedAt = "2030-01-01T00:00:00Z") => [{ pieces,
 
 /** Roster order, as /api/characters returns it. Most fixtures are one character. */
 const ORDER = ["char-m1", "char-m2"];
-const duo = () => party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")]);
+const duo = () => party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")]);
 
 describe("buildDropLog", () => {
   it("totals what landed in inventories, not the amounts as entered", () => {
@@ -168,14 +168,14 @@ describe("buildDropLog", () => {
 
     expect(entry.pooled).toBe(expected.split.sellerReceives);
     expect(entry.yourTake).toBe(expected.seller.keeps);
-    expect(entry.sellerName).toBe("mechyfechy");
+    expect(entry.sellerName).toBe("mechobotto");
   });
 
   it("logs a drop off a boss run alone, with the whole of it yours", () => {
     // A solo pool is a config with one seat, so nothing about the reading changes: the split has
     // no shares, and what there was to split is what you kept. The log is where these appear at
     // all, since Party View does not list them.
-    const alone = party("pa", [mine("m1", "mechyfechy")], { solo: true });
+    const alone = party("pa", [mine("m1", "mechobotto")], { solo: true });
     const loot = drop({ payouts: [] });
 
     const log = buildDropLog([alone], [pool("pa", [loot])], {});
@@ -217,7 +217,7 @@ describe("buildDropLog", () => {
 
   it("counts both halves when two of your own characters are in the party", () => {
     // You sold it and are owed a share of it. Taking only one half would under-count.
-    const p = party("pa", [mine("m1", "mechyfechy"), mine("m2", "mechymule", "char-m2")]);
+    const p = party("pa", [mine("m1", "mechobotto"), mine("m2", "mechomule", "char-m2")]);
     const loot = drop();
     const expected = splitOf(loot, p.members)!;
 
@@ -365,8 +365,8 @@ describe("groupDrops", () => {
 
 describe("forCharacter", () => {
   it("recomputes the totals rather than scaling them", () => {
-    const one = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")]);
-    const two = party("pb", [mine("m3", "otherchar"), theirs("m4", "CreedBratton")], {
+    const one = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")]);
+    const two = party("pb", [mine("m3", "otherchar"), theirs("m4", "CraneBolton")], {
       bossKey: "kalos",
     });
 
@@ -396,8 +396,8 @@ describe("forCharacter", () => {
   });
 
   it("leaves no section for a month the filter emptied", () => {
-    const one = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")]);
-    const two = party("pb", [mine("m3", "otherchar"), theirs("m4", "CreedBratton")]);
+    const one = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")]);
+    const two = party("pb", [mine("m3", "otherchar"), theirs("m4", "CraneBolton")]);
     const log = buildDropLog(
       [one, two],
       [pool("pa", [drop({ id: "l1", droppedOn: "2026-06-01" })]), pool("pb", [drop({ id: "l2" })])],
@@ -429,8 +429,8 @@ describe("forBoss", () => {
   });
 
   it("narrows on top of a character filter, down to nothing where the two do not meet", () => {
-    const one = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")]);
-    const two = party("pb", [mine("m3", "otherchar"), theirs("m4", "CreedBratton")]);
+    const one = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")]);
+    const two = party("pb", [mine("m3", "otherchar"), theirs("m4", "CraneBolton")]);
     const log = buildDropLog(
       [one, two],
       [pool("pa", [drop({ id: "l1" })]), pool("pb", [drop({ id: "l2", bossKey: "kalos" })])],
@@ -554,9 +554,9 @@ describe("consolidate", () => {
   it("puts a fold's runs in roster order, newest first inside each character", () => {
     // Three characters, interleaved by date. Newest-first alone made reading one character's
     // night a matter of picking their rows out of the list.
-    const one = party("pa", [mine("m1", "Huskyxkenshi")]);
-    const two = party("pb", [mine("m2", "acornacorn", "char-m2")]);
-    const three = party("pc", [mine("m3", "warrior2020", "char-m3")]);
+    const one = party("pa", [mine("m1", "Huntxkestrel")]);
+    const two = party("pb", [mine("m2", "acmeacme", "char-m2")]);
+    const three = party("pc", [mine("m3", "warden2030", "char-m3")]);
     const log = buildDropLog(
       [one, two, three],
       [
@@ -568,21 +568,21 @@ describe("consolidate", () => {
       {},
     );
 
-    // The roster says warrior2020 first, then Husky, then acornacorn, and that is the order the
+    // The roster says warden2030 first, then Hunt, then acmeacme, and that is the order the
     // runs read in whatever order they fell.
     const roster = ["char-m3", "char-m1", "char-m2"];
     const line = consolidate(log.entries, roster)[0]!;
     expect(line.entries.map((e) => e.lootId)).toEqual(["l3", "l4", "l1", "l2"]);
 
-    // Husky's own two are still newest first within their group.
-    const husky = line.entries.filter((e) => e.characterId === "char-m1");
-    expect(husky.map((e) => e.droppedOn)).toEqual(["2026-07-23", "2026-07-20"]);
+    // Hunt's own two are still newest first within their group.
+    const hunt = line.entries.filter((e) => e.characterId === "char-m1");
+    expect(hunt.map((e) => e.droppedOn)).toEqual(["2026-07-23", "2026-07-20"]);
   });
 
   it("puts a character the roster does not name last, not first", () => {
     // A missing index reads as 0 if it is not guarded, which would float a departed character to
     // the top of every fold.
-    const one = party("pa", [mine("m1", "Huskyxkenshi")]);
+    const one = party("pa", [mine("m1", "Huntxkestrel")]);
     const gone = party("pb", [mine("m2", "Ghost", "char-gone")]);
     const log = buildDropLog(
       [one, gone],
@@ -623,9 +623,9 @@ describe("foldRuns", () => {
   const fold = (roster: string[]) => {
     const log = buildDropLog(
       [
-        party("pa", [mine("m1", "Huskyxkenshi")]),
-        party("pb", [mine("m2", "acornacorn", "char-m2")]),
-        party("pc", [mine("m3", "warrior2020", "char-m3")]),
+        party("pa", [mine("m1", "Huntxkestrel")]),
+        party("pb", [mine("m2", "acmeacme", "char-m2")]),
+        party("pc", [mine("m3", "warden2030", "char-m3")]),
       ],
       [
         pool("pa", [alone("l1", "m1", "2026-07-20")]),
@@ -665,7 +665,7 @@ describe("foldRuns", () => {
     expect(sold.pooled).toBe((sold.entries[0]!.pooled ?? 0) * 2);
 
     const log = buildDropLog(
-      [party("pa", [mine("m1", "Huskyxkenshi")])],
+      [party("pa", [mine("m1", "Huntxkestrel")])],
       [pool("pa", [pending({ id: "l1" }), pending({ id: "l2", droppedOn: "2026-07-22" })])],
       {},
     );
@@ -694,7 +694,7 @@ describe("foldStatus", () => {
     const coupons = [entry({ pieces: true }), entry({ pieces: true })];
     expect(foldStatus(coupons)).toBe("Yours");
     expect(
-      foldStatus([...coupons, entry({ pieces: true, owedBy: "CreedBratton", owedToYou: 20 })]),
+      foldStatus([...coupons, entry({ pieces: true, owedBy: "CraneBolton", owedToYou: 20 })]),
     ).toBe("3 runs");
   });
 });
@@ -729,7 +729,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   });
 
   const trio = (over: Partial<Party> = {}) =>
-    party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton"), theirs("m3", "Free")], {
+    party("pa", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton"), theirs("m3", "Free")], {
       difficulty: "HARD",
       ...over,
     });
@@ -750,9 +750,9 @@ describe("a piece drop counts YOUR share, not what fell", () => {
 
   it("divides it by the week it fell in, not by the week the page asked for", () => {
     // The log reads a pool spanning months against ONE roster, and `members` is whichever week the
-    // page asked for. Husky ran Limbo as a trio in July and as a duo this week: read against the
+    // page asked for. Hunt ran Limbo as a trio in July and as a duo this week: read against the
     // duo, July's row claims 30 of the 60 for a character who got 20. See ranSeats.
-    const all = [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton"), theirs("m3", "Free")];
+    const all = [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton"), theirs("m3", "Free")];
     const nowADuo = trio({ members: [all[0]!, all[1]!], seats: all });
     const july = coupons({ droppedOn: "2026-07-20", ranThatWeek: ["m1", "m2", "m3"] });
 
@@ -827,7 +827,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
 
   // The night's own arrangement. Two seats on 60 in 3 stacks: 30 each, 20 to a stack. The same shape as an Extreme Kalos duo, in this table's numbers.
   const pair = (over: Partial<Party> = {}) =>
-    party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton")], {
+    party("pa", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton")], {
       difficulty: "HARD",
       ...over,
     });
@@ -857,10 +857,10 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     // The badge says nothing: it answers what to chase, and this is on the drop below instead.
     expect(couponsOutstandingByParty(log.entries).has("pa")).toBe(false);
     // This said "Yours" once, on the grounds that they are in your inventory. So is somebody else's
-    // share of them: a Hard Baldrix duo read "Yours" over 120 coupons that owed Bro 60, while the
+    // share of them: a Hard Baldrix duo read "Yours" over 120 coupons that owed Brock 60, while the
     // Sale Ledger asked for the 60. The whole row went quiet in the one direction.
-    expect(entry.owedTo).toBe("CreedBratton");
-    expect(couponSide(entry)).toEqual({ name: "CreedBratton", youHold: true });
+    expect(entry.owedTo).toBe("CraneBolton");
+    expect(couponSide(entry)).toEqual({ name: "CraneBolton", youHold: true });
     expect(dropStatusLabel(entry)).toBe("To hand over");
   });
 
@@ -868,10 +868,10 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     // The figure, because the row's count is your SHARE and neither direction can be read off it.
     // You holding 40 of a 30 share is 10 of theirs, and the row said nothing at all about it.
     const youHold = buildDropLog([pair()], [pool("pa", [arranged(2, 1)])], tables).entries[0]!;
-    expect(couponNote(youHold)).toBe("10 of CreedBratton's");
+    expect(couponNote(youHold)).toBe("10 of CraneBolton's");
 
     const theyHold = buildDropLog([pair()], [pool("pa", [arranged(1, 2)])], tables).entries[0]!;
-    expect(couponNote(theyHold)).toBe("CreedBratton looted");
+    expect(couponNote(theyHold)).toBe("CraneBolton looted");
 
     const even = buildDropLog([pair()], [pool("pa", [arranged(1, 1, { bundles: 2 })])], tables)
       .entries[0]!;
@@ -911,7 +911,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
 
     expect(log.entries[0]!.yours).toBe(30);
     expect(log.entries[0]!.owedToYou).toBe(10);
-    expect(log.entries[0]!.owedBy).toBe("CreedBratton");
+    expect(log.entries[0]!.owedBy).toBe("CraneBolton");
     expect(couponsOutstandingByParty(log.entries).get("pa")).toEqual({ toYou: 10 });
     expect(dropStatusLabel(log.entries[0]!)).toBe("Owed");
   });
@@ -941,7 +941,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   // debt into a meso one (V56), and the SALE LEDGER is the one place that nets it, out of its own
   // holderLedgers. This side used to subtract it too, and that made a boss row's figure depend on
   // every other party: Hard Baldrix went silent about a night looted whole because a tranche
-  // crediting Bro had drained the oldest nights, while Hard Kaling still asked for 30, and which of
+  // crediting Brock had drained the oldest nights, while Hard Kaling still asked for 30, and which of
   // one evening's three nights kept its debt came down to the order their ids sorted in.
   describe("a sale is the Sale Ledger's business, not the night's", () => {
     it("leaves the night exactly as it fell", () => {
@@ -981,7 +981,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   describe("a run states its own gap, and nets against nothing", () => {
     const CHRIS = "person:p-chris";
     const other = (over: Partial<Party> = {}) =>
-      party("pb", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton")], {
+      party("pb", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton")], {
         difficulty: "HARD",
         ...over,
       });
@@ -1071,10 +1071,10 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     });
 
     it("does not cancel across two different people", () => {
-      // Chris holding 10 of yours has nothing to do with what you owe Jared. Netting a count is
+      // Chris holding 10 of yours has nothing to do with what you owe Jarvis. Netting a count is
       // only safe within one relationship, which is why the sides are kept per person.
-      const jared = { ...theirs("m2", "Challynnger"), personId: "p-jared", personName: "Jared" };
-      const withJared = party("pc", [mine("m1", "Huskyxkenshi"), jared], { difficulty: "HARD" });
+      const jarvis = { ...theirs("m2", "Chalklynn"), personId: "p-jarvis", personName: "Jarvis" };
+      const withJarvis = party("pc", [mine("m1", "Huntxkestrel"), jarvis], { difficulty: "HARD" });
       const theirs10 = theirNight({ id: "l1", droppedOn: "2026-08-13" });
       const yours10 = coupons({
         id: "l2",
@@ -1086,7 +1086,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
         ],
       });
       const log = buildDropLog(
-        [withJared, other()],
+        [withJarvis, other()],
         [pool("pc", [yours10]), pool("pb", [theirs10])],
         tables,
       );
@@ -1241,7 +1241,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
   it("names who is holding your share when one seat looted the lot", () => {
     const log = buildDropLog([trio()], [pool("pa", [coupons(lootedBy("m2"))])], tables);
     expect(log.entries[0]!.yours).toBe(20);
-    expect(log.entries[0]!.owedBy).toBe("CreedBratton");
+    expect(log.entries[0]!.owedBy).toBe("CraneBolton");
   });
 
   it("does not name your own character, because that is you having it already", () => {
@@ -1297,29 +1297,29 @@ describe("who a drop was run with", () => {
   it("names the partner's character and not your own", () => {
     // The row already says which character of yours it is filed under. Naming it again in the same
     // line is the one word on it that tells the reader nothing.
-    expect(ranWith(duo(), drop())).toEqual(["CreedBratton"]);
+    expect(ranWith(duo(), drop())).toEqual(["CraneBolton"]);
   });
 
   it("names each character that ran it, not the person behind them", () => {
     // A night is run by characters, and the character is what the party screen and the clear name.
     // Folded to people this read "Chris" over a party of two seats nobody could match to it.
     const two = party("pa", [
-      mine("m1", "mechyfechy"),
-      theirs("m2", "Creed"),
+      mine("m1", "mechobotto"),
+      theirs("m2", "Crane"),
       theirs("m3", "Dwight"),
     ]);
-    expect(ranWith(two, drop())).toEqual(["Creed", "Dwight"]);
+    expect(ranWith(two, drop())).toEqual(["Crane", "Dwight"]);
   });
 
   it("reads the roster of the week it FELL in, not the party as it stands", () => {
     // A drop from August must not name somebody who joined in December. Same rule as the share on
     // the row above it, and the same primitive: see ranSeats.
     expect(ranWith(duo(), drop({ ranThatWeek: ["m1"] }))).toEqual([]);
-    expect(ranWith(duo(), drop({ ranThatWeek: ["m1", "m2"] }))).toEqual(["CreedBratton"]);
+    expect(ranWith(duo(), drop({ ranThatWeek: ["m1", "m2"] }))).toEqual(["CraneBolton"]);
   });
 
   it("names nobody on a solo, which has nobody to name", () => {
-    expect(ranWith(party("pa", [mine("m1", "mechyfechy")]), drop())).toEqual([]);
+    expect(ranWith(party("pa", [mine("m1", "mechobotto")]), drop())).toEqual([]);
   });
 });
 
@@ -1346,7 +1346,7 @@ describe("a piece drop divides at the mode it fell at", () => {
     pending({ dropKey: TOKEN, name: "Distorted Ambition", quantity: 6, ...over });
 
   const trio = () =>
-    party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton"), theirs("m3", "Free")], {
+    party("pa", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton"), theirs("m3", "Free")], {
       difficulty: "HARD",
     });
 
@@ -1359,14 +1359,14 @@ describe("a piece drop divides at the mode it fell at", () => {
     expect(entry.pieces).toBe(true);
     expect(entry.quantity).toBe(6);
     expect(entry.yours).toBe(2);
-    expect(entry.owedBy).toBe("CreedBratton");
+    expect(entry.owedBy).toBe("CraneBolton");
     expect(entry.owedToYou).toBe(2);
   });
 
   it("is neither, on a difficulty the table gives no amount for", () => {
     // NORMAL Limbo has no amount here, so the row is one item and its count is whatever was typed.
     // Both tests have to agree on that, or a row would be a coupon without dividing.
-    const at = party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton")], {
+    const at = party("pa", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton")], {
       difficulty: "NORMAL",
     });
 
@@ -1381,7 +1381,7 @@ describe("a piece drop divides at the mode it fell at", () => {
     // Reading the party here let an edit re-decide what a logged stack WAS: moving a Kalos party
     // from Extreme to Chaos, which drops no coupon at all, took 540 logged coupons out of the piece
     // maths with nothing on screen saying so. Reported 2026-08-30.
-    const movedOn = party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton")], {
+    const movedOn = party("pa", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton")], {
       difficulty: "NORMAL",
     });
 
@@ -1389,7 +1389,7 @@ describe("a piece drop divides at the mode it fell at", () => {
 
     // And the row's own mode is what is read, not merely a truthy override: a stack that really did
     // fall on Normal still does not divide, whatever the party says now.
-    const stillHard = party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton")], {
+    const stillHard = party("pa", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton")], {
       difficulty: "HARD",
     });
 
@@ -1404,7 +1404,7 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
   const HEROIC_PARTY = { worldType: "HEROIC" as const, difficulty: "CHAOS" };
 
   const trio = (over = {}) =>
-    party("pa", [mine("m1", "Huskyxkenshi"), theirs("m2", "CreedBratton"), theirs("m3", "Free")], {
+    party("pa", [mine("m1", "Huntxkestrel"), theirs("m2", "CraneBolton"), theirs("m3", "Free")], {
       ...HEROIC_PARTY,
       bossKey: "kalos-the-guardian",
       ...over,
@@ -1495,7 +1495,7 @@ describe("a Heroic world divides nothing by count and owes nobody", () => {
     expect(isCouponDrop(coupon(), at, coupons)).toBe(true);
 
     const log = buildDropLog([at], [pool("pa", [coupon()])], coupons);
-    expect(log.entries[0]!.owedBy).toBe("CreedBratton");
+    expect(log.entries[0]!.owedBy).toBe("CraneBolton");
     expect(log.entries[0]!.owedToYou).toBe(2);
   });
 

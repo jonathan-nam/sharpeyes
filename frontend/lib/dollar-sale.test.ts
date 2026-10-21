@@ -240,7 +240,7 @@ describe("collecting a dollar share", () => {
 });
 
 describe("a card that runs both ways at once", () => {
-  // The real card: Scanian owes a $333.33 share of the hammer, and you owe Scanian a meso share of
+  // The real card: Scarlet owes a $333.33 share of the hammer, and you owe Scarlet a meso share of
   // a grindstone. Every closing-action caption was written when a card could only be in one unit,
   // so Settle described the mesos alone and collected the dollars without saying so.
   const theirHammer = () =>

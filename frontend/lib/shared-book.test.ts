@@ -11,7 +11,7 @@ const B = 1_000_000_000;
 const YOU: Holder = { kind: "PERSON", personId: "p-you", characterName: null };
 
 const book = (fields: Partial<SharedBook>): SharedBook => ({
-  ownerName: "Jonathan",
+  ownerName: "Jonas",
   personId: "p-you",
   parties: [],
   pools: [],
@@ -42,7 +42,7 @@ const paid = (amount: number) => ({
 
 describe("sharedCard", () => {
   it("says what the owner owes you when you overpaid them", () => {
-    // Bro's card on 2026-10-20: 187b paid against 139b, read from Bro's side.
+    // Brock's card on 2026-10-20: 187b paid against 139b, read from Brock's side.
     const card = sharedCard(book({ debts: [debt(139 * B)], payments: [paid(187 * B)] }), []);
     expect([card?.owed, card?.owe]).toEqual([48 * B, 0]);
   });

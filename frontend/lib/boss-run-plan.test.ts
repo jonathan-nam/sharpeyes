@@ -56,11 +56,11 @@ describe("needsFixing", () => {
     const { rejected } = screenRuns(
       [
         run("twice", "lotus", 10, [
-          ["Creed", "chris"],
+          ["Crane", "chris"],
           ["Dwight", "chris"],
         ]),
-        run("nobody", "will", 10, [["Jared", null]]),
-        run("away", "lucid", 10, [["Mechy", "me"]]),
+        run("nobody", "will", 10, [["Jarvis", null]]),
+        run("away", "lucid", 10, [["Mecho", "me"]]),
       ],
       [],
     );
@@ -76,8 +76,8 @@ describe("screenRuns", () => {
     const { eligible: kept, rejected } = screenRuns(
       [
         run("a", "lotus", 10, [
-          ["Mechy", "me"],
-          ["Creed", "chris"],
+          ["Mecho", "me"],
+          ["Crane", "chris"],
         ]),
       ],
       ["me", "chris"],
@@ -90,8 +90,8 @@ describe("screenRuns", () => {
     const { eligible: kept, rejected } = screenRuns(
       [
         run("a", "lotus", 10, [
-          ["Mechy", "me"],
-          ["Creed", "chris"],
+          ["Mecho", "me"],
+          ["Crane", "chris"],
           ["Dwight", "chris"],
         ]),
       ],
@@ -100,14 +100,14 @@ describe("screenRuns", () => {
     expect(kept).toEqual([]);
     expect(rejected[0]?.reason).toBe("person-twice");
     // Names both of the seats, so the UI can say which pair collided.
-    expect(rejected[0]?.detail).toEqual(["Creed", "Dwight"]);
+    expect(rejected[0]?.detail).toEqual(["Crane", "Dwight"]);
   });
 
   it("refuses a party holding two of YOUR characters, which is the same collision", () => {
     const { rejected } = screenRuns(
       [
         run("a", "lotus", 10, [
-          ["Mechy", "me"],
+          ["Mecho", "me"],
           ["Otherme", "me"],
         ]),
       ],
@@ -120,8 +120,8 @@ describe("screenRuns", () => {
     const { eligible: kept, rejected } = screenRuns(
       [
         run("a", "lotus", 10, [
-          ["Mechy", "me"],
-          ["Creed", "chris"],
+          ["Mecho", "me"],
+          ["Crane", "chris"],
         ]),
       ],
       ["me"],
@@ -135,7 +135,7 @@ describe("screenRuns", () => {
     const { eligible: kept, rejected } = screenRuns(
       [
         run("a", "lotus", 10, [
-          ["Mechy", "me"],
+          ["Mecho", "me"],
           ["Stranger", null],
         ]),
       ],
@@ -148,15 +148,15 @@ describe("screenRuns", () => {
 
   it("drops the smaller versions of a party when everyone has to be on", () => {
     const trio = run("trio", "lotus", 10, [
-      ["Mechy", "me"],
-      ["Creed", "chris"],
+      ["Mecho", "me"],
+      ["Crane", "chris"],
       ["Sable", "mel"],
     ]);
     const duo = run("duo", "lucid", 10, [
-      ["Mechy", "me"],
-      ["Creed", "chris"],
+      ["Mecho", "me"],
+      ["Crane", "chris"],
     ]);
-    const solo = run("solo", "will", 10, [["Mechy", "me"]]);
+    const solo = run("solo", "will", 10, [["Mecho", "me"]]);
 
     const { eligible: kept, rejected } = screenRuns([trio, duo, solo], ["me", "chris", "mel"], {
       everyoneOn: true,
@@ -172,16 +172,16 @@ describe("screenRuns", () => {
 
   it("keeps the smaller versions when it is off, which is what it did before", () => {
     const duo = run("duo", "lucid", 10, [
-      ["Mechy", "me"],
-      ["Creed", "chris"],
+      ["Mecho", "me"],
+      ["Crane", "chris"],
     ]);
     expect(screenRuns([duo], ["me", "chris", "mel"]).eligible.map((r) => r.id)).toEqual(["duo"]);
   });
 
   it("still refuses a party seating somebody who is away, however full it is", () => {
     const trio = run("trio", "lotus", 10, [
-      ["Mechy", "me"],
-      ["Creed", "chris"],
+      ["Mecho", "me"],
+      ["Crane", "chris"],
       ["Dwight", "dave"],
     ]);
     const { eligible: kept, rejected } = screenRuns([trio], ["me", "chris", "mel"], {
@@ -194,8 +194,8 @@ describe("screenRuns", () => {
   it("can be told who everyone is, apart from who is available", () => {
     // Run Order screens cleared runs as well, and somebody only in those is not on tonight.
     const duo = run("duo", "lucid", 10, [
-      ["Mechy", "me"],
-      ["Creed", "chris"],
+      ["Mecho", "me"],
+      ["Crane", "chris"],
     ]);
     const options = { everyoneOn: true, everyone: ["me", "chris"] };
     expect(screenRuns([duo], ["me", "chris", "mel"], options).eligible).toHaveLength(1);
@@ -205,7 +205,7 @@ describe("screenRuns", () => {
     const { rejected } = screenRuns(
       [
         run("a", "lotus", 10, [
-          ["Creed", "chris"],
+          ["Crane", "chris"],
           ["Dwight", "chris"],
         ]),
       ],
@@ -217,7 +217,7 @@ describe("screenRuns", () => {
 
 describe("planNight", () => {
   it("returns an empty plan when nothing fits", () => {
-    const { best, byCount } = planNight([eligible("a", "lotus", 40, [["Mechy", "me"]])], {
+    const { best, byCount } = planNight([eligible("a", "lotus", 40, [["Mecho", "me"]])], {
       minutes: 30,
     });
     expect(best.runs).toEqual([]);
@@ -225,11 +225,11 @@ describe("planNight", () => {
   });
 
   it("keeps one person on one character by putting that character's runs together", () => {
-    // Alternating Mechy/Kanna/Mechy/Kanna would cost three switches. Grouping costs one.
+    // Alternating Mecho/Kanna/Mecho/Kanna would cost three switches. Grouping costs one.
     const runs = [
-      eligible("lotus", "lotus", 10, [["Mechy", "me"]]),
+      eligible("lotus", "lotus", 10, [["Mecho", "me"]]),
       eligible("damien", "damien", 10, [["Kanna", "me"]]),
-      eligible("lucid", "lucid", 10, [["Mechy", "me"]]),
+      eligible("lucid", "lucid", 10, [["Mecho", "me"]]),
       eligible("will", "will", 10, [["Kanna", "me"]]),
     ];
     const { best } = planNight(runs, { minutes: 120 });
@@ -245,8 +245,8 @@ describe("planNight", () => {
   it("counts a switch per person, not per run", () => {
     const runs = [
       eligible("a", "lotus", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
       ]),
       eligible("b", "damien", 10, [
         ["Kanna", "me"],
@@ -262,7 +262,7 @@ describe("planNight", () => {
     // A switch between them, and the two runs still add up to exactly 20. The window is spent on
     // bosses, so a night of 30-minute runs fills a 2 hour window with four of them and not three.
     const runs = [
-      eligible("a", "lotus", 10, [["Mechy", "me"]]),
+      eligible("a", "lotus", 10, [["Mecho", "me"]]),
       eligible("b", "damien", 10, [["Kanna", "me"]]),
     ];
     const { best } = planNight(runs, { minutes: 20 });
@@ -275,12 +275,12 @@ describe("planNight", () => {
     // Chris is only in run b, which goes first for being the biggest. Sitting out the other two
     // does not park him anywhere new, so the whole night costs ME one switch and CHRIS none.
     const runs = [
-      eligible("a", "lotus", 10, [["Mechy", "me"]]),
+      eligible("a", "lotus", 10, [["Mecho", "me"]]),
       eligible("b", "damien", 10, [
         ["Kanna", "me"],
-        ["Creed", "chris"],
+        ["Crane", "chris"],
       ]),
-      eligible("c", "lucid", 10, [["Mechy", "me"]]),
+      eligible("c", "lucid", 10, [["Mecho", "me"]]),
     ];
     const { best } = planNight(runs, { minutes: 120 });
     expect(best.runs).toHaveLength(3);
@@ -290,15 +290,15 @@ describe("planNight", () => {
 
   it("runs the fullest parties first", () => {
     const runs = [
-      eligible("solo", "lotus", 10, [["Mechy", "me"]]),
+      eligible("solo", "lotus", 10, [["Mecho", "me"]]),
       eligible("trio", "damien", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
         ["Dwight", "dave"],
       ]),
       eligible("duo", "lucid", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
       ]),
     ];
     const { best } = planNight(runs, { minutes: 120 });
@@ -310,19 +310,19 @@ describe("planNight", () => {
     // costs nobody a switch and still leaves both sitting out a boss in the middle of their night.
     const runs = [
       eligible("a", "lotus", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
       ]),
       eligible("b", "damien", 10, [
-        ["Mechy", "me"],
+        ["Mecho", "me"],
         ["Dwight", "dave"],
       ]),
       eligible("c", "lucid", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
       ]),
       eligible("d", "will", 10, [
-        ["Mechy", "me"],
+        ["Mecho", "me"],
         ["Dwight", "dave"],
       ]),
     ];
@@ -335,20 +335,20 @@ describe("planNight", () => {
 
   it("does not strand somebody in the middle to save a switch", () => {
     // My two characters split chris and dave down the middle. Running a, b, c, d parks me on
-    // Mechy then Kanna for one switch all night, and leaves BOTH of them sitting out a boss
+    // Mecho then Kanna for one switch all night, and leaves BOTH of them sitting out a boss
     // between their two. Pairing each of them up instead costs a second switch and no waiting.
     const runs = [
       eligible("a", "lotus", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
       ]),
       eligible("b", "damien", 10, [
-        ["Mechy", "me"],
+        ["Mecho", "me"],
         ["Dwight", "dave"],
       ]),
       eligible("c", "lucid", 10, [
         ["Kanna", "me"],
-        ["Creed", "chris"],
+        ["Crane", "chris"],
       ]),
       eligible("d", "will", 10, [
         ["Kanna", "me"],
@@ -363,7 +363,7 @@ describe("planNight", () => {
   });
 
   it("finishes off the person who is only in a handful of a long night", () => {
-    // The night this was reported on. Jared is in four of sixteen runs and used to be given two at
+    // The night this was reported on. Jarvis is in four of sixteen runs and used to be given two at
     // the start and two at the eleventh hour, sitting out nine in between, because waiting is only
     // charged when somebody comes BACK: until then a half-built night that had stranded him ranked
     // exactly like one that had not, and every better continuation was pruned before the bill
@@ -372,115 +372,115 @@ describe("planNight", () => {
       [
         "limbo",
         [
-          ["onetwothreeo", "me"],
-          ["Freeballynn", "bro"],
-          ["CourseLair", "jared"],
+          ["onefourfive", "me"],
+          ["Frecklynn", "brock"],
+          ["CourtLane", "jarvis"],
         ],
       ],
       [
         "adversary",
         [
-          ["onetwothreeo", "me"],
-          ["iPhone69C", "bro"],
-          ["CourseLair", "jared"],
+          ["onefourfive", "me"],
+          ["iPager42X", "brock"],
+          ["CourtLane", "jarvis"],
         ],
       ],
       [
         "kalos",
         [
-          ["warrior2020", "me"],
-          ["iPhone69C", "bro"],
+          ["warden2030", "me"],
+          ["iPager42X", "brock"],
         ],
       ],
       [
         "kaling",
         [
-          ["acornacorn", "me"],
-          ["iPhone69C", "bro"],
+          ["acmeacme", "me"],
+          ["iPager42X", "brock"],
         ],
       ],
       [
         "blackmage",
         [
-          ["acornacorn", "me"],
-          ["iPhone69C", "bro"],
+          ["acmeacme", "me"],
+          ["iPager42X", "brock"],
         ],
       ],
       [
         "star",
         [
-          ["acornacorn", "me"],
-          ["CreedBratton", "bro"],
+          ["acmeacme", "me"],
+          ["CraneBolton", "brock"],
         ],
       ],
       [
         "baldrix",
         [
-          ["HuskyxKenshi", "me"],
-          ["CreedBratton", "bro"],
+          ["HuntxKestrel", "me"],
+          ["CraneBolton", "brock"],
         ],
       ],
       [
         "kalosx",
         [
-          ["HuskyxKenshi", "me"],
-          ["CreedBratton", "bro"],
+          ["HuntxKestrel", "me"],
+          ["CraneBolton", "brock"],
         ],
       ],
       [
         "adversaryx",
         [
-          ["mechyfechy", "me"],
-          ["CreedBratton", "bro"],
+          ["mechobotto", "me"],
+          ["CraneBolton", "brock"],
         ],
       ],
       [
         "kalosx",
         [
-          ["mechyfechy", "me"],
-          ["Freeballynn", "bro"],
+          ["mechobotto", "me"],
+          ["Frecklynn", "brock"],
         ],
       ],
       [
         "blackmage",
         [
-          ["onetwothreeo", "me"],
-          ["Freeballynn", "bro"],
+          ["onefourfive", "me"],
+          ["Frecklynn", "brock"],
         ],
       ],
       [
         "star",
         [
-          ["onetwothreeo", "me"],
-          ["CourseLair", "jared"],
+          ["onefourfive", "me"],
+          ["CourtLane", "jarvis"],
         ],
       ],
       [
         "limbo",
         [
-          ["HuskyxKenshi", "me"],
-          ["DemonSlays20", "jared"],
+          ["HuntxKestrel", "me"],
+          ["DemonHunts30", "jarvis"],
         ],
       ],
       [
         "kaling",
         [
-          ["HuskyxKenshi", "me"],
-          ["Freeballynn", "bro"],
+          ["HuntxKestrel", "me"],
+          ["Frecklynn", "brock"],
         ],
       ],
       [
         "seren",
         [
-          ["HuskyxKenshi", "me"],
-          ["Freeballynn", "bro"],
+          ["HuntxKestrel", "me"],
+          ["Frecklynn", "brock"],
         ],
       ],
       [
         "star",
         [
-          ["HuskyxKenshi", "me"],
-          ["Freeballynn", "bro"],
+          ["HuntxKestrel", "me"],
+          ["Frecklynn", "brock"],
         ],
       ],
     ];
@@ -490,10 +490,10 @@ describe("planNight", () => {
     expect(best.runs).toHaveLength(16);
     expect(best.switches).toBe(10);
 
-    const jaredAt = best.runs.flatMap((planned, i) =>
-      planned.run.seats.some((seat) => seat.personId === "jared") ? [i] : [],
+    const jarvisAt = best.runs.flatMap((planned, i) =>
+      planned.run.seats.some((seat) => seat.personId === "jarvis") ? [i] : [],
     );
-    expect(jaredAt).toEqual([0, 1, 2, 3]);
+    expect(jarvisAt).toEqual([0, 1, 2, 3]);
   });
 
   it("puts a fuller party first even when that costs a switch", () => {
@@ -503,8 +503,8 @@ describe("planNight", () => {
       eligible("a", "lotus", 10, [["Kanna", "me"]]),
       eligible("b", "damien", 10, [["Kanna", "me"]]),
       eligible("c", "lucid", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
         ["Dwight", "dave"],
       ]),
     ];
@@ -514,14 +514,14 @@ describe("planNight", () => {
   });
 
   it("never books one character onto the same boss twice", () => {
-    // Two configs for Lotus that share Mechy. Mechy clears Lotus once, so only one can run.
+    // Two configs for Lotus that share Mecho. Mecho clears Lotus once, so only one can run.
     const runs = [
       eligible("a", "lotus", 10, [
-        ["Mechy", "me"],
-        ["Creed", "chris"],
+        ["Mecho", "me"],
+        ["Crane", "chris"],
       ]),
       eligible("b", "lotus", 10, [
-        ["Mechy", "me"],
+        ["Mecho", "me"],
         ["Dwight", "dave"],
       ]),
     ];
@@ -531,7 +531,7 @@ describe("planNight", () => {
 
   it("allows the same boss twice on different characters", () => {
     const runs = [
-      eligible("a", "lotus", 10, [["Mechy", "me"]]),
+      eligible("a", "lotus", 10, [["Mecho", "me"]]),
       eligible("b", "lotus", 10, [["Kanna", "me"]]),
     ];
     const { best } = planNight(runs, { minutes: 120 });
@@ -541,8 +541,8 @@ describe("planNight", () => {
   it("takes more bosses over fewer switches, and hands back the shorter plan too", () => {
     // Three runs fit. Adding the third costs a switch, so the 2-run plan is switch-free.
     const runs = [
-      eligible("a", "lotus", 10, [["Mechy", "me"]]),
-      eligible("b", "damien", 10, [["Mechy", "me"]]),
+      eligible("a", "lotus", 10, [["Mecho", "me"]]),
+      eligible("b", "damien", 10, [["Mecho", "me"]]),
       eligible("c", "lucid", 10, [["Kanna", "me"]]),
     ];
     const { best, byCount } = planNight(runs, { minutes: 120 });
@@ -556,7 +556,7 @@ describe("planNight", () => {
 
   it("starts each run where the one before it ended, switch or no switch", () => {
     const runs = [
-      eligible("a", "lotus", 30, [["Mechy", "me"]]),
+      eligible("a", "lotus", 30, [["Mecho", "me"]]),
       eligible("b", "damien", 30, [["Kanna", "me"]]),
       eligible("c", "lucid", 30, [["Kanna", "me"]]),
     ];
@@ -568,9 +568,9 @@ describe("planNight", () => {
 
   it("gives the same plan back for the same input", () => {
     const runs = [
-      eligible("a", "lotus", 10, [["Mechy", "me"]]),
+      eligible("a", "lotus", 10, [["Mecho", "me"]]),
       eligible("b", "damien", 10, [["Kanna", "me"]]),
-      eligible("c", "lucid", 10, [["Mechy", "me"]]),
+      eligible("c", "lucid", 10, [["Mecho", "me"]]),
       eligible("d", "will", 10, [["Kanna", "me"]]),
     ];
     const first = order(planNight(runs, { minutes: 120 }).best);
@@ -764,28 +764,28 @@ describe("withoutRuns", () => {
   // The night that was reported: two duos, each person on three characters.
   const night = [
     eligible("a-kalos", "kalos-x", 30, [
-      ["mechyfechy", "jon"],
-      ["Freeballynn", "ben"],
+      ["mechobotto", "jonas"],
+      ["Frecklynn", "ben"],
     ]),
     eligible("b-adversary", "adversary", 30, [
-      ["mechyfechy", "jon"],
-      ["CreedBratton", "ben"],
+      ["mechobotto", "jonas"],
+      ["CraneBolton", "ben"],
     ]),
     eligible("c-star", "star", 30, [
-      ["acornacorn", "jon"],
-      ["CreedBratton", "ben"],
+      ["acmeacme", "jonas"],
+      ["CraneBolton", "ben"],
     ]),
     eligible("d-kaling", "kaling", 30, [
-      ["acornacorn", "jon"],
-      ["iPhone69C", "ben"],
+      ["acmeacme", "jonas"],
+      ["iPager42X", "ben"],
     ]),
     eligible("e-seren", "seren", 30, [
-      ["acornacorn", "jon"],
-      ["iPhone69C", "ben"],
+      ["acmeacme", "jonas"],
+      ["iPager42X", "ben"],
     ]),
     eligible("0-kalos-c", "kalos-c", 30, [
-      ["warrior2020", "jon"],
-      ["iPhone69C", "ben"],
+      ["warden2030", "jonas"],
+      ["iPager42X", "ben"],
     ]),
   ];
 
@@ -842,29 +842,29 @@ describe("planNight's prefer", () => {
   // picked one with "Exclude Party Member Subsets" off.
   const trios = [
     eligible("48f7-adv-a", "adversary", 15, [
-      ["onetwothreeo", "you"],
-      ["CourseLair", "jared"],
-      ["iPhone69C", "bro"],
+      ["onefourfive", "you"],
+      ["CourtLane", "jarvis"],
+      ["iPager42X", "brock"],
     ]),
     eligible("911f-adv-b", "adversary", 15, [
-      ["warrior2020", "you"],
-      ["DemonSlays20", "jared"],
-      ["Freeballynn", "bro"],
+      ["warden2030", "you"],
+      ["DemonHunts30", "jarvis"],
+      ["Frecklynn", "brock"],
     ]),
     eligible("65b7-limbo-b", "limbo", 20, [
-      ["onetwothreeo", "you"],
-      ["Freeballynn", "bro"],
-      ["CourseLair", "jared"],
+      ["onefourfive", "you"],
+      ["Frecklynn", "brock"],
+      ["CourtLane", "jarvis"],
     ]),
     eligible("505d-limbo-a", "limbo", 20, [
-      ["warrior2020", "you"],
-      ["iPhone69C", "bro"],
-      ["Challynnger", "jared"],
+      ["warden2030", "you"],
+      ["iPager42X", "brock"],
+      ["Chalklynn", "jarvis"],
     ]),
     eligible("de93-star-a", "star", 20, [
-      ["warrior2020", "you"],
-      ["iPhone69C", "bro"],
-      ["Challynnger", "jared"],
+      ["warden2030", "you"],
+      ["iPager42X", "brock"],
+      ["Chalklynn", "jarvis"],
     ]),
   ];
   const offOrder = ["505d-limbo-a", "de93-star-a", "48f7-adv-a", "65b7-limbo-b", "911f-adv-b"];
@@ -893,24 +893,24 @@ describe("withoutRuns' switch marks", () => {
     // A real night (2026-10-20), in the order it was planned, the two cleared trios in the middle.
     const night = [
       eligible("adv-a", "adversary", 15, [
-        ["onetwothreeo", "you"],
-        ["iPhone69C", "bro"],
-        ["CourseLair", "jared"],
+        ["onefourfive", "you"],
+        ["iPager42X", "brock"],
+        ["CourtLane", "jarvis"],
       ]),
       eligible("limbo-b", "limbo", 20, [
-        ["onetwothreeo", "you"],
-        ["Freeballynn", "bro"],
-        ["CourseLair", "jared"],
+        ["onefourfive", "you"],
+        ["Frecklynn", "brock"],
+        ["CourtLane", "jarvis"],
       ]),
       eligible("adv-b", "adversary", 15, [
-        ["warrior2020", "you"],
-        ["Freeballynn", "bro"],
-        ["DemonSlays20", "jared"],
+        ["warden2030", "you"],
+        ["Frecklynn", "brock"],
+        ["DemonHunts30", "jarvis"],
       ]),
       eligible("limbo-a", "limbo", 20, [
-        ["warrior2020", "you"],
-        ["iPhone69C", "bro"],
-        ["Challynnger", "jared"],
+        ["warden2030", "you"],
+        ["iPager42X", "brock"],
+        ["Chalklynn", "jarvis"],
       ]),
     ];
     const planned: Plan = {
@@ -920,7 +920,7 @@ describe("withoutRuns' switch marks", () => {
     };
 
     const shown = withoutRuns(planned, new Set(["limbo-b", "adv-b"]), { minutes: Infinity });
-    expect(shown.runs.map((r) => r.switched)).toEqual([[], ["you", "jared"]]);
+    expect(shown.runs.map((r) => r.switched)).toEqual([[], ["you", "jarvis"]]);
     expect(shown.switches).toBe(2);
   });
 });

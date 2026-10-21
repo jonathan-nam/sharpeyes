@@ -42,8 +42,8 @@ describe("telling an edited split from a saved one", () => {
   });
 
   it("does not depend on which order the boxes were filled in", () => {
-    expect(sharesKey({ mechyfechy: "4", Freeballynn: "2" })).toBe(
-      sharesKey({ Freeballynn: "2", mechyfechy: "4" }),
+    expect(sharesKey({ mechobotto: "4", Frecklynn: "2" })).toBe(
+      sharesKey({ Frecklynn: "2", mechobotto: "4" }),
     );
   });
 

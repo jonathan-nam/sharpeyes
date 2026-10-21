@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { noPending, pendingFor, shownCount, withPending, withoutPending } from "./pending-counts";
 
-const ME = "char-mechyfechy";
-const THEM = "char-warrior2020";
+const ME = "char-mechobotto";
+const THEM = "char-warden2030";
 
 describe("a figure being edited", () => {
   it("is shown over the stored one", () => {

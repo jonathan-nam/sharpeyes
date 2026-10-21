@@ -151,9 +151,9 @@ class SharedBooksTest {
     @Test
     fun `a member reads the owner's parties with them in it, and the debts that name them`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
+            val theirs = character(owner, "mechobotto")
             character(owner, "Baldrix", position = 1)
-            character(member, "CreedBratton")
+            character(member, "CraneBolton")
             link(owner, "Chris", member)
             savePeople(
                 owner,
@@ -168,23 +168,23 @@ class SharedBooksTest {
                             "Chris",
                             emptyList(),
                         ),
-                        PersonRequest(null, "Jared", listOf("Jaredchar")),
+                        PersonRequest(null, "Jarvis", listOf("Jarvischar")),
                     ),
                 ),
                 Clock.System.now(),
             )
-            val withChris = config(theirs, listOf("CreedBratton"))
+            val withChris = config(theirs, listOf("CraneBolton"))
             val ownOther = character(owner, "Altchar", position = 2)
-            config(ownOther, listOf("Jaredchar"))
+            config(ownOther, listOf("Jarvischar"))
             debt("Chris", 48_000_000_000)
-            debt("Jared", 7)
+            debt("Jarvis", 7)
 
             val books = sharedBooksFor(member)
 
             val book = books.single()
             assertEquals(listOf(withChris.id), book.parties.map { it.id })
             assertEquals(listOf(48_000_000_000), book.debts.map { it.amount })
-            assertEquals("mechyfechy", book.ownerName)
+            assertEquals("mechobotto", book.ownerName)
             assertNull(book.ownerPersonId)
         }
     }
@@ -192,11 +192,11 @@ class SharedBooksTest {
     @Test
     fun `the owner is the member's own person row for them`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "mechobotto")
+            character(member, "CraneBolton")
             link(owner, "Chris", member)
             link(member, "Mech", owner)
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("CraneBolton"))
 
             val book = sharedBooksFor(member).single()
 
@@ -209,12 +209,12 @@ class SharedBooksTest {
     @Test
     fun `a member writes into the owner's book, and each side takes back only its own`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "mechobotto")
+            character(member, "CraneBolton")
             character(stranger, "Nobody")
             link(owner, "Chris", member)
             link(member, "Mech", owner)
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("CraneBolton"))
             val chris = Person.selectAll().where { Person.userId eq owner }.single()[Person.id]
             val mech = Person.selectAll().where { Person.userId eq member }.single()[Person.id]
             assertNull(sharedBookAt(chris, stranger), "only the person it names writes into it")
@@ -264,11 +264,11 @@ class SharedBooksTest {
     @Test
     fun `nobody else reads it`() {
         transaction {
-            val theirs = character(owner, "mechyfechy")
-            character(member, "CreedBratton")
+            val theirs = character(owner, "mechobotto")
+            character(member, "CraneBolton")
             character(stranger, "Nobody")
             link(owner, "Chris", member)
-            config(theirs, listOf("CreedBratton"))
+            config(theirs, listOf("CraneBolton"))
             assertEquals(emptyList(), sharedBooksFor(stranger))
             assertEquals(emptyList(), sharedBooksFor(owner))
         }

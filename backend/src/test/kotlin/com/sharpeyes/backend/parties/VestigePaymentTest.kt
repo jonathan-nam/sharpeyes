@@ -10,11 +10,11 @@ class VestigePaymentTest {
     @Test
     fun `a payment needs a holder it can be filed against, and money in it`() {
         val self = VestigeHolder(kind = "SELF")
-        val bro = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000001")
-        val stranger = VestigeHolder(kind = "CHARACTER", characterName = "freeballynn")
+        val brock = VestigeHolder(kind = "PERSON", personId = "6f1a8f6e-0000-4000-8000-000000000001")
+        val stranger = VestigeHolder(kind = "CHARACTER", characterName = "frecklynn")
 
         assertNull(paymentRefusal(self, 4_875_000_000))
-        assertNull(paymentRefusal(bro, 4_875_000_000))
+        assertNull(paymentRefusal(brock, 4_875_000_000))
         assertNull(paymentRefusal(stranger, 1))
 
         // Nothing arriving is the absence of an event, not one worth a row.

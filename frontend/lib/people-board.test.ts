@@ -59,13 +59,13 @@ const person = (name: string, characters: string[], owned: string[] = []): Perso
 
 describe("isRegular", () => {
   it("counts a standing seat in a standing party", () => {
-    expect(isRegular("Premial", [party([seat("Premial")])])).toBe(true);
+    expect(isRegular("Prelude", [party([seat("Prelude")])])).toBe(true);
   });
 
   // The point of the flag rule over a count: one party is the whole arrangement for a duo.
   it("counts somebody who is in exactly one party", () => {
-    const parties = [party([seat("mechyfechy"), seat("Premial")])];
-    expect(isRegular("Premial", parties)).toBe(true);
+    const parties = [party([seat("mechobotto"), seat("Prelude")])];
+    expect(isRegular("Prelude", parties)).toBe(true);
   });
 
   it("does not count a guest seat", () => {
@@ -82,28 +82,28 @@ describe("isRegular", () => {
   });
 
   it("matches the name case-insensitively", () => {
-    expect(isRegular("PREMIAL", [party([seat("Premial")])])).toBe(true);
+    expect(isRegular("PRELUDE", [party([seat("Prelude")])])).toBe(true);
   });
 });
 
 describe("unclaimed", () => {
   const parties = [
-    party([seat("mechyfechy"), seat("Premial")]),
-    party([seat("mechyfechy"), seat("Dwight", true)], { id: "pa-2" }),
+    party([seat("mechobotto"), seat("Prelude")]),
+    party([seat("mechobotto"), seat("Dwight", true)], { id: "pa-2" }),
   ];
 
   it("leaves out whoever a person already holds", () => {
-    expect(unclaimed(parties, [person("Jared", ["Premial"])])).toEqual(["mechyfechy"]);
+    expect(unclaimed(parties, [person("Jarvis", ["Prelude"])])).toEqual(["mechobotto"]);
   });
 
   // The point of stage one: a character whose own account says whose it is is not a question this
   // page has left to ask, so it does not sit in the pile waiting to be dragged onto somebody.
   it("leaves out whoever a linked account already answers for", () => {
-    expect(unclaimed(parties, [person("Jared", [], ["Premial"])])).toEqual(["mechyfechy"]);
+    expect(unclaimed(parties, [person("Jarvis", [], ["Prelude"])])).toEqual(["mechobotto"]);
   });
 
   it("does not offer a guest at all", () => {
-    expect(unclaimed(parties, [])).toEqual(["mechyfechy", "Premial"]);
+    expect(unclaimed(parties, [])).toEqual(["mechobotto", "Prelude"]);
   });
 
   it("does not offer a seat in a one-off party", () => {
@@ -112,61 +112,61 @@ describe("unclaimed", () => {
   });
 
   it("names a character once however many parties they are in", () => {
-    expect(unclaimed(parties, []).filter((n) => n === "mechyfechy")).toHaveLength(1);
+    expect(unclaimed(parties, []).filter((n) => n === "mechobotto")).toHaveLength(1);
   });
 
   it("leaves out a character claimed under a different case", () => {
-    expect(unclaimed(parties, [person("Jared", ["premial"])])).not.toContain("Premial");
+    expect(unclaimed(parties, [person("Jarvis", ["prelude"])])).not.toContain("Prelude");
   });
 
   it("reads every seat, not just the week's roster", () => {
-    const departed = party([seat("mechyfechy")], { seats: [seat("mechyfechy"), seat("Lynn")] });
+    const departed = party([seat("mechobotto")], { seats: [seat("mechobotto"), seat("Lynn")] });
     expect(unclaimed([departed], [])).toContain("Lynn");
   });
 
   it("leaves out a character on your own roster", () => {
-    expect(unclaimed(parties, [], ["mechyfechy"])).toEqual(["Premial"]);
+    expect(unclaimed(parties, [], ["mechobotto"])).toEqual(["Prelude"]);
   });
 
   it("leaves out your own character however it is spelled on the roster", () => {
-    expect(unclaimed(parties, [], ["MECHYFECHY"])).not.toContain("mechyfechy");
+    expect(unclaimed(parties, [], ["MECHOBOTTO"])).not.toContain("mechobotto");
   });
 
   // The seat says so itself, which is the answer for a character added to a party since.
   it("leaves out a seat marked as one of yours even with no roster passed", () => {
-    const own = party([seat("Nightwalk", false, "char-9"), seat("Premial")]);
-    expect(unclaimed([own], [])).toEqual(["Premial"]);
+    const own = party([seat("Nightwalk", false, "char-9"), seat("Prelude")]);
+    expect(unclaimed([own], [])).toEqual(["Prelude"]);
   });
 
   it("still shows your own character on the person who was given them", () => {
-    const held = [person("Jared", ["mechyfechy"])];
-    expect(unclaimed(parties, held, ["mechyfechy"])).toEqual(["Premial"]);
+    const held = [person("Jarvis", ["mechobotto"])];
+    expect(unclaimed(parties, held, ["mechobotto"])).toEqual(["Prelude"]);
   });
 });
 
 describe("claim", () => {
-  const people = [person("Jared", ["Premial"]), person("Chris", [])];
+  const people = [person("Jarvis", ["Prelude"]), person("Chris", [])];
 
   it("gives a character to a person", () => {
     expect(claim(people, "Lynn", 1)[1]!.characters).toEqual(["Lynn"]);
   });
 
   it("moves rather than duplicates, so nobody can claim it twice", () => {
-    const moved = claim(people, "Premial", 1);
+    const moved = claim(people, "Prelude", 1);
     expect(moved[0]!.characters).toEqual([]);
-    expect(moved[1]!.characters).toEqual(["Premial"]);
+    expect(moved[1]!.characters).toEqual(["Prelude"]);
   });
 
   it("moves a character named in a different case", () => {
-    expect(claim(people, "PREMIAL", 1)[0]!.characters).toEqual([]);
+    expect(claim(people, "PRELUDE", 1)[0]!.characters).toEqual([]);
   });
 
   it("takes a character back off everybody", () => {
-    expect(claim(people, "Premial", null)[0]!.characters).toEqual([]);
+    expect(claim(people, "Prelude", null)[0]!.characters).toEqual([]);
   });
 
   it("leaves the list alone rather than unclaiming when the row is gone", () => {
-    expect(claim(people, "Premial", 7)).toEqual(people);
+    expect(claim(people, "Prelude", 7)).toEqual(people);
   });
 });
 
@@ -175,26 +175,26 @@ describe("stillAttributed", () => {
   // says it now. The row draws each character once, as the owned one, and the attribution stays in
   // the database because it is still the answer if the link goes away.
   it("drops an attribution their own account already answers", () => {
-    expect(stillAttributed(person("Chris", ["CreedBratton"], ["CreedBratton"]))).toEqual([]);
+    expect(stillAttributed(person("Chris", ["CraneBolton"], ["CraneBolton"]))).toEqual([]);
   });
 
   it("keeps one their account does not hold", () => {
-    expect(stillAttributed(person("Chris", ["OldAlt"], ["CreedBratton"]))).toEqual(["OldAlt"]);
+    expect(stillAttributed(person("Chris", ["OldAlt"], ["CraneBolton"]))).toEqual(["OldAlt"]);
   });
 
   // The backend claims a character case-insensitively, so a spelling that differs only in case is
   // the same character and would otherwise draw twice.
   it("matches the two without regard to case", () => {
-    expect(stillAttributed(person("Chris", ["creedbratton"], ["CreedBratton"]))).toEqual([]);
+    expect(stillAttributed(person("Chris", ["cranebolton"], ["CraneBolton"]))).toEqual([]);
   });
 });
 
 describe("plays", () => {
   it("is true either way a character can be known", () => {
-    const chris = person("Chris", ["OldAlt"], ["CreedBratton"]);
+    const chris = person("Chris", ["OldAlt"], ["CraneBolton"]);
     expect(plays(chris, "OldAlt")).toBe(true);
-    expect(plays(chris, "CreedBratton")).toBe(true);
-    expect(plays(chris, "Premial")).toBe(false);
+    expect(plays(chris, "CraneBolton")).toBe(true);
+    expect(plays(chris, "Prelude")).toBe(false);
   });
 });
 
@@ -205,7 +205,7 @@ describe("toDraft", () => {
         id: "p1",
         name: "Chris",
         characters: ["OldAlt"],
-        ownedCharacters: ["Creed"],
+        ownedCharacters: ["Crane"],
         linked: true,
         pinned: false,
       },
@@ -215,7 +215,7 @@ describe("toDraft", () => {
         id: "p1",
         name: "Chris",
         characters: ["OldAlt"],
-        owned: ["Creed"],
+        owned: ["Crane"],
         linked: true,
         notOnAccount: [],
         contested: [],
@@ -228,12 +228,12 @@ describe("toDraft", () => {
   // this on its first render through `dirty`. Spreading the undefined threw
   // "p.ownedCharacters is not iterable" and took the page down until a hard reload.
   it("survives a payload cached before the field existed", () => {
-    const cached = [{ id: "p1", name: "Chris", characters: ["Creed"], pinned: false }];
+    const cached = [{ id: "p1", name: "Chris", characters: ["Crane"], pinned: false }];
     expect(toDraft(cached as unknown as Parameters<typeof toDraft>[0])).toEqual([
       {
         id: "p1",
         name: "Chris",
-        characters: ["Creed"],
+        characters: ["Crane"],
         owned: [],
         linked: false,
         notOnAccount: [],
@@ -263,26 +263,26 @@ describe("toDraft", () => {
 
 describe("fileUnder", () => {
   const people = [
-    { id: "p1", name: "Bro", characters: ["iPhone69C"], owned: [] },
-    { id: "p2", name: "Jared", characters: ["CourseLair"], owned: [] },
+    { id: "p1", name: "Brock", characters: ["iPager42X"], owned: [] },
+    { id: "p2", name: "Jarvis", characters: ["CourtLane"], owned: [] },
   ];
 
   it("files a character under a person already on the list, whatever the case", () => {
-    expect(fileUnder(people, "bro", "Freeballynn")[0]!.characters).toEqual([
-      "iPhone69C",
-      "Freeballynn",
+    expect(fileUnder(people, "brock", "Frecklynn")[0]!.characters).toEqual([
+      "iPager42X",
+      "Frecklynn",
     ]);
   });
 
   it("adds the person when nobody has that name", () => {
-    const filed = fileUnder(people, "Chris", "CreedBratton");
-    expect(filed.at(-1)).toEqual({ name: "Chris", characters: ["CreedBratton"], owned: [] });
+    const filed = fileUnder(people, "Chris", "CraneBolton");
+    expect(filed.at(-1)).toEqual({ name: "Chris", characters: ["CraneBolton"], owned: [] });
   });
 
   it("takes the character off whoever held it", () => {
-    const filed = fileUnder(people, "Bro", "CourseLair");
+    const filed = fileUnder(people, "Brock", "CourtLane");
     expect(filed[1]!.characters).toEqual([]);
-    expect(filed[0]!.characters).toContain("CourseLair");
+    expect(filed[0]!.characters).toContain("CourtLane");
   });
 });
 
@@ -290,7 +290,7 @@ describe("what a linked person's row says about a character", () => {
   const row = {
     name: "Chris",
     characters: ["GhostAlt", "TwinChar"],
-    owned: ["CreedBratton"],
+    owned: ["CraneBolton"],
     notOnAccount: ["GhostAlt"],
     contested: ["TwinChar", "OtherClash"],
   };
@@ -298,7 +298,7 @@ describe("what a linked person's row says about a character", () => {
   it("names a character their account does not hold, and one two accounts hold", () => {
     expect(characterNote(row, "GhostAlt")).toBe("Not on their account");
     expect(characterNote(row, "twinChar")).toBe("On two accounts");
-    expect(characterNote(row, "CreedBratton")).toBeNull();
+    expect(characterNote(row, "CraneBolton")).toBeNull();
   });
 
   it("still shows a clash that is not on the row's card", () => {

@@ -1,6 +1,6 @@
 """Boss-planner parse, checked against hand-verified truth.
 
-As in test_parse.py, truth is read off the screenshots by eye (verified by Jonathan for
+As in test_parse.py, truth is read off the screenshots by eye (verified by hand for
 sample 2), never taken from the parser's own output. sample 2 pins the (boss, cleared) read
 on one character; the full-screen sample pins that the name read identifies a full roster,
 including bosses that a fixed image library would not have covered.
@@ -12,7 +12,7 @@ from fixtures import PLANNER
 
 from app.cv import planner as P
 
-# (boss name, cleared) top-to-bottom. First nine verified by Jonathan; last two parser-proposed.
+# (boss name, cleared) top-to-bottom. First nine verified by hand; last two parser-proposed.
 SAMPLE2_TRUTH = [
     ("Darknell", True),
     ("Chosen Seren", True),

@@ -275,7 +275,7 @@ class BossRoutineTest {
                 SavePartyRequest(
                     characterId = character.toString(),
                     bossKey = "jupiter",
-                    members = listOf("Bryants", "CreedBratton"),
+                    members = listOf("Bryces", "CraneBolton"),
                     oneOff = true,
                 ),
                 midWeek,
@@ -297,7 +297,7 @@ class BossRoutineTest {
                 SavePartyRequest(
                     characterId = character.toString(),
                     bossKey = "jupiter",
-                    members = listOf("Bryants"),
+                    members = listOf("Bryces"),
                     oneOff = true,
                 ),
                 midWeek,

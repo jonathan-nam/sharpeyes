@@ -431,7 +431,7 @@ def test_garbage_body_is_a_400():
 
 # --- planner ---------------------------------------------------------------
 #
-# The read itself is pinned in test_planner.py, against truth Jonathan verified. These pin the
+# The read itself is pinned in test_planner.py, against truth verified by hand. These pin the
 # ROUTE: the type, that the contract carries keys rather than names, and that a capture holding
 # both panels gives up both. Truth here is the same hand-verified list, not the parser's output.
 

@@ -73,8 +73,8 @@ function party(
   };
 }
 
-const mine = member({ name: "Mechy", characterId: "c1" });
-const chris = member({ name: "Creed", personId: "p-chris", personName: "Chris" });
+const mine = member({ name: "Mecho", characterId: "c1" });
+const chris = member({ name: "Crane", personId: "p-chris", personName: "Chris" });
 
 describe("ownerOf", () => {
   it("calls one of your own characters yours", () => {
@@ -92,7 +92,7 @@ describe("ownerOf", () => {
   it("trusts the roster link over a name match on the People page", () => {
     // The backend sets characterId only when the seat IS a roster character. A person link is a
     // name match, so a stray People entry naming your own character must not take it off you.
-    expect(ownerOf(member({ name: "Mechy", characterId: "c1", personId: "p-chris" }))).toBe(YOU);
+    expect(ownerOf(member({ name: "Mecho", characterId: "c1", personId: "p-chris" }))).toBe(YOU);
   });
 });
 
@@ -165,8 +165,8 @@ describe("runsFromParties", () => {
         minutes: 20,
         assumed: false,
         seats: [
-          { character: "Mechy", personId: YOU },
-          { character: "Creed", personId: "p-chris" },
+          { character: "Mecho", personId: YOU },
+          { character: "Crane", personId: "p-chris" },
         ],
       },
     ]);
@@ -231,22 +231,22 @@ describe("runsFromDrafts", () => {
   it("identifies a hand-typed person by name, however it was capitalised", () => {
     const runs = runsFromDrafts([
       draft([
-        ["Mechy", "Chris"],
-        ["Creed", " chris "],
+        ["Mecho", "Chris"],
+        ["Crane", " chris "],
       ]),
     ]);
     expect(runs[0]?.seats.map((s) => s.personId)).toEqual(["chris", "chris"]);
   });
 
   it("leaves a seat with no person named unattributed", () => {
-    expect(runsFromDrafts([draft([["Mechy", ""]])])[0]?.seats[0]?.personId).toBeNull();
+    expect(runsFromDrafts([draft([["Mecho", ""]])])[0]?.seats[0]?.personId).toBeNull();
   });
 
   it("drops a row with no character on it, which is an unfilled form", () => {
     expect(
       runsFromDrafts([
         draft([
-          ["Mechy", "Chris"],
+          ["Mecho", "Chris"],
           ["  ", "Dave"],
         ]),
       ])[0]?.seats,

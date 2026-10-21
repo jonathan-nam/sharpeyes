@@ -8,7 +8,7 @@ import type { Party, PartyMember } from "@/types/party";
  *
  * The claim worth a test: a config is ONE row per (character, boss) and a one-off takes it over
  * rather than making a second, so a pool spans arrangements. Reported 2026-08-30 as 540 Extreme
- * coupons sitting under a heading reading "Chaos Kalos the Guardian with iPhone69C", on nights three
+ * coupons sitting under a heading reading "Chaos Kalos the Guardian with iPager42X", on nights three
  * people who had since left the party ran.
  */
 
@@ -75,10 +75,10 @@ const drop = (id: string, weekStart: string, over: Partial<Loot> = {}): Loot => 
   ...over,
 });
 
-const me = seat("m1", "acornacorn", true);
-const sas = seat("m2", "SAS7S1");
-const usuns = seat("m3", "USunsOfBaech");
-const phone = seat("m4", "iPhone69C");
+const me = seat("m1", "acmeacme", true);
+const sas = seat("m2", "SAR4Q2");
+const usuns = seat("m3", "USeasOfBlue");
+const phone = seat("m4", "iPager42X");
 
 describe("poolNights", () => {
   it("splits a pool into the weeks it was logged on, newest first", () => {
@@ -135,10 +135,10 @@ describe("poolNights", () => {
       party([me, phone, sas, usuns], "CHAOS"),
     );
 
-    expect(nights[0]!.members.map((m) => m.name)).toEqual(["acornacorn", "SAS7S1", "USunsOfBaech"]);
-    // The party as it stands tonight has iPhone69C in it, and that night did not.
-    expect(nights[0]!.members.map((m) => m.name)).not.toContain("iPhone69C");
-    expect(at.members.map((m) => m.name)).toContain("iPhone69C");
+    expect(nights[0]!.members.map((m) => m.name)).toEqual(["acmeacme", "SAR4Q2", "USeasOfBlue"]);
+    // The party as it stands tonight has iPager42X in it, and that night did not.
+    expect(nights[0]!.members.map((m) => m.name)).not.toContain("iPager42X");
+    expect(at.members.map((m) => m.name)).toContain("iPager42X");
   });
 });
 
@@ -152,12 +152,12 @@ describe("nightLabel", () => {
     );
 
     // Your own character is left out, the same rule the page heading follows.
-    expect(nightLabel(night!, at)).toBe("August 13 · Extreme · SAS7S1, USunsOfBaech");
+    expect(nightLabel(night!, at)).toBe("August 13 · Extreme · SAR4Q2, USeasOfBlue");
   });
 
   it("leaves out a silence rather than spelling it", () => {
     const [unsaid] = poolNights([drop("l1", "2026-08-13", { ranThatWeek: ["m1", "m2"] })], at);
-    expect(nightLabel(unsaid!, at)).toBe("August 13 · SAS7S1");
+    expect(nightLabel(unsaid!, at)).toBe("August 13 · SAR4Q2");
 
     const alone = poolNights(
       [drop("l1", "2026-08-13", { difficulty: "HARD", ranThatWeek: ["m1"] })],

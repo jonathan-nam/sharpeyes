@@ -38,8 +38,8 @@ const B = 1_000_000_000;
 const VESTIGE = "vestige-of-erion";
 const ORDER = new Map([["limbo", 6]]);
 const SELF: Holder = { kind: "SELF", personId: null, characterName: null };
-const BRO: Holder = { kind: "PERSON", personId: "p-bro", characterName: null };
-const BRO_KEY = "person:p-bro";
+const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
+const BROCK_KEY = "person:p-brock";
 
 const NO_WALLET: Wallet = {
   counterparties: [],
@@ -55,8 +55,8 @@ const NO_WALLET: Wallet = {
 const seat = (id: string, name: string, mine: boolean): PartyMember => ({
   id,
   name,
-  personId: mine ? null : "p-bro",
-  personName: mine ? null : "Bro",
+  personId: mine ? null : "p-brock",
+  personName: mine ? null : "Brock",
   characterId: mine ? `char-${id}` : null,
   linkedCharacterId: null,
   spriteImgUrl: null,
@@ -64,7 +64,7 @@ const seat = (id: string, name: string, mine: boolean): PartyMember => ({
   shares: 1,
 });
 
-const SEATS = [seat("m1", "Husky", true), seat("m2", "BroChar", false)];
+const SEATS = [seat("m1", "Hunt", true), seat("m2", "BrockChar", false)];
 
 const party = (): Party => ({
   id: "pa",
@@ -90,7 +90,7 @@ const party = (): Party => ({
   updatedAt: "2026-07-01T00:00:00Z",
 });
 
-/** A night you looted whole: 240 coupons over two seats, so 120 of them are Bro's. */
+/** A night you looted whole: 240 coupons over two seats, so 120 of them are Brock's. */
 const coupon = (): Loot => ({
   id: "l1",
   dropKey: VESTIGE,
@@ -117,14 +117,14 @@ const coupon = (): Loot => ({
   bundlesBy: [{ memberId: "m1", bundles: 3 }],
 });
 
-/** One sale out of your pile, naming what of it was Bro's. */
+/** One sale out of your pile, naming what of it was Brock's. */
 const sale = (pieces: number, amount: number, theirs: number) => ({
   id: "t1",
   holder: SELF,
   pieces,
   amount,
   disposition: "SOLD",
-  shares: [{ holder: BRO, pieces: theirs }],
+  shares: [{ holder: BROCK, pieces: theirs }],
   soldAt: "2026-08-29T12:00:00Z",
 });
 
@@ -149,7 +149,7 @@ const account = (rows: ReturnType<typeof sale>[]) => {
       saleCredits(rows),
       new Map(),
       new Map(),
-      new Set([BRO_KEY]),
+      new Set([BROCK_KEY]),
       answeredSalesByPair(rows),
       disposals,
     )[0]!;
@@ -158,7 +158,7 @@ const account = (rows: ReturnType<typeof sale>[]) => {
 
 const selfPile = (ledgers: HolderLedger[]) => ledgers.find((l) => l.holder.kind === "SELF")!;
 
-/** What you actually did: sold 150 for 3b, of which 120 pieces were Bro's. */
+/** What you actually did: sold 150 for 3b, of which 120 pieces were Brock's. */
 const WHOLE = account([sale(150, 3 * B, 120)]);
 /** What the card's placeholder talks you into: the same trade, prorated by hand to the debt. */
 const PRORATED = account([sale(120, 2.4 * B, 120)]);
@@ -166,7 +166,7 @@ const PRORATED = account([sale(120, 2.4 * B, 120)]);
 const BEFORE = account([]);
 
 describe("the Sale Ledger, on a sale bigger than the debt", () => {
-  it("premise: the night owes Bro 120 of the 240 you looted", () => {
+  it("premise: the night owes Brock 120 of the 240 you looted", () => {
     expect(outstandingOf(selfPile(BEFORE.ledgers))).toBe(120);
     expect(queueOf(selfPile(BEFORE.ledgers)).owing.map((d) => d.lootId)).toEqual(["l1"]);
   });
@@ -188,10 +188,10 @@ describe("the Sale Ledger, on a sale bigger than the debt", () => {
 });
 
 describe("the Settlement Ledger, on the same sale", () => {
-  it("holds Bro the 120 pieces' worth, never the whole lot", () => {
-    // 120 of 150 at 3b is 2.4b. The 600m for your own 30 is not Bro's and never reaches his card.
+  it("holds Brock the 120 pieces' worth, never the whole lot", () => {
+    // 120 of 150 at 3b is 2.4b. The 600m for your own 30 is not Brock's and never reaches his card.
     expect(WHOLE.settlement().holding).toBe(2.4 * B);
-    expect(saleCredits(WHOLE.rows).get(BRO_KEY)!.toThem).toBe(2.4 * B);
+    expect(saleCredits(WHOLE.rows).get(BROCK_KEY)!.toThem).toBe(2.4 * B);
   });
 
   it("stops asking for the coupons it has already asked for in money", () => {
@@ -203,7 +203,7 @@ describe("the Settlement Ledger, on the same sale", () => {
   });
 
   it("names the lot the money came out of, so the sale can be checked against the trade", () => {
-    const [row] = saleCredits(WHOLE.rows).get(BRO_KEY)!.sales;
+    const [row] = saleCredits(WHOLE.rows).get(BROCK_KEY)!.sales;
     expect(row).toMatchObject({
       trancheId: "t1",
       pieces: 120,
@@ -226,7 +226,7 @@ describe("the Settlement Ledger, on the same sale", () => {
 describe("settling the money, and what leaves the card", () => {
   const OFFSET: ProceedsDisposal = {
     id: "d1",
-    holder: BRO,
+    holder: BROCK,
     amount: 2.4 * B,
     kind: "OFFSET",
     decidedAt: "2026-08-30",
@@ -260,7 +260,7 @@ describe("the Settled View's money", () => {
   });
 
   it("REPORTS 600m LESS when the same trade is prorated by hand to the debt", () => {
-    // The whole reason the note exists. Both entries settle Bro identically, so the Sale and
+    // The whole reason the note exists. Both entries settle Brock identically, so the Sale and
     // Settlement Ledgers cannot tell them apart, and nothing on either screen says anything is
     // missing. It is only here that the hand-prorated version is wrong: it says the sale fetched
     // 2.4b when it fetched 3b, and that NONE of it was yours.

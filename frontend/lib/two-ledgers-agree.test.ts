@@ -3,7 +3,7 @@
 // They are different questions asked of the same debt: the Sale Ledger asks what a PILE of yours still
 // owes out, and the Settlement Ledger asks what stands between you and one PERSON. So they draw the
 // same night from opposite ends, and for as long as each reduced it by its own rule they could put two
-// figures on screen at once. Jonathan read 60 on one and 20 on the other off one Extreme Kalos night.
+// figures on screen at once. A user read 60 on one and 20 on the other off one Extreme Kalos night.
 //
 // Nothing else can hold this. Each file's own tests pin its own rule, and both passed the whole time.
 
@@ -31,8 +31,8 @@ const M = 1_000_000;
 const VESTIGE = "vestige-of-erion";
 const ORDER = new Map([["limbo", 6]]);
 const SELF: Holder = { kind: "SELF", personId: null, characterName: null };
-const BRO: Holder = { kind: "PERSON", personId: "p-bro", characterName: null };
-const BRO_KEY = "person:p-bro";
+const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
+const BROCK_KEY = "person:p-brock";
 
 /** Nothing has a price on either card, so the wallet is empty and every figure here is a count. */
 const NO_WALLET: Wallet = {
@@ -49,8 +49,8 @@ const NO_WALLET: Wallet = {
 const seat = (id: string, name: string, mine: boolean): PartyMember => ({
   id,
   name,
-  personId: mine ? null : "p-bro",
-  personName: mine ? null : "Bro",
+  personId: mine ? null : "p-brock",
+  personName: mine ? null : "Brock",
   characterId: mine ? `char-${id}` : null,
   linkedCharacterId: null,
   spriteImgUrl: null,
@@ -58,7 +58,7 @@ const seat = (id: string, name: string, mine: boolean): PartyMember => ({
   shares: 1,
 });
 
-const SEATS = [seat("m1", "Husky", true), seat("m2", "BroChar", false)];
+const SEATS = [seat("m1", "Hunt", true), seat("m2", "BrockChar", false)];
 
 const party = (id: string): Party => ({
   id,
@@ -113,8 +113,8 @@ const coupon = (id: string, quantity: number, droppedOn: string, looter: string)
 /**
  * The shape both ledgers draw: a night in each inventory, and a sale that priced part of one.
  *
- * You looted all 60 of the first, so 30 of them are Bro's. Bro looted all 30 of the second, so 15 of
- * those are yours. A sale out of your pile then named 10 of Bro's. Three subtractions on one debt,
+ * You looted all 60 of the first, so 30 of them are Brock's. Brock looted all 30 of the second, so 15 of
+ * those are yours. A sale out of your pile then named 10 of Brock's. Three subtractions on one debt,
  * which is what makes it worth asking both cards the same question.
  */
 const bothPiles = (theirs: number) => {
@@ -131,7 +131,7 @@ const bothPiles = (theirs: number) => {
             pieces: theirs,
             amount: 20 * theirs * M,
             disposition: "SOLD",
-            shares: [{ holder: BRO, pieces: theirs }],
+            shares: [{ holder: BROCK, pieces: theirs }],
           },
         ]
       : [];
@@ -185,27 +185,27 @@ describe("the two ledgers agree on one night", () => {
   it("premise: they are looking at the same 30-piece debt off the same night", () => {
     const { ledgers } = bothPiles(0);
     expect(selfPile(ledgers).drops.map((d) => d.lootId)).toEqual(["l1"]);
-    expect(heldOfYoursBy(ledgers).get(BRO_KEY)).toBe(15);
+    expect(heldOfYoursBy(ledgers).get(BROCK_KEY)).toBe(15);
   });
 
   // The card lists a night before the pair cancels, so it says what the sale left. The Sale Ledger
-  // still nets each night against what Bro holds of yours, so the two differ by exactly that 15.
+  // still nets each night against what Brock holds of yours, so the two differ by exactly that 15.
   it("says what the sale left where a sale part-answered the night", () => {
     const { ledgers, rows } = bothPiles(10);
-    expect(saleLedgerSays(ledgers, "l1", BRO_KEY)).toBe(5);
-    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(20);
+    expect(saleLedgerSays(ledgers, "l1", BROCK_KEY)).toBe(5);
+    expect(settlementLedgerSays(ledgers, rows, "l1", BROCK_KEY)).toBe(20);
   });
 
   it("says the whole night with nothing sold", () => {
     const { ledgers, rows } = bothPiles(0);
-    expect(saleLedgerSays(ledgers, "l1", BRO_KEY)).toBe(15);
-    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(30);
+    expect(saleLedgerSays(ledgers, "l1", BROCK_KEY)).toBe(15);
+    expect(settlementLedgerSays(ledgers, rows, "l1", BROCK_KEY)).toBe(30);
   });
 
   it("the Sale Ledger drops the night once the answers cover it, and the card still lists it", () => {
     const { ledgers, rows } = bothPiles(15);
-    expect(saleLedgerSays(ledgers, "l1", BRO_KEY)).toBe(0);
-    expect(settlementLedgerSays(ledgers, rows, "l1", BRO_KEY)).toBe(15);
+    expect(saleLedgerSays(ledgers, "l1", BROCK_KEY)).toBe(0);
+    expect(settlementLedgerSays(ledgers, rows, "l1", BROCK_KEY)).toBe(15);
   });
 
   it("the Sale Ledger's header is what its own rows come to", () => {
@@ -225,17 +225,17 @@ describe("the two ledgers agree on one night", () => {
 // sales it was made of. So the two have to agree on WHICH sales those were, or one screen drops a row
 // the other never picked up, and the way back to a mistyped sale is gone.
 describe("the two ledgers agree on which sales are finished", () => {
-  /** One sale out of your own pile, all of it Bro's coupons. */
+  /** One sale out of your own pile, all of it Brock's coupons. */
   const tranche = (id: string, pieces: number, amount: number) => ({
     id,
     holder: SELF,
     pieces,
     amount,
     disposition: "SOLD",
-    shares: [{ holder: BRO, pieces }],
+    shares: [{ holder: BROCK, pieces }],
   });
 
-  // Jonathan's own account as he reported it: four sales, and one Offset that came to exactly the
+  // A user's own account as reported: four sales, and one Offset that came to exactly the
   // first two of them.
   const SALES = [
     tranche("t1", 70, 1_298_888_850),
@@ -245,7 +245,7 @@ describe("the two ledgers agree on which sales are finished", () => {
   ];
   const OFFSET: ProceedsDisposal = {
     id: "d1",
-    holder: BRO,
+    holder: BROCK,
     amount: 2_412_222_150,
     kind: "OFFSET",
     decidedAt: "2026-08-14",
@@ -259,7 +259,7 @@ describe("the two ledgers agree on which sales are finished", () => {
       saleCredits(SALES),
       new Map(),
       new Map(),
-      new Set([BRO_KEY]),
+      new Set([BROCK_KEY]),
       new Map(),
       disposals,
     )[0]!;
@@ -277,7 +277,7 @@ describe("the two ledgers agree on which sales are finished", () => {
 
   it("drops none of them while the money is undecided, which is what the other card says too", () => {
     expect(stillAsking(SALES, decidedSales(saleCredits(SALES), []))).toHaveLength(4);
-    // Not an absence: every meso of it is on Bro's card as money of his you are holding.
+    // Not an absence: every meso of it is on Brock's card as money of his you are holding.
     expect(card([]).holding).toBe(SALES.reduce((sum, t) => sum + t.amount, 0));
   });
 

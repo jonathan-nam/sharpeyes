@@ -38,9 +38,9 @@ const M = 1_000_000;
 const closes = (pair: ReturnType<typeof settleThePair>) => pair.theirs.length + pair.yours.length;
 
 const SELF: Holder = { kind: "SELF", personId: null, characterName: null };
-const BRO: Holder = { kind: "PERSON", personId: "p-bro", characterName: null };
-const JARED: Holder = { kind: "PERSON", personId: "p-jared", characterName: null };
-const STRANGER: Holder = { kind: "CHARACTER", personId: null, characterName: "zaddy" };
+const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
+const JARVIS: Holder = { kind: "PERSON", personId: "p-jarvis", characterName: null };
+const STRANGER: Holder = { kind: "CHARACTER", personId: null, characterName: "zabby" };
 
 /** One holder's card, with only the fields the settlement reads. */
 const ledger = (holder: Holder, name: string, over: Partial<HolderLedger> = {}): HolderLedger => ({
@@ -77,11 +77,11 @@ const owing = (lootId: string, bossKey: string, pieces: number, closed = false) 
   bossKey,
   weekStart: "2026-08-06",
   droppedOn: "2026-08-06",
-  looterName: "CreedBratton",
+  looterName: "CraneBolton",
   ran: [],
   pieces: pieces * 2,
   closed,
-  transfers: [{ fromId: "person:p-bro", toId: "self", from: "Bro", to: "you", pieces }],
+  transfers: [{ fromId: "person:p-brock", toId: "self", from: "Brock", to: "you", pieces }],
 });
 
 /** One boss row under YOUR OWN pile, where `pieces` of theirs are in your inventory. */
@@ -91,11 +91,11 @@ const holdingOf = (lootId: string, bossKey: string, pieces: number, closed = fal
   bossKey,
   weekStart: "2026-08-13",
   droppedOn: "2026-08-13",
-  looterName: "HuskyxKenshi",
+  looterName: "HuntxKestrel",
   ran: [],
   pieces: pieces * 4,
   closed,
-  transfers: [{ fromId: "self", toId: "person:p-bro", from: "you", to: "Bro", pieces }],
+  transfers: [{ fromId: "self", toId: "person:p-brock", from: "you", to: "Brock", pieces }],
 });
 
 const line = (lootId: string, pay: number, direction: "owe" | "owed" = "owed"): WalletLine => ({
@@ -108,8 +108,8 @@ const line = (lootId: string, pay: number, direction: "owe" | "owed" = "owed"): 
   weekStart: "2026-08-06",
   direction,
   bought: false,
-  mine: "mechyfechy",
-  theirs: "CreedBratton",
+  mine: "mechobotto",
+  theirs: "CraneBolton",
   theirsId: `seat-${lootId}`,
   payeeId: `payee-${lootId}`,
   pay,
@@ -146,18 +146,18 @@ const wallet = (counterparties: Counterparty[]): Wallet => ({
 describe("what one person owes you", () => {
   it("puts pieces and shares on ONE row, since it is one person and one conversation", () => {
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
-      wallet([counterparty("person:p-bro", "Bro", [line("l2", 900 * M)])]),
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
+      wallet([counterparty("person:p-brock", "Brock", [line("l2", 900 * M)])]),
     );
     expect(rows).toHaveLength(1);
-    expect([rows[0]!.name, rows[0]!.pieces, rows[0]!.mesos]).toEqual(["Bro", 80, 900 * M]);
+    expect([rows[0]!.name, rows[0]!.pieces, rows[0]!.mesos]).toEqual(["Brock", 80, 900 * M]);
   });
 
   it("states the pieces and never a price for them", () => {
     // The whole point of the redesign: coupons are single-trade, so what they are worth is not
     // something the app can see. A meso figure here would be a guess at somebody else's sale.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
       wallet([]),
     );
     expect(rows[0]!.pieces).toBe(80);
@@ -168,7 +168,7 @@ describe("what one person owes you", () => {
   it("counts only YOUR part of their pile, not everything they picked up", () => {
     // They are holding 160; 80 of those are yours. Their own half is their business.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
       wallet([]),
     );
     expect(rows[0]!.drops[0]!.pieces).toBe(80);
@@ -182,11 +182,11 @@ describe("what one person owes you", () => {
       [ledger(SELF, "you", { drops: [holdingOf("l1", "kalos-the-guardian", 30)] })],
       wallet([]),
     );
-    expect([rows[0]!.name, rows[0]!.pieces, rows[0]!.piecesYouOwe]).toEqual(["Bro", 0, 30]);
+    expect([rows[0]!.name, rows[0]!.pieces, rows[0]!.piecesYouOwe]).toEqual(["Brock", 0, 30]);
   });
 
   it("nets the counts but lists each night whole", () => {
-    // Husky's week: 30 of Bro's off Kalos and 15 off Seren in your inventory, 20 of yours off
+    // Hunt's week: 30 of Brock's off Kalos and 15 off Seren in your inventory, 20 of yours off
     // Baldrix in his. One handover settles the pair, so the COUNT nets to 25. The nights do not:
     // a week filter over them has to say what that week owed.
     const rows = buildSettlement(
@@ -194,7 +194,7 @@ describe("what one person owes you", () => {
         ledger(SELF, "you", {
           drops: [holdingOf("l1", "kalos-the-guardian", 30), holdingOf("l2", "chosen-seren", 15)],
         }),
-        ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l3", "baldrix", 20)] }),
+        ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l3", "baldrix", 20)] }),
       ],
       wallet([]),
     );
@@ -205,7 +205,7 @@ describe("what one person owes you", () => {
   });
 
   it("marks what a sale took off each night, newest first, and cancels nothing", () => {
-    // 60 of Bro's in your pile over two nights, 10 of them sold, and 20 of yours in his. Each night
+    // 60 of Brock's in your pile over two nights, 10 of them sold, and 20 of yours in his. Each night
     // keeps what it owed, the sale is said on the night it came off, and only the step nets.
     const [row] = buildSettlement(
       [
@@ -215,7 +215,7 @@ describe("what one person owes you", () => {
             { ...holdingOf("l2", "kaling", 30), droppedOn: "2026-08-14" },
           ],
         }),
-        ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l3", "baldrix", 20)] }),
+        ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l3", "baldrix", 20)] }),
       ],
       wallet([]),
       [],
@@ -223,7 +223,7 @@ describe("what one person owes you", () => {
       new Map(),
       new Map(),
       new Set(),
-      new Map([[answeredKey("self", "person:p-bro"), sold(10)]]),
+      new Map([[answeredKey("self", "person:p-brock"), sold(10)]]),
     );
     expect(row!.piecesNet).toBe(30);
     expect(row!.owedDrops.map((d) => [d.pieces, d.sold])).toEqual([
@@ -240,9 +240,9 @@ describe("what one person owes you", () => {
     const [row] = buildSettlement(
       [
         ledger(SELF, "you", { drops: [holdingOf("l1", "kalos-the-guardian", 30)] }),
-        ledger(BRO, "Bro", { owedToYou: 30, drops: [owing("l2", "baldrix", 30)] }),
+        ledger(BROCK, "Brock", { owedToYou: 30, drops: [owing("l2", "baldrix", 30)] }),
       ],
-      wallet([counterparty("person:p-bro", "Bro", [line("l3", 900 * M)])]),
+      wallet([counterparty("person:p-brock", "Brock", [line("l3", 900 * M)])]),
     );
     expect([row!.pieces, row!.piecesYouOwe, row!.piecesNet]).toEqual([0, 0, 0]);
     expect(closes(settleThePair(row!))).toBe(2);
@@ -251,7 +251,7 @@ describe("what one person owes you", () => {
   });
 
   it("nets the two directions into the one count that changes hands", () => {
-    // Husky's week with Bro, in full: 90 of his in your inventory against 20 of yours in his. The
+    // Hunt's week with Brock, in full: 90 of his in your inventory against 20 of yours in his. The
     // card said "20 pieces / 90 to hand over" and left the subtraction to whoever read it.
     const rows = buildSettlement(
       [
@@ -263,7 +263,7 @@ describe("what one person owes you", () => {
             holdingOf("l4", "malefic-star", 30),
           ],
         }),
-        ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l5", "baldrix", 20)] }),
+        ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l5", "baldrix", 20)] }),
       ],
       wallet([]),
     );
@@ -274,7 +274,7 @@ describe("what one person owes you", () => {
     const rows = buildSettlement(
       [
         ledger(SELF, "you", { drops: [holdingOf("l1", "kalos-the-guardian", 10)] }),
-        ledger(BRO, "Bro", { owedToYou: 30, drops: [owing("l2", "baldrix", 30)] }),
+        ledger(BROCK, "Brock", { owedToYou: 30, drops: [owing("l2", "baldrix", 30)] }),
       ],
       wallet([]),
     );
@@ -301,7 +301,7 @@ describe("who belongs on the list at all", () => {
   it("leaves a closed pile off, because it is finished", () => {
     const rows = buildSettlement(
       [
-        ledger(BRO, "Bro", {
+        ledger(BROCK, "Brock", {
           owedToYou: 80,
           closed: true,
           drops: [owing("l1", "kalos", 80, true)],
@@ -315,7 +315,7 @@ describe("who belongs on the list at all", () => {
   it("leaves a closed BOSS off a pile that is still open", () => {
     const rows = buildSettlement(
       [
-        ledger(BRO, "Bro", {
+        ledger(BROCK, "Brock", {
           owedToYou: 80,
           drops: [owing("l1", "kalos", 90, true), owing("l2", "first-adversary", 80)],
         }),
@@ -331,7 +331,7 @@ describe("who belongs on the list at all", () => {
     // only the collectable direction would not mention the money of theirs in your hands.
     const rows = buildSettlement(
       [],
-      wallet([counterparty("person:p-bro", "Bro", [line("l2", 900 * M, "owe")])]),
+      wallet([counterparty("person:p-brock", "Brock", [line("l2", 900 * M, "owe")])]),
     );
     expect([rows[0]!.mesos, rows[0]!.owedByYou, rows[0]!.sharesYouOwe]).toEqual([0, 0, 900 * M]);
   });
@@ -345,7 +345,10 @@ describe("the two directions, which are said rather than netted", () => {
     const rows = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [line("l1", 1_000 * M), line("l2", 400 * M, "owe")]),
+        counterparty("person:p-brock", "Brock", [
+          line("l1", 1_000 * M),
+          line("l2", 400 * M, "owe"),
+        ]),
       ]),
     );
     expect([rows[0]!.mesos, rows[0]!.owedByYou, rows[0]!.sharesYouOwe]).toEqual([
@@ -361,7 +364,10 @@ describe("the two directions, which are said rather than netted", () => {
     const rows = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [line("l1", 1_000 * M), line("l2", 1_500 * M, "owe")]),
+        counterparty("person:p-brock", "Brock", [
+          line("l1", 1_000 * M),
+          line("l2", 1_500 * M, "owe"),
+        ]),
       ]),
     );
     expect([rows[0]!.mesos, rows[0]!.owedByYou, rows[0]!.sharesYouOwe]).toEqual([
@@ -374,9 +380,12 @@ describe("the two directions, which are said rather than netted", () => {
   it("says what you owe when their PIECES put them on the list anyway", () => {
     // So a pile is not chased off somebody you are 1.5b behind with.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l3", "first-adversary", 80)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l3", "first-adversary", 80)] })],
       wallet([
-        counterparty("person:p-bro", "Bro", [line("l1", 1_000 * M), line("l2", 1_500 * M, "owe")]),
+        counterparty("person:p-brock", "Brock", [
+          line("l1", 1_000 * M),
+          line("l2", 1_500 * M, "owe"),
+        ]),
       ]),
     );
     expect([rows[0]!.pieces, rows[0]!.mesos, rows[0]!.sharesYouOwe]).toEqual([
@@ -389,10 +398,10 @@ describe("the two directions, which are said rather than netted", () => {
   it("carries the share lines when the only money is what you owe, so they can be settled", () => {
     // These used to be dropped, on the reasoning that settling what YOU owe did not belong on a
     // card about collecting. Retiring the Wallet took the only other place it could be done, and
-    // Jonathan was left with four shares he owed and no settle anywhere in the app.
+    // A user was left with four shares they owed and no settle anywhere in the app.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l3", "first-adversary", 80)] })],
-      wallet([counterparty("person:p-bro", "Bro", [line("l2", 1_500 * M, "owe")])]),
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l3", "first-adversary", 80)] })],
+      wallet([counterparty("person:p-brock", "Brock", [line("l2", 1_500 * M, "owe")])]),
     );
     expect(rows[0]!.sharesYouOwe).toBe(1_500 * M);
     expect(sharesOf(rows[0]!)).toEqual([{ lootId: "l2", memberId: "payee-l2" }]);
@@ -402,7 +411,10 @@ describe("the two directions, which are said rather than netted", () => {
     const rows = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [line("l1", 1_000 * M), line("l2", 400 * M, "owe")]),
+        counterparty("person:p-brock", "Brock", [
+          line("l1", 1_000 * M),
+          line("l2", 400 * M, "owe"),
+        ]),
       ]),
     );
     expect(sharesOf(rows[0]!).map((s) => s.lootId)).toEqual(["l1", "l2"]);
@@ -412,8 +424,8 @@ describe("the two directions, which are said rather than netted", () => {
     // The two are not commensurable: a piece has no price until somebody names one, and the sides
     // come off different nights at different prices.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l3", "first-adversary", 80)] })],
-      wallet([counterparty("person:p-bro", "Bro", [line("l2", 400 * M, "owe")])]),
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l3", "first-adversary", 80)] })],
+      wallet([counterparty("person:p-brock", "Brock", [line("l2", 400 * M, "owe")])]),
     );
     expect(rows[0]!.pieces).toBe(80);
     expect(rows[0]!.sharesYouOwe).toBe(400 * M);
@@ -421,10 +433,10 @@ describe("the two directions, which are said rather than netted", () => {
 
   it("keeps an unattributed character as their own row, rather than guessing", () => {
     const rows = buildSettlement(
-      [ledger(STRANGER, "Zaddy", { owedToYou: 30, drops: [owing("l1", "limbo", 30)] })],
+      [ledger(STRANGER, "Zabby", { owedToYou: 30, drops: [owing("l1", "limbo", 30)] })],
       wallet([]),
     );
-    expect([rows[0]!.name, rows[0]!.attributed]).toEqual(["Zaddy", false]);
+    expect([rows[0]!.name, rows[0]!.attributed]).toEqual(["Zabby", false]);
   });
 });
 
@@ -432,23 +444,23 @@ describe("the order the rows come out in", () => {
   it("leads with the mesos, which is the half you can act on today", () => {
     const rows = buildSettlement(
       [
-        ledger(BRO, "Bro", { owedToYou: 500, drops: [owing("l1", "kalos", 500)] }),
-        ledger(STRANGER, "Zaddy", { owedToYou: 10, drops: [owing("l3", "limbo", 10)] }),
+        ledger(BROCK, "Brock", { owedToYou: 500, drops: [owing("l1", "kalos", 500)] }),
+        ledger(STRANGER, "Zabby", { owedToYou: 10, drops: [owing("l3", "limbo", 10)] }),
       ],
-      wallet([counterparty("character:zaddy", "Zaddy", [line("l4", 900 * M)])]),
+      wallet([counterparty("character:zabby", "Zabby", [line("l4", 900 * M)])]),
     );
-    expect(rows.map((r) => r.name)).toEqual(["Zaddy", "Bro"]);
+    expect(rows.map((r) => r.name)).toEqual(["Zabby", "Brock"]);
   });
 
   it("breaks a tie on pieces, then the name, so two reads never disagree", () => {
     const rows = buildSettlement(
       [
-        ledger(BRO, "Bro", { owedToYou: 10, drops: [owing("l1", "kalos", 10)] }),
-        ledger(STRANGER, "Zaddy", { owedToYou: 80, drops: [owing("l2", "limbo", 80)] }),
+        ledger(BROCK, "Brock", { owedToYou: 10, drops: [owing("l1", "kalos", 10)] }),
+        ledger(STRANGER, "Zabby", { owedToYou: 80, drops: [owing("l2", "limbo", 80)] }),
       ],
       wallet([]),
     );
-    expect(rows.map((r) => r.name)).toEqual(["Zaddy", "Bro"]);
+    expect(rows.map((r) => r.name)).toEqual(["Zabby", "Brock"]);
   });
 });
 
@@ -457,18 +469,18 @@ describe("what a settle would touch", () => {
     // The trap this exists for: a piece debt has NO payout row, so naming one clears nothing while
     // looking as though it worked. That is why coupon debt was kept out of the wallet's lines.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
-      wallet([counterparty("person:p-bro", "Bro", [line("l2", 900 * M)])]),
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
+      wallet([counterparty("person:p-brock", "Brock", [line("l2", 900 * M)])]),
     );
     expect(sharesOf(rows[0]!)).toEqual([{ lootId: "l2", memberId: "payee-l2" }]);
   });
 
   it("carries the holder for the piece side, which is what a payment is filed against", () => {
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
       wallet([]),
     );
-    expect(rows[0]!.holder).toEqual(BRO);
+    expect(rows[0]!.holder).toEqual(BROCK);
   });
 
   it("rebuilds the holder for somebody with no pile, so an entry can still be filed against them", () => {
@@ -476,11 +488,11 @@ describe("what a settle would touch", () => {
     // entered debt is filed against the PERSON, and somebody who has never held a coupon can owe you.
     const rows = buildSettlement(
       [],
-      wallet([counterparty("person:p-jared", "Jared", [line("l9", 400 * M)])]),
+      wallet([counterparty("person:p-jarvis", "Jarvis", [line("l9", 400 * M)])]),
     );
     expect(rows[0]!.holder).toEqual({
       kind: "PERSON",
-      personId: "p-jared",
+      personId: "p-jarvis",
       characterName: null,
     });
     expect(isEmpty(rows[0]!)).toBe(false);
@@ -520,30 +532,30 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
           holder: SELF,
           pieces: 160,
           amount: 4_000 * M,
-          shares: [{ holder: BRO, pieces: 80 }],
+          shares: [{ holder: BROCK, pieces: 80 }],
         },
       ]),
       new Map(),
-      new Map([["person:p-bro", "Bro"]]),
+      new Map([["person:p-brock", "Brock"]]),
     );
     // HOLDING, not owed. Their money is in your hands and what becomes of it is the pair's to say.
-    expect([rows[0]!.name, rows[0]!.holding, rows[0]!.owedByYou]).toEqual(["Bro", 2_000 * M, 0]);
+    expect([rows[0]!.name, rows[0]!.holding, rows[0]!.owedByYou]).toEqual(["Brock", 2_000 * M, 0]);
   });
 
   it("does NOT deduct that sale from what they owe you until somebody says to", () => {
     // The behaviour V61 took away. Their 3b debt stood, their 2b sat in your hands, and the card put
-    // the two together and called it 1b: an offset nobody agreed to. Bro may want the mesos.
+    // the two together and called it 1b: an offset nobody agreed to. Brock may want the mesos.
     const rows = buildSettlement(
       [],
       wallet([]),
-      [debt(BRO, 3_000 * M, "Ludi loan")],
+      [debt(BROCK, 3_000 * M, "Ludi loan")],
       saleCredits([
         {
           id: "t1",
           holder: SELF,
           pieces: 160,
           amount: 4_000 * M,
-          shares: [{ holder: BRO, pieces: 80 }],
+          shares: [{ holder: BROCK, pieces: 80 }],
         },
       ]),
     );
@@ -556,21 +568,21 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
     const rows = buildSettlement(
       [],
       wallet([]),
-      [debt(BRO, 3_000 * M, "Ludi loan")],
+      [debt(BROCK, 3_000 * M, "Ludi loan")],
       saleCredits([
         {
           id: "t1",
           holder: SELF,
           pieces: 160,
           amount: 4_000 * M,
-          shares: [{ holder: BRO, pieces: 80 }],
+          shares: [{ holder: BROCK, pieces: 80 }],
         },
       ]),
       new Map(),
       new Map(),
       new Set(),
       new Map(),
-      [disposal(BRO, 2_000 * M, "OFFSET")],
+      [disposal(BROCK, 2_000 * M, "OFFSET")],
     );
     expect(rows[0]!.mesos).toBe(1_000 * M);
     expect([rows[0]!.parts.soldOfTheirs, rows[0]!.holding]).toEqual([-2_000 * M, 0]);
@@ -578,25 +590,25 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
 
   it("leaves their debt alone when you PAID them instead", () => {
     // The other half of the choice, and the reason it had to become one. The money left you and what
-    // Bro owes you never moved.
+    // Brock owes you never moved.
     const rows = buildSettlement(
       [],
       wallet([]),
-      [debt(BRO, 3_000 * M, "Ludi loan")],
+      [debt(BROCK, 3_000 * M, "Ludi loan")],
       saleCredits([
         {
           id: "t1",
           holder: SELF,
           pieces: 160,
           amount: 4_000 * M,
-          shares: [{ holder: BRO, pieces: 80 }],
+          shares: [{ holder: BROCK, pieces: 80 }],
         },
       ]),
       new Map(),
       new Map(),
       new Set(),
       new Map(),
-      [disposal(BRO, 2_000 * M, "PAID")],
+      [disposal(BROCK, 2_000 * M, "PAID")],
     );
     expect(rows[0]!.mesos).toBe(3_000 * M);
     expect([rows[0]!.parts.soldOfTheirs, rows[0]!.holding]).toEqual([0, 0]);
@@ -606,21 +618,21 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
     const rows = buildSettlement(
       [],
       wallet([]),
-      [debt(BRO, 3_000 * M, "Ludi loan")],
+      [debt(BROCK, 3_000 * M, "Ludi loan")],
       saleCredits([
         {
           id: "t1",
           holder: SELF,
           pieces: 160,
           amount: 4_000 * M,
-          shares: [{ holder: BRO, pieces: 80 }],
+          shares: [{ holder: BROCK, pieces: 80 }],
         },
       ]),
       new Map(),
       new Map(),
       new Set(),
       new Map(),
-      [disposal(BRO, 9_000 * M, "OFFSET")],
+      [disposal(BROCK, 9_000 * M, "OFFSET")],
     );
     expect([rows[0]!.parts.soldOfTheirs, rows[0]!.holding]).toEqual([-2_000 * M, 0]);
   });
@@ -638,7 +650,7 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
           holder: SELF,
           pieces: 100,
           amount: 2_500 * M,
-          shares: [{ holder: BRO, pieces: 80 }],
+          shares: [{ holder: BROCK, pieces: 80 }],
         },
       ]),
     );
@@ -658,7 +670,7 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
   it("divides no redemption, which realized nothing to share", () => {
     // The server refuses shares on one too; this is the reader agreeing with it.
     const credits = saleCredits([
-      { id: "t1", holder: SELF, pieces: 80, amount: null, shares: [{ holder: BRO, pieces: 80 }] },
+      { id: "t1", holder: SELF, pieces: 80, amount: null, shares: [{ holder: BROCK, pieces: 80 }] },
     ]);
     expect(credits.size).toBe(0);
   });
@@ -673,10 +685,10 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
         pieces: 80,
         amount: 2_000 * M,
         disposition: "BOUGHT",
-        shares: [{ holder: BRO, pieces: 80 }],
+        shares: [{ holder: BROCK, pieces: 80 }],
       },
     ]);
-    expect(credits.get("person:p-bro")).toEqual({
+    expect(credits.get("person:p-brock")).toEqual({
       toThem: 2_000 * M,
       toYou: 0,
       sales: [
@@ -701,10 +713,10 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
         pieces: 80,
         amount: 2_000 * M,
         disposition: "BOUGHT",
-        shares: [{ holder: BRO, pieces: 40 }],
+        shares: [{ holder: BROCK, pieces: 40 }],
       },
     ]);
-    expect(credits.get("person:p-bro")).toEqual({
+    expect(credits.get("person:p-brock")).toEqual({
       toThem: 1_000 * M,
       toYou: 0,
       sales: [
@@ -724,7 +736,7 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
     const credits = saleCredits([
       {
         id: "t1",
-        holder: BRO,
+        holder: BROCK,
         pieces: 80,
         amount: 2_000 * M,
         shares: [{ holder: STRANGER, pieces: 80 }],
@@ -738,57 +750,57 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
     const rows = buildSettlement(
       [],
       wallet([]),
-      [debt(BRO, 1_000 * M)],
+      [debt(BROCK, 1_000 * M)],
       new Map(),
-      new Map([["person:p-bro", 400 * M]]),
+      new Map([["person:p-brock", 400 * M]]),
     );
     expect([rows[0]!.mesos, rows[0]!.parts.received]).toEqual([600 * M, -400 * M]);
   });
 
   it("says an overpayment is owed back", () => {
-    // Bro sent 187b against 139b, so 48b is yours to send back.
+    // Brock sent 187b against 139b, so 48b is yours to send back.
     const rows = buildSettlement(
       [],
       wallet([]),
-      [debt(BRO, 139_000 * M)],
+      [debt(BROCK, 139_000 * M)],
       new Map(),
-      new Map([["person:p-bro", 187_000 * M]]),
+      new Map([["person:p-brock", 187_000 * M]]),
     );
     expect([rows[0]!.mesos, rows[0]!.owedByYou]).toEqual([0, 48_000 * M]);
     expect(rows[0]!.parts.received).toBe(-187_000 * M);
   });
 
   it("says an overpayment is owed back while they hold coupons of yours", () => {
-    // Bro's card on 2026-10-20: the 48b past his debt read as "received" for 80 unpriced coupons.
+    // Brock's card on 2026-10-20: the 48b past his debt read as "received" for 80 unpriced coupons.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
       wallet([]),
-      [debt(BRO, 500 * M)],
+      [debt(BROCK, 500 * M)],
       new Map(),
-      new Map([["person:p-bro", 900 * M]]),
+      new Map([["person:p-brock", 900 * M]]),
     );
     expect([rows[0]!.mesos, rows[0]!.owedByYou, rows[0]!.pieces]).toEqual([0, 400 * M, 80]);
     expect(rows[0]!.parts.received).toBe(-900 * M);
   });
 
   it("spends a payment that already closed a pile, so it cannot pay for the next debt", () => {
-    // Jonathan's live data, 2026-08-12. Bro sold 195 coupons for 4.856b, sent 4.86b, and the pile
+    // Live data, 2026-08-12. Brock sold 195 coupons for 4.856b, sent 4.86b, and the pile
     // was settled twenty minutes later. Counted raw, that finished payment came straight off the
     // 254b entered against him today. #350's rule, one ledger further along: a closed thing counts
     // towards no current total.
     const paid = [
-      { holder: BRO, amount: 4_860 * M, receivedAt: "2026-08-10T22:01:46Z" },
-      { holder: BRO, amount: 500 * M, receivedAt: "2026-08-11T09:00:00Z" },
+      { holder: BROCK, amount: 4_860 * M, receivedAt: "2026-08-10T22:01:46Z" },
+      { holder: BROCK, amount: 500 * M, receivedAt: "2026-08-11T09:00:00Z" },
     ];
-    const closed = [{ holder: BRO, settledAt: "2026-08-10T22:21:53Z" }];
+    const closed = [{ holder: BROCK, settledAt: "2026-08-10T22:21:53Z" }];
 
     // Only the one that arrived after the books closed.
-    expect(receivedSinceClosing(paid, closed)).toEqual(new Map([["person:p-bro", 500 * M]]));
+    expect(receivedSinceClosing(paid, closed)).toEqual(new Map([["person:p-brock", 500 * M]]));
 
     const rows = buildSettlement(
       [],
       wallet([]),
-      [debt(BRO, 254_000 * M)],
+      [debt(BROCK, 254_000 * M)],
       new Map(),
       receivedSinceClosing(paid, closed),
     );
@@ -796,17 +808,17 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
   });
 
   it("counts every payment when no pile has ever been closed", () => {
-    const paid = [{ holder: BRO, amount: 400 * M, receivedAt: "2026-08-10T22:01:46Z" }];
-    expect(receivedSinceClosing(paid, [])).toEqual(new Map([["person:p-bro", 400 * M]]));
+    const paid = [{ holder: BROCK, amount: 400 * M, receivedAt: "2026-08-10T22:01:46Z" }];
+    expect(receivedSinceClosing(paid, [])).toEqual(new Map([["person:p-brock", 400 * M]]));
   });
 
   it("closes one person's books without spending another's payments", () => {
     const paid = [
-      { holder: BRO, amount: 400 * M, receivedAt: "2026-08-10T22:01:46Z" },
+      { holder: BROCK, amount: 400 * M, receivedAt: "2026-08-10T22:01:46Z" },
       { holder: STRANGER, amount: 900 * M, receivedAt: "2026-08-10T22:01:46Z" },
     ];
-    const closed = [{ holder: BRO, settledAt: "2026-08-10T23:00:00Z" }];
-    expect(receivedSinceClosing(paid, closed)).toEqual(new Map([["character:zaddy", 900 * M]]));
+    const closed = [{ holder: BROCK, settledAt: "2026-08-10T23:00:00Z" }];
+    expect(receivedSinceClosing(paid, closed)).toEqual(new Map([["character:zabby", 900 * M]]));
   });
 
   // The card lists receipts one by one, so it needs the receipts and not their sum: a spent one is
@@ -814,11 +826,11 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
   // the net. See Receipts.
   it("hands the card each receipt, split by the closure that spent it", () => {
     const paid = [
-      { id: "p2", holder: BRO, amount: 500 * M, receivedAt: "2026-08-11T09:00:00Z" },
-      { id: "p1", holder: BRO, amount: 4_860 * M, receivedAt: "2026-08-10T22:01:46Z" },
+      { id: "p2", holder: BROCK, amount: 500 * M, receivedAt: "2026-08-11T09:00:00Z" },
+      { id: "p1", holder: BROCK, amount: 4_860 * M, receivedAt: "2026-08-10T22:01:46Z" },
     ];
-    const closed = [{ holder: BRO, settledAt: "2026-08-10T22:21:53Z" }];
-    const split = paymentsSinceClosing(paid, closed).get("person:p-bro");
+    const closed = [{ holder: BROCK, settledAt: "2026-08-10T22:21:53Z" }];
+    const split = paymentsSinceClosing(paid, closed).get("person:p-brock");
     expect([split?.counted.map((r) => r.id), split?.spent.map((r) => r.id)]).toEqual([
       ["p2"],
       ["p1"],
@@ -827,33 +839,33 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
 
   it("hands them over oldest first, the order the money moved in", () => {
     const paid = [
-      { id: "late", holder: BRO, amount: 500 * M, receivedAt: "2026-08-12T09:00:00Z" },
-      { id: "early", holder: BRO, amount: 400 * M, receivedAt: "2026-08-11T09:00:00Z" },
+      { id: "late", holder: BROCK, amount: 500 * M, receivedAt: "2026-08-12T09:00:00Z" },
+      { id: "early", holder: BROCK, amount: 400 * M, receivedAt: "2026-08-11T09:00:00Z" },
     ];
     expect(
       paymentsSinceClosing(paid, [])
-        .get("person:p-bro")
+        .get("person:p-brock")
         ?.counted.map((r) => r.id),
     ).toEqual(["early", "late"]);
   });
 
   it("takes a share you owe off what they owe you, the moment it is OFFSET against theirs", () => {
     // The settlement two people actually make when the sums are lopsided: rather than send 139m and
-    // have 254b come back, it comes off the larger figure. Both real rows off Jonathan's account.
+    // have 254b come back, it comes off the larger figure. Both real rows off a user's account.
     //
     // The figure MOVES here, and that is the whole act. It used to be netted before anybody agreed
     // to it, so the two halves of the offset cancelled and pressing the button changed nothing on
     // screen. Marking the share paid alone still says the money moved, which is Mark sent. See V57.
-    const share = counterparty("person:p-bro", "Bro", [line("l9", 139_548_023, "owe")]);
+    const share = counterparty("person:p-brock", "Brock", [line("l9", 139_548_023, "owe")]);
 
     // Outstanding: what he owes you, whole, with your share beside it rather than inside it.
-    const before = buildSettlement([], wallet([share]), [debt(BRO, 254_512_697_574)]);
+    const before = buildSettlement([], wallet([share]), [debt(BROCK, 254_512_697_574)]);
     expect([before[0]!.mesos, before[0]!.sharesYouOwe]).toEqual([254_512_697_574, 139_548_023]);
 
     // Offset: the share is paid AND a negative adjustment records what discharged it.
     const after = buildSettlement([], wallet([]), [
-      debt(BRO, 254_512_697_574),
-      debt(BRO, -139_548_023, "offset against Bro"),
+      debt(BROCK, 254_512_697_574),
+      debt(BROCK, -139_548_023, "offset against Brock"),
     ]);
     expect([after[0]!.mesos, after[0]!.sharesYouOwe]).toEqual([254_512_697_574 - 139_548_023, 0]);
   });
@@ -861,7 +873,9 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
   it("says you owe when an offset is the only thing on the card", () => {
     // A negative with nothing to come off is not an offset, it is a debt of yours, and it is said
     // rather than hidden. The card offers no offset in that state; this is only the arithmetic.
-    const rows = buildSettlement([], wallet([]), [debt(BRO, -139_548_023, "offset against Bro")]);
+    const rows = buildSettlement([], wallet([]), [
+      debt(BROCK, -139_548_023, "offset against Brock"),
+    ]);
     expect([rows[0]!.mesos, rows[0]!.owedByYou]).toEqual([0, 139_548_023]);
   });
 
@@ -869,9 +883,9 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
     // The rule this ledger was split for. A piece has no price until somebody names one, so it is
     // never added to or taken off a meso figure.
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
       wallet([]),
-      [debt(BRO, 1_000 * M)],
+      [debt(BROCK, 1_000 * M)],
     );
     expect([rows[0]!.pieces, rows[0]!.mesos]).toEqual([80, 1_000 * M]);
   });
@@ -880,9 +894,9 @@ describe("the money a sale of somebody else's coupons puts on the card", () => {
     // 1 of 3 pieces out of 1000 mesos. The two sides must add up to the tranche exactly, and the
     // person who typed the figure is the one who can check it.
     const credits = saleCredits([
-      { id: "t1", holder: SELF, pieces: 3, amount: 1_000, shares: [{ holder: BRO, pieces: 1 }] },
+      { id: "t1", holder: SELF, pieces: 3, amount: 1_000, shares: [{ holder: BROCK, pieces: 1 }] },
     ]);
-    expect(credits.get("person:p-bro")).toEqual({
+    expect(credits.get("person:p-brock")).toEqual({
       toThem: 333,
       toYou: 0,
       sales: [
@@ -899,8 +913,8 @@ describe("what the account comes to, above the cards", () => {
     const rows = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [line("l1", 1_000 * M)]),
-        counterparty("character:zaddy", "Zaddy", [line("l2", 400 * M, "owe")]),
+        counterparty("person:p-brock", "Brock", [line("l1", 1_000 * M)]),
+        counterparty("character:zabby", "Zabby", [line("l2", 400 * M, "owe")]),
       ]),
     );
     expect(settlementTotals(rows)).toEqual({
@@ -922,7 +936,10 @@ describe("what the account comes to, above the cards", () => {
     const rows = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [line("l1", 1_000 * M), line("l2", 400 * M, "owe")]),
+        counterparty("person:p-brock", "Brock", [
+          line("l1", 1_000 * M),
+          line("l2", 400 * M, "owe"),
+        ]),
       ]),
     );
     expect(settlementTotals(rows)).toEqual({
@@ -937,14 +954,14 @@ describe("what the account comes to, above the cards", () => {
   it("says you are behind overall when the net runs against you", () => {
     const rows = buildSettlement(
       [],
-      wallet([counterparty("person:p-bro", "Bro", [line("l1", 900 * M, "owe")])]),
+      wallet([counterparty("person:p-brock", "Brock", [line("l1", 900 * M, "owe")])]),
     );
     expect(settlementTotals(rows).net).toBe(-900 * M);
   });
 
   it("counts no pieces, since a count cannot be added to a total of mesos", () => {
     const rows = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "kalos", 80)] })],
       wallet([]),
     );
     expect(settlementTotals(rows)).toEqual({
@@ -964,7 +981,10 @@ describe("marking a share you owe as actually sent", () => {
     const rows = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [line("l1", 1_000 * M), line("l2", 400 * M, "owe")]),
+        counterparty("person:p-brock", "Brock", [
+          line("l1", 1_000 * M),
+          line("l2", 400 * M, "owe"),
+        ]),
       ]),
     );
     expect(owedByYouShares(rows[0]!)).toEqual([{ lootId: "l2", memberId: "payee-l2" }]);
@@ -972,32 +992,32 @@ describe("marking a share you owe as actually sent", () => {
   });
 
   it("is there for a card whose every share runs against you", () => {
-    // The gap left when Settle was pulled off such a card: Jared's read "you owe 289,382,716" with
+    // The gap left when Settle was pulled off such a card: Jarvis's read "you owe 289,382,716" with
     // nothing to do about it, which is a ledger you cannot keep.
     const rows = buildSettlement(
       [],
-      wallet([counterparty("person:p-jared", "Jared", [line("l3", 289 * M, "owe")])]),
+      wallet([counterparty("person:p-jarvis", "Jarvis", [line("l3", 289 * M, "owe")])]),
     );
     expect(owedByYouShares(rows[0]!)).toHaveLength(1);
   });
 });
 
 describe("discharging what you owe against what they owe you", () => {
-  /** One entered row against Bro. Negative is a debt of yours discharged against it. See V57. */
+  /** One entered row against Brock. Negative is a debt of yours discharged against it. See V57. */
   const debt = (amount: number): SettlementDebt => ({
     id: `d-${amount}`,
-    holder: BRO,
+    holder: BROCK,
     amount,
     note: null,
     payouts: [],
     incurredAt: "2026-08-10T00:00:00Z",
   });
 
-  /** Bro owes `entered`, and you owe him `share` out of a drop you sold. */
+  /** Brock owes `entered`, and you owe him `share` out of a drop you sold. */
   const card = (entered: number, share: number) =>
     buildSettlement(
       [],
-      wallet([counterparty("person:p-bro", "Bro", [line("l1", share, "owe")])]),
+      wallet([counterparty("person:p-brock", "Brock", [line("l1", share, "owe")])]),
       entered > 0 ? [debt(entered)] : [],
     )[0]!;
 
@@ -1062,12 +1082,12 @@ describe("discharging what you owe against what they owe you", () => {
   });
 
   it("names every share it covers, each with its own figure", () => {
-    // What the ledger writes a row from. Three nights against Bro were ONE entry reading 5.6b and
-    // "offset against Bro", with which three a fold down from a figure that named none of them.
+    // What the ledger writes a row from. Three nights against Brock were ONE entry reading 5.6b and
+    // "offset against Brock", with which three a fold down from a figure that named none of them.
     const row = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [
+        counterparty("person:p-brock", "Brock", [
           line("l1", 1_933 * M, "owe"),
           line("l2", 372 * M, "owe"),
           line("l3", 861 * M, "owe"),
@@ -1091,7 +1111,7 @@ describe("discharging what you owe against what they owe you", () => {
     const row = buildSettlement(
       [],
       wallet([
-        counterparty("person:p-bro", "Bro", [
+        counterparty("person:p-brock", "Brock", [
           line("l1", 500 * M, "owe"),
           line("l2", 700 * M, "owed"),
         ]),
@@ -1116,13 +1136,13 @@ describe("discharging what you owe against what they owe you", () => {
         holder: SELF,
         pieces: 80,
         amount: 800 * M,
-        shares: [{ holder: BRO, pieces: 40 }],
+        shares: [{ holder: BROCK, pieces: 40 }],
       },
     ]);
     const card = (disposals: ProceedsDisposal[]) =>
       buildSettlement(
         [],
-        wallet([counterparty("person:p-bro", "Bro", [line("l1", 200 * M, "owe")])]),
+        wallet([counterparty("person:p-brock", "Brock", [line("l1", 200 * M, "owe")])]),
         [debt(2_000 * M)],
         proceeds,
         new Map(),
@@ -1146,7 +1166,7 @@ describe("discharging what you owe against what they owe you", () => {
     const offset = card([
       {
         id: "x1",
-        holder: BRO,
+        holder: BROCK,
         amount: 400 * M,
         kind: "OFFSET",
         decidedAt: "2026-08-14T00:00:00Z",
@@ -1166,11 +1186,11 @@ describe("a person whose card is kept", () => {
       [],
       new Map(),
       new Map(),
-      new Map([["person:p-bro", "Bro"]]),
-      new Set(["person:p-bro"]),
+      new Map([["person:p-brock", "Brock"]]),
+      new Set(["person:p-brock"]),
     );
     expect(rows).toHaveLength(1);
-    expect([rows[0]!.name, rows[0]!.pinned, rows[0]!.mesos]).toEqual(["Bro", true, 0]);
+    expect([rows[0]!.name, rows[0]!.pinned, rows[0]!.mesos]).toEqual(["Brock", true, 0]);
   });
 
   it("still leaves off somebody nobody pinned and nothing is owed to", () => {
@@ -1181,12 +1201,12 @@ describe("a person whose card is kept", () => {
   it("marks a pinned person who DOES owe you, rather than drawing them twice", () => {
     const rows = buildSettlement(
       [],
-      wallet([counterparty("person:p-bro", "Bro", [line("l1", 900 * M)])]),
+      wallet([counterparty("person:p-brock", "Brock", [line("l1", 900 * M)])]),
       [],
       new Map(),
       new Map(),
       new Map(),
-      new Set(["person:p-bro"]),
+      new Set(["person:p-brock"]),
     );
     expect(rows).toHaveLength(1);
     expect([rows[0]!.pinned, rows[0]!.mesos]).toEqual([true, 900 * M]);
@@ -1202,11 +1222,11 @@ describe("which piles the Sale Ledger draws", () => {
     // Every debt is stated on the Settlement Ledger, in pieces, and nowhere else: two cards claiming
     // what one person owes is two answers. Their rows were kept here while the old entry shape's
     // tranches still existed and could be corrected nowhere else. Both are gone.
-    expect(yourPiles([ledger(BRO, "Bro")])).toEqual([]);
+    expect(yourPiles([ledger(BROCK, "Brock")])).toEqual([]);
   });
 
   it("keeps only yours out of a mixed list", () => {
-    const all = [ledger(SELF, "you"), ledger(BRO, "Bro"), ledger(STRANGER, "Zaddy")];
+    const all = [ledger(SELF, "you"), ledger(BROCK, "Brock"), ledger(STRANGER, "Zabby")];
     expect(yourPiles(all).map((l) => l.holderName)).toEqual(["you"]);
   });
 });
@@ -1217,29 +1237,29 @@ describe("what builds the debt, and what has come off it", () => {
     amount: number,
     note: string | null,
     payouts: { lootId: string; memberId: string }[] = [],
-  ): SettlementDebt => ({ id, holder: BRO, amount, note, payouts, incurredAt: `2026-08-${id}` });
+  ): SettlementDebt => ({ id, holder: BROCK, amount, note, payouts, incurredAt: `2026-08-${id}` });
 
   const card = (entries: SettlementDebt[], disposals: ProceedsDisposal[] = []) =>
     buildSettlement(
       [],
       wallet([]),
       entries,
-      new Map([["person:p-bro", { toThem: 5_000 * M, toYou: 0, sales: [] }]]),
+      new Map([["person:p-brock", { toThem: 5_000 * M, toYou: 0, sales: [] }]]),
       new Map(),
-      new Map([["person:p-bro", "Bro"]]),
+      new Map([["person:p-brock", "Brock"]]),
       new Set(),
       new Map(),
       disposals,
     )[0]!;
 
   it("keeps a typed debt in the owed list and takes the offsets out", () => {
-    // The card Jonathan was reading: one line saying what Bro owed, buried under two saying what had
+    // The card a user was reading: one line saying what Brock owed, buried under two saying what had
     // come off, all four looking like the same kind of thing.
     const rows = moneyRows(
       card([
         entry("12", 254_512 * M, "oath + secondary"),
-        entry("13", -139 * M, "offset against Bro", [{ lootId: "l1", memberId: "m1" }]),
-        entry("14", -1_180 * M, "offset against Bro", [{ lootId: "l2", memberId: "m2" }]),
+        entry("13", -139 * M, "offset against Brock", [{ lootId: "l1", memberId: "m1" }]),
+        entry("14", -1_180 * M, "offset against Brock", [{ lootId: "l2", memberId: "m2" }]),
       ]),
     );
     expect(rows.typed.map((e) => e.note)).toEqual(["oath + secondary"]);
@@ -1257,10 +1277,10 @@ describe("what builds the debt, and what has come off it", () => {
     const row = card(
       [
         entry("12", 254_512 * M, "oath + secondary"),
-        entry("13", -139 * M, "offset against Bro", [{ lootId: "l1", memberId: "m1" }]),
+        entry("13", -139 * M, "offset against Brock", [{ lootId: "l1", memberId: "m1" }]),
         entry("14", -900 * M, "sent him too much"),
       ],
-      [{ id: "d1", holder: BRO, amount: 2_000 * M, kind: "OFFSET", decidedAt: "2026-08-20" }],
+      [{ id: "d1", holder: BROCK, amount: 2_000 * M, kind: "OFFSET", decidedAt: "2026-08-20" }],
     );
     const rows = moneyRows(row);
     // What the component's `owedTotal` sums: the priced parts it draws, plus the typed debts.
@@ -1286,7 +1306,7 @@ describe("what builds the debt, and what has come off it", () => {
         [
           {
             id: "x1",
-            holder: BRO,
+            holder: BROCK,
             amount: 2_412 * M,
             kind: "OFFSET",
             decidedAt: "2026-08-15",
@@ -1303,7 +1323,7 @@ describe("what builds the debt, and what has come off it", () => {
     const rows = moneyRows(
       card(
         [entry("12", 5_000 * M, "oath")],
-        [{ id: "x1", holder: BRO, amount: 2_412 * M, kind: "PAID", decidedAt: "2026-08-15" }],
+        [{ id: "x1", holder: BROCK, amount: 2_412 * M, kind: "PAID", decidedAt: "2026-08-15" }],
       ),
     );
     expect([rows.discharges, rows.discharged]).toEqual([[], 0]);
@@ -1323,7 +1343,7 @@ describe("what builds the debt, and what has come off it", () => {
     const rows = moneyRows(
       card(
         [entry("12", -100 * M, "older", [{ lootId: "l1", memberId: "m1" }])],
-        [{ id: "x1", holder: BRO, amount: 200 * M, kind: "OFFSET", decidedAt: "2026-08-20" }],
+        [{ id: "x1", holder: BROCK, amount: 200 * M, kind: "OFFSET", decidedAt: "2026-08-20" }],
       ),
     );
     expect(rows.discharges.map((d) => d.label)).toEqual(["coupon sale", "older"]);
@@ -1372,26 +1392,26 @@ describe("the coupon sales behind a decision", () => {
     id: string,
     amount: number,
     kind: "OFFSET" | "PAID" = "OFFSET",
-  ): ProceedsDisposal => ({ id, holder: BRO, amount, kind, decidedAt: `2026-08-${id}` });
+  ): ProceedsDisposal => ({ id, holder: BROCK, amount, kind, decidedAt: `2026-08-${id}` });
 
-  /** Bro's card: sales of his coupons out of your pile, and what has been decided about the money. */
+  /** Brock's card: sales of his coupons out of your pile, and what has been decided about the money. */
   const card = (sales: CouponSale[], disposals: ProceedsDisposal[]) =>
     buildSettlement(
       [],
       wallet([]),
       [],
       new Map([
-        ["person:p-bro", { toThem: sales.reduce((sum, s) => sum + s.mesos, 0), toYou: 0, sales }],
+        ["person:p-brock", { toThem: sales.reduce((sum, s) => sum + s.mesos, 0), toYou: 0, sales }],
       ]),
       new Map(),
-      new Map([["person:p-bro", "Bro"]]),
+      new Map([["person:p-brock", "Brock"]]),
       new Set(),
       new Map(),
       disposals,
     )[0]!;
 
-  it("names them, so 2.41b off Bro's debt says it was 130 coupons", () => {
-    // Jonathan's own card. One Offset, taken on the whole undecided pile, made of two nights' sales:
+  it("names them, so 2.41b off Brock's debt says it was 130 coupons", () => {
+    // A user's own card. One Offset, taken on the whole undecided pile, made of two nights' sales:
     // the row said "coupon sale" and the count was on no screen at all.
     const rows = moneyRows(
       card(
@@ -1438,7 +1458,7 @@ describe("the coupon sales behind a decision", () => {
   /** The sales of one person's coupons, as saleCredits hands them over. */
   const held = (sales: CouponSale[]) =>
     new Map([
-      ["person:p-bro", { toThem: sales.reduce((sum, s) => sum + s.mesos, 0), toYou: 0, sales }],
+      ["person:p-brock", { toThem: sales.reduce((sum, s) => sum + s.mesos, 0), toYou: 0, sales }],
     ]);
 
   it("names the sales that are finished, and who they were finished with", () => {
@@ -1450,8 +1470,8 @@ describe("the coupon sales behind a decision", () => {
       [decided("15", 2_412_222_150)],
     );
     expect([...out]).toEqual([
-      ["t1", new Set(["person:p-bro"])],
-      ["t2", new Set(["person:p-bro"])],
+      ["t1", new Set(["person:p-brock"])],
+      ["t2", new Set(["person:p-brock"])],
     ]);
   });
 
@@ -1487,22 +1507,22 @@ describe("the coupon sales behind a decision", () => {
   });
 
   it("never queues one person's decisions against another's money", () => {
-    // Two piles, one decision. Spending them in one queue would have Jared's offset land on the sale
-    // of Bro's coupons and settle a debt Jared never agreed to.
+    // Two piles, one decision. Spending them in one queue would have Jarvis's offset land on the sale
+    // of Brock's coupons and settle a debt Jarvis never agreed to.
     const out = decidedSales(
       new Map([
         [
-          "person:p-bro",
+          "person:p-brock",
           { toThem: 1_000 * M, toYou: 0, sales: [sale("t1", 70, 1_000 * M, "2026-08-14")] },
         ],
         [
-          "person:p-jared",
+          "person:p-jarvis",
           { toThem: 1_000 * M, toYou: 0, sales: [sale("t2", 70, 1_000 * M, "2026-08-15")] },
         ],
       ]),
-      [{ ...decided("15", 1_000 * M), holder: JARED }],
+      [{ ...decided("15", 1_000 * M), holder: JARVIS }],
     );
-    expect([...out]).toEqual([["t2", new Set(["person:p-jared"])]]);
+    expect([...out]).toEqual([["t2", new Set(["person:p-jarvis"])]]);
   });
 });
 
@@ -1514,34 +1534,34 @@ describe("them keeping coupons of yours, at a price", () => {
   });
 
   it("finds the ones entered against somebody else's pile, keyed by whose", () => {
-    const out = keptOfYours([tranche("t1", BRO, [{ holder: SELF }])]);
-    expect(out.get("person:p-bro")?.map((t) => t.id)).toEqual(["t1"]);
+    const out = keptOfYours([tranche("t1", BROCK, [{ holder: SELF }])]);
+    expect(out.get("person:p-brock")?.map((t) => t.id)).toEqual(["t1"]);
   });
 
   it("leaves your own pile's rows alone, the Sale Ledger drawing those", () => {
     // Two cards offering to remove one row is two answers about one act.
-    expect(keptOfYours([tranche("t1", SELF, [{ holder: BRO }])])).toEqual(new Map());
+    expect(keptOfYours([tranche("t1", SELF, [{ holder: BROCK }])])).toEqual(new Map());
   });
 
   it("leaves out a row of theirs that never named you", () => {
     // Their pile selling their own coupons is their business and reaches your card nowhere.
-    expect(keptOfYours([tranche("t1", BRO), tranche("t2", BRO, [{ holder: STRANGER }])])).toEqual(
-      new Map(),
-    );
+    expect(
+      keptOfYours([tranche("t1", BROCK), tranche("t2", BROCK, [{ holder: STRANGER }])]),
+    ).toEqual(new Map());
   });
 
   it("takes the pieces off the count and puts the money on the card", () => {
-    // The whole act: Bro keeps the 20 he is holding, at 400m. They stop being a coupon claim, and
+    // The whole act: Brock keeps the 20 he is holding, at 400m. They stop being a coupon claim, and
     // 400m comes off what you owe him. Netting them instead would have decided that for him.
     const [row] = buildSettlement(
-      [ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l1", "baldrix", 20)] })],
+      [ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l1", "baldrix", 20)] })],
       wallet([]),
       [],
-      new Map([["person:p-bro", { toThem: 0, toYou: 400 * M, sales: [] }]]),
+      new Map([["person:p-brock", { toThem: 0, toYou: 400 * M, sales: [] }]]),
       new Map(),
       new Map(),
       new Set(),
-      new Map([[answeredKey("person:p-bro", "self"), sold(20)]]),
+      new Map([[answeredKey("person:p-brock", "self"), sold(20)]]),
     );
     expect([row!.pieces, row!.piecesAnswered.yours]).toEqual([0, 20]);
     expect(row!.parts.soldOfYours).toBe(400 * M);
@@ -1557,26 +1577,26 @@ describe("closing the coupon books with one person", () => {
     bossKey,
     weekStart: "2026-08-13",
     droppedOn: "2026-08-13",
-    looterName: "HuskyxKenshi",
+    looterName: "HuntxKestrel",
     ran: [],
     pieces: 180,
     closed: false,
     transfers: [
-      { fromId: "self", toId: "person:p-bro", from: "you", to: "Bro", pieces: 30 },
-      { fromId: "self", toId: "character:zaddy", from: "you", to: "Zaddy", pieces: 20 },
+      { fromId: "self", toId: "person:p-brock", from: "you", to: "Brock", pieces: 30 },
+      { fromId: "self", toId: "character:zabby", from: "you", to: "Zabby", pieces: 20 },
     ],
   });
 
   const card = (ledgers: HolderLedger[]) => buildSettlement(ledgers, wallet([]))[0]!;
 
   it("names both sides, since one handover finishes both", () => {
-    // Husky's week with Bro: five nights of his in your inventory, one of yours in his. Settling is
+    // Hunt's week with Brock: five nights of his in your inventory, one of yours in his. Settling is
     // one transfer of the difference, so it closes six bosses and not one.
     const row = card([
       ledger(SELF, "you", {
         drops: [holdingOf("l1", "malefic-star", 30), holdingOf("l2", "kaling", 20)],
       }),
-      ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l3", "baldrix", 20)] }),
+      ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l3", "baldrix", 20)] }),
     ]);
     const pair = settleThePair(row);
     expect([pair.theirs, pair.yours]).toEqual([["l3"], ["l1", "l2"]]);
@@ -1592,14 +1612,14 @@ describe("closing the coupon books with one person", () => {
     expect([yoursOnly.theirs, yoursOnly.yours, yoursOnly.offered]).toEqual([[], ["l1"], true]);
 
     const theirsOnly = settleThePair(
-      card([ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l2", "baldrix", 20)] })]),
+      card([ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l2", "baldrix", 20)] })]),
     );
     expect([theirsOnly.theirs, theirsOnly.yours, theirsOnly.offered]).toEqual([["l2"], [], true]);
   });
 
   it("leaves out a night that owes somebody else, and says how many", () => {
-    // A closure is keyed (pile, drop), so it cannot mean "settled with Bro alone". Closing this one
-    // would call Zaddy's 20 settled too, on no screen and with no act. Prefer the missing item.
+    // A closure is keyed (pile, drop), so it cannot mean "settled with Brock alone". Closing this one
+    // would call Zabby's 20 settled too, on no screen and with no act. Prefer the missing item.
     const row = card([
       ledger(SELF, "you", { drops: [holdingOf("l1", "kaling", 20), owingTwo("l2", "kalos")] }),
     ]);
@@ -1619,8 +1639,8 @@ describe("closing the coupon books with one person", () => {
     const twice = {
       ...holdingOf("l1", "kaling", 20),
       transfers: [
-        { fromId: "self", toId: "person:p-bro", from: "you", to: "Bro", pieces: 20 },
-        { fromId: "self", toId: "person:p-bro", from: "you", to: "Bro", pieces: 10 },
+        { fromId: "self", toId: "person:p-brock", from: "you", to: "Brock", pieces: 20 },
+        { fromId: "self", toId: "person:p-brock", from: "you", to: "Brock", pieces: 10 },
       ],
     };
     const pair = settleThePair(card([ledger(SELF, "you", { drops: [twice] })]));
@@ -1632,7 +1652,7 @@ describe("closing the coupon books with one person", () => {
     // night to name, and the server refuses a settlement that names none.
     const row = buildSettlement(
       [],
-      wallet([counterparty("person:p-bro", "Bro", [line("l1", 900 * M)])]),
+      wallet([counterparty("person:p-brock", "Brock", [line("l1", 900 * M)])]),
     )[0]!;
     expect(settleThePair(row).offered).toBe(false);
   });
@@ -1651,7 +1671,7 @@ describe("pieces a sale has already answered for", () => {
   /**
    * The night this was reported on, to the piece.
    *
-   * Your pile held 150 of Bro's across five open nights, Bro held 20 of yours off a Hard Baldrix, and
+   * Your pile held 150 of Brock's across five open nights, Brock held 20 of yours off a Hard Baldrix, and
    * one tranche of 70 sold out of your own pile named all 70 as his. The Sale Ledger subtracted that
    * 70 and said 60; this card did not and said 130. Same debt, two screens, two answers, the gap
    * being exactly the coupons whose money was already on the card as `soldOfTheirs`.
@@ -1667,9 +1687,9 @@ describe("pieces a sale has already answered for", () => {
           holdingOf("l5", "kalos-the-guardian", 30),
         ],
       }),
-      ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l6", "baldrix", 20)] }),
+      ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l6", "baldrix", 20)] }),
     ],
-    answered: new Map([[answeredKey("self", "person:p-bro"), sold(70)]]),
+    answered: new Map([[answeredKey("self", "person:p-brock"), sold(70)]]),
   });
 
   /** The card, with everything between the wallet and the answered map left empty. */
@@ -1679,7 +1699,7 @@ describe("pieces a sale has already answered for", () => {
   it("takes them off what you owe, so both ledgers give one answer", () => {
     const { ledgers, answered } = theNight();
     const [row] = cardFor(ledgers, answered);
-    // 150 owed less the 70 sold is 80, and the 20 Bro holds of yours cancels against it.
+    // 150 owed less the 70 sold is 80, and the 20 Brock holds of yours cancels against it.
     expect([row!.piecesYouOwe, row!.pieces, row!.piecesNet]).toEqual([60, 0, 60]);
   });
 
@@ -1700,7 +1720,7 @@ describe("pieces a sale has already answered for", () => {
   });
 
   it("takes nothing off the OTHER direction, which this sale did not answer", () => {
-    // The sale came out of your pile, so it answers what you owe. What Bro is holding of yours is a
+    // The sale came out of your pile, so it answers what you owe. What Brock is holding of yours is a
     // separate count with its own answered figure, and spending one on the other would be the
     // cross-person netting one card away.
     //
@@ -1709,9 +1729,9 @@ describe("pieces a sale has already answered for", () => {
     const [row] = cardFor(
       [
         ledger(SELF, "you", { drops: [holdingOf("l1", "kaling", 10)] }),
-        ledger(BRO, "Bro", { owedToYou: 20, drops: [owing("l2", "baldrix", 20)] }),
+        ledger(BROCK, "Brock", { owedToYou: 20, drops: [owing("l2", "baldrix", 20)] }),
       ],
-      new Map([[answeredKey("self", "person:p-bro"), sold(10)]]),
+      new Map([[answeredKey("self", "person:p-brock"), sold(10)]]),
     );
     expect(row!.piecesAnswered.yours).toBe(0);
     expect(row!.drops.map((d) => d.pieces)).toEqual([20]);
@@ -1737,7 +1757,7 @@ describe("pieces a sale has already answered for", () => {
   });
 
   it("squares to nothing once every coupon has been sold or netted", () => {
-    // Two sales of 70 and 60 against 150 owed, and Bro holding the last 20. The 130 is on the card in
+    // Two sales of 70 and 60 against 150 owed, and Brock holding the last 20. The 130 is on the card in
     // mesos, the last 20 cancels against his, and both counts are zero.
     //
     // Pinned only so there is a row to read: see below for what an unpinned one does.
@@ -1749,8 +1769,8 @@ describe("pieces a sale has already answered for", () => {
       new Map(),
       new Map(),
       new Map(),
-      new Set(["person:p-bro"]),
-      new Map([[answeredKey("self", "person:p-bro"), sold(130)]]),
+      new Set(["person:p-brock"]),
+      new Map([[answeredKey("self", "person:p-brock"), sold(130)]]),
     );
     expect([row!.piecesYouOwe, row!.pieces, row!.piecesNet]).toEqual([0, 0, 0]);
     expect(row!.piecesAnswered.theirs).toBe(130);
@@ -1763,7 +1783,7 @@ describe("pieces a sale has already answered for", () => {
     // The same night unpinned. Every coupon sold or cancelled and no money on it, so it goes the way
     // every other card with nothing on it goes, and comes straight back on the next night.
     const { ledgers } = theNight();
-    expect(cardFor(ledgers, new Map([[answeredKey("self", "person:p-bro"), sold(130)]]))).toEqual(
+    expect(cardFor(ledgers, new Map([[answeredKey("self", "person:p-brock"), sold(130)]]))).toEqual(
       [],
     );
   });
@@ -1776,11 +1796,11 @@ describe("pieces a sale has already answered for", () => {
       [ledger(SELF, "you", { drops: [holdingOf("l1", "kaling", 20)] })],
       wallet([]),
       [],
-      new Map([["person:p-bro", { toThem: 500 * M, toYou: 0, sales: [] }]]),
+      new Map([["person:p-brock", { toThem: 500 * M, toYou: 0, sales: [] }]]),
       new Map(),
       new Map(),
       new Set(),
-      new Map([[answeredKey("self", "person:p-bro"), sold(500)]]),
+      new Map([[answeredKey("self", "person:p-brock"), sold(500)]]),
     );
     expect([row!.piecesYouOwe, row!.piecesAnswered.theirs]).toEqual([0, 20]);
   });
@@ -1788,13 +1808,13 @@ describe("pieces a sale has already answered for", () => {
   it("drops the card when the pieces were the whole of it and money settled them", () => {
     const rows = cardFor(
       [ledger(SELF, "you", { drops: [holdingOf("l1", "kaling", 20)] })],
-      new Map([[answeredKey("self", "person:p-bro"), sold(20)]]),
+      new Map([[answeredKey("self", "person:p-brock"), sold(20)]]),
     );
     expect(rows).toEqual([]);
   });
 
   it("keeps one person's sold coupons off another person's card", () => {
-    // The reason this is keyed by PAIR. A pile total here would take Bro's 70 off whichever card was
+    // The reason this is keyed by PAIR. A pile total here would take Brock's 70 off whichever card was
     // drawn next, which is the plausible wrong number rather than a missing one.
     const rows = cardFor(
       [
@@ -1807,30 +1827,30 @@ describe("pieces a sale has already answered for", () => {
               bossKey: "limbo",
               weekStart: "2026-08-13",
               droppedOn: "2026-08-13",
-              looterName: "HuskyxKenshi",
+              looterName: "HuntxKestrel",
               ran: [],
               pieces: 120,
               closed: false,
               transfers: [
-                { fromId: "self", toId: "character:zaddy", from: "you", to: "Zaddy", pieces: 30 },
+                { fromId: "self", toId: "character:zabby", from: "you", to: "Zabby", pieces: 30 },
               ],
             },
           ],
         }),
       ],
-      new Map([[answeredKey("self", "person:p-bro"), sold(40)]]),
+      new Map([[answeredKey("self", "person:p-brock"), sold(40)]]),
     );
     const byName = new Map(rows.map((r) => [r.name, r]));
-    expect(byName.get("Zaddy")!.piecesYouOwe).toBe(30);
-    expect(byName.has("Bro")).toBe(false);
+    expect(byName.get("Zabby")!.piecesYouOwe).toBe(30);
+    expect(byName.has("Brock")).toBe(false);
   });
 
   it("answers the mirror direction too, where THEY sold coupons of yours", () => {
     // Their pile, their sale, and it named you. Those pieces are `soldOfYours` in mesos now, so the
     // count they came off stops asking as well.
     const [row] = cardFor(
-      [ledger(BRO, "Bro", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
-      new Map([[answeredKey("person:p-bro", "self"), sold(50)]]),
+      [ledger(BROCK, "Brock", { owedToYou: 80, drops: [owing("l1", "first-adversary", 80)] })],
+      new Map([[answeredKey("person:p-brock", "self"), sold(50)]]),
     );
     expect([row!.pieces, row!.piecesAnswered.yours, row!.piecesNet]).toEqual([30, 50, -30]);
   });
@@ -1845,7 +1865,7 @@ describe("splitting an offset written before one-row-per-share", () => {
     currency: "MESO",
     iconUrl: null,
     boss: "Lotus",
-    members: ["Bro"],
+    members: ["Brock"],
     on: "2026-08-28",
     weekStart: "2026-08-27",
     share: amount,
@@ -1857,9 +1877,9 @@ describe("splitting an offset written before one-row-per-share", () => {
 
   const entry = (id: string, amount: number, payouts: number): SettlementDebt => ({
     id,
-    holder: BRO,
+    holder: BROCK,
     amount,
-    note: "offset against Bro",
+    note: "offset against Brock",
     payouts: Array.from({ length: payouts }, (_, i) => ({ lootId: `l${i}`, memberId: `m${i}` })),
     incurredAt: "2026-08-29T15:14:30Z",
   });

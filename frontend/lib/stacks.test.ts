@@ -122,8 +122,8 @@ describe("telling an edited deal from a saved one", () => {
   it("keeps every box, because a stack count has no neutral value", () => {
     // sharesKey dropped a box reading "1", since a blank ratio meant one share. Doing that here would
     // call an edited deal unedited.
-    expect(stacksKey({ You: "1", Bro: "2" })).toBe("Bro=2,You=1");
-    expect(stacksKey({ You: "1", Bro: "2" })).not.toBe(stacksKey({ You: "2", Bro: "1" }));
+    expect(stacksKey({ You: "1", Brock: "2" })).toBe("Brock=2,You=1");
+    expect(stacksKey({ You: "1", Brock: "2" })).not.toBe(stacksKey({ You: "2", Brock: "1" }));
     expect(stacksKey({ You: " 1.5 " })).toBe("You=1.5");
   });
 });

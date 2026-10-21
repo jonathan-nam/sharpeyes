@@ -10,14 +10,14 @@ const pool = (partyId: string, ...rows: Loot[]): PartyLootPool => ({ partyId, lo
 
 describe("a run logged in your own party and a shared one", () => {
   const own = {
-    parties: [party("mine", "creed", "kalos"), party("other", "creed", "lucid")],
+    parties: [party("mine", "crane", "kalos"), party("other", "crane", "lucid")],
     pools: [
       pool("mine", loot("dup", "2026-10-15"), loot("only-mine", "2026-10-08")),
       pool("other", loot("lucid", "2026-10-15")),
     ],
   };
   const shared = {
-    parties: [party("theirs", "creed", "kalos")],
+    parties: [party("theirs", "crane", "kalos")],
     pools: [pool("theirs", loot("their-copy", "2026-10-15"))],
     ownerOf: new Map([["theirs", "Mech"]]),
   };
@@ -38,7 +38,7 @@ describe("a run logged in your own party and a shared one", () => {
       parties: [
         {
           ...party("theirs", "their-leader", "kalos"),
-          seats: [{ characterId: "creed" }, { characterId: null }],
+          seats: [{ characterId: "crane" }, { characterId: null }],
         } as unknown as Party,
       ],
     };

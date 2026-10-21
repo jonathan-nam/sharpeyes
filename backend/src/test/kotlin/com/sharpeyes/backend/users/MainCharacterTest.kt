@@ -87,7 +87,7 @@ class MainCharacterTest {
         transaction {
             ensureUser(userId, "$userId@example.com")
             val before = "https://msavatar1.nexon.net/Character/BEFORE.png"
-            val id = character(userId, "mechyfechy", before)
+            val id = character(userId, "mechobotto", before)
 
             assertTrue(setMainCharacter(userId, id))
             assertEquals(spriteProxyPath(before), settingsFor(userId).mainCharacterSprite)
@@ -106,7 +106,7 @@ class MainCharacterTest {
         transaction {
             ensureUser(userId, "$userId@example.com")
             ensureUser(stranger, "$stranger@example.com")
-            val mine = character(userId, "mechyfechy", "https://msavatar1.nexon.net/Character/A.png")
+            val mine = character(userId, "mechobotto", "https://msavatar1.nexon.net/Character/A.png")
             val theirs = character(stranger, "Rune", "https://msavatar1.nexon.net/Character/B.png")
 
             assertTrue(setMainCharacter(userId, mine))
@@ -121,7 +121,7 @@ class MainCharacterTest {
     fun `null clears the choice`() {
         transaction {
             ensureUser(userId, "$userId@example.com")
-            val id = character(userId, "mechyfechy", "https://msavatar1.nexon.net/Character/A.png")
+            val id = character(userId, "mechobotto", "https://msavatar1.nexon.net/Character/A.png")
 
             assertTrue(setMainCharacter(userId, id))
             assertTrue(setMainCharacter(userId, null))
@@ -136,7 +136,7 @@ class MainCharacterTest {
     fun `deleting your main clears it rather than blocking the delete`() {
         transaction {
             ensureUser(userId, "$userId@example.com")
-            val id = character(userId, "mechyfechy", "https://msavatar1.nexon.net/Character/A.png")
+            val id = character(userId, "mechobotto", "https://msavatar1.nexon.net/Character/A.png")
             assertTrue(setMainCharacter(userId, id))
 
             // The FK is ON DELETE SET NULL. Left as the default it would be RESTRICT, and deleting

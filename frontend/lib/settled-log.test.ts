@@ -12,8 +12,8 @@ import type { VestigeSettlement } from "@/types/vestige";
 
 const M = 1_000_000;
 const VESTIGE = "vestige-of-erion";
-const BRO: Holder = { kind: "PERSON", personId: "p-bro", characterName: null };
-const NAMES = new Map([["person:p-bro", "Bro"]]);
+const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
+const NAMES = new Map([["person:p-brock", "Brock"]]);
 
 /** The coupon table for the boss the fixtures run, which is what makes a row a PIECE drop. */
 const TABLES: DropTables = {
@@ -47,8 +47,8 @@ const mine = (id: string, name: string): PartyMember => ({
 const theirs = (id: string, name: string): PartyMember => ({
   id,
   name,
-  personId: "p-bro",
-  personName: "Bro",
+  personId: "p-brock",
+  personName: "Brock",
   characterId: null,
   linkedCharacterId: null,
   spriteImgUrl: null,
@@ -66,8 +66,8 @@ const party = (over: Partial<Party> = {}): Party => ({
   bossKey: "limbo",
   difficulty: "HARD",
   minutes: null,
-  members: [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")],
-  seats: [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton")],
+  members: [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")],
+  seats: [mine("m1", "mechobotto"), theirs("m2", "CraneBolton")],
   usualRoster: true,
   skippedThisPeriod: false,
   oneOff: false,
@@ -116,7 +116,7 @@ const night = (over: Partial<Loot> = {}): Loot =>
     name: "Vestige of Erion Coupon",
     quantity: 60,
     bundles: 3,
-    // Bro bent down for all three stacks, so 30 of the 60 in his inventory are yours.
+    // Brock bent down for all three stacks, so 30 of the 60 in his inventory are yours.
     bundlesBy: [{ memberId: "m2", bundles: 3 }],
     status: "PENDING",
     soldAt: null,
@@ -132,7 +132,7 @@ const pool = (loot: Loot[]): PartyLootPool => ({ partyId: "pa", loot });
 
 const act = (over: Partial<VestigeSettlement> = {}): VestigeSettlement => ({
   id: "s1",
-  holder: BRO,
+  holder: BROCK,
   lootIds: ["n1"],
   unpaid: 0,
   settledAt: "2026-08-10T22:00:00Z",
@@ -197,7 +197,7 @@ describe("what the Settled View records", () => {
     // open is theirs to settle with a third person: they do it directly and nothing about it
     // reaches this account. Waiting on it means waiting for a fact nobody here can observe, and
     // ticking it to move the drop along would be recording a guess. See settledForYou.
-    const seats = [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton"), theirs("m3", "Jared")];
+    const seats = [mine("m1", "mechobotto"), theirs("m2", "CraneBolton"), theirs("m3", "Jarvis")];
     const theirSale = drop({
       status: "SOLD",
       sellerMemberId: "m2",
@@ -214,7 +214,7 @@ describe("what the Settled View records", () => {
   it("still holds a drop open where the unpaid share is one YOU are owed", () => {
     // The mirror, and the reason this is not just "settled once you stop caring": a share running
     // towards you is one you can see arrive, so it goes on holding the drop open.
-    const seats = [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton"), theirs("m3", "Jared")];
+    const seats = [mine("m1", "mechobotto"), theirs("m2", "CraneBolton"), theirs("m3", "Jarvis")];
     const theirSale = drop({
       status: "SOLD",
       sellerMemberId: "m2",
@@ -233,7 +233,7 @@ describe("what the Settled View records", () => {
     const taken = drop({ status: "TAKEN", takenByMemberId: "m2", soldAt: null, saleAmount: null });
     const rows = buildSettledLog(logOf([taken]));
     expect([rows[0]!.takenBy, rows[0]!.sale, rows[0]!.settledOn]).toEqual([
-      "CreedBratton",
+      "CraneBolton",
       null,
       null,
     ]);
@@ -241,12 +241,12 @@ describe("what the Settled View records", () => {
 
   it("names a taker who has since left the party", () => {
     // Off `seats` and never `members`. A seat that left still took the item.
-    const gone = { ...theirs("m3", "Freeballynn"), guest: true };
+    const gone = { ...theirs("m3", "Frecklynn"), guest: true };
     const taken = drop({ status: "TAKEN", takenByMemberId: "m3", soldAt: null, saleAmount: null });
     const rows = buildSettledLog(
-      logOf([taken], [], { seats: [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton"), gone] }),
+      logOf([taken], [], { seats: [mine("m1", "mechobotto"), theirs("m2", "CraneBolton"), gone] }),
     );
-    expect(rows[0]!.takenBy).toBe("Freeballynn");
+    expect(rows[0]!.takenBy).toBe("Frecklynn");
   });
 
   it("records a coupon night by the act that closed it, not by its status", () => {
@@ -255,7 +255,7 @@ describe("what the Settled View records", () => {
     // account has ever had as unfinished.
     const rows = buildSettledLog(logOf([night()], [act()]), [act()], NAMES);
     expect(rows).toHaveLength(1);
-    expect([rows[0]!.kind, rows[0]!.holderName, rows[0]!.pieces]).toEqual(["PIECES", "Bro", 30]);
+    expect([rows[0]!.kind, rows[0]!.holderName, rows[0]!.pieces]).toEqual(["PIECES", "Brock", 30]);
   });
 
   it("leaves a coupon night out until somebody closes it", () => {
@@ -264,15 +264,15 @@ describe("what the Settled View records", () => {
 
   it("records a night closed with two people as two acts", () => {
     // One night's coupons sit in as many piles as there were people bending down, and closing the
-    // books with Bro says nothing about Jared. Folding them would name one and drop the other.
-    const jared: Holder = { kind: "PERSON", personId: "p-jared", characterName: null };
-    const two = [act(), act({ id: "s2", holder: jared, settledAt: "2026-08-11T00:00:00Z" })];
+    // books with Brock says nothing about Jarvis. Folding them would name one and drop the other.
+    const jarvis: Holder = { kind: "PERSON", personId: "p-jarvis", characterName: null };
+    const two = [act(), act({ id: "s2", holder: jarvis, settledAt: "2026-08-11T00:00:00Z" })];
     const rows = buildSettledLog(
       logOf([night()], two),
       two,
-      new Map([...NAMES, ["person:p-jared", "Jared"]]),
+      new Map([...NAMES, ["person:p-jarvis", "Jarvis"]]),
     );
-    expect(rows.map((r) => r.holderName)).toEqual(["Jared", "Bro"]);
+    expect(rows.map((r) => r.holderName)).toEqual(["Jarvis", "Brock"]);
     expect(new Set(rows.map((r) => r.lootId))).toEqual(new Set(["n1"]));
   });
 
@@ -401,10 +401,14 @@ describe("folding the nights one act closed", () => {
 
   it("keeps two acts apart, because they are two decisions", () => {
     // Folding them would put one date on both. Same night, two people, two acts.
-    const jared: Holder = { kind: "PERSON", personId: "p-jared", characterName: null };
-    const two = [act(), act({ id: "s2", holder: jared, settledAt: "2026-08-11T00:00:00Z" })];
+    const jarvis: Holder = { kind: "PERSON", personId: "p-jarvis", characterName: null };
+    const two = [act(), act({ id: "s2", holder: jarvis, settledAt: "2026-08-11T00:00:00Z" })];
     const lines = consolidateSettled(
-      buildSettledLog(logOf([night()], two), two, new Map([...NAMES, ["person:p-jared", "Jared"]])),
+      buildSettledLog(
+        logOf([night()], two),
+        two,
+        new Map([...NAMES, ["person:p-jarvis", "Jarvis"]]),
+      ),
     );
     expect(lines).toHaveLength(2);
     expect(lines.every((l) => !l.folded)).toBe(true);
@@ -454,7 +458,7 @@ describe("Settled cannot be reopened", () => {
 
   /**
    * The one that matters. Closing a coupon pair writes one settlement PER PILE, so deleting a single
-   * one leaves the night shut in their inventory and open in yours: Jonathan hit Reopen by accident
+   * one leaves the night shut in their inventory and open in yours: a user hit Reopen by accident
    * and 60 coupons came back onto the Sale Ledger with the other side still closed. There is no
    * half-undo because there is no undo.
    */

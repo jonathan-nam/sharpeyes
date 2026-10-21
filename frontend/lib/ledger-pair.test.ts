@@ -225,7 +225,7 @@ describe("every act in one step", () => {
     // They were two calls, on the reasoning that a share is a claim and their money is already here.
     // They are still two facts and the server still writes them as two rows; what cannot be two is
     // the REQUEST, because both come off what they owe you and each answer drew the card. One press
-    // of Offset walked Bro's owed figure down by the shares, then down again by the money.
+    // of Offset walked Brock's owed figure down by the shares, then down again by the money.
     expect(ledger).toContain(
       "onOffsetAll(row.holder, row.name, offset.offered ? offset.parts : [], heldOrNone)",
     );
@@ -334,7 +334,7 @@ describe("the two entry forms", () => {
 // Two ways a half-width column went wrong, both found on screen rather than by a test.
 describe("what a column draws and how wide it lets itself get", () => {
   it("heads a list of nights only where a night will be drawn", () => {
-    // A night that never owed anything sits in `drops` at zero. Read as a length, that put "Bro is
+    // A night that never owed anything sits in `drops` at zero. Read as a length, that put "Brock is
     // holding" over nothing at all. A SOLD night is drawn, with its sale marked.
     expect(ledger).toContain(
       "const theirNights = row.drops.filter((drop) => drop.pieces + drop.sold > 0);",

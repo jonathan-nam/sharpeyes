@@ -91,7 +91,7 @@ class PiecePileTest {
 
     private fun character(
         world: String = WORLD_INTERACTIVE,
-        name: String = "Husky${names++}",
+        name: String = "Hunt${names++}",
         sync: Boolean = true,
     ): Uuid {
         ensureUser(userId, "$userId@example.com")

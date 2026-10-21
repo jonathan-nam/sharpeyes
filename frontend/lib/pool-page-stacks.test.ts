@@ -8,7 +8,7 @@ import type { Party, PartyMember } from "@/types/party";
 
 // The Loot pool page states what each seat was entitled to and what they picked up.
 //
-// Hard Baldrix, two seats: Bro's character took two of the three stacks one week and none the next,
+// Hard Baldrix, two seats: Brock's character took two of the three stacks one week and none the next,
 // and the party header said "20 coupons owed" over a list of nights that all looked alike. The gap
 // IS the debt, and neither half of it can be worked out from the other, so the page that states the
 // figure has to be able to show the nights behind it.
@@ -39,8 +39,8 @@ const mine = (id: string, name: string): PartyMember => ({
 const theirs = (id: string, name: string): PartyMember => ({
   id,
   name,
-  personId: "p-bro",
-  personName: "Bro",
+  personId: "p-brock",
+  personName: "Brock",
   characterId: null,
   linkedCharacterId: null,
   spriteImgUrl: null,
@@ -48,12 +48,12 @@ const theirs = (id: string, name: string): PartyMember => ({
   shares: 1,
 });
 
-const husky = mine("m1", "HuskyxKenshi");
-const creed = theirs("m2", "CreedBratton");
+const hunt = mine("m1", "HuntxKestrel");
+const crane = theirs("m2", "CraneBolton");
 
 const party: Party = {
   id: "pa",
-  slug: "husky/baldrix",
+  slug: "hunt/baldrix",
   characterId: "char-m1",
   solo: false,
   oneOff: false,
@@ -62,8 +62,8 @@ const party: Party = {
   bossKey: "baldrix",
   difficulty: "HARD",
   minutes: null,
-  members: [husky, creed],
-  seats: [husky, creed],
+  members: [hunt, crane],
+  seats: [hunt, crane],
   usualRoster: true,
   skippedThisPeriod: false,
   pendingLoot: 0,
@@ -107,12 +107,12 @@ const COUPON = { dropKey: "vestige-of-erion", behind: new Map<string, number>() 
 
 describe("the pool page can show the nights behind a coupon debt", () => {
   it("states both halves of the night that made the debt", () => {
-    // The one that produced "20 coupons owed": two stacks to Bro, one to you, 1.5 each was the deal.
+    // The one that produced "20 coupons owed": two stacks to Brock, one to you, 1.5 each was the deal.
     const drops = assignableDrops(party, [night("l1", "2026-08-13", { m1: 1, m2: 2 })], COUPON);
     const tallies = pieceTallies(drops[0]!, drops[0]!.counts);
 
-    expect(tallies.get(holderKey(holderOf(husky)))).toEqual({ took: 40, due: 60 });
-    expect(tallies.get(holderKey(holderOf(creed)))).toEqual({ took: 80, due: 60 });
+    expect(tallies.get(holderKey(holderOf(hunt)))).toEqual({ took: 40, due: 60 });
+    expect(tallies.get(holderKey(holderOf(crane)))).toEqual({ took: 80, due: 60 });
   });
 
   it("states the night that runs the other way too", () => {
@@ -120,8 +120,8 @@ describe("the pool page can show the nights behind a coupon debt", () => {
     const drops = assignableDrops(party, [night("l2", "2026-08-23", { m1: 3 })], COUPON);
     const tallies = pieceTallies(drops[0]!, drops[0]!.counts);
 
-    expect(tallies.get(holderKey(holderOf(husky)))).toEqual({ took: 120, due: 60 });
-    expect(tallies.get(holderKey(holderOf(creed)))).toEqual({ took: 0, due: 60 });
+    expect(tallies.get(holderKey(holderOf(hunt)))).toEqual({ took: 120, due: 60 });
+    expect(tallies.get(holderKey(holderOf(crane)))).toEqual({ took: 0, due: 60 });
   });
 
   it("says nothing about who took what on a night nobody answered for", () => {

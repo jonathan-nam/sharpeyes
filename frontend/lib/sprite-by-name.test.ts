@@ -71,16 +71,16 @@ describe("spriteByName", () => {
   });
 
   it("finds your own characters, who may be in no party at all", () => {
-    expect(spriteByName([character("mechyfechy", "/sprites/me.png")], []).get("mechyfechy")).toBe(
+    expect(spriteByName([character("mechobotto", "/sprites/me.png")], []).get("mechobotto")).toBe(
       "/sprites/me.png",
     );
   });
 
   it("prefers your roster's sprite to the one a seat was saved with", () => {
     // Your own page is where a sprite gets refreshed, so where the two disagree it is the newer.
-    const parties = [config("p1", [seat("mechyfechy", "/sprites/stale.png")])];
-    const characters = [character("mechyfechy", "/sprites/fresh.png")];
-    expect(spriteByName(characters, parties).get("mechyfechy")).toBe("/sprites/fresh.png");
+    const parties = [config("p1", [seat("mechobotto", "/sprites/stale.png")])];
+    const characters = [character("mechobotto", "/sprites/fresh.png")];
+    expect(spriteByName(characters, parties).get("mechobotto")).toBe("/sprites/fresh.png");
   });
 
   it("leaves out a name whose lookup found nothing", () => {
@@ -94,9 +94,9 @@ describe("spriteByName", () => {
 
   it("finds the faces in a party somebody else owns", () => {
     // An account that joined by a link owns no config, so this is the only list it has.
-    expect(spriteByName([], [shared("p1", [seat("Bro", "/sprites/bro.png")])]).get("Bro")).toBe(
-      "/sprites/bro.png",
-    );
+    expect(
+      spriteByName([], [shared("p1", [seat("Brock", "/sprites/brock.png")])]).get("Brock"),
+    ).toBe("/sprites/brock.png");
   });
 
   it("says nothing about a name it has never seen", () => {

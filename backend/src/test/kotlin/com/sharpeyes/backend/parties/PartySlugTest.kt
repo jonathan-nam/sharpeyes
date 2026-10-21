@@ -93,7 +93,7 @@ class PartySlugTest {
         characterId: Uuid,
         bossKey: String,
     ): PartyResponse {
-        val request = SavePartyRequest(characterId.toString(), bossKey, listOf("CreedBratton"))
+        val request = SavePartyRequest(characterId.toString(), bossKey, listOf("CraneBolton"))
         val id = createParty(userId, characterId, bossIdForKey(bossKey)!!, request, Clock.System.now())
         return findParty(id, userId)!!
     }
@@ -101,20 +101,20 @@ class PartySlugTest {
     @Test
     fun `a config is addressed by its character and its boss`() {
         transaction {
-            val mine = addCharacter(userOneId, "MechyFechy")
+            val mine = addCharacter(userOneId, "MechoBotto")
             val party = config(userOneId, mine, "kalos-the-guardian")
 
             // Lowercased, because a path that only works in the case it was typed in is not one to
             // put in front of anybody.
-            assertEquals("mechyfechy/kalos-the-guardian", party.slug)
-            assertEquals(party.id, findPartyBySlug(listOf("mechyfechy", "kalos-the-guardian"), userOneId)?.id)
+            assertEquals("mechobotto/kalos-the-guardian", party.slug)
+            assertEquals(party.id, findPartyBySlug(listOf("mechobotto", "kalos-the-guardian"), userOneId)?.id)
         }
     }
 
     @Test
     fun `a uuid still addresses the config it always did`() {
         transaction {
-            val mine = addCharacter(userOneId, "MechyFechy")
+            val mine = addCharacter(userOneId, "MechoBotto")
             val party = config(userOneId, mine, "kalos-the-guardian")
 
             // What an older link carries. It resolves to the party, and the party still says its
@@ -164,33 +164,33 @@ class PartySlugTest {
     @Test
     fun `a slug is only ever this account's`() {
         transaction {
-            val mine = addCharacter(userOneId, "MechyFechy")
+            val mine = addCharacter(userOneId, "MechoBotto")
             config(userOneId, mine, "kalos-the-guardian")
             // The same name, on somebody else's account. Nothing about the path says whose it is,
             // so the ownership filter is the only thing standing between them.
-            val theirs = addCharacter(userTwoId, "MechyFechy")
+            val theirs = addCharacter(userTwoId, "MechoBotto")
             val theirParty = config(userTwoId, theirs, "kalos-the-guardian")
 
             assertEquals(
                 theirParty.id,
-                findPartyBySlug(listOf("mechyfechy", "kalos-the-guardian"), userTwoId)?.id,
+                findPartyBySlug(listOf("mechobotto", "kalos-the-guardian"), userTwoId)?.id,
             )
-            assertNull(findPartyBySlug(listOf("mechyfechy", "baldrix"), userTwoId))
+            assertNull(findPartyBySlug(listOf("mechobotto", "baldrix"), userTwoId))
         }
     }
 
     @Test
     fun `a slug that names nothing resolves to nothing`() {
         transaction {
-            val mine = addCharacter(userOneId, "MechyFechy")
+            val mine = addCharacter(userOneId, "MechoBotto")
             config(userOneId, mine, "kalos-the-guardian")
 
             // A boss this character has no config for, a character that does not exist, a path
             // longer than a slug can be, and a single segment that is not a uuid.
-            assertNull(findPartyBySlug(listOf("mechyfechy", "baldrix"), userOneId))
+            assertNull(findPartyBySlug(listOf("mechobotto", "baldrix"), userOneId))
             assertNull(findPartyBySlug(listOf("nobody", "kalos-the-guardian"), userOneId))
             assertNull(findPartyBySlug(listOf("a", "b", "c", "kalos-the-guardian"), userOneId))
-            assertNull(findPartyBySlug(listOf("mechyfechy"), userOneId))
+            assertNull(findPartyBySlug(listOf("mechobotto"), userOneId))
             assertNull(findPartyBySlug(emptyList(), userOneId))
         }
     }

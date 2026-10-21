@@ -112,12 +112,12 @@ class PartyAccessTest {
         .where { (PartyMember.partyId eq Uuid.parse(party.id)) and (PartyMember.name eq name) }
         .firstOrNull()
 
-    /** The owner, Chris on [member]'s account seated as CreedBratton, and Baldrix nobody claims. */
+    /** The owner, Chris on [member]'s account seated as CraneBolton, and Baldrix nobody claims. */
     private fun shared(): PartyResponse {
-        val theirs = character(owner, "mechyfechy")
-        character(member, "CreedBratton")
+        val theirs = character(owner, "mechobotto")
+        character(member, "CraneBolton")
         link(owner, "Chris", member)
-        return config(theirs, listOf("CreedBratton", "Baldrix"))
+        return config(theirs, listOf("CraneBolton", "Baldrix"))
     }
 
     /** A Grindstone in [party]'s pool, logged by [by]. */
@@ -141,20 +141,20 @@ class PartyAccessTest {
     fun `whoever logged a drop sells it, and nobody else`() {
         transaction {
             val party = shared()
-            val creed = seat(party, "CreedBratton")!![PartyMember.id]
-            val mechy = seat(party, "mechyfechy")!![PartyMember.id]
+            val crane = seat(party, "CraneBolton")!![PartyMember.id]
+            val mecho = seat(party, "mechobotto")!![PartyMember.id]
             val theirs = grindstone(party, member)
             val ours = grindstone(party, owner)
             val partyId = Uuid.parse(party.id)
 
-            assertNull(sellRefusal(partyId, member, creed, findLoot(Uuid.parse(theirs.id), partyId, member)!!))
+            assertNull(sellRefusal(partyId, member, crane, findLoot(Uuid.parse(theirs.id), partyId, member)!!))
             assertEquals(
                 "Someone else logged this drop. They record its sale.",
-                sellRefusal(partyId, member, creed, findLoot(Uuid.parse(ours.id), partyId, member)!!)?.refusal,
+                sellRefusal(partyId, member, crane, findLoot(Uuid.parse(ours.id), partyId, member)!!)?.refusal,
             )
             assertEquals(
                 "Someone else logged this drop. They record its sale.",
-                sellRefusal(partyId, owner, mechy, findLoot(Uuid.parse(theirs.id), partyId, owner)!!)?.refusal,
+                sellRefusal(partyId, owner, mecho, findLoot(Uuid.parse(theirs.id), partyId, owner)!!)?.refusal,
             )
         }
     }
@@ -163,15 +163,15 @@ class PartyAccessTest {
     fun `a member marks a share paid from either end of it, and no other`() {
         transaction {
             val party = shared()
-            val creed = seat(party, "CreedBratton")!![PartyMember.id]
-            val mechy = seat(party, "mechyfechy")!![PartyMember.id]
+            val crane = seat(party, "CraneBolton")!![PartyMember.id]
+            val mecho = seat(party, "mechobotto")!![PartyMember.id]
             val baldrix = seat(party, "Baldrix")!![PartyMember.id]
             val partyId = Uuid.parse(party.id)
-            val ownersSale = grindstone(party, owner).copy(sellerMemberId = mechy.toString())
-            val membersSale = grindstone(party, member).copy(sellerMemberId = creed.toString())
+            val ownersSale = grindstone(party, owner).copy(sellerMemberId = mecho.toString())
+            val membersSale = grindstone(party, member).copy(sellerMemberId = crane.toString())
 
-            assertNull(payoutRefusal(partyId, member, creed, ownersSale), "owed to them")
-            assertNull(payoutRefusal(partyId, member, mechy, membersSale), "sent by them")
+            assertNull(payoutRefusal(partyId, member, crane, ownersSale), "owed to them")
+            assertNull(payoutRefusal(partyId, member, mecho, membersSale), "sent by them")
             assertEquals(
                 "You can only mark a share you sent or were sent.",
                 payoutRefusal(partyId, member, baldrix, ownersSale)?.refusal,
@@ -200,7 +200,7 @@ class PartyAccessTest {
                     owner,
                     viewer = member,
                 ).single().loot.associate { it.id to it.recordedByName }
-            assertEquals(mapOf(theirs.id to null, ours.id to "mechyfechy"), namesAsMember)
+            assertEquals(mapOf(theirs.id to null, ours.id to "mechobotto"), namesAsMember)
         }
     }
 
@@ -209,8 +209,8 @@ class PartyAccessTest {
         transaction {
             val party = shared()
             assertTrue(canEditParty(Uuid.parse(party.id), member))
-            val creedSeat = seat(party, "CreedBratton")!![PartyMember.id].toString()
-            assertEquals(listOf(creedSeat), findParty(Uuid.parse(party.id), member)!!.yourSeats)
+            val craneSeat = seat(party, "CraneBolton")!![PartyMember.id].toString()
+            assertEquals(listOf(craneSeat), findParty(Uuid.parse(party.id), member)!!.yourSeats)
             assertEquals(emptyList(), findParty(Uuid.parse(party.id), owner)!!.yourSeats)
         }
     }
@@ -256,7 +256,7 @@ class PartyAccessTest {
     fun `a seat with no account behind it grants nothing`() {
         transaction {
             val party = shared()
-            PartyMember.update({ PartyMember.id eq seat(party, "CreedBratton")!![PartyMember.id] }) {
+            PartyMember.update({ PartyMember.id eq seat(party, "CraneBolton")!![PartyMember.id] }) {
                 it[linkedCharacterId] = null
             }
             assertFalse(canEditParty(Uuid.parse(party.id), member))

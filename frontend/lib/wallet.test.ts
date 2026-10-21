@@ -90,7 +90,7 @@ describe("buildWallet", () => {
   it("takes every figure from splitOf rather than dividing anything itself", () => {
     // The claim that matters: the wallet is a fold over the same split the drop's own row shows.
     // If these ever disagree, one of them is a second implementation.
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
     const loot = sold();
     const expected = splitOf(loot, p.members)!;
 
@@ -101,7 +101,7 @@ describe("buildWallet", () => {
   });
 
   it("owes when your seat sold, and is owed when theirs did", () => {
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
     const youSold = buildWallet([p], [pool("pa", [sold()])]);
     // The same drop, sold by them: the payout row is now yours.
     const theySold = buildWallet(
@@ -125,7 +125,7 @@ describe("buildWallet", () => {
   });
 
   it("carries the week a drop fell in, not the week it sold", () => {
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
     const w = buildWallet(
       [p],
       [pool("pa", [sold({ weekStart: "2026-07-16", soldAt: "2026-09-25T10:00:00Z" })])],
@@ -137,7 +137,7 @@ describe("buildWallet", () => {
   it("marks a line whose drop a member bought, so no sale is named for it", () => {
     // The debt is the same one and belongs in the same fold. What differs is only that the line
     // cannot say "sold": nothing was.
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
     const bought = buildWallet([p], [pool("pa", [sold({ amountBasis: "BOUGHT" })])]);
     const listed = buildWallet([p], [pool("pa", [sold()])]);
 
@@ -148,8 +148,8 @@ describe("buildWallet", () => {
   it("folds a person's characters into one debt", () => {
     // The whole point of attributing characters: two of Chris's names are one person to settle up
     // with, not two.
-    const one = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
-    const two = party("pb", [mine("m3", "mechyfechy"), theirs("m4", "CreedBratton2", chris)], {
+    const one = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
+    const two = party("pb", [mine("m3", "mechobotto"), theirs("m4", "CraneBolton2", chris)], {
       bossKey: "kalos",
     });
 
@@ -177,8 +177,8 @@ describe("buildWallet", () => {
     // The wallet is where "who owes who what" is finally answered, so an uneven night has to reach
     // it. Two seats on one drop, one of them on a double share.
     const p = party("pa", [
-      mine("m1", "mechyfechy"),
-      theirs("m2", "CreedBratton", chris),
+      mine("m1", "mechobotto"),
+      theirs("m2", "CraneBolton", chris),
       theirs("m3", "Ana"),
     ]);
     const loot = sold({
@@ -205,9 +205,9 @@ describe("buildWallet", () => {
     // A double share on one of their characters and a single on the other is still ONE person to
     // settle with, and the total is the sum rather than either seat's.
     const p = party("pa", [
-      mine("m1", "mechyfechy"),
-      theirs("m2", "CreedBratton", chris),
-      theirs("m3", "CreedBratton2", chris),
+      mine("m1", "mechobotto"),
+      theirs("m2", "CraneBolton", chris),
+      theirs("m3", "CraneBolton2", chris),
     ]);
     const loot = sold({
       payouts: [
@@ -235,9 +235,9 @@ describe("buildWallet", () => {
     // Two seats, one person, one drop: two transfers, not one line drawn twice. Their ids are what
     // keeps them apart, and the pair (drop, seat) is what makes a line unique.
     const p = party("pa", [
-      mine("m1", "mechyfechy"),
-      theirs("m2", "CreedBratton", chris),
-      theirs("m3", "CreedBratton2", chris),
+      mine("m1", "mechobotto"),
+      theirs("m2", "CraneBolton", chris),
+      theirs("m3", "CraneBolton2", chris),
     ]);
     const wallet = buildWallet(
       [p],
@@ -261,7 +261,7 @@ describe("buildWallet", () => {
 
   it("keeps unattributed characters apart, and says they are characters", () => {
     // Merging two names nobody has claimed would be a guess about who plays what.
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "Rune"), theirs("m3", "Steve")]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "Rune"), theirs("m3", "Steve")]);
     const wallet = buildWallet(
       [p],
       [
@@ -281,8 +281,8 @@ describe("buildWallet", () => {
   });
 
   it("nets the two directions per counterparty", () => {
-    const one = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
-    const two = party("pb", [mine("m3", "mechyfechy"), theirs("m4", "CreedBratton", chris)], {
+    const one = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
+    const two = party("pb", [mine("m3", "mechobotto"), theirs("m4", "CraneBolton", chris)], {
       bossKey: "kalos",
     });
 
@@ -310,7 +310,7 @@ describe("buildWallet", () => {
   });
 
   it("leaves out paid shares and drops still in the pool", () => {
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
     const wallet = buildWallet(
       [p],
       [
@@ -340,7 +340,7 @@ describe("buildWallet", () => {
 
   it("counts a share between two other people rather than owing it", () => {
     // Your party, their business: you are neither end of this transfer.
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "Rune"), theirs("m3", "Steve")]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "Rune"), theirs("m3", "Steve")]);
     const wallet = buildWallet(
       [p],
       [
@@ -362,7 +362,7 @@ describe("buildWallet", () => {
   });
 
   it("counts a share between two of your own characters rather than owing it", () => {
-    const p = party("pa", [mine("m1", "mechyfechy"), mine("m2", "mechymule")]);
+    const p = party("pa", [mine("m1", "mechobotto"), mine("m2", "mechomule")]);
     const wallet = buildWallet([p], [pool("pa", [sold()])]);
 
     expect(wallet.betweenMine).toBe(1);
@@ -372,7 +372,7 @@ describe("buildWallet", () => {
   it("counts a split it cannot read instead of dropping it", () => {
     // A sale naming a seat that is gone. The debt is real and its size is not knowable, so the
     // total has to say it is short rather than look complete.
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)]);
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)]);
     const wallet = buildWallet(
       [p],
       [
@@ -390,7 +390,7 @@ describe("buildWallet", () => {
     // The reason the wallet asks for ?retired=include. A retired config still holds real drops, so
     // handed one the split reads exactly as it did before the party left Party View. Without it
     // this same pool falls into the unreadable branch above and the debt stops being owed.
-    const p = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "CreedBratton", chris)], {
+    const p = party("pa", [mine("m1", "mechobotto"), theirs("m2", "CraneBolton", chris)], {
       retired: true,
     });
     const wallet = buildWallet([p], [pool("pa", [sold({ sellerMemberId: "m1" })])]);
@@ -415,8 +415,8 @@ describe("buildWallet", () => {
   });
 
   it("puts the biggest outstanding relationship first, netted or not", () => {
-    const big = party("pa", [mine("m1", "mechyfechy"), theirs("m2", "Rune")]);
-    const small = party("pb", [mine("m3", "mechyfechy"), theirs("m4", "Steve")], {
+    const big = party("pa", [mine("m1", "mechobotto"), theirs("m2", "Rune")]);
+    const small = party("pb", [mine("m3", "mechobotto"), theirs("m4", "Steve")], {
       bossKey: "kalos",
     });
 
@@ -445,7 +445,7 @@ describe("buildWallet, across a week the roster changed in", () => {
     // normal, so `members` no longer names them. Read against the roster the share would resolve
     // to nobody, splitOf would refuse the whole drop, and a real debt would leave the wallet as
     // "unreadable" with nothing saying whose it was.
-    const you = mine("m1", "mechyfechy");
+    const you = mine("m1", "mechobotto");
     const guest = theirs("m9", "Cara", chris);
     const p = party("pa", [you], { seats: [you, guest] });
     const loot = sold({ payouts: [{ memberId: "m9", paid: false, paidAt: null, shares: 1 }] });

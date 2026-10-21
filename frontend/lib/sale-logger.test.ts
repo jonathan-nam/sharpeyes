@@ -26,13 +26,13 @@ describe("who a sale can name as seller", () => {
       characterId: mine ? `c-${id}` : null,
       linkedCharacterId: linked ? `l-${id}` : null,
     }) as never;
-  const ran = [seat("bro", false, true), seat("jared", false), seat("you", true)];
+  const ran = [seat("brock", false, true), seat("jarvis", false), seat("you", true)];
 
   it("is only your own seats in a party you are only in", () => {
     expect(sellersOf(ran, true).map((s: { id: string }) => s.id)).toEqual(["you"]);
   });
 
   it("in your own party is you first, then anybody not on the site, never another account", () => {
-    expect(sellersOf(ran, false).map((s: { id: string }) => s.id)).toEqual(["you", "jared"]);
+    expect(sellersOf(ran, false).map((s: { id: string }) => s.id)).toEqual(["you", "jarvis"]);
   });
 });

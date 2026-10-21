@@ -136,7 +136,7 @@ class SettlementOffsetDbTest {
                 PartyMember.insert {
                     it[id] = memberId
                     it[PartyMember.partyId] = partyId
-                    it[name] = "Bro$seat"
+                    it[name] = "Brock$seat"
                     it[position] = seat
                     it[standing] = true
                     it[shares] = 1
@@ -168,15 +168,15 @@ class SettlementOffsetDbTest {
         val answer =
             transaction {
                 ensureUser(userId, "offset@example.com")
-                val bro = person(userId, "Bro")
+                val brock = person(userId, "Brock")
                 val (lootId, members) = nightOwing(userId, seats = 2)
                 val result =
                     writeClose(
                         userId,
-                        holderFor(bro),
+                        holderFor(brock),
                         CloseAct(
                             CLOSE_OFFSET,
-                            "offset against Bro",
+                            "offset against Brock",
                             listOf(
                                 OffsetPart(lootId, members[0], 703_703_488),
                                 OffsetPart(lootId, members[1], 139_548_023),
@@ -195,7 +195,7 @@ class SettlementOffsetDbTest {
         // two nights used to be one entry reading 843,251,511 and naming neither. See #514.
         assertEquals(listOf(-703_703_488L, -139_548_023L).sorted(), answer.debts.map { it.amount }.sorted())
         assertTrue(answer.debts.all { it.payouts.size == 1 })
-        assertEquals(setOf("offset against Bro"), answer.debts.map { it.note }.toSet())
+        assertEquals(setOf("offset against Brock"), answer.debts.map { it.note }.toSet())
         // The pools come back with it, because the act moved them too: a second request for them is
         // the repaint this endpoint exists to remove.
         assertTrue(answer.pools.isNotEmpty())
@@ -208,7 +208,7 @@ class SettlementOffsetDbTest {
         // un-offset, and plausible. One transaction cannot end there.
         transaction {
             ensureUser(userId, "offset@example.com")
-            val bro = person(userId, "Bro")
+            val brock = person(userId, "Brock")
             val (lootId, members) = nightOwing(userId, seats = 2)
 
             // The second share is already discharged by an earlier entry, which is what a retry of a
@@ -222,10 +222,10 @@ class SettlementOffsetDbTest {
                 it[SettlementDebt.id] = earlier
                 it[SettlementDebt.userId] = owner
                 it[SettlementDebt.holderKind] = "PERSON"
-                it[SettlementDebt.personId] = bro
+                it[SettlementDebt.personId] = brock
                 it[SettlementDebt.characterName] = null
                 it[SettlementDebt.amount] = -139_548_023
-                it[SettlementDebt.note] = "offset against Bro"
+                it[SettlementDebt.note] = "offset against Brock"
                 it[SettlementDebt.incurredAt] = now
                 it[SettlementDebt.createdAt] = now
             }
@@ -238,10 +238,10 @@ class SettlementOffsetDbTest {
             val result =
                 writeClose(
                     userId,
-                    holderFor(bro),
+                    holderFor(brock),
                     CloseAct(
                         CLOSE_OFFSET,
-                        "offset against Bro",
+                        "offset against Brock",
                         listOf(
                             OffsetPart(lootId, members[0], 703_703_488),
                             OffsetPart(lootId, members[1], 139_548_023),
@@ -262,15 +262,15 @@ class SettlementOffsetDbTest {
         val answer =
             transaction {
                 ensureUser(userId, "offset@example.com")
-                val bro = person(userId, "Bro")
+                val brock = person(userId, "Brock")
                 val (lootId, members) = nightOwing(userId, seats = 1)
                 val result =
                     writeClose(
                         userId,
-                        holderFor(bro),
+                        holderFor(brock),
                         CloseAct(
                             CLOSE_OFFSET,
-                            "offset against Bro",
+                            "offset against Brock",
                             listOf(OffsetPart(lootId, members[0], 703_703_488)),
                             2_412_222_150,
                         ),
@@ -281,7 +281,7 @@ class SettlementOffsetDbTest {
                 result.answer
             }
 
-        // Both pots off one answer. As two requests the card redrew between them and what Bro owed
+        // Both pots off one answer. As two requests the card redrew between them and what Brock owed
         // went down by the shares, then down again by the money, for one press of one button.
         assertEquals(listOf(-703_703_488L), answer.debts.map { it.amount })
         assertEquals(listOf(2_412_222_150L), answer.disposals.map { it.amount })
@@ -293,12 +293,12 @@ class SettlementOffsetDbTest {
         val answer =
             transaction {
                 ensureUser(userId, "offset@example.com")
-                val bro = person(userId, "Bro")
+                val brock = person(userId, "Brock")
                 val (lootId, members) = nightOwing(userId, seats = 1)
                 val result =
                     writeClose(
                         userId,
-                        holderFor(bro),
+                        holderFor(brock),
                         CloseAct(
                             CLOSE_PAID,
                             null,
@@ -323,16 +323,16 @@ class SettlementOffsetDbTest {
         transaction {
             ensureUser(userId, "offset@example.com")
             ensureUser(strangerId, "stranger@example.com")
-            val bro = person(userId, "Bro")
+            val brock = person(userId, "Brock")
             val (lootId, members) = nightOwing(strangerId, seats = 1)
 
             val result =
                 writeClose(
                     userId,
-                    holderFor(bro),
+                    holderFor(brock),
                     CloseAct(
                         CLOSE_OFFSET,
-                        "offset against Bro",
+                        "offset against Brock",
                         listOf(OffsetPart(lootId, members[0], 703_703_488)),
                         2_412_222_150,
                     ),
@@ -355,10 +355,10 @@ class SettlementOffsetDbTest {
             val result =
                 writeClose(
                     userId,
-                    VestigeHolder(kind = "CHARACTER", personId = null, characterName = "bro"),
+                    VestigeHolder(kind = "CHARACTER", personId = null, characterName = "brock"),
                     CloseAct(
                         CLOSE_OFFSET,
-                        "offset against bro",
+                        "offset against brock",
                         listOf(OffsetPart(lootId, members[0], 703_703_488)),
                         null,
                     ),

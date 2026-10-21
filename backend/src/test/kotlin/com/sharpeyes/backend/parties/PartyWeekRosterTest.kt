@@ -211,10 +211,10 @@ class PartyWeekRosterTest {
             saveParty(
                 userId,
                 partyId,
-                SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Bob", "Dana")),
+                SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Bob", "Dara")),
                 Clock.System.now(),
             )
-            assertTrue(findParty(partyId, userId)!!.members.any { it.name == "Dana" })
+            assertTrue(findParty(partyId, userId)!!.members.any { it.name == "Dara" })
         }
     }
 
@@ -225,12 +225,12 @@ class PartyWeekRosterTest {
             val partyId = Uuid.parse(party.id)
             caraForBob(party)
 
-            // Bob leaves the party for good, and Dana joins. The week Cara guested in is not
+            // Bob leaves the party for good, and Dara joins. The week Cara guested in is not
             // about either of them, and must not be rewritten by a decision taken after it.
             saveParty(
                 userId,
                 partyId,
-                SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Dana")),
+                SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Dara")),
                 Clock.System.now(),
             )
 
@@ -430,12 +430,12 @@ class PartyWeekRosterTest {
         }
     }
 
-    /** Bob out, Dana in, as the party ITSELF. The edit every test below is about. */
-    private fun danaForBob(party: PartyResponse) =
+    /** Bob out, Dara in, as the party ITSELF. The edit every test below is about. */
+    private fun daraForBob(party: PartyResponse) =
         saveParty(
             userId,
             Uuid.parse(party.id),
-            SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Dana")),
+            SavePartyRequest(party.characterId, "limbo", listOf("Steve", "Dara")),
             Clock.System.now(),
         )
 
@@ -448,10 +448,10 @@ class PartyWeekRosterTest {
             val party = trio()
             // Nothing has dropped and nobody has ticked the boss, so the config is still a template
             // for this week: swapping a member before the run is the party that runs it.
-            danaForBob(party)
+            daraForBob(party)
 
             val shown = findParty(Uuid.parse(party.id), userId)!!
-            assertEquals(listOf("Rune", "Steve", "Dana"), shown.members.map { it.name })
+            assertEquals(listOf("Rune", "Steve", "Dara"), shown.members.map { it.name })
             assertTrue(shown.usualRoster, "nothing to spell out")
         }
     }
@@ -462,14 +462,14 @@ class PartyWeekRosterTest {
             val party = trio()
             addGrindstoneOn(party, todayUtc())
 
-            danaForBob(party)
+            daraForBob(party)
 
-            // Bob ran this week and the grindstone is still in the pool. Putting Dana in his place
+            // Bob ran this week and the grindstone is still in the pool. Putting Dara in his place
             // now would owe her a share of a night she was not in.
             val shown = findParty(Uuid.parse(party.id), userId)!!
             assertEquals(listOf("Rune", "Steve", "Bob"), shown.members.map { it.name })
             assertFalse(shown.usualRoster)
-            assertEquals(listOf("Rune", "Steve", "Dana"), nextWeek(party).members.map { it.name })
+            assertEquals(listOf("Rune", "Steve", "Dara"), nextWeek(party).members.map { it.name })
         }
     }
 
@@ -482,13 +482,13 @@ class PartyWeekRosterTest {
             // still a night three people turned up for.
             setPartyClear(party, boss, bossResetOf(boss)!!, cleared = true, now = Clock.System.now())
 
-            danaForBob(party)
+            daraForBob(party)
 
             assertEquals(
                 listOf("Rune", "Steve", "Bob"),
                 findParty(Uuid.parse(party.id), userId)!!.members.map { it.name },
             )
-            assertEquals(listOf("Rune", "Steve", "Dana"), nextWeek(party).members.map { it.name })
+            assertEquals(listOf("Rune", "Steve", "Dara"), nextWeek(party).members.map { it.name })
         }
     }
 

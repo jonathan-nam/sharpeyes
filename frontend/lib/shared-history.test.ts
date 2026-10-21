@@ -8,11 +8,11 @@ import type { Loot } from "@/types/loot";
 import type { Party, PartyMember } from "@/types/party";
 import type { SharedBook } from "@/types/page";
 
-// Mechy owns the party and Creed (Bro, `p-bro` in Mechy's book) sits in it. Read from Bro's side.
+// Mecho owns the party and Crane (Brock, `p-brock` in Mecho's book) sits in it. Read from Brock's side.
 
 const seat = (over: Partial<PartyMember>): PartyMember => ({
   id: "m1",
-  name: "mechyfechy",
+  name: "mechobotto",
   personId: null,
   personName: null,
   characterId: null,
@@ -23,18 +23,18 @@ const seat = (over: Partial<PartyMember>): PartyMember => ({
   ...over,
 });
 
-const ownerSeat = seat({ id: "m1", name: "mechyfechy", characterId: "char-mech" });
-const broSeat = seat({
+const ownerSeat = seat({ id: "m1", name: "mechobotto", characterId: "char-mech" });
+const brockSeat = seat({
   id: "m2",
-  name: "CreedBratton",
-  personId: "p-bro",
-  personName: "Bro",
-  linkedCharacterId: "char-creed",
+  name: "CraneBolton",
+  personId: "p-brock",
+  personName: "Brock",
+  linkedCharacterId: "char-crane",
 });
 
 const party: Party = {
   id: "pa",
-  slug: "mechyfechy/limbo",
+  slug: "mechobotto/limbo",
   characterId: "char-mech",
   solo: false,
   retired: false,
@@ -42,8 +42,8 @@ const party: Party = {
   bossKey: "limbo",
   difficulty: null,
   minutes: null,
-  members: [ownerSeat, broSeat],
-  seats: [ownerSeat, broSeat],
+  members: [ownerSeat, brockSeat],
+  seats: [ownerSeat, brockSeat],
   usualRoster: true,
   skippedThisPeriod: false,
   oneOff: false,
@@ -56,7 +56,7 @@ const party: Party = {
   updatedAt: "2026-07-01T00:00:00Z",
 };
 
-// Mechy sold it and owes Bro half.
+// Mecho sold it and owes Brock half.
 const sold: Loot = {
   id: "l1",
   dropKey: "grindstone-of-faith",
@@ -85,8 +85,8 @@ const sold: Loot = {
 
 const book = (over: Partial<SharedBook> = {}): SharedBook => ({
   ownerName: "Mech",
-  personId: "p-bro",
-  ownerPersonId: "bro-p-mech",
+  personId: "p-brock",
+  ownerPersonId: "brock-p-mech",
   parties: [party],
   pools: [{ partyId: "pa", loot: [sold] }],
   tranches: [],
@@ -101,10 +101,10 @@ describe("somebody else's book from your side", () => {
   it("files their party under your character, with your seat yours and theirs a person", () => {
     const [flipped] = fromYourSide(book()).parties;
 
-    expect(flipped!.characterId).toBe("char-creed");
+    expect(flipped!.characterId).toBe("char-crane");
     expect(flipped!.seats.map((m) => [m.name, m.characterId, m.personId])).toEqual([
-      ["mechyfechy", null, "bro-p-mech"],
-      ["CreedBratton", "char-creed", null],
+      ["mechobotto", null, "brock-p-mech"],
+      ["CraneBolton", "char-crane", null],
     ]);
   });
 
@@ -112,12 +112,12 @@ describe("somebody else's book from your side", () => {
     const side = fromYourSide(book());
     const [entry] = buildDropLog(side.parties, side.pools, {}).entries;
 
-    expect(entry!.characterId).toBe("char-creed");
-    expect(entry!.sellerName).toBe("mechyfechy");
+    expect(entry!.characterId).toBe("char-crane");
+    expect(entry!.sellerName).toBe("mechobotto");
     const share = splitOf(sold, party.seats)!.shares.find((s) => s.memberId === "m2")!;
     expect(entry!.yourTake).toBe(share.nets);
     expect(entry!.yourTake).not.toBe(entry!.pooled! - share.nets);
-    expect(entry!.ranWith).toEqual(["mechyfechy"]);
+    expect(entry!.ranWith).toEqual(["mechobotto"]);
   });
 
   it("is in your settled record once their payout to you is marked", () => {
@@ -134,7 +134,7 @@ describe("somebody else's book from your side", () => {
           { id: "s1", holder: SELF_HOLDER, lootIds: ["l1"], unpaid: 0, settledAt: "2026-07-23" },
           {
             id: "s2",
-            holder: { kind: "PERSON", personId: "p-bro", characterName: null },
+            holder: { kind: "PERSON", personId: "p-brock", characterName: null },
             lootIds: ["l1"],
             unpaid: 0,
             settledAt: "2026-07-23",
@@ -143,18 +143,21 @@ describe("somebody else's book from your side", () => {
       }),
     );
 
-    expect(side.settlements.map((s) => holderKey(s.holder))).toEqual(["person:bro-p-mech", "self"]);
+    expect(side.settlements.map((s) => holderKey(s.holder))).toEqual([
+      "person:brock-p-mech",
+      "self",
+    ]);
     expect([...closedByHolder(side.settlements).closed]).toEqual([
-      "person:bro-p-mech|l1",
+      "person:brock-p-mech|l1",
       "self|l1",
     ]);
-    expect(side.names.get("person:bro-p-mech")).toBe("Mech");
+    expect(side.names.get("person:brock-p-mech")).toBe("Mech");
   });
 
   it("keeps the owner one pile when you never added them as a person", () => {
     const [flipped] = fromYourSide(book({ ownerPersonId: null })).parties;
 
-    expect(flipped!.seats[0]!.personId).toBe("owner-of:p-bro");
+    expect(flipped!.seats[0]!.personId).toBe("owner-of:p-brock");
   });
 
   it("adds nothing when nobody shares a book with you", () => {

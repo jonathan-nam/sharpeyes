@@ -28,7 +28,7 @@ class GmsWorldTest {
     private val verifiedAgainst =
         mapOf(
             "Bane" to GmsWorld.BERA,
-            "mechyfechy" to GmsWorld.SCANIA,
+            "mechobotto" to GmsWorld.SCANIA,
             "Shapaz" to GmsWorld.KRONOS,
             "GigaTaco5" to GmsWorld.HYPERION,
         )

@@ -113,10 +113,10 @@ const pool = (loot: Loot[]): PartyLootPool => ({ partyId: "pa", loot });
 const sold = (pieces: number, recordedAt = "2030-01-01T00:00:00Z") => [{ pieces, recordedAt }];
 
 const SELF: Holder = { kind: "SELF", personId: null, characterName: null };
-const BRO: Holder = { kind: "PERSON", personId: "p-bro", characterName: null };
+const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
 
 /**
- * A night YOU looted all of: 60 pieces, half of them Bro's.
+ * A night YOU looted all of: 60 pieces, half of them Brock's.
  *
  * Your own pile holding somebody else's pieces, which is the shape the fate list used to have no
  * answer for. A duo rather than a solo, because a solo owes nobody and the surplus never appears.
@@ -127,7 +127,7 @@ const BRO: Holder = { kind: "PERSON", personId: "p-bro", characterName: null };
 const yourPile = (
   kept = 0,
   bought = { pieces: 0, paid: 0 },
-  /** A sale, and how many of its pieces it named as Bro's. See V56. */
+  /** A sale, and how many of its pieces it named as Brock's. See V56. */
   sold: { pieces: number; amount: number; theirs?: number } | null = null,
 ) => {
   const rows = [
@@ -142,7 +142,7 @@ const yourPile = (
             pieces: sold.pieces,
             amount: sold.amount,
             disposition: "SOLD",
-            shares: sold.theirs ? [{ holder: BRO, pieces: sold.theirs }] : [],
+            shares: sold.theirs ? [{ holder: BROCK, pieces: sold.theirs }] : [],
           },
         ]
       : []),
@@ -151,8 +151,8 @@ const yourPile = (
     outstanding(
       [
         party([
-          seat("m1", "Husky", { mine: true }),
-          seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+          seat("m1", "Hunt", { mine: true }),
+          seat("m2", "BrockChar", { person: ["p-brock", "Brock"] }),
         ]),
       ],
       [pool([{ ...coupon(60), bundles: 2, bundlesBy: [{ memberId: "m1", bundles: 2 }] }])],
@@ -181,8 +181,8 @@ const yourPile = (
 const squarePile = () => {
   const parties = [
     party([
-      seat("m1", "Husky", { mine: true }),
-      seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+      seat("m1", "Hunt", { mine: true }),
+      seat("m2", "BrockChar", { person: ["p-brock", "Brock"] }),
     ]),
   ];
   const pools = [pool([{ ...coupon(60), bundles: 2 }])];
@@ -224,7 +224,7 @@ describe("the answers a pile can be given", () => {
 });
 
 // The dead end this file exists to close. Your own card offered SOLD and KEPT, and KEPT stops at your
-// own share, so the 30 pieces of Bro's in your inventory could only ever be sold: a pile you meant to
+// own share, so the 30 pieces of Brock's in your inventory could only ever be sold: a pile you meant to
 // keep sat at "30 of 60 accounted for" forever, with nothing on screen saying which answer was
 // missing. Nobody may be forced to sell a coupon to make a count come out.
 describe("whether the answers can account for the whole pile", () => {
@@ -247,8 +247,8 @@ describe("whether the answers can account for the whole pile", () => {
       outstanding(
         [
           party([
-            seat("m1", "Husky", { mine: true }),
-            seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+            seat("m1", "Hunt", { mine: true }),
+            seat("m2", "BrockChar", { person: ["p-brock", "Brock"] }),
           ]),
         ],
         [pool([{ ...coupon(60), bundles: 2, bundlesBy: [{ memberId: "m2", bundles: 2 }] }])],
@@ -257,7 +257,7 @@ describe("whether the answers can account for the whole pile", () => {
       ),
       new Map(),
     ).find((l) => l.holder.kind === "PERSON")!;
-    expect(theirs.holder).toEqual(BRO);
+    expect(theirs.holder).toEqual(BROCK);
     expect(coversThePile(theirs)).toBe(true);
   });
 });
@@ -361,8 +361,8 @@ describe("whether the card has anything to ask", () => {
       alsoHeldByYou(
         [
           party([
-            seat("m1", "Husky", { mine: true }),
-            seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+            seat("m1", "Hunt", { mine: true }),
+            seat("m2", "BrockChar", { person: ["p-brock", "Brock"] }),
           ]),
         ],
         [pool([{ ...coupon(60), bundles: 2 }])],
@@ -400,11 +400,13 @@ describe("the nights the card's queue lists", () => {
     weekStart: "2026-08-06",
     droppedOn,
     recordedAt,
-    looterName: "Husky",
+    looterName: "Hunt",
     ran: [],
     pieces,
     closed,
-    transfers: to ? [{ fromId: "self", toId: "person:p-bro", from: "you", to, pieces: owed }] : [],
+    transfers: to
+      ? [{ fromId: "self", toId: "person:p-brock", from: "you", to, pieces: owed }]
+      : [],
   });
 
   const pileOf = (drops: ReturnType<typeof night>[]): HolderLedger => ({
@@ -426,20 +428,20 @@ describe("the nights the card's queue lists", () => {
   });
 
   it("lists a night that owes somebody", () => {
-    const { owing } = queueOf(pileOf([night("l1", { to: "Bro" })]));
+    const { owing } = queueOf(pileOf([night("l1", { to: "Brock" })]));
     expect(owing.map((d) => d.lootId)).toEqual(["l1"]);
   });
 
   it("leaves out a night that divided the way it fell, which is most of them", () => {
     // The whole complaint. Nothing is derived from what became of those coupons, so the row carried
     // a boss, a looter, a week and no question, and there were thirty of them.
-    const { owing } = queueOf(pileOf([night("l1"), night("l2"), night("l3", { to: "Bro" })]));
+    const { owing } = queueOf(pileOf([night("l1"), night("l2"), night("l3", { to: "Brock" })]));
     expect(owing.map((d) => d.lootId)).toEqual(["l3"]);
   });
 
   it("counts what it left out rather than going quiet about it", () => {
     // A missing item beats a wrong count, and a count that changed still gets said. See CLAUDE.md.
-    const { clean } = queueOf(pileOf([night("l1"), night("l2"), night("l3", { to: "Bro" })]));
+    const { clean } = queueOf(pileOf([night("l1"), night("l2"), night("l3", { to: "Brock" })]));
     expect(clean).toBe(2);
   });
 
@@ -448,7 +450,7 @@ describe("the nights the card's queue lists", () => {
     // closed it, who with, and what it wrote off. Counting it here as well would be two places to
     // disagree; counting it as CLEAN would say the debt never existed.
     const { owing, clean } = queueOf(
-      pileOf([night("l1", { to: "Bro", closed: true }), night("l2")]),
+      pileOf([night("l1", { to: "Brock", closed: true }), night("l2")]),
     );
     expect([owing.length, clean]).toEqual([0, 1]);
   });
@@ -459,13 +461,13 @@ describe("the nights the card's queue lists", () => {
   });
 
   it("counts the nights whose debt has been answered, rather than listing them", () => {
-    // Jonathan's five rows. Their coupons were sold and priced months ago, the money is on Bro's
+    // A user's five rows. Their coupons were sold and priced months ago, the money is on Brock's
     // Settlement card, and the header above them already said nothing was outstanding. They were the
     // only kind of finished night still drawn.
     const pile = {
-      ...pileOf([night("l1", { to: "Bro" }), night("l2", { to: "Bro" })]),
+      ...pileOf([night("l1", { to: "Brock" }), night("l2", { to: "Brock" })]),
       answered: 60,
-      answeredByCreditor: new Map([["person:p-bro", sold(60)]]),
+      answeredByCreditor: new Map([["person:p-brock", sold(60)]]),
     };
     const { owing, answered } = queueOf(pile);
     expect([owing.length, answered]).toEqual([0, 2]);
@@ -476,27 +478,27 @@ describe("the nights the card's queue lists", () => {
     // keep BOTH up, on the reasoning that a tranche names a person and never a boss so either could
     // be the part still owed. What that cost is the test below.
     const pile = {
-      ...pileOf([night("l1", { to: "Bro" }), night("l2", { to: "Bro" })]),
+      ...pileOf([night("l1", { to: "Brock" }), night("l2", { to: "Brock" })]),
       answered: 30,
-      answeredByCreditor: new Map([["person:p-bro", sold(30)]]),
+      answeredByCreditor: new Map([["person:p-brock", sold(30)]]),
     };
     const { owing, answered } = queueOf(pile);
     expect([owing.map((d) => d.lootId), answered]).toEqual([["l1"], 1]);
   });
 
   it("does not put a night back up because a LATER one was logged", () => {
-    // Jonathan's report. Five nights owing Bro 150, all answered by two sales, so the queue was
+    // A user's report. Five nights owing Brock 150, all answered by two sales, so the queue was
     // empty. One Hard Kaling entered that week owed 30 more, and all six came back including the
     // five already sold. A night that has been answered for is finished, and a night logged today
     // cannot un-finish it.
     const before = {
       ...pileOf([
-        night("l1", { to: "Bro", owed: 10 }),
-        night("l2", { to: "Bro", owed: 60 }),
-        night("l3", { to: "Bro", owed: 60 }),
+        night("l1", { to: "Brock", owed: 10 }),
+        night("l2", { to: "Brock", owed: 60 }),
+        night("l3", { to: "Brock", owed: 60 }),
       ]),
       answered: 130,
-      answeredByCreditor: new Map([["person:p-bro", sold(130)]]),
+      answeredByCreditor: new Map([["person:p-brock", sold(130)]]),
     };
     expect(queueOf(before).owing).toEqual([]);
 
@@ -506,7 +508,7 @@ describe("the nights the card's queue lists", () => {
         ...before.drops,
         // Logged after both sales, so neither can have come off it however new it is.
         night("l4", {
-          to: "Bro",
+          to: "Brock",
           owed: 30,
           droppedOn: "2026-08-14",
           recordedAt: "2030-02-01T00:00:00Z",
@@ -523,28 +525,28 @@ describe("the nights the card's queue lists", () => {
     // reads the day it FELL and the oldest night is the one left owing. See spendSales.
     const pile = {
       ...pileOf([
-        night("newest", { to: "Bro", owed: 30, droppedOn: "2026-08-14" }),
-        night("oldest", { to: "Bro", owed: 30, droppedOn: "2026-08-13" }),
+        night("newest", { to: "Brock", owed: 30, droppedOn: "2026-08-14" }),
+        night("oldest", { to: "Brock", owed: 30, droppedOn: "2026-08-13" }),
       ]),
       answered: 30,
-      answeredByCreditor: new Map([["person:p-bro", sold(30)]]),
+      answeredByCreditor: new Map([["person:p-brock", sold(30)]]),
     };
     expect(queueOf(pile).owing.map((d) => d.lootId)).toEqual(["oldest"]);
   });
 
   it("never spends one creditor's answered coupons on a night owed to another", () => {
-    // The cross-person netting `owes` refuses, one screen along. Bro's sold coupons cannot finish a
-    // night Zaddy is owed, however square Bro's own side is.
-    const owedZaddy = {
-      ...night("l2", { to: "Zaddy" }),
+    // The cross-person netting `owes` refuses, one screen along. Brock's sold coupons cannot finish a
+    // night Zabby is owed, however square Brock's own side is.
+    const owedZabby = {
+      ...night("l2", { to: "Zabby" }),
       transfers: [
-        { fromId: "self", toId: "character:zaddy", from: "you", to: "Zaddy", pieces: 30 },
+        { fromId: "self", toId: "character:zabby", from: "you", to: "Zabby", pieces: 30 },
       ],
     };
     const pile = {
-      ...pileOf([night("l1", { to: "Bro" }), owedZaddy]),
+      ...pileOf([night("l1", { to: "Brock" }), owedZabby]),
       answered: 300,
-      answeredByCreditor: new Map([["person:p-bro", sold(300)]]),
+      answeredByCreditor: new Map([["person:p-brock", sold(300)]]),
     };
     expect(queueOf(pile).owing.map((d) => d.lootId)).toEqual(["l2"]);
   });
@@ -553,8 +555,8 @@ describe("the nights the card's queue lists", () => {
     // The other way a pile comes to owe nothing: the creditor is holding as much of yours as you
     // are of theirs. `owes` nets per creditor, so the queue has to read the same figure the header
     // does or the two disagree about whether anything is left.
-    const pile = pileOf([night("l1", { to: "Bro" })]);
-    const { owing, answered } = queueOf(pile, new Map([["person:p-bro", 60]]));
+    const pile = pileOf([night("l1", { to: "Brock" })]);
+    const { owing, answered } = queueOf(pile, new Map([["person:p-brock", 60]]));
     expect([owing.length, answered]).toEqual([0, 1]);
   });
 
@@ -563,9 +565,9 @@ describe("the nights the card's queue lists", () => {
     // was paid in money. The closed one is the Settled View's, so only the answered one is counted
     // here, and neither is listed.
     const pile = {
-      ...pileOf([night("l1", { to: "Bro", closed: true }), night("l2", { to: "Bro" })]),
+      ...pileOf([night("l1", { to: "Brock", closed: true }), night("l2", { to: "Brock" })]),
       answered: 60,
-      answeredByCreditor: new Map([["person:p-bro", sold(60)]]),
+      answeredByCreditor: new Map([["person:p-brock", sold(60)]]),
     };
     const { answered, owing } = queueOf(pile);
     expect([owing.length, answered]).toEqual([0, 1]);
@@ -630,8 +632,8 @@ describe("which of your own piles the ledger draws", () => {
       alsoHeldByYou(
         [
           party([
-            seat("m1", "Husky", { mine: true }),
-            seat("m2", "BroChar", { person: ["p-bro", "Bro"] }),
+            seat("m1", "Hunt", { mine: true }),
+            seat("m2", "BrockChar", { person: ["p-brock", "Brock"] }),
           ]),
         ],
         [pool([{ ...coupon(60), bundles: 2 }])],
@@ -765,46 +767,46 @@ describe("the piles the ledger holds back", () => {
 // A sale is two numbers again: how many went and for how much. Who gets what comes off the debts the
 // ledger already knows, which is what #362's per-creditor box asked the reader to work out.
 describe("distributing a sale over the people it owes", () => {
-  const bro = { key: "person:p-bro", name: "Bro", pieces: 70 };
-  const jared = { key: "person:p-jared", name: "Jared", pieces: 20 };
+  const brock = { key: "person:p-brock", name: "Brock", pieces: 70 };
+  const jarvis = { key: "person:p-jarvis", name: "Jarvis", pieces: 20 };
 
   it("pays the debts off first, biggest first, and leaves the rest yours", () => {
     // 100 sold against 90 of debt: both settled, and 10 of the money is your own.
-    const out = distributeSale(100, [jared, bro]);
+    const out = distributeSale(100, [jarvis, brock]);
     expect(out.map((s) => [s.creditor.name, s.pieces])).toEqual([
-      ["Bro", 70],
-      ["Jared", 20],
+      ["Brock", 70],
+      ["Jarvis", 20],
     ]);
   });
 
   it("stops at the sale, so a part-sale credits nobody for coupons still sitting there", () => {
-    // 50 sold against 90 owed. The biggest debt takes it, and Jared's is untouched: crediting him a
-    // slice of a sale that did not cover Bro would state money for pieces that never went.
-    expect(distributeSale(50, [bro, jared])).toEqual([{ creditor: bro, pieces: 50 }]);
+    // 50 sold against 90 owed. The biggest debt takes it, and Jarvis's is untouched: crediting him a
+    // slice of a sale that did not cover Brock would state money for pieces that never went.
+    expect(distributeSale(50, [brock, jarvis])).toEqual([{ creditor: brock, pieces: 50 }]);
   });
 
   it("never credits a creditor past their own debt", () => {
-    expect(distributeSale(500, [bro])).toEqual([{ creditor: bro, pieces: 70 }]);
+    expect(distributeSale(500, [brock])).toEqual([{ creditor: brock, pieces: 70 }]);
   });
 
   it("gives the same answer whatever order the debts arrive in", () => {
     // The order is arbitrary between two creditors and has to be, so it is fixed rather than
     // incidental: nothing about the coupons themselves says whose went to market.
-    expect(distributeSale(80, [bro, jared])).toEqual(distributeSale(80, [jared, bro]));
+    expect(distributeSale(80, [brock, jarvis])).toEqual(distributeSale(80, [jarvis, brock]));
   });
 
   it("has nothing to say about a sale of nothing, or a pile that owes nobody", () => {
-    expect(distributeSale(0, [bro])).toEqual([]);
+    expect(distributeSale(0, [brock])).toEqual([]);
     expect(distributeSale(50, [])).toEqual([]);
     // A creditor already square drops out rather than taking a zero share.
-    expect(distributeSale(50, [{ ...bro, pieces: 0 }])).toEqual([]);
+    expect(distributeSale(50, [{ ...brock, pieces: 0 }])).toEqual([]);
   });
 });
 
 describe("which recorded sales the card still draws a row for", () => {
   const SELF: Holder = { kind: "SELF", personId: null, characterName: null };
-  const BRO: Holder = { kind: "PERSON", personId: "p-bro", characterName: null };
-  const JARED: Holder = { kind: "PERSON", personId: "p-jared", characterName: null };
+  const BROCK: Holder = { kind: "PERSON", personId: "p-brock", characterName: null };
+  const JARVIS: Holder = { kind: "PERSON", personId: "p-jarvis", characterName: null };
 
   const tranche = (id: string, shares?: { holder: Holder }[]) => ({ id, holder: SELF, shares });
   /** decidedSales' answer: which sales somebody has said what happens to the money of. */
@@ -812,24 +814,24 @@ describe("which recorded sales the card still draws a row for", () => {
     new Map(pairs.map(([id, who]) => [id, new Set(who.map(holderKey))]));
 
   it("keeps one nobody has decided about, its money still sitting in your hands", () => {
-    // Naming Bro is not settling with Bro: until somebody says whether the money is sent or comes
+    // Naming Brock is not settling with Brock: until somebody says whether the money is sent or comes
     // off his debt, the sale is the thing still to deal with.
-    expect(stillAsking([tranche("t1", [{ holder: BRO }])], decided()).map((t) => t.id)).toEqual([
+    expect(stillAsking([tranche("t1", [{ holder: BROCK }])], decided()).map((t) => t.id)).toEqual([
       "t1",
     ]);
   });
 
   it("drops one whose money has been paid out or offset, count and all", () => {
-    // Jonathan's report. A finished sale is not this card's, and a count of them is not either: it
+    // A user's report. A finished sale is not this card's, and a count of them is not either: it
     // was still finished work standing on a worklist, one line further down.
-    expect(stillAsking([tranche("t1", [{ holder: BRO }])], decided(["t1", [BRO]]))).toEqual([]);
+    expect(stillAsking([tranche("t1", [{ holder: BROCK }])], decided(["t1", [BROCK]]))).toEqual([]);
   });
 
   it("keeps one settled with only one of the two people whose coupons were in it", () => {
     // One sale can hold two piles' worth, and each of them decides separately. Dropping it on the
     // first would take the second person's money off the only screen that says it is undecided.
-    const both = [{ holder: BRO }, { holder: JARED }];
-    expect(stillAsking([tranche("t1", both)], decided(["t1", [BRO]])).map((t) => t.id)).toEqual([
+    const both = [{ holder: BROCK }, { holder: JARVIS }];
+    expect(stillAsking([tranche("t1", both)], decided(["t1", [BROCK]])).map((t) => t.id)).toEqual([
       "t1",
     ]);
   });
@@ -852,11 +854,11 @@ describe("which recorded sales the card still draws a row for", () => {
     const shown = stillAsking(
       [
         tranche("t1"),
-        tranche("t2", [{ holder: BRO }]),
-        tranche("t3", [{ holder: BRO }]),
-        tranche("t4", [{ holder: BRO }]),
+        tranche("t2", [{ holder: BROCK }]),
+        tranche("t3", [{ holder: BROCK }]),
+        tranche("t4", [{ holder: BROCK }]),
       ],
-      decided(["t2", [BRO]], ["t4", [BRO]]),
+      decided(["t2", [BROCK]], ["t4", [BROCK]]),
     );
     expect(shown.map((t) => t.id)).toEqual(["t1", "t3"]);
   });
@@ -864,18 +866,18 @@ describe("which recorded sales the card still draws a row for", () => {
   it("gives a sale back the moment the decision behind it is taken off", () => {
     // The way back, and the reason dropping a finished sale strands nothing. Undoing the offset on
     // the Settlement card puts the money in your hands undecided, and the row returns here.
-    const sales = [tranche("t1", [{ holder: BRO }])];
-    expect(stillAsking(sales, decided(["t1", [BRO]]))).toEqual([]);
+    const sales = [tranche("t1", [{ holder: BROCK }])];
+    expect(stillAsking(sales, decided(["t1", [BROCK]]))).toEqual([]);
     expect(stillAsking(sales, decided())).toEqual(sales);
   });
 });
 
-// The bug Jonathan reported, at its smallest: the Sale Ledger said Extreme Kalos owed Bro 60 while the
+// The reported bug, at its smallest: the Sale Ledger said Extreme Kalos owed Brock 60 while the
 // Settlement Ledger said 20 off the same night. The fold here was ALL-OR-NOTHING, so a night whose
 // credit could not finish it OUTRIGHT was drawn at its gross figure while the header above had already
 // counted the answer. One night, one creditor, and the card contradicting itself.
 describe("a night the answer only part covers", () => {
-  /** 30 of the 60 in your inventory are Bro's, and a sale has named 20 of them. */
+  /** 30 of the 60 in your inventory are Brock's, and a sale has named 20 of them. */
   const partly = () =>
     yourPile(0, { pieces: 0, paid: 0 }, { pieces: 20, amount: 400 * M, theirs: 20 });
 
@@ -897,7 +899,9 @@ describe("a night the answer only part covers", () => {
   it("names the creditor for what is left, not for what was answered", () => {
     // The header's own words. It totalled the transfers itself and took off only their own coupons, so
     // it went on naming a debt a sale had already priced.
-    expect(owedByCreditor(partly())).toEqual([{ key: "person:p-bro", name: "Bro", pieces: 10 }]);
+    expect(owedByCreditor(partly())).toEqual([
+      { key: "person:p-brock", name: "Brock", pieces: 10 },
+    ]);
   });
 
   it("still asks, because 10 pieces are still somebody else's", () => {
@@ -913,16 +917,16 @@ describe("a night the answer only part covers", () => {
   });
 
   it("counts a creditor's own coupons in your inventory as the answer too", () => {
-    // The credit `owes` has always netted, now reaching the rows as well. Bro holding 12 of yours
+    // The credit `owes` has always netted, now reaching the rows as well. Brock holding 12 of yours
     // makes 12 of what you owe him nothing changing hands, so the night says 18 rather than 30.
-    const held = new Map([["person:p-bro", 12]]);
+    const held = new Map([["person:p-brock", 12]]);
     expect(queueOf(yourPile(), held).owing[0]!.transfers.map((t) => t.pieces)).toEqual([18]);
     expect(outstandingOf(yourPile(), held)).toBe(18);
   });
 
   it("stops a SECOND sale attributing pieces the first already answered", () => {
     // owedByCreditor is what feeds distributeSale, so netting the answer there is also what keeps one
-    // debt from being answered twice: 30 were Bro's, 20 are priced, and 10 are left to name.
+    // debt from being answered twice: 30 were Brock's, 20 are priced, and 10 are left to name.
     expect(distributeSale(30, owedByCreditor(partly())).map((s) => s.pieces)).toEqual([10]);
   });
 

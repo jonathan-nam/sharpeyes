@@ -363,23 +363,23 @@ class PartyPeriodSkipTest {
     @Test
     fun `a party taken off this week frees its seats for a ONE-OFF that week`() {
         transaction {
-            val warrior = mine("warrior2020")
-            val acorn = mine("acornacorn")
+            val warrior = mine("warden2030")
+            val acorn = mine("acmeacme")
             val kalos = bossIdForKey("kalos-the-guardian")!!
-            val standing = partyOn(warrior, "kalos-the-guardian", members = listOf("iPhone69C"))
-            val held = Refusal("iPhone69C is already in warrior2020's party for this boss. Remove them from it first.")
+            val standing = partyOn(warrior, "kalos-the-guardian", members = listOf("iPager42X"))
+            val held = Refusal("iPager42X is already in warden2030's party for this boss. Remove them from it first.")
 
             fun check(oneOff: Boolean) =
                 validateBossRoster(
                     userId,
                     kalos,
                     exclude = null,
-                    rosterOf(acorn, listOf("iPhone69C")),
+                    rosterOf(acorn, listOf("iPager42X")),
                     Clock.System.now(),
                     oneOff = oneOff,
                 )
 
-            // While the party is on it holds iPhone69C's clear, whichever kind is being written.
+            // While the party is on it holds iPager42X's clear, whichever kind is being written.
             assertEquals(held, check(oneOff = true))
             assertEquals(held, check(oneOff = false))
 
@@ -396,9 +396,9 @@ class PartyPeriodSkipTest {
 
             // And the pair still cannot be on at once: putting the standing party back while the
             // night is armed comes back through the same rule, from the other end.
-            val night = partyOn(acorn, "kalos-the-guardian", oneOff = true, members = listOf("iPhone69C"))
+            val night = partyOn(acorn, "kalos-the-guardian", oneOff = true, members = listOf("iPager42X"))
             assertEquals(
-                Refusal("iPhone69C is already in acornacorn's party for this boss. Remove them from it first."),
+                Refusal("iPager42X is already in acmeacme's party for this boss. Remove them from it first."),
                 validateBossRoster(
                     userId,
                     kalos,
