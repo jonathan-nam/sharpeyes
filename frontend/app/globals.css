@@ -6932,6 +6932,16 @@ button.link:disabled {
   cursor: default;
 }
 
+/* The mark on a party you are only in: a status, not a button, so it neither points nor lights up. */
+.run-mark.is-shown {
+  display: inline-block;
+  cursor: default;
+}
+
+.run-mark.is-shown:not(.is-cleared):hover {
+  color: transparent;
+}
+
 /* Done, so the run recedes and the order becomes what is left, the way a cleared party row does.
    Only the boss half: a person's cell still says which character they bring, and greying the whole
    row would take the record of the night down with the tick. */

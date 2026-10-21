@@ -7,6 +7,7 @@ import { apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { onFriendsChanged } from "@/lib/friends-changed";
 import { useAuth } from "@/lib/use-auth";
 import { useDismiss } from "@/lib/use-dismiss";
+import { useLive } from "@/lib/use-live";
 import type { AppNotification, Notifications } from "@/types/notifications";
 
 const NOTIFICATIONS_KEY = "/api/notifications";
@@ -40,6 +41,8 @@ export function NotificationBell() {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => onFriendsChanged(() => void call(NOTIFICATIONS_KEY).catch(() => {})), []);
+  // A request arriving, or answered from another tab, shows without a click.
+  useLive("notifications", () => void call(NOTIFICATIONS_KEY).catch(() => {}));
 
   function toggle() {
     const opening = !open;

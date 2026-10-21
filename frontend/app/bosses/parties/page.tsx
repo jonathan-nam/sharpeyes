@@ -2,6 +2,7 @@
 
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
+import { useLive } from "@/lib/use-live";
 import Link from "next/link";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AddForWeek } from "@/components/add-for-week";
@@ -115,6 +116,7 @@ const VESTIGE = "vestige-of-erion";
 // Only the live view is cached. A past week is a deliberate click and worth a round-trip, and
 // caching every week stepped through would grow without bound. Same reasoning as the boss page.
 const clearsUrl = (week: string | null) => (week ? `${CLEARS_KEY}?week=${week}` : CLEARS_KEY);
+const seatedUrl = (week: string | null) => (week ? `${SEATED_KEY}?week=${week}` : SEATED_KEY);
 const partiesUrl = (week: string | null) =>
   week ? `${PARTY_LIST_KEY}&week=${week}` : PARTY_LIST_KEY;
 
@@ -230,15 +232,20 @@ export default function PartiesPage() {
     const auth = token !== undefined ? () => Promise.resolve(token) : getToken;
     const ticket = ++latestWeek.current;
     const clearsRequest = apiFetch<BossClearsView>(clearsUrl(target), { method: "GET" }, auth);
-    const [clears, partyList] = await Promise.all([
+    const [clears, partyList, seatedList] = await Promise.all([
       clearsOptional ? clearsRequest.catch(() => null) : clearsRequest,
       apiFetch<Party[]>(partiesUrl(target), { method: "GET" }, auth),
+      // The shared rows answer for the same week, or they would keep this week's clears under
+      // another week's label. Allowed to fail, as on the Bosses page: losing it loses those rows.
+      apiFetch<SeatedParty[]>(seatedUrl(target), { method: "GET" }, auth).catch(() => null),
     ]);
     if (ticket !== latestWeek.current) return false;
 
     setEveryParty(partyList);
+    if (seatedList) setSeated(seatedList.filter((row) => row.party));
     if (target === null) {
       put(PARTY_LIST_KEY, partyList);
+      if (seatedList) put(SEATED_KEY, seatedList);
     }
     if (!clears) return false;
     setView(clears);
@@ -246,6 +253,9 @@ export default function PartiesPage() {
     if (target === null) put(CLEARS_KEY, clears);
     return true;
   }
+
+  // A party member ticking a clear, or one written through to you, is on screen without a reload.
+  useLive("clears", () => void loadWeek(week, { clearsOptional: true }).catch(() => {}));
 
   async function selectWeek(target: string | null) {
     setStepping(true);

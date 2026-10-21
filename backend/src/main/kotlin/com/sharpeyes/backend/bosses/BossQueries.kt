@@ -9,7 +9,6 @@ import com.sharpeyes.backend.parties.lootFromClear
 import com.sharpeyes.backend.parties.unlootFromClear
 import com.sharpeyes.backend.services.DetectedBossClear
 import com.sharpeyes.backend.tokens.CaptureCounts
-import com.sharpeyes.backend.tokens.syncPiecesForClear
 import com.sharpeyes.backend.users.inActiveWorld
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -223,6 +222,7 @@ internal fun setBossClearByHand(
         row[BossClear.cleared] = cleared
         row[capturedAt] = now
         row[sourceScreenshotId] = null
+        row[viaPartyId] = null
     }
     val day = now.toLocalDateTime(TimeZone.UTC).date
     if (cleared) {
@@ -230,7 +230,7 @@ internal fun setBossClearByHand(
     } else {
         unlootFromClear(characterId, boss[BossCatalog.id], boss[BossCatalog.reset], day)
     }
-    syncPiecesForClear(characterId, boss[BossCatalog.id], periodStartFor(boss[BossCatalog.reset], now), now)
+    clearChanged(characterId, boss[BossCatalog.id], periodStartFor(boss[BossCatalog.reset], now), now)
     return true
 }
 
@@ -271,6 +271,7 @@ internal fun upsertBossClears(
             r[cleared] = clear.cleared
             r[BossClear.capturedAt] = capturedAt
             r[sourceScreenshotId] = screenshotId
+            r[viaPartyId] = null
         }
         // A capture files what a solo clear guarantees too, or takes it back on a boss it reads as
         // pending. Skipping it here would make a ticked clear and a captured one disagree about
@@ -283,7 +284,7 @@ internal fun upsertBossClears(
         }
         // After the token counts, which ingestion writes first: a count this capture also read
         // already includes the drop, and CaptureCounts is how the sync tells.
-        syncPiecesForClear(
+        clearChanged(
             characterId,
             row[BossCatalog.id],
             period,

@@ -2,6 +2,7 @@
 
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
+import { useLive } from "@/lib/use-live";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { BossMatrix } from "@/components/boss-matrix";
@@ -92,6 +93,9 @@ export default function BossesPage() {
     if (target === null) put(CLEARS_KEY, result);
     return true;
   }
+
+  // A clear written through from a party, or ticked in another tab, is on screen without a reload.
+  useLive("clears", () => void loadClears(week).catch(() => {}));
 
   /**
    * Answers one cell by hand, for when there is no planner capture to hand.

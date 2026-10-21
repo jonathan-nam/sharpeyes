@@ -1,10 +1,10 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.bossClearedOn
+import com.sharpeyes.backend.bosses.clearChanged
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyWeekSeat
-import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -143,7 +143,7 @@ internal fun setSoloDifficulty(
         }
     }
     // Re-files this period's pieces at the new mode, solo or party.
-    syncPiecesForClear(characterId, bossCatalogId, periodStartFor(reset, now), now)
+    clearChanged(characterId, bossCatalogId, periodStartFor(reset, now), now)
     return partyId
 }
 

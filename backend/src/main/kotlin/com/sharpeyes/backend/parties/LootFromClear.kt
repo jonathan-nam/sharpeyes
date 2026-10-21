@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.bosses.clearChanged
 import com.sharpeyes.backend.bosses.periodAfter
 import com.sharpeyes.backend.bosses.periodOf
 import com.sharpeyes.backend.bosses.periodStartFor
@@ -11,7 +12,6 @@ import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyLootBundle
 import com.sharpeyes.backend.db.VestigeSettlementLoot
-import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -250,7 +250,8 @@ internal fun withdrawClear(
                     (BossClear.bossCatalogId eq bossId) and
                     (BossClear.periodStart eq period)
             }.firstOrNull()
-    if (ticked == null || ticked[BossClear.sourceScreenshotId] != null) return
+    // A copy is the party owner's clear, not this drop's: see ClearWriteThrough.kt.
+    if (ticked == null || ticked[BossClear.sourceScreenshotId] != null || ticked[BossClear.viaPartyId] != null) return
 
     // Before the row goes, while there is still a clear for it to be the inverse of. Only ever takes
     // rows the app filed and nobody has spoken for, which is unlootFromClear's own rule.
@@ -260,5 +261,5 @@ internal fun withdrawClear(
             (BossClear.bossCatalogId eq bossId) and
             (BossClear.periodStart eq period)
     }
-    syncPiecesForClear(characterId, bossId, period, now)
+    clearChanged(characterId, bossId, period, now)
 }

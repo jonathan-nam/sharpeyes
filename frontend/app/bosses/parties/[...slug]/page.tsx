@@ -2,6 +2,7 @@
 
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
+import { useLive } from "@/lib/use-live";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -153,6 +154,12 @@ export default function PartyPage() {
       .catch(() => setState("error"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, isLoaded]);
+
+  // Its clear, ticked by whoever owns it or written through from them, is on screen without a reload.
+  useLive("clears", () => {
+    if (state === "loaded")
+      void apiFetch<Party>(partyUrl, { method: "GET" }, getToken).then(setParty, () => {});
+  });
 
   // Every mutation refetches the pool rather than patching it in place: status is derived from the
   // sale and the payout rows server side, so the server's answer is the only one that is right.

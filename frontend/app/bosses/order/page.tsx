@@ -51,7 +51,9 @@ import { queryParam, replaceQuery, useQueryString } from "@/lib/url-state";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
-import type { Party, SavePartyBody } from "@/types/party";
+import type { Party, SavePartyBody, SeatedParty } from "@/types/party";
+import { asYourRow } from "@/lib/shared-parties";
+import { useLive } from "@/lib/use-live";
 import type { VestigeSettlement } from "@/types/vestige";
 
 const BOSSES_KEY = "/api/bosses";
@@ -60,6 +62,8 @@ const PARTIES_KEY = "/api/parties";
 // Party View and the party page, so all three share one cached copy.
 const DROPS_KEY = "/api/bosses/drops";
 const POOLS_KEY = "/api/parties/loot";
+// The parties somebody ELSE owns that a character of yours sits in. See SeatedParties.kt.
+const SEATED_KEY = "/api/parties/seated";
 // Every config there has ever been, solo and retired included, for the coupon balance alone. A debt
 // does not stop being owed for having been arranged on a config that has since come off the list,
 // and reading the night's list instead would rotate the odd stack against half the account. Same
@@ -149,6 +153,11 @@ export default function RunOrderPage() {
   const seededBosses = peek<Boss[]>(BOSSES_KEY);
 
   const [parties, setParties] = useState<Party[]>(seededParties ?? []);
+  // Parties somebody else owns that a character of yours sits in, run tonight like your own.
+  const [seated, setSeated] = useState<SeatedParty[]>(
+    (peek<SeatedParty[]>(SEATED_KEY) ?? []).filter((row) => row.party),
+  );
+  const nightParties = useMemo(() => [...parties, ...seated.map(asYourRow)], [parties, seated]);
   const [bosses, setBosses] = useState<Boss[]>(seededBosses ?? []);
   const [dropTables, setDropTables] = useState<DropTables>(peek<DropTables>(DROPS_KEY) ?? {});
   // Only for the coupon balance behind the stack boxes, which is read off each week's pickups.
@@ -166,7 +175,7 @@ export default function RunOrderPage() {
   const [state, setState] = useState<LoadState>(seededParties ? "loaded" : "loading");
 
   // A run in the night links to its party, which draws its seats. See lib/seat-sprites.ts.
-  useSeatSprites(parties);
+  useSeatSprites(nightParties);
   // A run opens to the drop picker, which draws them. See lib/drop-icons.ts.
   useDropIcons(dropTables);
 
@@ -252,11 +261,26 @@ export default function RunOrderPage() {
           ),
           // Optional: losing it costs the picker its Eternal pieces and nothing else.
           apiFetch<BossClearsView>(CLEARS_KEY, { method: "GET" }, withToken).catch(() => null),
+          // Optional: losing it loses the parties you are in, and keeps your own.
+          apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, withToken).catch(() => null),
         ]);
       })
       .then(
-        ([nextParties, nextBosses, nextDrops, nextPools, nextLedger, nextSettlements, clears]) => {
+        ([
+          nextParties,
+          nextBosses,
+          nextDrops,
+          nextPools,
+          nextLedger,
+          nextSettlements,
+          clears,
+          nextSeated,
+        ]) => {
           if (!live) return;
+          if (nextSeated) {
+            setSeated(nextSeated.filter((row) => row.party));
+            put(SEATED_KEY, nextSeated);
+          }
           if (clears) setWeekStart(clears.currentWeekStart);
           setParties(nextParties);
           setBosses(nextBosses);
@@ -304,11 +328,22 @@ export default function RunOrderPage() {
     const [refreshed, poolResult] = await Promise.all([
       apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, getToken),
       apiFetch<PartyLootPool[]>(POOLS_KEY, { method: "GET" }, getToken),
+      refetchSeated(),
     ]);
     setParties(refreshed);
     put(PARTIES_KEY, refreshed);
     setPools(poolResult);
     put(POOLS_KEY, poolResult);
+  }
+
+  /** The parties you are in, read again. A failure keeps the ones on screen. */
+  async function refetchSeated() {
+    const next = await apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, getToken).catch(
+      () => null,
+    );
+    if (!next) return;
+    setSeated(next.filter((row) => row.party));
+    put(SEATED_KEY, next);
   }
 
   /**
@@ -383,7 +418,7 @@ export default function RunOrderPage() {
   // cleared" is a narrowing you can turn off to see the rest; "we are not running it" is not one of
   // those, and a plan that scheduled it anyway would be a night built around a boss Party View has
   // already dropped.
-  const running = useMemo(() => runningThisPeriod(parties), [parties]);
+  const running = useMemo(() => runningThisPeriod(nightParties), [nightParties]);
 
   // --- The controls, live --------------------------------------------------------------------
   //
@@ -563,6 +598,20 @@ export default function RunOrderPage() {
   // A count no option has falls back to the full plan.
   const plan = (chosen !== null && options.find((o) => o.runs.length === chosen)) || best;
 
+  // A clear moving on any party tonight, yours or one you are in, is on the plan without a reload.
+  // The runs already on screen are kept in the night first, as a tick from here keeps its run (see
+  // stillToRun): a clear arriving from the party's owner marks a run done, it does not take it away.
+  useLive("clears", () => {
+    plan.runs.forEach((planned) => keepInNight(planned.run.id));
+    void apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, getToken)
+      .then((next) => {
+        setParties(next);
+        put(PARTIES_KEY, next);
+      })
+      .catch(() => {});
+    void refetchSeated();
+  });
+
   const scheduled = new Set(plan.runs.map((planned) => planned.run.id));
   const unscheduled = eligible.filter((run) => !scheduled.has(run.id));
   const assumed = plan.runs.filter((planned) => planned.run.assumed).length;
@@ -618,7 +667,11 @@ export default function RunOrderPage() {
       behind,
       pickupTitle: "Looted this week",
       entitledTitle: "Entitled each week",
-      onSaveShares: (shares: Map<string, number>) => saveShares(party, shares),
+      // The split is the owner's deal, so a party you are only in shows it without a Save.
+      onSaveShares:
+        party.yours === false
+          ? undefined
+          : (shares: Map<string, number>) => saveShares(party, shares),
     };
   };
 
@@ -660,7 +713,7 @@ export default function RunOrderPage() {
         <p className="finder-empty">Couldn&apos;t load your parties. Reload to try again.</p>
       )}
 
-      {state === "loaded" && parties.length === 0 && (
+      {state === "loaded" && nightParties.length === 0 && (
         <p className="finder-empty">
           No parties yet. <Link href="/bosses/parties/edit">Set one up.</Link>
         </p>
@@ -669,7 +722,7 @@ export default function RunOrderPage() {
       {/* The filter sits with the parties it narrows, not down in the budget section, because it
           is the only way back out of the state where it has excluded everything. Under a heading
           the plan renders it left a cleared week with a blank page and no control on it. */}
-      {state === "loaded" && parties.length > 0 && (
+      {state === "loaded" && nightParties.length > 0 && (
         <label className="night-toggle">
           <input
             type="checkbox"
@@ -683,7 +736,7 @@ export default function RunOrderPage() {
       {/* Counted over the parties still ON the period: counting every
           config would call a boss taken off by hand a boss that is cleared, which is a different
           answer to "why is there nothing to run". */}
-      {state === "loaded" && parties.length > 0 && runs.length === 0 && (
+      {state === "loaded" && nightParties.length > 0 && runs.length === 0 && (
         <p className="finder-empty">
           {running.length === 0
             ? "Every boss is off this period."
