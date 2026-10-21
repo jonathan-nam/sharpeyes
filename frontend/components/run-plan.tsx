@@ -396,7 +396,20 @@ export function RunPlan({
                       it keeps an empty cell rather than losing it, or the grid goes ragged. */}
                   {log && (
                     <td className="run-clear-cell">
-                      {party && (
+                      {/* A party you are only in: its owner marks it, and the mark arrives here. */}
+                      {party && party.yours === false && (
+                        <span
+                          className={
+                            party.cleared === true
+                              ? "run-mark is-cleared is-shown"
+                              : "run-mark is-shown"
+                          }
+                        >
+                          <span aria-hidden="true">&#10003;</span>
+                          <span className="visually-hidden">{clearStateLabel(party.cleared)}</span>
+                        </span>
+                      )}
+                      {party && party.yours !== false && (
                         <button
                           type="button"
                           className={party.cleared === true ? "run-mark is-cleared" : "run-mark"}

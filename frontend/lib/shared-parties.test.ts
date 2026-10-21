@@ -24,4 +24,9 @@ describe("asYourRow", () => {
     const members = asYourRow(seated()).members;
     expect(members.map((m) => m.characterId)).toEqual([null, "your-char"]);
   });
+
+  it("is not yours to write, whatever the list said", () => {
+    // The seated list leaves `yours` at its default of true. Run Order hides the owner's controls on it.
+    expect(asYourRow({ ...seated(), party: { ...seated().party, yours: true } }).yours).toBe(false);
+  });
 });

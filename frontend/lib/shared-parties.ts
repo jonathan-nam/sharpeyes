@@ -11,6 +11,8 @@ import type { Party, SeatedParty } from "@/types/party";
 export function asYourRow({ party, mySeatIds, yourCharacterId }: SeatedParty): Party {
   return {
     ...party,
+    // The list answer leaves this at its default, which is true. See PartyResponse.yours.
+    yours: false,
     characterId: yourCharacterId,
     members: party.members.map((m) => ({
       ...m,
