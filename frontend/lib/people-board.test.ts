@@ -5,6 +5,7 @@ import {
   isRegular,
   plays,
   stillAttributed,
+  sectionsOf,
   toDraft,
   fileUnder,
   characterNote,
@@ -207,6 +208,7 @@ describe("toDraft", () => {
         characters: ["OldAlt"],
         ownedCharacters: ["Creed"],
         linked: true,
+        image: "https://cdn.discordapp.com/a.png",
         pinned: false,
       },
     ];
@@ -217,6 +219,7 @@ describe("toDraft", () => {
         characters: ["OldAlt"],
         owned: ["Creed"],
         linked: true,
+        image: "https://cdn.discordapp.com/a.png",
         notOnAccount: [],
         contested: [],
       },
@@ -236,6 +239,7 @@ describe("toDraft", () => {
         characters: ["Creed"],
         owned: [],
         linked: false,
+        image: null,
         notOnAccount: [],
         contested: [],
       },
@@ -303,5 +307,26 @@ describe("what a linked person's row says about a character", () => {
 
   it("still shows a clash that is not on the row's card", () => {
     expect(contestedOffCard(row)).toEqual(["OtherClash"]);
+  });
+});
+
+describe("sectionsOf", () => {
+  const row = (name: string, linked: boolean) => ({ name, characters: [], owned: [], linked });
+  it("splits verified from unverified, keeping each row's own index", () => {
+    const sections = sectionsOf([row("Bro", true), row("Jared", false), row("Mech", true)]);
+    expect(sections.map((s) => [s.title, s.rows.map((r) => [r.row.name, r.index])])).toEqual([
+      [
+        "Verified",
+        [
+          ["Bro", 0],
+          ["Mech", 2],
+        ],
+      ],
+      ["Unverified", [["Jared", 1]]],
+    ]);
+  });
+  it("leaves out a section with nobody in it, and files a new row as unverified", () => {
+    const sections = sectionsOf([{ name: "", characters: [], owned: [] }]);
+    expect(sections.map((s) => s.title)).toEqual(["Unverified"]);
   });
 });

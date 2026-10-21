@@ -11,6 +11,7 @@ import {
   claim,
   contestedOffCard,
   plays,
+  sectionsOf,
   stillAttributed,
 } from "@/lib/people-board";
 
@@ -118,110 +119,125 @@ export function PeopleBoard({
     <div className={`people-board${picked !== null ? " is-picking" : ""}`}>
       <KnownCharacters names={knownCharacters} />
 
-      <div className="people-list">
-        {people.map((row, index) => (
-          // A saved person keys on their id; a new row has only its slot.
-          <div className="person-row" key={row.id ?? `new-${index}`}>
-            {/* Who they are and what you can do about them, in one column. The lane beside it
+      {sectionsOf(people).map((section) => (
+        <section key={section.title}>
+          <h2 className="night-heading people-pool-title">{section.title}</h2>
+          <div className="people-list">
+            {section.rows.map(({ row, index }) => (
+              // A saved person keys on their id; a new row has only its slot.
+              <div className="person-row" key={row.id ?? `new-${index}`}>
+                {/* Who they are and what you can do about them, in one column. The lane beside it
                 takes whatever width is left, which is what keeps every row the same shape however
                 many characters a person has. */}
-            <div className="person-meta">
-              <label className="person-name-field">
-                <span className="field-label">Name</span>
-                <input
-                  className="split-input person-name"
-                  value={row.name}
-                  onChange={(e) => onRename(index, e.target.value)}
-                  placeholder="Jared"
-                  maxLength={40}
-                />
-              </label>
-              <div className="person-meta-actions">
-                {/* Only a saved person can be sent one: the link is made from their row in the
+                <div className="person-meta">
+                  <label className="person-name-field">
+                    <span className="field-label">Name</span>
+                    <span className="person-name-line">
+                      {row.linked && (
+                        <span className="person-avatar" aria-hidden="true">
+                          {row.image && <img src={row.image} alt="" />}
+                        </span>
+                      )}
+                      <input
+                        className="split-input person-name"
+                        value={row.name}
+                        onChange={(e) => onRename(index, e.target.value)}
+                        placeholder="Jared"
+                        maxLength={40}
+                      />
+                    </span>
+                  </label>
+                  <div className="person-meta-actions">
+                    {/* Only a saved person can be sent one: the link is made from their row in the
                     database, and a row that is not there yet has no id to make it from. */}
-                {row.id != null && (
-                  <button
-                    type="button"
-                    className="person-invite"
-                    disabled={busy || unsaved || inviting !== null}
-                    title={unsaved ? "Save first" : undefined}
-                    onClick={() => onInvite(row.id as string)}
-                  >
-                    {/* The wait is here rather than in the dialog, which does not open until there
+                    {row.id != null && (
+                      <button
+                        type="button"
+                        className="person-invite"
+                        disabled={busy || unsaved || inviting !== null}
+                        title={unsaved ? "Save first" : undefined}
+                        onClick={() => onInvite(row.id as string)}
+                      >
+                        {/* The wait is here rather than in the dialog, which does not open until there
                         is a link to put in it. The button carries no state beyond that: a link
                         lasts five minutes, so the answer to pressing it again is another link. */}
-                    {inviting === row.id ? "Generating..." : "Generate Invite Link"}
-                  </button>
-                )}
-                {/* Only where there is an account to take off. A link is a bearer token, so one
+                        {inviting === row.id ? "Generating..." : "Generate Invite Link"}
+                      </button>
+                    )}
+                    {/* Only where there is an account to take off. A link is a bearer token, so one
                     that reached the wrong person is taken back here rather than being permanent. */}
-                {row.linked && row.id != null && (
-                  <button
-                    type="button"
-                    className="party-delete"
-                    disabled={busy}
-                    onClick={() => onUnlink(row.id as string)}
-                  >
-                    Unlink
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="party-delete"
-                  disabled={busy}
-                  onClick={() => onRemove(index)}
+                    {row.linked && row.id != null && (
+                      <button
+                        type="button"
+                        className="party-delete"
+                        disabled={busy}
+                        onClick={() => onUnlink(row.id as string)}
+                      >
+                        Unlink
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="party-delete"
+                      disabled={busy}
+                      onClick={() => onRemove(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <TileStrip
+                  zone={zoneProps(index)}
+                  deps={[row.characters, row.owned, picked, adding]}
                 >
-                  Remove
-                </button>
-              </div>
-            </div>
-            <TileStrip zone={zoneProps(index)} deps={[row.characters, row.owned, picked, adding]}>
-              {/* Their own account's answer, first and unmovable. Nothing here is this account's
+                  {/* Their own account's answer, first and unmovable. Nothing here is this account's
                   to reassign, so the card is not a handle and carries no grip. */}
-              {row.owned.map((name) => (
-                <LinkedChip key={name} name={name} sprite={spriteFor(name)} />
-              ))}
-              {/* On their account and another linked one too, so it is nobody's: shown so the clash
+                  {row.owned.map((name) => (
+                    <LinkedChip key={name} name={name} sprite={spriteFor(name)} />
+                  ))}
+                  {/* On their account and another linked one too, so it is nobody's: shown so the clash
                   is not a character quietly missing from the row. */}
-              {contestedOffCard(row).map((name) => (
-                <LinkedChip
-                  key={name}
-                  name={name}
-                  sprite={spriteFor(name)}
-                  note={characterNote(row, name)}
-                />
-              ))}
-              {stillAttributed(row).map((name) => (
-                <Chip
-                  key={name}
-                  name={name}
-                  sprite={spriteFor(name)}
-                  note={characterNote(row, name)}
-                  picked={picked === name}
-                  busy={busy}
-                  onPick={() => pick(name)}
-                />
-              ))}
-              {picked !== null && !plays(row, picked) && (
-                <Target
-                  label={row.name.trim() === "" ? "This row" : row.name}
-                  description={`Give ${picked} to ${row.name.trim() === "" ? "this row" : row.name}`}
-                />
-              )}
-              {picked === null && adding === index && (
-                <AddBox
-                  person={row.name}
-                  onCommit={(name) => commitAdd(index, name)}
-                  onCancel={() => setAdding(null)}
-                />
-              )}
-              {picked === null && adding !== index && (
-                <AddCard person={row.name} busy={busy} onOpen={() => setAdding(index)} />
-              )}
-            </TileStrip>
+                  {contestedOffCard(row).map((name) => (
+                    <LinkedChip
+                      key={name}
+                      name={name}
+                      sprite={spriteFor(name)}
+                      note={characterNote(row, name)}
+                    />
+                  ))}
+                  {stillAttributed(row).map((name) => (
+                    <Chip
+                      key={name}
+                      name={name}
+                      sprite={spriteFor(name)}
+                      note={characterNote(row, name)}
+                      picked={picked === name}
+                      busy={busy}
+                      onPick={() => pick(name)}
+                    />
+                  ))}
+                  {picked !== null && !plays(row, picked) && (
+                    <Target
+                      label={row.name.trim() === "" ? "This row" : row.name}
+                      description={`Give ${picked} to ${row.name.trim() === "" ? "this row" : row.name}`}
+                    />
+                  )}
+                  {picked === null && adding === index && (
+                    <AddBox
+                      person={row.name}
+                      onCommit={(name) => commitAdd(index, name)}
+                      onCancel={() => setAdding(null)}
+                    />
+                  )}
+                  {picked === null && adding !== index && (
+                    <AddCard person={row.name} busy={busy} onOpen={() => setAdding(index)} />
+                  )}
+                </TileStrip>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </section>
+      ))}
 
       <h2 className="night-heading people-pool-title">Unassigned Party Members</h2>
       <TileStrip zone={zoneProps(null)} deps={[unassigned, picked]}>
