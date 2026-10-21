@@ -75,8 +75,16 @@ export function forgetSessionToken(): void {
   held = null;
 }
 
-/** Signing out has to drop the token too, or the next call sends a bearer for a dead session. */
+/**
+ * Signing out has to drop the token too, or the next call sends a bearer for a dead session.
+ *
+ * A full load rather than router.push: lib/cache.ts and every mounted page live in this document,
+ * and a client-side navigation would keep the last account's data for whoever signs in next.
+ */
 export async function signOut(): Promise<void> {
   forgetSessionToken();
-  await authClient.signOut();
+  const { error } = await authClient.signOut();
+  // Still signed in, so stay put rather than show a sign-in page over a live session.
+  if (error) return;
+  window.location.assign("/sign-in");
 }
