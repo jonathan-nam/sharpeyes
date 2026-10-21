@@ -21,15 +21,16 @@ import kotlin.uuid.Uuid
 // Inside a transaction, like the rest.
 
 /**
- * Takes the account off [personId], and takes their seats back with it.
+ * Takes the account off [personId], and takes their seats back with it, on BOTH sides.
+ *
+ * Both, because a link is two accounts agreeing they are two people: they hold a person for you as
+ * well, and seats of yours on their parties. Ending one side left the other still reading your
+ * parties through their half, which is the same unlink-that-does-not-revoke as the seats below.
  *
  * The seats are the point. partiesSeatedIn authorises on party_member.linked_character_id and not
  * on person.linked_user_id, so clearing the person alone would leave every seat still bound and the
  * other account still reading the party, its roster, its nights and what they sold for. An unlink
  * that does not revoke is worse than none, because it looks like it worked.
- *
- * Only seats on YOUR OWN parties. A seat of theirs on somebody else's config is that person's
- * business and not reachable from here.
  *
  * The person stays, with whatever this account attributed to them by hand. Unlinking says "that is
  * not their account", not "I do not know them": deleting the person would take the attributions
@@ -52,21 +53,25 @@ internal fun unlinkPerson(
     // above being the answer worth having.
     val account = person[Person.linkedUserId]
     if (account != null) {
-        revokeSeats(userId, account)
-        Person.update({ Person.id eq personId }) {
-            it[linkedUserId] = null
-            it[updatedAt] = Clock.System.now()
-        }
+        unlinkSide(userId, account)
+        unlinkSide(account, userId)
     }
     return true
 }
 
-/**
- * Takes back every seat on YOUR parties that points at a character of [account]'s.
- *
- * The half of unlinking that actually revokes. A seat of theirs on somebody ELSE'S config is that
- * person's business and not reachable from here.
- */
+/** [owner]'s half: their seats bound to [account]'s characters, and their people linked to it. */
+private fun unlinkSide(
+    owner: String,
+    account: String,
+) {
+    revokeSeats(owner, account)
+    Person.update({ (Person.userId eq owner) and (Person.linkedUserId eq account) }) {
+        it[linkedUserId] = null
+        it[updatedAt] = Clock.System.now()
+    }
+}
+
+/** Takes back every seat on [userId]'s parties that points at a character of [account]'s. */
 private fun revokeSeats(
     userId: String,
     account: String,
