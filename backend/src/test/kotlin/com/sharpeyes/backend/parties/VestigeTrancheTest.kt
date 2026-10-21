@@ -94,7 +94,7 @@ class VestigeTrancheTest {
             it[userId] = owner
             it[holderKind] = if (holder == null) "SELF" else "PERSON"
             it[personId] = holder
-            it[VestigeTranche.pieces] = pieces
+            it[VestigeTranche.pieces] = pieces.toDouble()
             it[VestigeTranche.amount] = amount
             it[VestigeTranche.disposition] = disposition
             it[soldAt] = now - hoursAgo.hours
@@ -110,7 +110,7 @@ class VestigeTrancheTest {
             tranche(userId, null, 50, 1_200_000_000, hoursAgo = 5)
 
             val rows = tranchesFor(userId)
-            assertEquals(listOf(50, 10), rows.map { it.pieces })
+            assertEquals(listOf(50.0, 10.0), rows.map { it.pieces })
             // The total is what was entered; nothing here divides it into a price each.
             assertEquals(listOf(1_200_000_000L, 250_000_000L), rows.map { it.amount })
         }
@@ -125,7 +125,7 @@ class VestigeTrancheTest {
             tranche(strangerId, null, 999, 9_000_000_000, hoursAgo = 2)
 
             assertEquals(1, tranchesFor(userId).size)
-            assertEquals(50, tranchesFor(userId).single().pieces)
+            assertEquals(50.0, tranchesFor(userId).single().pieces)
         }
     }
 
@@ -141,7 +141,7 @@ class VestigeTrancheTest {
 
             val byHolder = tranchesFor(userId).groupBy { it.holder.kind }
             assertEquals(setOf("SELF", "PERSON"), byHolder.keys)
-            assertEquals(60, byHolder["SELF"]!!.single().pieces)
+            assertEquals(60.0, byHolder["SELF"]!!.single().pieces)
             assertEquals(owen.toString(), byHolder["PERSON"]!!.single().holder.personId)
         }
     }
@@ -157,7 +157,7 @@ class VestigeTrancheTest {
 
             // The pile is still one pile. A name-keyed tally would have orphaned it here, and every
             // boss it covered would have re-priced to nothing with no error.
-            assertEquals(40, tranchesFor(userId).single().pieces)
+            assertEquals(40.0, tranchesFor(userId).single().pieces)
         }
     }
 
@@ -167,43 +167,43 @@ class VestigeTrancheTest {
         val owen = VestigeHolder(kind = "PERSON", personId = Uuid.random().toString())
         val stranger = VestigeHolder(kind = "CHARACTER", characterName = "marrow")
 
-        assertNull(trancheRefusal(self, 50, 1_200_000_000))
-        assertNull(trancheRefusal(owen, 50, 1_200_000_000))
-        assertNull(trancheRefusal(stranger, 50, 1_200_000_000))
+        assertNull(trancheRefusal(self, 50.0, 1_200_000_000))
+        assertNull(trancheRefusal(owen, 50.0, 1_200_000_000))
+        assertNull(trancheRefusal(stranger, 50.0, 1_200_000_000))
         // A sale for nothing is refused, and the refusal says where that stack belongs. Allowing it
         // made the creditor absorb their share of a loss the holder chose; KEPT charges the holder.
-        assertTrue(trancheRefusal(self, 30, 0)!!.contains("KEPT"))
-        assertNull(trancheRefusal(self, 30, 1))
+        assertTrue(trancheRefusal(self, 30.0, 0)!!.contains("KEPT"))
+        assertNull(trancheRefusal(self, 30.0, 1))
 
         // The kind and the reference cannot disagree, which is what keeps a pile from belonging to
         // nobody and pricing every boss it covers at zero.
-        assertTrue(trancheRefusal(VestigeHolder(kind = "NOBODY"), 50, 1)!!.contains("kind"))
-        assertTrue(trancheRefusal(VestigeHolder(kind = "PERSON"), 50, 1)!!.contains("personId"))
-        assertTrue(trancheRefusal(VestigeHolder(kind = "CHARACTER"), 50, 1)!!.contains("characterName"))
-        assertTrue(trancheRefusal(self.copy(personId = "x"), 50, 1)!!.contains("personId"))
+        assertTrue(trancheRefusal(VestigeHolder(kind = "NOBODY"), 50.0, 1)!!.contains("kind"))
+        assertTrue(trancheRefusal(VestigeHolder(kind = "PERSON"), 50.0, 1)!!.contains("personId"))
+        assertTrue(trancheRefusal(VestigeHolder(kind = "CHARACTER"), 50.0, 1)!!.contains("characterName"))
+        assertTrue(trancheRefusal(self.copy(personId = "x"), 50.0, 1)!!.contains("personId"))
         assertTrue(
-            trancheRefusal(VestigeHolder(kind = "PERSON", personId = "not-an-id"), 50, 1)!!
+            trancheRefusal(VestigeHolder(kind = "PERSON", personId = "not-an-id"), 50.0, 1)!!
                 .contains("not an id"),
         )
 
-        assertTrue(trancheRefusal(self, 0, 1)!!.contains("between 1"))
-        assertTrue(trancheRefusal(self, 1_000_001, 1)!!.contains("1000000"))
+        assertTrue(trancheRefusal(self, 0.0, 1)!!.contains("above 0"))
+        assertTrue(trancheRefusal(self, 1_000_001.0, 1)!!.contains("1000000"))
         // Negative lands in the same refusal as zero: both are a sale with no money in it.
-        assertTrue(trancheRefusal(self, 50, -1)!!.contains("above zero"))
+        assertTrue(trancheRefusal(self, 50.0, -1)!!.contains("above zero"))
     }
 
     @Test
     fun `a redemption carries no money, and a sale cannot be missing it`() {
         val self = VestigeHolder(kind = "SELF")
 
-        assertNull(trancheRefusal(self, 195, null, "KEPT"))
-        assertNull(trancheRefusal(self, 195, 4_875_000_000, "SOLD"))
+        assertNull(trancheRefusal(self, 195.0, null, "KEPT"))
+        assertNull(trancheRefusal(self, 195.0, 4_875_000_000, "SOLD"))
 
         // The two cannot disagree, matching the check in V46. A KEPT row carrying an amount would
         // price the very pieces it exists to say were never priced, which is #281 by another route.
-        assertTrue(trancheRefusal(self, 195, 4_875_000_000, "KEPT")!!.contains("amount"))
-        assertTrue(trancheRefusal(self, 195, null, "SOLD")!!.contains("amount"))
-        assertTrue(trancheRefusal(self, 195, null, "REDEEMED")!!.contains("disposition"))
+        assertTrue(trancheRefusal(self, 195.0, 4_875_000_000, "KEPT")!!.contains("amount"))
+        assertTrue(trancheRefusal(self, 195.0, null, "SOLD")!!.contains("amount"))
+        assertTrue(trancheRefusal(self, 195.0, null, "REDEEMED")!!.contains("disposition"))
     }
 
     @Test
@@ -212,9 +212,9 @@ class VestigeTrancheTest {
 
         // V50. The third kind: pieces the holder was not entitled to, at a price somebody agreed
         // rather than at whatever average the holder's own sales happened to reach.
-        assertNull(trancheRefusal(self, 10, 150_000_000, "BOUGHT"))
-        assertTrue(trancheRefusal(self, 10, null, "BOUGHT")!!.contains("amount"))
-        assertTrue(trancheRefusal(self, 10, 0, "BOUGHT")!!.contains("above zero"))
+        assertNull(trancheRefusal(self, 10.0, 150_000_000, "BOUGHT"))
+        assertTrue(trancheRefusal(self, 10.0, null, "BOUGHT")!!.contains("amount"))
+        assertTrue(trancheRefusal(self, 10.0, 0, "BOUGHT")!!.contains("above zero"))
     }
 
     @Test
@@ -229,7 +229,7 @@ class VestigeTrancheTest {
             // Null, not zero. Zero is a price, and it is the wrong one: it would make the creditor
             // absorb half of a loss nobody took. See V46.
             assertEquals(listOf(4_875_000_000L, null), rows.map { it.amount })
-            assertEquals(listOf(195, 195), rows.map { it.pieces })
+            assertEquals(listOf(195.0, 195.0), rows.map { it.pieces })
         }
     }
 

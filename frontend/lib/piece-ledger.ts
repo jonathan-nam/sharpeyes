@@ -74,18 +74,36 @@ export function largestRemainder(total: number, weights: number[]): number[] {
 }
 
 /**
- * What each seat was entitled to.
+ * A count of coupons, held to the millionth of one.
  *
- * Pieces are whole, so a share of them usually is not: 181 across four is 45.25 each. The point of
- * dividing it by the largest remainder is that the entitlements add up to exactly what dropped,
- * which is what makes the balances below sum to zero and the transfers clear the ledger completely
- * rather than nearly.
+ * Not a rounding anybody sees: it is exact for every share a party can have to two decimals, and it
+ * is what stops a third (61 across three) leaving 7e-15 of a coupon owed after the transfers clear.
+ */
+export function pieces(n: number): number {
+  return Math.round(n * 1e6) / 1e6;
+}
+
+/** A count of coupons as the screen says it: whole as a whole, a share to two places (22.5, 20.33). */
+export function formatPieces(n: number): string {
+  return n.toLocaleString("en-US", { maximumFractionDigits: 2, useGrouping: false });
+}
+
+/**
+ * What each seat was entitled to, EXACTLY: 45 across two is 22.5 each.
+ *
+ * It was the largest remainder, which gave one of them 23 and called the other's half a coupon
+ * theirs. Coupons trade whole, so a .5 is the two of them to settle, and the ledger says so rather
+ * than deciding (decided 2026-10-21). The entitlements still add up to what dropped.
  */
 export function entitlements(total: number, seats: LedgerSeat[]): Map<string, number> {
-  const share = largestRemainder(
-    total,
-    seats.map((s) => s.shares),
-  );
+  const weight = seats.reduce((sum, s) => sum + s.shares, 0);
+  if (weight <= 0 || total <= 0) return new Map(seats.map((s) => [s.memberId, 0]));
+  const share = seats.map((s) => pieces((total * s.shares) / weight));
+  // The last seat takes what makes it add up, so 61 across three is 20.333333 twice and 20.333334,
+  // not 60.999999 and a millionth owed forever that no transfer can clear.
+  const last = seats.map((s) => s.shares > 0).lastIndexOf(true);
+  if (last >= 0)
+    share[last] = pieces(total - share.reduce((sum, n, i) => (i === last ? sum : sum + n), 0));
   return new Map(seats.map((s, i) => [s.memberId, share[i] ?? 0]));
 }
 
@@ -99,7 +117,7 @@ export function balances(total: number, seats: LedgerSeat[]): SeatBalance[] {
       name: s.name,
       entitled: owed,
       looted: s.looted,
-      balance: owed - s.looted,
+      balance: pieces(owed - s.looted),
     };
   });
 }
@@ -199,17 +217,17 @@ export function transfersOf(
   for (const debtor of owing) {
     while (debtor.left > 0 && step < owed.length) {
       const creditor = owed[step]!;
-      const pieces = Math.min(debtor.left, creditor.left);
+      const moved = Math.min(debtor.left, creditor.left);
       out.push({
         fromId: debtor.memberId,
         toId: creditor.memberId,
         from: debtor.name,
         to: creditor.name,
-        pieces,
+        pieces: moved,
       });
-      debtor.left -= pieces;
-      creditor.left -= pieces;
-      if (creditor.left === 0) step += 1;
+      debtor.left = pieces(debtor.left - moved);
+      creditor.left = pieces(creditor.left - moved);
+      if (creditor.left <= 0) step += 1;
     }
   }
   return from === undefined ? out : out.filter((t) => t.fromId === from);

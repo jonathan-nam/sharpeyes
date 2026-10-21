@@ -247,8 +247,8 @@ describe("what the card says a person owes", () => {
     expect(source).toContain(
       "const pieces = act.sales.reduce((sum, sale) => sum + sale.pieces, 0);",
     );
-    expect(source).toContain("`${pieces} coupons sold`");
-    expect(source).toContain("`${sale.pieces} coupons`");
+    expect(source).toContain("`${formatPieces(pieces)} coupons sold`");
+    expect(source).toContain("`${formatPieces(sale.pieces)} coupons`");
     expect(source).toContain("sale.soldAt && dayOf(sale.soldAt)");
     expect(source).toContain("signed(-sale.mesos)");
   });

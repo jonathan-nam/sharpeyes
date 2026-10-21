@@ -25,6 +25,7 @@ import {
   entitlements,
   heldOf,
   ownShareOf,
+  pieces as roundPieces,
   transfersOf,
 } from "./piece-ledger";
 import type { AnsweredSale, PieceTransfer } from "./piece-ledger";
@@ -446,7 +447,7 @@ export function couponGapOf(loot: Loot, party: Party): CouponGap | null {
   const held = heldByHolder(loot, party, holders);
   if (held === null) return null;
   const mine = held.get(SELF_KEY)?.pieces ?? 0;
-  const short = yourShare(loot.quantity, ran) - mine;
+  const short = roundPieces(yourShare(loot.quantity, ran) - mine);
   if (short === 0) return null;
   // Whoever is furthest from their own share is the other side of it. Named, because which of them
   // to ask is the whole use of the figure, and a pile of two characters names both (see Pile.by).
@@ -687,7 +688,7 @@ export function outstanding(
 
       for (const [key, pile] of held) {
         const holder = byKey.get(key);
-        if (!holder || pile.pieces < 1) continue;
+        if (!holder || pile.pieces <= 0) continue;
         out.push({
           lootId: loot.id,
           partyId: pool.partyId,
@@ -763,7 +764,7 @@ export function alsoHeldByYou(
           : heldByHolder(loot, party, holders);
       if (held === null) continue;
       const pile = held.get(SELF_KEY);
-      if (!pile || pile.pieces < 1) continue;
+      if (!pile || pile.pieces <= 0) continue;
 
       out.push({
         lootId: loot.id,

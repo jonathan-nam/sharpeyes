@@ -8,11 +8,15 @@ import kotlin.uuid.Uuid
 // owe are in your own inventory, so the figure being divided is one you know. What somebody else
 // sold at is still not asked for, and still could not be answered: that is the pro rata #354 deleted.
 
+/** A count off by less than this is the same count: they arrive held to the millionth. */
+internal const val PIECE_DUST = 1e-6
+
 /**
  * How one holder is matched, mirroring holderKey() in frontend/lib/vestige-ledger.ts.
  *
  * Only used to spot the same creditor named twice on one sale, which two rows would double.
  */
+
 private fun VestigeHolder.key(): String =
     when (kind) {
         PERSON -> "person:$personId"
@@ -28,7 +32,7 @@ private fun VestigeHolder.key(): String =
  */
 internal fun shareRefusal(
     holder: VestigeHolder,
-    pieces: Int,
+    pieces: Double,
     disposition: String,
     shares: List<VestigeTrancheShareRow>,
 ): String? {
@@ -47,14 +51,15 @@ internal fun shareRefusal(
         shares.any {
             it.holder.personId != null && runCatching { Uuid.parse(it.holder.personId) }.isFailure
         } -> "personId is not an id"
-        shares.any { it.pieces < 1 } -> "shares[].pieces must be at least 1"
+        shares.any { it.pieces <= 0 } -> "shares[].pieces must be above 0"
         // The holder cannot owe themselves any of their own pile, and a creditor named twice would
         // be counted twice rather than added up.
         shares.any { it.holder.key() == holder.key() } ->
             "a tranche cannot owe its own pile"
         shares.map { it.holder.key() }.toSet().size != shares.size ->
             "each creditor may be named once on a tranche"
-        shares.sumOf { it.pieces } > pieces ->
+        // To the millionth a count is held to (lib/piece-ledger.ts pieces), so 22.5 + 22.5 is 45.
+        shares.sumOf { it.pieces } > pieces + PIECE_DUST ->
             "shares name more pieces than the tranche held"
         else -> null
     }

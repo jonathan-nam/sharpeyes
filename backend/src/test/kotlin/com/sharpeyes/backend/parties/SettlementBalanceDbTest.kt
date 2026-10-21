@@ -107,7 +107,7 @@ class SettlementBalanceDbTest {
             it[holderKind] = "SELF"
             it[personId] = null
             it[characterName] = null
-            it[VestigeTranche.pieces] = pieces
+            it[VestigeTranche.pieces] = pieces.toDouble()
             it[VestigeTranche.amount] = amount
             it[disposition] = "SOLD"
             it[soldAt] = now
@@ -119,7 +119,7 @@ class SettlementBalanceDbTest {
             it[holderKind] = "PERSON"
             it[personId] = creditor
             it[characterName] = null
-            it[VestigeTrancheShare.pieces] = theirs
+            it[VestigeTrancheShare.pieces] = theirs.toDouble()
             it[createdAt] = now
         }
         return trancheId
@@ -228,13 +228,13 @@ class SettlementBalanceDbTest {
 
             val rows = tranchesFor(userId)
             assertEquals(2, rows.size)
-            val big = rows.first { it.pieces == 160 }
+            val big = rows.first { it.pieces == 160.0 }
             assertEquals(1, big.shares.size)
-            assertEquals(80, big.shares[0].pieces)
+            assertEquals(80.0, big.shares[0].pieces)
             assertEquals(owen.toString(), big.shares[0].holder.personId)
             assertEquals("PERSON", big.shares[0].holder.kind)
             // Their share of the money is never stored, only derivable: 80 of 160 at 4b is 2b.
-            assertEquals(20, rows.first { it.pieces == 20 }.shares[0].pieces)
+            assertEquals(20.0, rows.first { it.pieces == 20.0 }.shares[0].pieces)
         }
     }
 
