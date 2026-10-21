@@ -1621,7 +1621,13 @@ function DischargeRow({
                         {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"}
                       </Link>
                       <span className="ledger-offset-sub">
-                        <span className="ledger-amount">{pieces}</span>
+                        {/* `night` is from owedNights, before any sale spent it, so its pieces are
+                            what the night owed. A sale that took part of one says so. */}
+                        <span className="ledger-amount">
+                          {pieces < night.pieces
+                            ? `${formatPieces(pieces)} of ${formatPieces(night.pieces)}`
+                            : formatPieces(pieces)}
+                        </span>
                         <span className="loot-meta">{night.ran.join(", ")}</span>
                       </span>
                     </div>
