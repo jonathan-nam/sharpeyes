@@ -1,0 +1,197 @@
+"use client";
+
+import { type ReactNode, useEffect, useState } from "react";
+import { ConfirmAct } from "@/components/confirm-act";
+import { PageSwap } from "@/components/page-swap";
+import { apiFetch, failureText, spriteUrl } from "@/lib/api";
+import { invalidate } from "@/lib/cache";
+import { reportDataReady } from "@/lib/rum";
+import { useAuth } from "@/lib/use-auth";
+import type { FriendView, Social } from "@/types/social";
+
+const SOCIAL_KEY = "/api/friends";
+
+// Friends: other accounts, found by Discord username. Accepting links the two accounts the way an
+// invite does, so a friend is also a linked person on People and shares the parties that seat them.
+export default function SocialPage() {
+  const { getToken, isLoaded } = useAuth();
+  const [social, setSocial] = useState<Social | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [username, setUsername] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Not before auth answers, or the fetch goes out as `Bearer null`. See lib/api.ts.
+    if (!isLoaded) return;
+    apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken)
+      .then((loaded) => {
+        setSocial(loaded);
+        reportDataReady();
+      })
+      .catch(() => setFailed(true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  /** One write, answered with the whole page. A friendship changes people and parties as well. */
+  async function act(path: string, init: RequestInit, fallback: string): Promise<boolean> {
+    setBusy(true);
+    setError(null);
+    try {
+      setSocial(await apiFetch<Social>(path, init, getToken));
+      invalidate("/api/people");
+      invalidate("/api/parties");
+      return true;
+    } catch (e) {
+      setError(failureText(e, fallback));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function send() {
+    const sent = await act(
+      `${SOCIAL_KEY}/requests`,
+      { method: "POST", body: JSON.stringify({ username: username.trim() }) },
+      "Couldn't send that. Try again.",
+    );
+    if (sent) setUsername("");
+  }
+
+  const request = (id: string) => `${SOCIAL_KEY}/requests/${encodeURIComponent(id)}`;
+
+  return (
+    <main className="page">
+      <div className="settings-section-head">
+        <h1 className="page-title">Social</h1>
+        {social?.username && <span className="party-hint">You are @{social.username}</span>}
+      </div>
+
+      {failed && !social && <p>Couldn&apos;t load your friends. Reload to try again.</p>}
+      <PageSwap waiting={!social && !failed} placeholder={<p className="party-hint">Loading...</p>}>
+        {social && (
+          <>
+            <form
+              className="add-character social-add"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send();
+              }}
+            >
+              <input
+                type="text"
+                className="split-input"
+                value={username}
+                placeholder="Discord username"
+                aria-label="Discord username"
+                disabled={busy}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+              <button type="submit" className="party-save" disabled={busy || !username.trim()}>
+                Send Request
+              </button>
+            </form>
+            {error && <p className="routine-error">{error}</p>}
+
+            {social.incoming.length > 0 && (
+              <FriendGroup title="Requests">
+                {social.incoming.map((f) => (
+                  <FriendCard key={f.id} friend={f}>
+                    <button
+                      type="button"
+                      className="party-save"
+                      disabled={busy}
+                      onClick={() =>
+                        void act(`${request(f.id)}/accept`, { method: "POST" }, "Couldn't accept.")
+                      }
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      className="party-cancel"
+                      disabled={busy}
+                      onClick={() =>
+                        void act(request(f.id), { method: "DELETE" }, "Couldn't decline.")
+                      }
+                    >
+                      Decline
+                    </button>
+                  </FriendCard>
+                ))}
+              </FriendGroup>
+            )}
+
+            {social.outgoing.length > 0 && (
+              <FriendGroup title="Sent">
+                {social.outgoing.map((f) => (
+                  <FriendCard key={f.id} friend={f}>
+                    <button
+                      type="button"
+                      className="party-cancel"
+                      disabled={busy}
+                      onClick={() =>
+                        void act(request(f.id), { method: "DELETE" }, "Couldn't cancel.")
+                      }
+                    >
+                      Cancel
+                    </button>
+                  </FriendCard>
+                ))}
+              </FriendGroup>
+            )}
+
+            <FriendGroup title="Friends">
+              {social.friends.length === 0 && <p className="finder-empty">No friends yet.</p>}
+              {social.friends.map((f) => (
+                <FriendCard key={f.id} friend={f}>
+                  <ConfirmAct
+                    label="Remove"
+                    question="Remove Friend"
+                    keep="Keep"
+                    busy={busy}
+                    onConfirm={() =>
+                      void act(
+                        `${SOCIAL_KEY}/${encodeURIComponent(f.id)}`,
+                        { method: "DELETE" },
+                        "Couldn't remove them.",
+                      )
+                    }
+                  />
+                </FriendCard>
+              ))}
+            </FriendGroup>
+          </>
+        )}
+      </PageSwap>
+    </main>
+  );
+}
+
+function FriendGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="character-group">
+      <h2 className="character-world">{title}</h2>
+      <ul className="character-cards">{children}</ul>
+    </section>
+  );
+}
+
+/** Their main character's sprite, as a character card draws one, with the actions under it. */
+function FriendCard({ friend, children }: { friend: FriendView; children: ReactNode }) {
+  return (
+    <li className="character-card">
+      {friend.spriteImgUrl ? (
+        <img className="tile-sprite" src={spriteUrl(friend.spriteImgUrl)} alt="" />
+      ) : (
+        <span className="tile-sprite" aria-hidden="true" />
+      )}
+      <span className="tile-plate">
+        <span className="tile-name">{friend.name ?? friend.username ?? "?"}</span>
+        {friend.username && <span className="tile-meta">@{friend.username}</span>}
+      </span>
+      <span className="character-card-actions">{children}</span>
+    </li>
+  );
+}

@@ -735,3 +735,29 @@ object AccountInvite : Table("account_invite") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+// Written by the auth service at each Discord sign-in, keyed by the Discord id. See V86__friends.sql.
+object DiscordUsername : Table("discord_username") {
+    val discordId = text("discord_id")
+    val username = text("username")
+    val updatedAt = timestamp("updated_at")
+
+    override val primaryKey = PrimaryKey(discordId)
+}
+
+// Better Auth's own table, read only to turn a Discord id into an account. Its columns are camelCase.
+object AuthAccount : Table("auth_account") {
+    val userId = text("userId")
+    val providerId = text("providerId")
+    val accountId = text("accountId")
+}
+
+// A friend request, until it is accepted, declined or cancelled. See V86__friends.sql.
+object FriendRequest : Table("friend_request") {
+    val id = uuid("id")
+    val fromUserId = reference("from_user_id", Users.id)
+    val toUserId = reference("to_user_id", Users.id)
+    val createdAt = timestamp("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}

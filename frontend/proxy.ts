@@ -3,7 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 // Next.js 16 renamed middleware.ts -> proxy.ts; this file plays the same role.
 // /characters and /upload only redirect now (see next.config redirects and app/upload), but they
 // stay gated so an unauthenticated hit lands on sign-in rather than leaking the redirect target.
-const PROTECTED = [/^\/inventory(\/|$)/, /^\/characters(\/|$)/, /^\/upload(\/|$)/];
+const PROTECTED = [
+  /^\/inventory(\/|$)/,
+  /^\/characters(\/|$)/,
+  /^\/upload(\/|$)/,
+  /^\/social(\/|$)/,
+];
 
 // The session cookie is set by the auth service on the API host, and scoped to the parent domain,
 // so it reaches this app too. `__Secure-` is prepended wherever the base URL is https, which is

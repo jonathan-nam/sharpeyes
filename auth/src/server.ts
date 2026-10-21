@@ -2,7 +2,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 import { toNodeHandler } from "better-auth/node";
 
-import { auth, PASSWORD_LOGIN, TRUSTED_ORIGINS } from "./auth.js";
+import { auth, PASSWORD_LOGIN, pool, TRUSTED_ORIGINS } from "./auth.js";
+import { backfillDiscordUsernames } from "./backfill.js";
 import { assertCanSendEmail } from "./email.js";
 import { env, optionalEnv } from "./env.js";
 
@@ -51,6 +52,24 @@ function applyCors(request: IncomingMessage, response: ServerResponse): boolean 
   return false;
 }
 
+/**
+ * The backfill, retried until its table exists.
+ *
+ * This service starts BEFORE the backend (backend depends_on auth), and the backend is what runs the
+ * migration that creates discord_username. So on the deploy that adds it, the first try always fails.
+ */
+async function backfillWhenMigrated() {
+  for (;;) {
+    try {
+      await backfillDiscordUsernames(pool);
+      return;
+    } catch (e) {
+      console.error("Discord username backfill will retry in a minute", e);
+      await new Promise((resolve) => setTimeout(resolve, 60_000));
+    }
+  }
+}
+
 const server = createServer((request, response) => {
   if (applyCors(request, response)) return;
 
@@ -68,4 +87,5 @@ server.listen(port, () => {
   // Named at startup because the one thing that silently breaks the backend is this service
   // serving a JWKS the backend is not reading. Both values in one line make that mismatch visible.
   console.log(`auth listening on :${port}, issuing for ${env("AUTH_BASE_URL")}`);
+  void backfillWhenMigrated();
 });

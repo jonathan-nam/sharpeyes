@@ -2,6 +2,7 @@ package com.sharpeyes.backend.plugins
 
 import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
+import com.sharpeyes.backend.friends.friendRoutes
 import com.sharpeyes.backend.invites.inviteRoutes
 import com.sharpeyes.backend.invites.joinRoutes
 import com.sharpeyes.backend.pages.pageRoutes
@@ -153,6 +154,8 @@ fun Application.configureRouting(
             route("/api/settings") {
                 settingsRoutes()
             }
+
+            route("/api/friends") { friendRoutes() }
 
             route("/api/invites") {
                 inviteRoutes(nexonLookupService, spriteCache)

@@ -1612,6 +1612,10 @@ img.user-avatar-img {
   margin-top: 16px;
 }
 
+.social-add {
+  margin: 0 0 24px;
+}
+
 .hero {
   margin: 48px auto;
   text-align: center;

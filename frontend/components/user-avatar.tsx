@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { spriteUrl } from "@/lib/api";
 import { signOut } from "@/lib/session-token";
@@ -62,6 +63,9 @@ export function UserAvatar() {
 
       {open ? (
         <div className="user-avatar-menu" role="menu">
+          <Link href="/social" role="menuitem" onClick={() => setOpen(false)}>
+            Social
+          </Link>
           <button
             type="button"
             role="menuitem"
