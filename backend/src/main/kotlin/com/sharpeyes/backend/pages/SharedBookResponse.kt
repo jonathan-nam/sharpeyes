@@ -16,6 +16,8 @@ data class SharedBookResponse(
     val ownerName: String,
     /** The owner's person row for YOU. Your card in their book is `person:<this>`. */
     val personId: String,
+    /** YOUR person row for their account, which is who they are when the book is read from your side. */
+    val ownerPersonId: String?,
     val parties: List<PartyResponse>,
     val pools: List<PartyLootPoolResponse>,
     val tranches: List<VestigeTrancheResponse>,

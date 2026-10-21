@@ -66,6 +66,7 @@ import { useAccountSettings } from "@/lib/use-account-settings";
 import {
   type Holder,
   SELF_KEY,
+  closedByHolder,
   couponMoney,
   holderKey,
   paymentsSinceClosing,
@@ -81,6 +82,7 @@ import type { Loot, LogDropBody, PartyLootPool } from "@/types/loot";
 import type { DropLogPage, SharedBook } from "@/types/page";
 import { SharedCards } from "@/components/shared-cards";
 import { sharedCard } from "@/lib/shared-book";
+import { sharedHistory } from "@/lib/shared-history";
 import type { Party, Person } from "@/types/party";
 import type {
   ProceedsDisposal,
@@ -303,11 +305,17 @@ export default function DropLogPage() {
     disposals,
   });
   const { closures, settled, ledgers, holderNames, offsetShares, credits } = view;
+  // Other owners' books from your side, so a drop you ran in their party is in your log and your
+  // settled record. Read-only: nothing below that writes is handed these.
+  const shared = sharedHistory(sharedBooks);
+  const logParties = [...parties, ...shared.parties];
+  const logPools = [...pools, ...shared.pools];
+  const closedInLog = new Set([...closures.closed, ...closedByHolder(shared.settlements).closed]);
   // The whole log is kept alongside the filtered one so the toolbar does not come and go: which
   // controls exist is a property of the account, not of what the filter currently leaves.
   // With the tranches, so a night whose coupons you already sold is not asked for in coupons as
   // well as in money. The same subtraction the Settlement Ledger makes below. See V56.
-  const whole = buildDropLog(parties, pools, dropTables, closures.closed);
+  const whole = buildDropLog(logParties, logPools, dropTables, closedInLog);
   const log = forBoss(forCharacter(whole, character), boss);
   const { totals } = log;
   const groups = groupDrops(log.entries, grouping).map((group) => ({
@@ -318,7 +326,9 @@ export default function DropLogPage() {
   // Only characters that actually have drops. A filter offering a name with nothing behind it
   // reads as a bug the first time it is picked.
   const withDrops = characters.filter((c) =>
-    parties.some((p) => p.characterId === c.id && pools.some((pool) => pool.partyId === p.id)),
+    logParties.some(
+      (p) => p.characterId === c.id && logPools.some((pool) => pool.partyId === p.id),
+    ),
   );
   // The same for bosses, off the whole log so picking a character does not take bosses away.
   const loggedBosses = new Set(whole.entries.map((e) => e.bossKey));
@@ -382,11 +392,15 @@ export default function DropLogPage() {
 
   // What is finished. Off the WHOLE log rather than the filtered one, for the reason the ledgers
   // above are: this is the account's record, and a month's slice of it is not one.
-  const settledRows = buildSettledLog(whole.entries, settlements, holderNames);
+  const settledRows = buildSettledLog(
+    whole.entries,
+    [...settlements, ...shared.settlements],
+    new Map([...holderNames, ...shared.names]),
+  );
   // The coupon lots with it: a coupon night has no one price, so its money arrives whole from the
   // tranche ledger or the view is every sale but the vestiges. See SettledTotals.pooled.
   const settledCounts = settledTotals(settledRows, couponMoney(tranches));
-  const settledOrphans = orphansOf(whole.entries, settlements);
+  const settledOrphans = orphansOf(whole.entries, [...settlements, ...shared.settlements]);
   const open = unanswered(parties, pools, VESTIGE);
   // Only the drops still open tilt the rotation: a debt that has been closed was compensated, so it
   // has no business suggesting against the same person forever. See V52.
@@ -700,7 +714,7 @@ export default function DropLogPage() {
                 money={money}
                 orphans={settledOrphans}
                 bossByKey={bossByKey}
-                partyById={partyById}
+                partyById={new Map(logParties.map((p) => [p.id, p]))}
               />
             )}
           </>
