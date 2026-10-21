@@ -735,3 +735,43 @@ object AccountInvite : Table("account_invite") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+// Written by the auth service at each Discord sign-in, keyed by the Discord id. See V86.
+object DiscordUsername : Table("discord_username") {
+    val discordId = text("discord_id")
+    val username = text("username")
+    val updatedAt = timestamp("updated_at")
+
+    override val primaryKey = PrimaryKey(discordId)
+}
+
+// Better Auth's own table, read only to turn a Discord id into an account. Its columns are camelCase.
+object AuthAccount : Table("auth_account") {
+    val userId = text("userId")
+    val providerId = text("providerId")
+    val accountId = text("accountId")
+}
+
+// A friend request, until it is accepted, declined or cancelled. See V86.
+object FriendRequest : Table("friend_request") {
+    val id = uuid("id")
+    val fromUserId = reference("from_user_id", Users.id)
+    val toUserId = reference("to_user_id", Users.id)
+    val createdAt = timestamp("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+// One notification, of any kind. See V86 and notifications/.
+object Notification : Table("notification") {
+    val id = uuid("id")
+    val userId = reference("user_id", Users.id)
+    val kind = text("kind")
+    val subjectId = uuid("subject_id").nullable()
+    val actorId = text("actor_id").nullable()
+    val payload = jsonb<JsonElement>("payload", Json)
+    val createdAt = timestamp("created_at")
+    val readAt = timestamp("read_at").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}

@@ -43,14 +43,34 @@ export const TRUSTED_ORIGINS = env("AUTH_TRUSTED_ORIGINS")
 /** IANA-reserved, so a synthesised address can never collide with or be mistaken for a real one. */
 const NO_EMAIL_DOMAIN = "discord.invalid";
 
+export const pool = new Pool({
+  host: env("DB_HOST"),
+  port: Number(env("DB_PORT")),
+  database: env("DB_NAME"),
+  user: env("DB_USERNAME"),
+  password: env("DB_PASSWORD"),
+});
+
+/**
+ * The Discord username, which is what a friend request is addressed to. See V86.
+ *
+ * Every sign-in, because a username can change. A failure is logged and the sign-in goes ahead:
+ * nobody should be locked out over a name used only for finding friends.
+ */
+export async function recordDiscordUsername(db: Pool, discordId: string, username: string) {
+  try {
+    await db.query(
+      `INSERT INTO discord_username (discord_id, username, updated_at) VALUES ($1, $2, now())
+       ON CONFLICT (discord_id) DO UPDATE SET username = EXCLUDED.username, updated_at = now()`,
+      [discordId, username],
+    );
+  } catch (e) {
+    console.error("could not record the Discord username", e);
+  }
+}
+
 export const auth = betterAuth({
-  database: new Pool({
-    host: env("DB_HOST"),
-    port: Number(env("DB_PORT")),
-    database: env("DB_NAME"),
-    user: env("DB_USERNAME"),
-    password: env("DB_PASSWORD"),
-  }),
+  database: pool,
 
   basePath: AUTH_BASE_PATH,
   baseURL: env("AUTH_BASE_URL"),
@@ -110,10 +130,12 @@ export const auth = betterAuth({
       // granted, and Better Auth refuses a sign-in with no email. Synthesised from the Discord
       // snowflake, which is stable and unique. Left unverified on purpose: `emailVerified` is what
       // account linking matches on, and a made-up address must never link two people together.
-      mapProfileToUser: (profile) =>
-        profile.email
+      mapProfileToUser: async (profile) => {
+        await recordDiscordUsername(pool, profile.id, profile.username);
+        return profile.email
           ? {}
-          : { email: `${profile.id}@${NO_EMAIL_DOMAIN}`, emailVerified: false },
+          : { email: `${profile.id}@${NO_EMAIL_DOMAIN}`, emailVerified: false };
+      },
     },
   },
 

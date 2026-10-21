@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NotificationBell } from "@/components/notification-bell";
 import { SectionMenu } from "@/components/section-menu";
 import { UserAvatar } from "@/components/user-avatar";
 import { WorldToggle } from "@/components/world-toggle";
@@ -52,6 +53,9 @@ export function SiteHeader() {
 
         {!isLoaded && (
           <div className="site-user header-reserved" aria-hidden="true">
+            <div className="notification-bell">
+              <div className="notification-bell-btn is-reserved" />
+            </div>
             <div className="user-avatar">
               <div className="user-avatar-btn is-reserved" />
             </div>
@@ -59,6 +63,7 @@ export function SiteHeader() {
         )}
         {isSignedIn && (
           <div className="site-user">
+            <NotificationBell />
             <UserAvatar />
           </div>
         )}
