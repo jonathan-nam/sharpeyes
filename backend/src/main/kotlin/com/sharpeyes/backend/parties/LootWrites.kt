@@ -275,6 +275,7 @@ internal fun setPayoutPaid(
             it[PartyLootPayout.paid] = paid
             it[paidAt] = if (paid) now else null
         }
+    if (changed > 0) poolOfLootChanged(lootId)
     return changed > 0
 }
 

@@ -160,6 +160,27 @@ class PartyAccessTest {
     }
 
     @Test
+    fun `a member marks a share paid from either end of it, and no other`() {
+        transaction {
+            val party = shared()
+            val creed = seat(party, "CreedBratton")!![PartyMember.id]
+            val mechy = seat(party, "mechyfechy")!![PartyMember.id]
+            val baldrix = seat(party, "Baldrix")!![PartyMember.id]
+            val partyId = Uuid.parse(party.id)
+            val ownersSale = grindstone(party, owner).copy(sellerMemberId = mechy.toString())
+            val membersSale = grindstone(party, member).copy(sellerMemberId = creed.toString())
+
+            assertNull(payoutRefusal(partyId, member, creed, ownersSale), "owed to them")
+            assertNull(payoutRefusal(partyId, member, mechy, membersSale), "sent by them")
+            assertEquals(
+                "You can only mark a share you sent or were sent.",
+                payoutRefusal(partyId, member, baldrix, ownersSale)?.refusal,
+            )
+            assertNull(payoutRefusal(partyId, owner, baldrix, ownersSale))
+        }
+    }
+
+    @Test
     fun `the owner's own pools say which drops a member logged`() {
         transaction {
             val party = shared()

@@ -20,8 +20,8 @@ export type SharedPile = {
  * Your pile as the owner's book keeps it: their ledger for your person row, unchanged.
  *
  * Nothing is flipped. That ledger is already the pile your coupons are in, and a sale typed into it
- * writes exactly the row their book needs (holder: you; shares: theirs as SELF). Only its title is
- * yours, in place of the name they call you by.
+ * writes exactly the row their book needs (holder: you; shares: theirs as SELF). Only the names are
+ * yours: the title, and the owner where their book says "you". Draw it with PieceLedger's `yours`.
  *
  * Null when the book holds no pile of yours.
  */
@@ -54,11 +54,16 @@ export function sharedPile(book: SharedBook, bosses: Boss[]): SharedPile | null 
     const k = holderKey(tranche.holder);
     tranches.set(k, [...(tranches.get(k) ?? []), tranche]);
   }
+  // Their book calls them "you". Keyed the same, so only the name changes.
+  const drops = ledger.drops.map((drop) => ({
+    ...drop,
+    transfers: drop.transfers.map((t) => (t.toId === SELF_KEY ? { ...t, to: book.ownerName } : t)),
+  }));
   return {
     personId: book.personId,
     ownerName: book.ownerName,
     // Not plain "You": your own pile's card already says that, and this is a second pile.
-    ledger: { ...ledger, holderName: `You · ${book.ownerName}'s parties` },
+    ledger: { ...ledger, drops, holderName: `You · ${book.ownerName}'s parties` },
     heldOfYours: new Map(held > 0 ? [[SELF_KEY, held]] : []),
     tranches,
     decided: decidedSales(view.credits, book.disposals),

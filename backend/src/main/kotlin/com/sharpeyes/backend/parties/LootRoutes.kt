@@ -24,7 +24,8 @@ import kotlin.uuid.Uuid
 // the one handler here that is NOT under a party (see settleRoute), registered by PartyRoutes.kt.
 //
 // Every handler starts by proving the caller may write here: the owner, or for logging, selling and
-// keeping, a member acting as their own seat (PartyAccess.kt). Payouts and bundles stay the owner's.
+// keeping, a member acting as their own seat (PartyAccess.kt), and for a payout either end of it.
+// Bundles stay the owner's.
 // Nothing here trusts a loot id on its own, since a loot row's owner is its party's owner.
 
 fun Route.lootRoutes() {
@@ -150,14 +151,16 @@ private suspend fun RoutingContext.setPayoutRoute() {
     val outcome =
         dbQuery {
             ensureUser(userId, email)
+            val loot = findLoot(lootId, partyId, userId)
             when {
-                !ownsParty(partyId, userId) -> null
-                findLoot(lootId, partyId) == null -> null
+                !canEditParty(partyId, userId) -> null
+                loot == null -> null
+                payoutRefusal(partyId, userId, memberId, loot) != null -> payoutRefusal(partyId, userId, memberId, loot)
                 // No row means this member is not on the drop's pinned roster: they joined after
                 // it sold, or they are the seller. Either way there is nothing owed to mark.
                 !crossesOwner(lootId, memberId) -> "This share is between two other members."
                 !setPayoutPaid(lootId, memberId, request.paid, Clock.System.now()) -> null
-                else -> findLoot(lootId, partyId)!!
+                else -> findLoot(lootId, partyId, userId)!!
             }
         }
     respondToLoot(outcome, HttpStatusCode.OK)

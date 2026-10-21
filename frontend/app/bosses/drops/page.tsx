@@ -755,6 +755,7 @@ export default function DropLogPage() {
                       <PieceLedger
                         key={pile.personId}
                         ledgers={[pile.ledger]}
+                        yours
                         heldOfYours={pile.heldOfYours}
                         tranches={pile.tranches}
                         decided={pile.decided}
