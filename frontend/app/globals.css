@@ -8146,6 +8146,45 @@ img.notification-face {
   object-fit: cover;
 }
 
+/* Centred in the width an icon takes, so every row's sentence starts in the same column. */
+.notification-menu .notification-face {
+  margin: 0 5px;
+}
+
+/* A drop's or a boss's art at its own size (46 and 26), with the changer's face on its corner. */
+.notification-art {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+}
+
+.notification-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.notification-sentence {
+  color: var(--ink-strong);
+  overflow-wrap: anywhere;
+}
+
+a.notification-sentence {
+  text-decoration: none;
+}
+
+a.notification-sentence:hover {
+  text-decoration: underline;
+}
+
 .notification-text {
   min-width: 0;
   flex: 1;
@@ -8198,4 +8237,63 @@ img.notification-face {
 .notification-dismiss:hover {
   background: var(--surface-2);
   color: var(--ink-strong);
+}
+
+/* Whoever else just changed this, over its corner for CHANGED_BY_MS (components/changed-by.tsx).
+   Pops in, holds, fades. Never takes a click from what is underneath. */
+.changed-by-anchor {
+  position: relative;
+}
+
+.changed-by {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 3;
+  width: 26px;
+  height: 26px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--surface-2);
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
+  pointer-events: none;
+  animation: changed-by 2.5s ease-out both;
+}
+
+@keyframes changed-by {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  12% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+  20% {
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* No pop, only the hold and the fade: the face is the news, the bounce is decoration. */
+@media (prefers-reduced-motion: reduce) {
+  .changed-by {
+    animation-name: changed-by-still;
+  }
+
+  @keyframes changed-by-still {
+    0%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
 }

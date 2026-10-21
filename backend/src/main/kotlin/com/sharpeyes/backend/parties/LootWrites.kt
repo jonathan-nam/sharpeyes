@@ -139,7 +139,7 @@ internal fun sellLoot(
     partyId: Uuid,
     now: Instant,
 ) {
-    poolChanged(partyId)
+    poolChanged(partyId, lootId)
     val row =
         PartyLoot
             .selectAll()

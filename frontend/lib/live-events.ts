@@ -17,36 +17,57 @@ export type Topic = (typeof TOPICS)[number];
 
 const EVENT = "sharpeyes:live";
 
+/** What a write touched, as far as the backend knew. See events/Publish.kt. */
+export type LiveTarget = { party?: string | null; loot?: string | null; person?: string | null };
+
+/** One event off the stream: the topic, and who made the change when it was somebody. */
+export type LiveEvent = {
+  topic: Topic;
+  actor?: string | null;
+  image?: string | null;
+  target?: LiveTarget;
+};
+
+function dataOf(line: string | undefined): Omit<LiveEvent, "topic"> {
+  try {
+    return line ? JSON.parse(line.slice(6)) : {};
+  } catch {
+    return {};
+  }
+}
+
 /**
- * The topics in [buffer]'s complete events, and what is left of an event still arriving.
+ * The complete events in [buffer], and what is left of an event still arriving.
  *
  * Server-sent events end with a blank line. A comment (`: ping`) names nothing, and a topic this
  * build does not know is dropped rather than passed on to a page that cannot act on it.
  */
-export function topicsIn(buffer: string): { topics: Topic[]; rest: string } {
+export function eventsIn(buffer: string): { events: LiveEvent[]; rest: string } {
   const blocks = buffer.split("\n\n");
   const rest = blocks.pop() ?? "";
-  const topics = blocks
-    .map((block) =>
-      block
-        .split("\n")
-        .find((line) => line.startsWith("event: "))
-        ?.slice(7)
-        .trim(),
-    )
-    .filter((name): name is Topic => (TOPICS as readonly string[]).includes(name ?? ""));
-  return { topics, rest };
+  const events = blocks.flatMap((block): LiveEvent[] => {
+    const lines = block.split("\n");
+    const topic = lines
+      .find((line) => line.startsWith("event: "))
+      ?.slice(7)
+      .trim();
+    if (!(TOPICS as readonly string[]).includes(topic ?? "")) return [];
+    return [{ ...dataOf(lines.find((line) => line.startsWith("data: "))), topic: topic as Topic }];
+  });
+  return { events, rest };
 }
 
-/** Tells every listener on this tab that [topic] moved. */
-export function announce(topic: Topic) {
-  window.dispatchEvent(new CustomEvent<Topic>(EVENT, { detail: topic }));
+/** Tells every listener on this tab that [event]'s topic moved. A bare topic is nobody's change. */
+export function announce(event: LiveEvent | Topic) {
+  const detail = typeof event === "string" ? { topic: event } : event;
+  window.dispatchEvent(new CustomEvent<LiveEvent>(EVENT, { detail }));
 }
 
 /** Calls [listener] whenever [topic] moves. Returns the unsubscribe. */
-export function onLive(topic: Topic, listener: () => void): () => void {
+export function onLive(topic: Topic, listener: (event: LiveEvent) => void): () => void {
   const handler = (e: Event) => {
-    if ((e as CustomEvent<Topic>).detail === topic) listener();
+    const event = (e as CustomEvent<LiveEvent>).detail;
+    if (event.topic === topic) listener(event);
   };
   window.addEventListener(EVENT, handler);
   return () => window.removeEventListener(EVENT, handler);

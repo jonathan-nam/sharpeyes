@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
+import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -77,6 +78,8 @@ private suspend fun RoutingContext.listDisposals() {
 private suspend fun RoutingContext.addDisposalRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val request = call.receive<AddProceedsDisposalRequest>()
+    // Which Settlement card this is, for the other side's screen. See tellLinkedOnWrite.
+    call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
 
     val refusal = disposalRefusal(holder, request.amount, request.kind)

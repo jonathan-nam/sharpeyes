@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.events
 
 import com.sharpeyes.backend.parties.audienceOf
+import com.sharpeyes.backend.parties.imageOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
@@ -13,19 +14,39 @@ import kotlin.uuid.Uuid
 
 internal const val CHANNEL = "sharpeyes_events"
 
+/**
+ * What a change touched, as precisely as its writer knows: a party, one of its drops, or a person's
+ * Settlement card (the owner's person row, which is the key of both sides' card). Nothing named is a
+ * change the page reads again without pointing at anything.
+ */
+@Serializable
+internal data class EventTarget(
+    val party: String? = null,
+    val loot: String? = null,
+    val person: String? = null,
+)
+
 @Serializable
 internal data class Event(
     val users: List<String>,
     val topic: String,
+    /** Who made it, so their own tabs can stay quiet and everybody else's can show their face. */
+    val actor: String? = null,
+    /** Their Discord avatar. Looked up once here rather than by every browser that hears it. */
+    val image: String? = null,
+    val target: EventTarget = EventTarget(),
 )
 
 /** Tells [users]' open pages that [topic] changed. Inside a transaction. */
 internal fun publish(
     users: Collection<String>,
     topic: String,
+    target: EventTarget = EventTarget(),
+    actor: String? = ACTOR.get(),
 ) {
     if (users.isEmpty()) return
-    val payload = Json.encodeToString(Event.serializer(), Event(users.distinct(), topic))
+    val event = Event(users.distinct(), topic, actor, actor?.let(::imageOf), target)
+    val payload = Json.encodeToString(Event.serializer(), event)
     TransactionManager.current().exec("SELECT pg_notify(?, ?)", listOf(textArg(CHANNEL), textArg(payload)))
 }
 
@@ -33,7 +54,8 @@ internal fun publish(
 internal fun publishToParty(
     partyId: Uuid,
     topic: String,
-) = publish(audienceOf(partyId), topic)
+    loot: Uuid? = null,
+) = publish(audienceOf(partyId), topic, EventTarget(party = partyId.toString(), loot = loot?.toString()))
 
 private fun textArg(value: String) =
     org.jetbrains.exposed.v1.core

@@ -11,12 +11,15 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-// GET /api/events: a stream of topic names for the signed-in account, as server-sent events. Read
-// with fetch rather than EventSource, which cannot send the Authorization header (lib/live-events.ts).
+// GET /api/events: a stream of topic names for the signed-in account, each with who made the change
+// and what it touched, as server-sent events. Read with fetch rather than EventSource, which cannot
+// send the Authorization header (lib/live-events.ts).
 
 /** Under nginx's 60s read timeout, so an idle stream is never cut as a hung upstream. */
 private val HEARTBEAT = 25.seconds
@@ -41,8 +44,9 @@ fun Route.eventRoutes() {
                 writeStringUtf8(": open\n\n")
                 flush()
                 while (Clock.System.now() < until) {
-                    val topic = withTimeoutOrNull(HEARTBEAT) { channel.receive() }
-                    writeStringUtf8(if (topic == null) ": ping\n\n" else "event: $topic\ndata: {}\n\n")
+                    val event = withTimeoutOrNull(HEARTBEAT) { channel.receive() }
+                    val frame = event?.let { "event: ${it.topic}\ndata: ${dataOf(it)}\n\n" } ?: ": ping\n\n"
+                    writeStringUtf8(frame)
                     flush()
                 }
             } finally {
@@ -51,3 +55,14 @@ fun Route.eventRoutes() {
         }
     }
 }
+
+/** Who and what, for the page to show on the thing that moved. Never who else was told. */
+@Serializable
+private data class LiveData(
+    val actor: String?,
+    val image: String?,
+    val target: EventTarget,
+)
+
+private fun dataOf(event: Event): String =
+    Json.encodeToString(LiveData.serializer(), LiveData(event.actor, event.image, event.target))

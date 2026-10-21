@@ -1,7 +1,9 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.events.EventTarget
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.tellLinkedOnWrite
+import com.sharpeyes.backend.notifications.noticeLedger
 import com.sharpeyes.backend.pages.bookBetween
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -41,7 +43,7 @@ data class SharedMoneyRequest(
 
 fun Route.sharedBookRoutes() {
     // The owner's Settlement card moves, and so does the member's own.
-    tellLinkedOnWrite(Topic.SETTLEMENT, Topic.LOOT)
+    tellLinkedOnWrite(Topic.SETTLEMENT, Topic.LOOT) { EventTarget(person = it.parameters["personId"]) }
     route("/{personId}") {
         post("/tranches") { addTranche() }
         post("/debts") { addMoney(SharedRow.DEBT) }
@@ -114,6 +116,7 @@ private suspend fun RoutingContext.addMoney(kind: SharedRow) {
             } else {
                 insertSharedPayment(book, writer, request.amount, note, now)
             }
+            noticeLedger(book.personId, if (kind == SharedRow.DEBT) "debt" else "payment", request.amount, note)
             null
         }
     }

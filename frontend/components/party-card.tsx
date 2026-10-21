@@ -19,6 +19,7 @@ import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Party } from "@/types/party";
 import { partyHref } from "@/lib/party-path";
 import { PartyAccounts } from "@/components/party-accounts";
+import { ChangedBy } from "@/components/changed-by";
 
 // One config: who ran this boss this week, and what its pool is up to.
 //
@@ -185,6 +186,8 @@ export function PartyCard({
     }
   }
 
+  const clearedBy = <ChangedBy topics={["clears"]} matches={(t) => t.party === party.id} />;
+
   return (
     // Cleared rows step back so the list reads as what is left. Strictly `=== true`: null is "no
     // capture has said anything", which is a row that still needs an answer, not a finished one.
@@ -237,10 +240,12 @@ export function PartyCard({
             left no way to tell a party with a season of drops from one that never dropped. */}
         {poolLine && (
           <Link
-            className={poolLine.done ? "party-loot-summary is-done" : "party-loot-summary"}
+            className={`changed-by-anchor party-loot-summary${poolLine.done ? " is-done" : ""}`}
             href={partyHref(party)}
           >
             {poolLine.text}
+            {/* Open, the drop that moved shows it instead. */}
+            {!expanded && <ChangedBy topics={["loot"]} matches={(t) => t.party === party.id} />}
           </Link>
         )}
 
@@ -253,16 +258,20 @@ export function PartyCard({
         {onToggleClear ? (
           <button
             type="button"
-            className={`party-clear is-${clearClass(clear.cleared)}`}
+            className={`changed-by-anchor party-clear is-${clearClass(clear.cleared)}`}
             disabled={busy}
             onClick={() => onToggleClear(nextClear(clear.cleared))}
             title={clear.cleared === null ? "No capture yet" : undefined}
           >
             {clearStateLabel(clear.cleared)}
+            {clearedBy}
           </button>
         ) : (
-          <span className={`party-clear is-${clearClass(clear.cleared)} is-readonly`}>
+          <span
+            className={`changed-by-anchor party-clear is-${clearClass(clear.cleared)} is-readonly`}
+          >
             {clearStateLabel(clear.cleared)}
+            {clearedBy}
           </span>
         )}
       </header>

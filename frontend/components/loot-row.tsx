@@ -1,5 +1,6 @@
 "use client";
 
+import { ChangedBy } from "@/components/changed-by";
 import { useState, type ReactNode } from "react";
 import { CopyAmount } from "@/components/copy-amount";
 import { LootSaleForm } from "@/components/loot-sale-form";
@@ -139,7 +140,8 @@ export function LootRow({
   const mayRemove = !readOnly || (member !== null && loot.recordedByYou === true);
 
   return (
-    <article className={`loot-row status-${loot.status.toLowerCase()}`}>
+    <article className={`changed-by-anchor loot-row status-${loot.status.toLowerCase()}`}>
+      <ChangedBy topics={["loot"]} matches={(t) => t.loot === loot.id} />
       <header className="loot-head">
         {loot.iconUrl ? (
           <img className="loot-icon" src={apiAssetUrl(loot.iconUrl)} alt="" />

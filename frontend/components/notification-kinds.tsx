@@ -3,6 +3,9 @@
 import type { ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
+import { bossLabel } from "@/lib/boss-difficulty";
+import { shortMesos } from "@/lib/drop-split";
+import { formatDollars } from "@/lib/money";
 import { friendsChanged } from "@/lib/friends-changed";
 import type { AppNotification } from "@/types/notifications";
 
@@ -18,12 +21,76 @@ export type KindActions = {
 /**
  * How each kind is drawn. A new kind is one entry here and one `notify` on the backend. One that
  * needs an answer brings its buttons and is cleared by answering; one without gets a dismiss.
+ *
+ * A change somebody made to something shared is a sentence instead of a title, beside the art of
+ * what changed (the drop, the boss) where it has some. See backend PartyNotices.kt.
  */
-type Kind = { title: string; actions?: (props: KindActions) => ReactNode };
+type Kind = {
+  title?: string;
+  actions?: (props: KindActions) => ReactNode;
+  /** The sentence, given who did it. */
+  text?: (payload: Payload, who: string) => string;
+  /** Backend-relative art for what changed. */
+  icon?: (payload: Payload) => string | null;
+  href?: (payload: Payload) => string;
+};
+
+type Payload = AppNotification["payload"];
+
+const str = (value: unknown) => (typeof value === "string" ? value : "");
+const num = (value: unknown) => (typeof value === "number" ? value : 0);
+
+const artOf = (p: Payload) => str(p.icon) || null;
+const partyPage = (p: Payload) => `/bosses/parties/${encodeURIComponent(str(p.partyId))}`;
+
+function priceOf(p: Payload): string {
+  if (typeof p.usdCents === "number") return formatDollars(p.usdCents);
+  return typeof p.amount === "number" ? shortMesos(p.amount) : "";
+}
+
+function shareText(p: Payload, who: string): string {
+  if (typeof p.count === "number") {
+    const shares = p.count === 1 ? "1 share" : `${p.count} shares`;
+    return p.how === "OFFSET" ? `${who} offset ${shares}` : `${who} marked ${shares} sent`;
+  }
+  return `${who} marked a ${str(p.item)} share ${p.paid ? "paid" : "unpaid"}`;
+}
+
+function clearText(p: Payload, who: string): string {
+  const boss = bossLabel(str(p.boss) || "a boss", str(p.difficulty) || null);
+  return p.cleared ? `${who} cleared ${boss}` : `${who} unmarked ${boss}`;
+}
+
+function ledgerText(p: Payload, who: string): string {
+  const amount = shortMesos(num(p.amount));
+  if (p.entry === "payment") {
+    return p.toYou
+      ? `${who} recorded ${amount} paid to you`
+      : `${who} recorded ${amount} paid by you`;
+  }
+  return p.toYou ? `${who} recorded ${amount} owed to you` : `${who} recorded ${amount} you owe`;
+}
 
 const KINDS: Record<string, Kind> = {
   FRIEND_REQUEST: { title: "Friend Request", actions: FriendRequestActions },
   FRIEND_ACCEPTED: { title: "Friend Request Accepted" },
+  SALE_RECORDED: {
+    text: (p, who) => `${who} sold ${str(p.item)} for ${priceOf(p)}`,
+    icon: artOf,
+    href: partyPage,
+  },
+  SHARE_MARKED: {
+    text: shareText,
+    icon: artOf,
+    href: (p) => (p.partyId ? partyPage(p) : "/bosses/drops"),
+  },
+  STACKS_CHANGED: {
+    text: (p, who) => `${who} updated the stacks on ${str(p.item)}`,
+    icon: artOf,
+    href: partyPage,
+  },
+  CLEAR_MARKED: { text: clearText, icon: artOf, href: partyPage },
+  LEDGER_ENTRY: { text: ledgerText, href: () => "/bosses/drops" },
 };
 
 /** Null for a kind this build does not know, which the bell leaves out rather than guesses at. */

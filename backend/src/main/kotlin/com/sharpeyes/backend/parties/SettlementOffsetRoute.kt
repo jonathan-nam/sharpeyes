@@ -3,6 +3,8 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
+import com.sharpeyes.backend.events.eventPerson
+import com.sharpeyes.backend.notifications.noticeSharesClosed
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -134,6 +136,8 @@ internal suspend fun RoutingContext.sentSharesRoute() = closeRoute(CLOSE_PAID)
 private suspend fun RoutingContext.closeRoute(kind: String) {
     val (userId, email) = call.principalIdAndEmail()
     val request = call.receive<OffsetSharesRequest>()
+    // Which Settlement card this is, for the other side's screen. See tellLinkedOnWrite.
+    call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
     val note = request.note?.trim()?.takeIf { it.isNotEmpty() }
 
@@ -152,7 +156,7 @@ private suspend fun RoutingContext.closeRoute(kind: String) {
                 holder,
                 CloseAct(kind, note, parts, request.holding),
                 Clock.System.now(),
-            )
+            ).also { if (it is OffsetWrite.Wrote) noticeSharesClosed(holder.personId, parts.size, kind) }
         }
     when (result) {
         is OffsetWrite.AlreadyDischarged ->

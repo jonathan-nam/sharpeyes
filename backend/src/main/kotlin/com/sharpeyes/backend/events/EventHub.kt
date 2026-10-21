@@ -31,24 +31,24 @@ private const val POLL_MS = 10_000
 private const val BUFFER = 16
 
 internal object EventHub {
-    private val listeners = ConcurrentHashMap<String, MutableSet<Channel<String>>>()
+    private val listeners = ConcurrentHashMap<String, MutableSet<Channel<Event>>>()
 
-    fun subscribe(userId: String): Channel<String> {
-        val channel = Channel<String>(BUFFER)
+    fun subscribe(userId: String): Channel<Event> {
+        val channel = Channel<Event>(BUFFER)
         listeners.computeIfAbsent(userId) { ConcurrentHashMap.newKeySet() }.add(channel)
         return channel
     }
 
     fun unsubscribe(
         userId: String,
-        channel: Channel<String>,
+        channel: Channel<Event>,
     ) {
         listeners[userId]?.remove(channel)
         channel.close()
     }
 
     fun deliver(event: Event) {
-        for (user in event.users) listeners[user]?.forEach { it.trySend(event.topic) }
+        for (user in event.users) listeners[user]?.forEach { it.trySend(event) }
     }
 }
 

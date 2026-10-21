@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { kindOf, type KindActions } from "@/components/notification-kinds";
-import { apiFetch, failureText, spriteUrl } from "@/lib/api";
+import { apiAssetUrl, apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { onFriendsChanged } from "@/lib/friends-changed";
 import { useAuth } from "@/lib/use-auth";
 import { useDismiss } from "@/lib/use-dismiss";
@@ -92,6 +93,7 @@ export function NotificationBell() {
               fresh={fresh.has(n.id)}
               busy={busy}
               run={run}
+              onFollow={() => setOpen(false)}
               onDismiss={() =>
                 run(
                   (token) =>
@@ -118,13 +120,23 @@ function NotificationItem({
   busy,
   run,
   onDismiss,
-}: KindActions & { fresh: boolean; onDismiss: () => void }) {
+  onFollow,
+}: KindActions & { fresh: boolean; onDismiss: () => void; onFollow: () => void }) {
   const kind = kindOf(notification.kind)!;
-  const { actor } = notification;
+  const { actor, payload } = notification;
+  const icon = kind.icon?.(payload);
+  const href = kind.href?.(payload);
+  const sentence = kind.text?.(payload, actor?.name ?? actor?.username ?? "Somebody");
   return (
     <div className={fresh ? "notification-item is-fresh" : "notification-item"}>
-      {/* The account that did it, so its Discord face first; their main's sprite where none. */}
-      {actor?.image ? (
+      {/* What changed, with the face of who changed it on its corner. Otherwise the account that
+          did it, so its Discord face first; their main's sprite where none. */}
+      {icon ? (
+        <span className="notification-art">
+          <img className="notification-icon" src={apiAssetUrl(icon)} alt="" />
+          {actor?.image && <img className="notification-badge" src={actor.image} alt="" />}
+        </span>
+      ) : actor?.image ? (
         <img className="notification-face" src={actor.image} alt="" />
       ) : actor?.spriteImgUrl ? (
         <span
@@ -135,13 +147,25 @@ function NotificationItem({
       ) : (
         <span className="notification-face" aria-hidden="true" />
       )}
-      <span className="notification-text">
-        <span className="notification-title">{kind.title}</span>
-        {actor && <span className="notification-who">{actor.name ?? actor.username}</span>}
-        {actor?.username && actor.name && (
-          <span className="notification-handle">@{actor.username}</span>
-        )}
-      </span>
+      {sentence ? (
+        <span className="notification-text">
+          {href ? (
+            <Link className="notification-sentence" href={href} onClick={onFollow}>
+              {sentence}
+            </Link>
+          ) : (
+            <span className="notification-sentence">{sentence}</span>
+          )}
+        </span>
+      ) : (
+        <span className="notification-text">
+          <span className="notification-title">{kind.title}</span>
+          {actor && <span className="notification-who">{actor.name ?? actor.username}</span>}
+          {actor?.username && actor.name && (
+            <span className="notification-handle">@{actor.username}</span>
+          )}
+        </span>
+      )}
       <span className="notification-actions">
         {kind.actions ? (
           kind.actions({ notification, busy, run })

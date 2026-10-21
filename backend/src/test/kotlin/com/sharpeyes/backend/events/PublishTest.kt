@@ -37,6 +37,22 @@ class PublishTest {
     }
 
     @Test
+    fun `a publish says who made the change and what it touched`() {
+        val target = EventTarget(party = "p", loot = "l")
+        val events =
+            heard {
+                ACTOR.set("u")
+                try {
+                    transaction { publish(listOf("a"), Topic.LOOT, target) }
+                } finally {
+                    ACTOR.remove()
+                }
+            }
+        assertEquals("u", events.single().actor)
+        assertEquals(target, events.single().target)
+    }
+
+    @Test
     fun `a write that rolls back tells nobody`() {
         val events =
             heard {

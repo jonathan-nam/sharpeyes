@@ -1,5 +1,6 @@
 "use client";
 
+import { ChangedBy } from "@/components/changed-by";
 import { formatPieces } from "@/lib/piece-ledger";
 import { useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
@@ -60,7 +61,8 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
     for (const part of sendable) await writes.send(part.send!);
   };
   return (
-    <section className="ledger-card">
+    <section className="changed-by-anchor ledger-card">
+      <ChangedBy topics={["settlement"]} matches={(t) => t.person === card.personId} />
       <header className="ledger-head">
         <span className="loot-title">
           <span className="loot-name ledger-who">

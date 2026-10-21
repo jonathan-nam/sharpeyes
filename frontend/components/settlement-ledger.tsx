@@ -1,5 +1,6 @@
 "use client";
 
+import { ChangedBy } from "@/components/changed-by";
 import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { Fragment, useState } from "react";
@@ -672,7 +673,8 @@ function SettlementCard({
     : discharged;
 
   return (
-    <section className="ledger-card">
+    <section className="changed-by-anchor ledger-card">
+      <ChangedBy topics={["settlement"]} matches={(t) => `person:${t.person}` === row.key} />
       <header className="ledger-head">
         {/* Kept whatever it says. Only a PERSON can be pinned: a character nobody has claimed is
             somebody the account cannot name yet, and pinning one would keep a card for a human it
