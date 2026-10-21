@@ -94,7 +94,7 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
         </div>
       )}
 
-      {(detail.theyOwe.length > 0 || detail.holding > 0) && (
+      {(detail.theyOwe.length > 0 || detail.theyOweEntered.length > 0 || detail.holding > 0) && (
         <Fold
           title={`${card.name} Owes You`}
           rows={[
@@ -104,6 +104,7 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
               mesos: line.pay,
               money: formatMoney(line.pay, line.currency, true),
             })),
+            ...detail.theyOweEntered,
             ...(detail.holding > 0
               ? [{ key: "holding", label: "Your coupon sales they hold", mesos: detail.holding }]
               : []),
