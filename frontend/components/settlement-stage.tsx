@@ -93,6 +93,13 @@ export function SettlementStage({
 
       <SettlementLedger
         rows={settlement}
+        images={
+          new Map(
+            page.people.flatMap((person) =>
+              person.image ? [[`person:${person.id}`, person.image] as const] : [],
+            ),
+          )
+        }
         bossByKey={bossByKey}
         partyById={partyById}
         offsetShares={offsetShares}

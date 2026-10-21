@@ -4638,6 +4638,13 @@ button.link:disabled {
   font-size: var(--text-lg);
 }
 
+/* A settlement card's person, with their Discord avatar where they are linked. */
+.ledger-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .loot-meta {
   color: var(--muted);
   font-size: var(--text-base);
@@ -5462,17 +5469,28 @@ button.link:disabled {
   gap: 6px;
 }
 
-.person-avatar {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
+/* A linked account's Discord avatar wherever a name of theirs is: components/discord-avatar.tsx. */
+.discord-avatar {
+  display: inline-block;
+  flex: 0 0 auto;
   border: 1px solid var(--line);
   border-radius: 50%;
   overflow: hidden;
   background: var(--surface-2);
+  vertical-align: middle;
 }
 
-.person-avatar img {
+.discord-avatar.is-md {
+  width: 28px;
+  height: 28px;
+}
+
+.discord-avatar.is-sm {
+  width: 18px;
+  height: 18px;
+}
+
+.discord-avatar img {
   display: block;
   width: 100%;
   height: 100%;
@@ -8100,6 +8118,10 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   border: 1px solid var(--line);
   border-radius: 50%;
   background-color: var(--surface-2);
+}
+
+img.notification-face {
+  object-fit: cover;
 }
 
 .notification-text {

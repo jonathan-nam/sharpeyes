@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Fragment, useState } from "react";
+import { DiscordAvatar } from "@/components/discord-avatar";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import {
@@ -95,8 +96,11 @@ export function SettlementLedger({
   onPin,
   onOffsetAll,
   onSendAll,
+  images = new Map(),
 }: {
   rows: Settlement[];
+  /** Linked people's Discord avatars, keyed by their card's key (`person:<id>`). */
+  images?: Map<string, string>;
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   /** The shares an offset discharged, resolved, keyed by shareKey(). See V58. */
@@ -170,6 +174,7 @@ export function SettlementLedger({
         <SettlementCard
           key={row.key}
           row={row}
+          image={images.get(row.key) ?? null}
           bossByKey={bossByKey}
           partyById={partyById}
           offsetShares={offsetShares}
@@ -214,8 +219,11 @@ function SettlementCard({
   onPin,
   onOffsetAll,
   onSendAll,
+  image,
 }: {
   row: Settlement;
+  /** Their Discord avatar, when they are linked. */
+  image: string | null;
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   /** The shares an offset discharged, resolved, keyed by shareKey(). See V58. */
@@ -672,7 +680,10 @@ function SettlementCard({
           </button>
         )}
         <span className="loot-title">
-          <span className="loot-name">{row.name}</span>
+          <span className="loot-name ledger-who">
+            <DiscordAvatar image={image} size="sm" />
+            {row.name}
+          </span>
           {/* The direction the whole card runs, coloured as the parts below it are, so the headline
               and its own arithmetic never read as two different kinds of thing.
 

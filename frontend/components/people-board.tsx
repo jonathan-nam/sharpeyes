@@ -6,6 +6,7 @@ import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-charact
 import { spriteUrl } from "@/lib/api";
 import { useCarousel } from "@/lib/use-carousel";
 import { ConfirmAct } from "@/components/confirm-act";
+import { DiscordAvatar } from "@/components/discord-avatar";
 import {
   type PersonDraft,
   characterNote,
@@ -134,11 +135,7 @@ export function PeopleBoard({
                   <label className="person-name-field">
                     <span className="field-label">Name</span>
                     <span className="person-name-line">
-                      {row.linked && (
-                        <span className="person-avatar" aria-hidden="true">
-                          {row.image && <img src={row.image} alt="" />}
-                        </span>
-                      )}
+                      {row.linked && <DiscordAvatar image={row.image} />}
                       <input
                         className="split-input person-name"
                         value={row.name}

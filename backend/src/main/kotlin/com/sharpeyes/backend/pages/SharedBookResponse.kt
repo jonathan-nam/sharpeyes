@@ -14,6 +14,8 @@ import kotlinx.serialization.Serializable
 data class SharedBookResponse(
     /** What you call them: your own person row for their account, else their main character. */
     val ownerName: String,
+    /** Their current Discord avatar. See imagesOf. */
+    val ownerImage: String? = null,
     /** The owner's person row for YOU. Your card in their book is `person:<this>`. */
     val personId: String,
     /** YOUR person row for their account, which is who they are when the book is read from your side. */

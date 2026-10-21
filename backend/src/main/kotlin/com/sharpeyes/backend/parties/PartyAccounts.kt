@@ -69,3 +69,6 @@ internal fun imagesOf(accounts: Collection<String>): Map<String, String> =
             .mapNotNull { row -> row[AuthUser.image]?.let { row[AuthUser.id] to it } }
             .toMap()
     }
+
+/** One account's Discord avatar. */
+internal fun imageOf(account: String): String? = imagesOf(listOf(account))[account]

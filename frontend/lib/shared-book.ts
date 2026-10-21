@@ -9,6 +9,8 @@ import type { SharedBook } from "@/types/page";
 /** Your card in somebody else's book, from your side. Every figure is theirs, swapped. */
 export type SharedCard = {
   name: string;
+  /** The owner's Discord avatar. */
+  image: string | null;
   /** Your person row in their book: where your writes into it go (/api/shared-books/{personId}). */
   personId: string;
   /** Mesos they owe you: what their card says they owe you, netted or as unpaid shares. */
@@ -123,6 +125,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     source === "PAYMENT" ? paymentsById.get(id) : source === "DEBT" ? debtsById.get(id) : undefined;
   return {
     name: book.ownerName,
+    image: book.ownerImage ?? null,
     personId: book.personId,
     owed: row.owedByYou + row.sharesYouOwe,
     owe: row.mesos,
