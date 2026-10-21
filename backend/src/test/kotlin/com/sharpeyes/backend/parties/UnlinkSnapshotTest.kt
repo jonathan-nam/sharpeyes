@@ -325,3 +325,14 @@ class UnlinkSnapshotTest {
             .where { (PersonCharacter.userId eq userId) and (PersonCharacter.personId eq person) }
             .map { it[PersonCharacter.name] }
 }
+
+/** The copy's share of a coupon sale must be the figure saleCredits (lib/vestige-ledger.ts) computes. */
+class ShareOfSaleTest {
+    @Test
+    fun `rounds to the meso, half up, like Math round`() {
+        assertEquals(6_000_000_000, shareOfSale(30, 12_000_000_000, 60))
+        assertEquals(3, shareOfSale(1, 10, 3)) // 3.33
+        assertEquals(3, shareOfSale(1, 5, 2)) // 2.5, up
+        assertEquals(7, shareOfSale(2, 10, 3)) // 6.67
+    }
+}
