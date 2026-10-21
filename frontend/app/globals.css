@@ -5353,14 +5353,6 @@ button.link:disabled {
   border: 1px solid var(--line-soft);
 }
 
-/* The coupon a boss drops for certain, beside the party size. A fact about the boss, so it is
-   there whether the pieces are in the pool, owed or settled. */
-.party-row-guaranteed {
-  width: 18px;
-  height: 18px;
-  flex: none;
-}
-
 /* Who picks up the pieces, when the party agreed one member loots the lot. */
 .config-looter {
   display: flex;

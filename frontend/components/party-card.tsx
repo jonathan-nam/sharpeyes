@@ -8,23 +8,11 @@ import { LootList, type StackAssignment } from "@/components/loot-list";
 import { PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
-import {
-  SAVED_BUT_STALE,
-  StaleAfterWrite,
-  apiAssetUrl,
-  failureText,
-  isDuplicateDrop,
-} from "@/lib/api";
+import { SAVED_BUT_STALE, StaleAfterWrite, failureText, isDuplicateDrop } from "@/lib/api";
 import { clearClass, clearStateLabel, nextClear } from "@/lib/boss-clears";
 import type { PieceStatus } from "@/lib/drop-log";
 import { type CouponsOutstanding, poolLabel } from "@/lib/loot";
-import {
-  guaranteedDrop,
-  hasStandingRoster,
-  modeThisWeek,
-  otherMembers,
-  partySizeLabel,
-} from "@/lib/parties";
+import { hasStandingRoster, modeThisWeek, otherMembers, partySizeLabel } from "@/lib/parties";
 import type { Boss } from "@/types/boss";
 import type { BossDrop, DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
@@ -168,8 +156,6 @@ export function PartyCard({
   const [offError, setOffError] = useState<string | null>(null);
   // The badge, named as the party page names it: `pool` is the pool itself here.
   const poolLine = poolLabel(party, coupons);
-  // The coupon this boss drops for certain at the mode this party runs, or null.
-  const guaranteed = guaranteedDrop(dropTable, modeThisWeek(party), party.worldType);
   const panelId = `party-panel-${party.id}`;
   const others = otherMembers(party);
   // A solo party has no roster, but it does have a pool, so it opens too now.
@@ -245,18 +231,6 @@ export function PartyCard({
         </Link>
         <span className="party-row-label">{partySizeLabel(party.members.length)}</span>
         <PartyAccounts accounts={party.accounts ?? []} />
-
-        {/* A boss that drops vestige coupons, said with the coupon itself. A fact about the boss and
-            its difficulty rather than about anything that has happened, so it does not come and go
-            with what is in the pool: the pieces always drop. */}
-        {guaranteed && (
-          <img
-            className="party-row-guaranteed"
-            src={apiAssetUrl(guaranteed.iconUrl ?? "")}
-            alt=""
-            title={`Drops ${guaranteed.name}`}
-          />
-        )}
 
         {/* Work to do gets the line; a settled pool gets it quietly when there is none. It used
             to say nothing at all once everything was paid, which erased the pool from the row and
