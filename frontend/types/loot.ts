@@ -67,6 +67,8 @@ export type Loot = {
   // rows meant when they were cached, and is corrected by the next fetch.
   // The caller logged it, which is what lets an Editor remove it. Absent on a cached payload.
   recordedByYou?: boolean;
+  /** Who logged it, as you call them, when it was not you. Absent on a payload from before it. */
+  recordedByName?: string | null;
   recordedAt?: string;
   // Who is owed, pinned when the drop sold. Empty before that.
   payouts: LootPayout[];

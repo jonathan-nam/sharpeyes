@@ -161,6 +161,7 @@ internal fun lootFor(
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
     val mine = ownSeatsIn(rows.map { it[PartyLoot.partyId] }.distinct())
     val owner = Party.selectAll().where { Party.id eq partyId }.single()[Party.userId]
+    val names = loggerNames(viewer ?: owner, rows.map { it[PartyLoot.recordedByUserId] ?: owner })
     return rows.map {
         it
             .toLootResponse(
@@ -169,7 +170,10 @@ internal fun lootFor(
                 sharesByLoot[it[PartyLoot.id]].orEmpty(),
                 bundlesByLoot[it[PartyLoot.id]].orEmpty(),
                 mine,
-            ).copy(recordedByYou = viewer == null || (it[PartyLoot.recordedByUserId] ?: owner) == viewer)
+            ).let { loot ->
+                val logger = it[PartyLoot.recordedByUserId] ?: owner
+                loot.copy(recordedByYou = viewer == null || logger == viewer, recordedByName = names[logger])
+            }
     }
 }
 
@@ -209,6 +213,7 @@ internal fun allLootFor(
     val sharesByLoot = sharesThatWeekFor(rows, weekRosters)
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
     val mine = ownSeatsIn(rows.map { it[PartyLoot.partyId] }.distinct())
+    val names = loggerNames(viewer, rows.map { it[PartyLoot.recordedByUserId] ?: userId })
     val response = { row: ResultRow ->
         row
             .toLootResponse(
@@ -217,7 +222,10 @@ internal fun allLootFor(
                 sharesByLoot[row[PartyLoot.id]].orEmpty(),
                 bundlesByLoot[row[PartyLoot.id]].orEmpty(),
                 mine,
-            ).copy(recordedByYou = (row[PartyLoot.recordedByUserId] ?: userId) == viewer)
+            ).let { loot ->
+                val logger = row[PartyLoot.recordedByUserId] ?: userId
+                loot.copy(recordedByYou = logger == viewer, recordedByName = names[logger])
+            }
     }
     // groupBy keeps the order rows arrived in, so each pool stays newest-first.
     return rows

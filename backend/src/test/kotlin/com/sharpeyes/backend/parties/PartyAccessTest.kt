@@ -170,6 +170,16 @@ class PartyAccessTest {
             assertEquals(mapOf(theirs.id to false, ours.id to true), read)
             val asMember = allLootFor(owner, viewer = member).single().loot.associate { it.id to it.recordedByYou }
             assertEquals(mapOf(theirs.id to true, ours.id to false), asMember)
+            // Named as each viewer calls the other: the owner's person row for Chris, and the owner's
+            // main for a member with no person of their own for them. Your own drop names nobody.
+            val names = allLootFor(owner).single().loot.associate { it.id to it.recordedByName }
+            assertEquals(mapOf(theirs.id to "Chris", ours.id to null), names)
+            val namesAsMember =
+                allLootFor(
+                    owner,
+                    viewer = member,
+                ).single().loot.associate { it.id to it.recordedByName }
+            assertEquals(mapOf(theirs.id to null, ours.id to "mechyfechy"), namesAsMember)
         }
     }
 

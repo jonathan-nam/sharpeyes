@@ -43,10 +43,13 @@ export function OthersSales({
                   {[
                     boss ? bossLabel(boss.name, party?.difficulty ?? null) : null,
                     formatDropped(row.droppedOn),
+                    row.loggedBy ? `Logged by ${row.loggedBy}` : null,
                   ]
                     .filter(Boolean)
                     .join(" · ")}
                 </span>
+                {/* Who ran it that night, which is who its sale will divide between. */}
+                <span className="loot-meta">{row.ran.map((seat) => seat.name).join(", ")}</span>
               </div>
             </li>
           );

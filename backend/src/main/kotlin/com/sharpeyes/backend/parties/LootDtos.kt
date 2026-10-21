@@ -95,6 +95,8 @@ data class LootResponse(
     val bundlesBy: List<LootBundleResponse> = emptyList(),
     // The caller logged it, which is what lets a member take it back off. See PartyAccess.kt.
     val recordedByYou: Boolean = true,
+    // Who did, as the viewer calls them, when it was not the viewer. See loggerNames.
+    val recordedByName: String? = null,
 )
 
 /**
