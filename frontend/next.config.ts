@@ -45,10 +45,20 @@ const nextConfig: NextConfig = {
   // (PORT=8081) is not reachable from the host browser. Proxying it through the dev server's own
   // origin means only the frontend port has to be forwarded, and it makes the calls same-origin,
   // so CORS stops mattering for the preview too.
+  //
+  // The auth service, under the app's own origin, for the one page a browser opens on it: Discord's
+  // redirect back after sign-in (the box's AUTH_BASE_URL is this origin). Chrome's Safe Browsing
+  // flagged that page as phishing on api., and its check aborts the request after the code is
+  // spent, so clicking through cannot finish a sign-in. Everything else still calls the service
+  // directly, without this hop.
   async rewrites() {
+    const rules = [];
+    const auth = process.env.NEXT_PUBLIC_AUTH_BASE_URL;
+    if (auth) rules.push({ source: "/api/auth/:path*", destination: `${auth}/api/auth/:path*` });
     const previewApi = process.env.PREVIEW_API_ORIGIN;
-    if (!previewApi) return [];
-    return [{ source: "/preview-api/:path*", destination: `${previewApi}/:path*` }];
+    if (previewApi)
+      rules.push({ source: "/preview-api/:path*", destination: `${previewApi}/:path*` });
+    return rules;
   },
 
   // The two brand faces are 468kb together, and Next serves everything in public/ as

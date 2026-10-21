@@ -104,8 +104,9 @@ in. Note that `backend/.env.example` tells you to copy it to `backend/.env`: not
 file. The backend reads its configuration from the process environment (`Env.kt`), and compose
 supplies it.
 
-> **Trap.** `AUTH_BASE_URL` and the backend's `AUTH_ISSUER` have to be the same string. They are
-> both derived from one variable in compose so they cannot drift, but if you override one by hand,
+> **Trap.** The auth service's `iss` (its `AUTH_ISSUER`, or `AUTH_BASE_URL` when that is unset) and
+> the backend's `AUTH_ISSUER` have to be the same string. They are both derived from one variable
+> in compose so they cannot drift, but if you override one by hand,
 > the mismatch does not fail loudly: the backend boots happily and then 401s every request, and the
 > UI reports that as *"Upload failed, check your connection"*, which sends you to look at your
 > network. **If everything 401s, suspect this first.**

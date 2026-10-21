@@ -151,14 +151,16 @@ The last one mirrors the box's `AUTH_PASSWORD_LOGIN` and decides only what is OF
 decides what WORKS, so the two disagreeing hides a working form or shows a refused one, and neither
 signs the wrong person in. Change them together anyway.
 
-Both are the API hostname: nginx serves sign-in from it under `/api/auth`, so there is no third
-name to point at anything.
+Both are the API hostname, and the app's own calls go there. The one PAGE a browser opens on the
+auth service, Discord's redirect back, is on the apex instead: the box sets `AUTH_BASE_URL` to the
+frontend's origin and `next.config.ts` proxies `sharpeyes.app/api/auth/*` to the service. Chrome's
+Safe Browsing flagged that redirect as phishing when it landed on `api.` (2026-10-21).
 
 Then register the redirect URI in the Discord application
 (<https://discord.com/developers/applications> → *OAuth2*), exactly:
 
 ```
-https://api.sharpeyes.app/api/auth/callback/discord
+https://sharpeyes.app/api/auth/callback/discord
 ```
 
 Discord matches it character for character, a trailing slash included, and refuses anything else.

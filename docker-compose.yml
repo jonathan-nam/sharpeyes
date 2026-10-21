@@ -85,6 +85,8 @@ services:
       AUTH_BASE_URL: ${AUTH_BASE_URL:-http://localhost:3001}
       AUTH_AUDIENCE: ${AUTH_AUDIENCE:-sharpeyes-api}
       AUTH_TRUSTED_ORIGINS: ${AUTH_TRUSTED_ORIGINS:-http://localhost:3000}
+      # Where a sign-in that went wrong lands, with ?error= on it.
+      AUTH_ERROR_URL: ${AUTH_ERROR_URL:-http://localhost:3000/sign-in}
       # Encrypts the signing keys at rest. Change it and every existing key is unreadable, so the
       # service mints a new one and every token in flight fails at once.
       AUTH_SECRET: ${AUTH_SECRET:?set it in .env, any long random string. `openssl rand -base64 32`}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { authClient } from "@/lib/auth-client";
 
 // Discord, because that is where the players are: the game links a Discord account to a Nexon one,
@@ -16,6 +16,9 @@ export function SignInButton({
   callbackPath?: string;
 } = {}) {
   const [busy, setBusy] = useState(false);
+  // A sign-in that came back with ?error= (Discord refused, or the round trip was lost). The
+  // service sends it to the page the attempt started on, or to /sign-in when it cannot tell.
+  const failed = useSyncExternalStore(noChanges, cameBackFailed, () => false);
 
   async function signIn() {
     if (busy) return;
@@ -25,6 +28,7 @@ export function SignInButton({
         provider: "discord",
         // Back to the app, not to the auth service, which has nothing to show anybody.
         callbackURL: `${window.location.origin}${callbackPath ?? ""}`,
+        errorCallbackURL: withoutError(window.location.href),
       });
     } finally {
       // Reached only if the redirect did not happen, which is what a failed sign-in looks like from
@@ -34,11 +38,28 @@ export function SignInButton({
   }
 
   return (
-    <button type="button" className="sign-in-btn" onClick={signIn} disabled={busy}>
-      <DiscordMark />
-      Sign In with Discord
-    </button>
+    <>
+      <button type="button" className="sign-in-btn" onClick={signIn} disabled={busy}>
+        <DiscordMark />
+        Sign In with Discord
+      </button>
+      {failed && (
+        <p className="auth-error" role="alert">
+          Sign-in didn&apos;t finish. Try again.
+        </p>
+      )}
+    </>
   );
+}
+
+const noChanges = () => () => {};
+const cameBackFailed = () => new URLSearchParams(window.location.search).has("error");
+
+/** [href] without a previous attempt's `error`, so a second failure is not read as the first. */
+function withoutError(href: string): string {
+  const url = new URL(href);
+  url.searchParams.delete("error");
+  return url.toString();
 }
 
 /** Discord's own mark, so the button is recognisable at a glance rather than read. */
