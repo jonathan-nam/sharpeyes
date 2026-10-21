@@ -47,7 +47,9 @@ an edit to an applied one.
 | Variable | What it is |
 | --- | --- |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USERNAME` / `DB_PASSWORD` | the same Postgres the backend uses |
-| `AUTH_BASE_URL` | where a **browser** reaches this service. Lands in the token's `iss` and in every OAuth redirect |
+| `AUTH_BASE_URL` | where a **browser** reaches this service. Lands in every OAuth redirect. In prod it is the frontend's origin, which proxies `/api/auth/*` here |
+| `AUTH_ISSUER` | optional. The token's `iss`, when it is not `AUTH_BASE_URL`. Must match the backend's `AUTH_ISSUER` |
+| `AUTH_ERROR_URL` | optional. Where a failed sign-in lands, with `?error=` added |
 | `AUTH_SECRET` | encrypts the signing keys at rest. Losing it invalidates every session at once |
 | `AUTH_AUDIENCE` | what the backend checks `aud` against. Both sides must agree |
 | `AUTH_TRUSTED_ORIGINS` | comma-separated origins allowed to call this service |

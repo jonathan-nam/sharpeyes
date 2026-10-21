@@ -166,7 +166,9 @@ export const auth = betterAuth({
         keyPairConfig: { alg: "ES256" },
       },
       jwt: {
-        issuer: env("AUTH_BASE_URL"),
+        // Its own variable, because AUTH_BASE_URL is where the browser signs in (the frontend's
+        // origin in prod, proxied here) and `iss` is what the backend's AUTH_ISSUER checks.
+        issuer: optionalEnv("AUTH_ISSUER") ?? env("AUTH_BASE_URL"),
         audience: env("AUTH_AUDIENCE"),
       },
     }),
@@ -182,6 +184,10 @@ export const auth = betterAuth({
   },
 
   trustedOrigins: TRUSTED_ORIGINS,
+
+  // Where a sign-in that fails before its own errorCallbackURL is known lands (a lost or replayed
+  // state). Unset, it was this service's own address, which has no page to show.
+  onAPIError: { errorURL: optionalEnv("AUTH_ERROR_URL") },
 });
 
 /** Where the backend's JWKS_URL has to point. Exported so a test can assert the two agree. */

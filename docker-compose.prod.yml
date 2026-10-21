@@ -60,9 +60,14 @@ services:
     environment:
       DB_USERNAME: ${DB_USERNAME:?set it in .env on the box}
       DB_PASSWORD: ${DB_PASSWORD:?set it in .env on the box}
-      # The API hostname, because nginx serves sign-in from the same one. This lands in the token's
-      # `iss` and in the OAuth redirect, so it has to be the URL a BROWSER uses, https and all.
-      AUTH_BASE_URL: https://${API_DOMAIN:?the API hostname, e.g. api.sharpeyes.app}
+      # The frontend's origin, because the browser signs in there: Vercel proxies /api/auth/* to
+      # this service (frontend/next.config.ts). It lands in the OAuth redirect, so Discord sends
+      # people back to sharpeyes.app. Chrome flagged the old callback on api. as phishing.
+      AUTH_BASE_URL: ${FRONTEND_ORIGIN:?the frontend's origin, e.g. https://sharpeyes.app}
+      # What `iss` says, which the backend's AUTH_ISSUER above checks character for character.
+      AUTH_ISSUER: https://${API_DOMAIN:?the API hostname, e.g. api.sharpeyes.app}
+      # Where a sign-in that went wrong lands, with ?error= on it.
+      AUTH_ERROR_URL: ${FRONTEND_ORIGIN:?the frontend's origin, e.g. https://sharpeyes.app}/sign-in
       # Scoped to the parent so the frontend on the apex and this service on api. share one session.
       # A leading dot, and never a bare subdomain, or the apex does not get the cookie.
       AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:?the parent domain with a leading dot, e.g. .sharpeyes.app}
