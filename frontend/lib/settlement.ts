@@ -745,7 +745,9 @@ export function moneyRows(
   const discharges: Discharge[] = [];
 
   for (const entry of row.entries) {
-    if (entry.payouts.length === 0 && entry.amount >= 0) {
+    // Either sign. A negative one is them saying you owe them (V88), which is a debt and not
+    // something that came off one. Only an offset names the shares it discharged.
+    if (entry.payouts.length === 0) {
       typed.push(entry);
       continue;
     }

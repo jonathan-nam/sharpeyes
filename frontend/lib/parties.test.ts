@@ -7,7 +7,6 @@ import {
   consolidate,
   existedInWeek,
   filterByClear,
-  guaranteedDrop,
   hasGuaranteedDrop,
   hasStandingRoster,
   heldDifficulty,
@@ -396,7 +395,7 @@ describe("knownCharacterNames", () => {
   });
 });
 
-describe("guaranteedDrop", () => {
+describe("hasGuaranteedDrop", () => {
   const coupon = {
     dropKey: "vestige-of-erion",
     name: "Vestige of Erion Coupon",
@@ -416,23 +415,6 @@ describe("guaranteedDrop", () => {
     pieces: {},
     bundles: {},
   };
-
-  it("names the drop this boss gives for certain at the mode being run", () => {
-    expect(guaranteedDrop([grindstone, coupon], "EXTREME", "INTERACTIVE")?.dropKey).toBe(
-      "vestige-of-erion",
-    );
-  });
-
-  it("says nothing at a difficulty that drops none of it", () => {
-    // Extreme Kalos gives 180 and Chaos Kalos none, so the marker is not a property of the boss
-    // alone.
-    expect(guaranteedDrop([grindstone, coupon], "CHAOS", "INTERACTIVE")).toBeNull();
-  });
-
-  it("says nothing when nobody has recorded a difficulty, or there is no table", () => {
-    expect(guaranteedDrop([grindstone, coupon], null, "INTERACTIVE")).toBeNull();
-    expect(guaranteedDrop(undefined, "EXTREME", "INTERACTIVE")).toBeNull();
-  });
 
   // Which bosses the routine list asks a mode for. A boss whose table carries an amount at some mode
   // has something a clear can file once the mode is known; on every other boss the select would be a

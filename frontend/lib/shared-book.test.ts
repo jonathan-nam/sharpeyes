@@ -40,6 +40,20 @@ const paid = (amount: number) => ({
   receivedAt: "2026-10-02T00:00:00Z",
 });
 
+describe("a debt entered each way", () => {
+  it("lists what they owe you under them, and what you owe under you, never under paid", () => {
+    // Their book: you owe them 10b, and you said they owe you 8b (negative there).
+    const card = sharedCard(
+      book({ debts: [debt(10 * B), { ...debt(-8 * B), note: "dinner" }] }),
+      [],
+    )!;
+    expect(card.detail.owe.map((p) => p.mesos)).toEqual([10 * B]);
+    expect(card.detail.theyOweEntered.map((p) => [p.label, p.mesos])).toEqual([["dinner", 8 * B]]);
+    expect(card.detail.paid).toEqual([]);
+    expect(card.owe).toBe(2 * B);
+  });
+});
+
 describe("a payment the owner sends back (V89)", () => {
   it("comes off what the owner owes you, and says who paid whom", () => {
     // You entered 8b they owe you; they paid 3b of it back, a negative row in their book.

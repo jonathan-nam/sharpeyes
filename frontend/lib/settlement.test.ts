@@ -1272,11 +1272,12 @@ describe("what builds the debt, and what has come off it", () => {
     expect(owedTotal - rows.discharged).toBe(row.mesos - row.owedByYou);
   });
 
-  it("counts a credit typed by hand as a discharge, whatever it names", () => {
-    // V57 made the entry signed, so a negative can arrive with no share behind it. Left in the owed
-    // list it would read as a debt of minus a billion.
-    const rows = moneyRows(card([entry("12", -900 * M, "sent him too much")]));
-    expect([rows.typed.length, rows.discharged]).toEqual([0, 900 * M]);
+  it("keeps a debt typed your way an entry, not something that came off", () => {
+    // A negative entry with no share behind it is them saying you owe them (V88). It is not a
+    // payment, so it stays out of the discharges, and the card draws it under You Owe rather than
+    // as a debt of minus a billion under Owed. Only an offset names the shares it discharged.
+    const rows = moneyRows(card([entry("12", -900 * M, "dinner")]));
+    expect([rows.typed.map((e) => e.amount), rows.discharged]).toEqual([[-900 * M], 0]);
   });
 
   it("folds a coupon-sale offset in with the rest, one place for one kind of fact", () => {

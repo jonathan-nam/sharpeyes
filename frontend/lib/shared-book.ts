@@ -52,6 +52,8 @@ export type SharedDetail = {
   paidTotal: number;
   /** Shares of a night they owe you, one per drop. */
   theyOwe: WalletLine[];
+  /** Debts entered their way: what they owe you outside a drop. Positive. */
+  theyOweEntered: SharedPart[];
   /** Your money they are holding from a sale of your coupons, with nothing decided yet. */
   holding: number;
 };
@@ -109,16 +111,18 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
   // Who wrote each typed row and each receipt, so the card can name the owner's and offer your own back.
   const debtsById = new Map(book.debts.map((d) => [d.id, d]));
   const paymentsById = new Map(book.payments.map((p) => [p.id, p]));
+  // A typed debt, either way: in their book positive is you owing them, negative them owing you.
+  const enteredPart = (entry: (typeof typed)[number]): SharedPart => ({
+    key: entry.id,
+    label: entry.note ?? "Entered",
+    mesos: Math.abs(entry.amount),
+    by: entry.recordedByYou === false ? (entry.recordedByName ?? book.ownerName) : null,
+    remove: entry.recordedByYou === true ? { kind: "debts" as const, id: entry.id } : undefined,
+  });
   const owe: SharedPart[] = [
     ...shares,
     { key: "sold", label: `Coupons of ${book.ownerName}'s you sold`, mesos: row.parts.soldOfYours },
-    ...typed.map((entry) => ({
-      key: entry.id,
-      label: entry.note ?? "Entered",
-      mesos: entry.amount,
-      by: entry.recordedByYou === false ? (entry.recordedByName ?? book.ownerName) : null,
-      remove: entry.recordedByYou === true ? { kind: "debts" as const, id: entry.id } : undefined,
-    })),
+    ...typed.filter((entry) => entry.amount > 0).map(enteredPart),
   ].filter((part) => part.mesos !== 0);
   const paidLabel = { PAYMENT: "You paid", DEBT: "Offset", PROCEEDS: "Coupon sale" } as const;
   const writtenBy = (id: string, source: string) =>
@@ -163,6 +167,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
       theyOwe: row.lines
         .filter((line) => line.direction === "owe")
         .map((line) => ({ ...line, name: where(line) })),
+      theyOweEntered: typed.filter((entry) => entry.amount < 0).map(enteredPart),
       holding: row.holding,
     },
   };
