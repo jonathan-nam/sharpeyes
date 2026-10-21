@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.backend.notifications.noticeSale
+import com.sharpeyes.backend.notifications.noticeShareMarked
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -113,7 +115,9 @@ private suspend fun RoutingContext.sellLootRoute() {
                     sharesRefusal(request.shares, loot.ranThatWeek)
                 else -> {
                     sellLoot(lootId, request, sellerId, partyId, Clock.System.now())
-                    findLoot(lootId, partyId, userId)!!
+                    val sold = findLoot(lootId, partyId, userId)!!
+                    noticeSale(partyId, sold)
+                    sold
                 }
             }
         }
@@ -160,7 +164,7 @@ private suspend fun RoutingContext.setPayoutRoute() {
                 // it sold, or they are the seller. Either way there is nothing owed to mark.
                 !crossesOwner(lootId, memberId) -> "This share is between two other members."
                 !setPayoutPaid(lootId, memberId, request.paid, Clock.System.now()) -> null
-                else -> findLoot(lootId, partyId, userId)!!
+                else -> findLoot(lootId, partyId, userId)!!.also { noticeShareMarked(partyId, it, request.paid) }
             }
         }
     respondToLoot(outcome, HttpStatusCode.OK)

@@ -5,6 +5,7 @@ import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeSettlement
 import com.sharpeyes.backend.db.VestigeSettlementLoot
+import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -81,6 +82,8 @@ private suspend fun RoutingContext.listSettlements() {
 private suspend fun RoutingContext.addSettlementRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val request = call.receive<AddVestigeSettlementRequest>()
+    // Which Settlement card this is, for the other side's screen. See tellLinkedOnWrite.
+    call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
 
     val refusal = settlementRefusal(holder, request.lootIds, request.unpaid)

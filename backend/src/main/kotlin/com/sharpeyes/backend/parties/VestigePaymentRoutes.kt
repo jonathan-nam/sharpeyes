@@ -1,6 +1,8 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.VestigePayment
+import com.sharpeyes.backend.events.eventPerson
+import com.sharpeyes.backend.notifications.noticeLedger
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -85,6 +87,8 @@ private suspend fun RoutingContext.listPayments() {
 private suspend fun RoutingContext.addPaymentRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val request = call.receive<AddVestigePaymentRequest>()
+    // Which Settlement card this is, for the other side's screen. See tellLinkedOnWrite.
+    call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
     val note = request.note?.trim()?.takeIf { it.isNotEmpty() }
 
@@ -113,6 +117,7 @@ private suspend fun RoutingContext.addPaymentRoute() {
                 it[receivedAt] = now
                 it[createdAt] = now
             }
+            noticeLedger(person, "payment", request.amount, note)
             paymentsFor(userId)
         }
     // The whole tally, like the tranche write: what a holder still owes is read off all of it, so a

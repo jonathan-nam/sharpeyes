@@ -11,7 +11,10 @@ import kotlin.uuid.Uuid
 // commit and never for a write that rolled back.
 
 /** Tells everybody in the party that its pool moved, so their Drop Log reads it again. */
-internal fun poolChanged(partyId: Uuid) = publishToParty(partyId, Topic.LOOT)
+internal fun poolChanged(
+    partyId: Uuid,
+    loot: Uuid? = null,
+) = publishToParty(partyId, Topic.LOOT, loot)
 
 /** The same, for a write that knows the drop and not its party. */
 internal fun poolOfLootChanged(lootId: Uuid) {
@@ -19,5 +22,5 @@ internal fun poolOfLootChanged(lootId: Uuid) {
         .selectAll()
         .where { PartyLoot.id eq lootId }
         .firstOrNull()
-        ?.let { poolChanged(it[PartyLoot.partyId]) }
+        ?.let { poolChanged(it[PartyLoot.partyId], lootId) }
 }

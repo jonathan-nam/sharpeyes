@@ -33,8 +33,16 @@ internal fun linkedTo(userId: String): Set<String> =
         .mapNotNull { if (it[Person.userId] == userId) it[Person.linkedUserId] else it[Person.userId] }
         .toSet()
 
-/** Tells the caller's links that [topics] moved, after every successful write under this route. */
-fun Route.tellLinkedOnWrite(vararg topics: String) {
+/**
+ * Tells the caller's links that [topics] moved, after every successful write under this route.
+ *
+ * [target] says what the write touched, off the call: a route group knows which of its path
+ * parameters are a party or a drop. By default, the card a handler named with eventPerson.
+ */
+internal fun Route.tellLinkedOnWrite(
+    vararg topics: String,
+    target: (ApplicationCall) -> EventTarget = { EventTarget(person = it.eventPersonOrNull()) },
+) {
     install(
         createRouteScopedPlugin("TellLinked") {
             // Not onCall, which runs before authentication has said who is calling, so it saw nobody
@@ -48,11 +56,12 @@ fun Route.tellLinkedOnWrite(vararg topics: String) {
                 val user = call.writer() ?: return@on
                 if (call.response.status()?.isSuccess() != true) return@on
                 val before = call.attributes.getOrNull(LINKED_BEFORE).orEmpty()
+                val touched = target(call)
                 // After the response, so the write has committed before anybody reads it back.
                 call.application.launch {
                     dbQuery {
                         val told = before + linkedTo(user) + user
-                        topics.forEach { publish(told, it) }
+                        topics.forEach { publish(told, it, touched, actor = user) }
                     }
                 }
             }

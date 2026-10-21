@@ -4,6 +4,7 @@ import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.db.VestigeTrancheShare
 import com.sharpeyes.backend.events.Topic
+import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
@@ -192,6 +193,7 @@ private suspend fun RoutingContext.listTranches() {
 private suspend fun RoutingContext.addTrancheRoute() {
     val (userId, email) = call.principalIdAndEmail()
     val request = call.receive<AddVestigeTrancheRequest>()
+    call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
 
     val disposition = request.disposition.trim().uppercase()
@@ -208,11 +210,9 @@ private suspend fun RoutingContext.addTrancheRoute() {
         dbQuery {
             ensureUser(userId, email)
             val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
-            if (holder.kind == PERSON) {
-                // Scoped to the account, which the foreign key does not do: without this a tranche
-                // could be filed against somebody else's person and read back as one of theirs.
-                if (!ownsPerson(userId, person)) return@dbQuery null
-            }
+            // Scoped to the account, which the foreign key does not do: without this a tranche could be
+            // filed against somebody else's person and read back as one of theirs.
+            if (holder.kind == PERSON && !ownsPerson(userId, person)) return@dbQuery null
             // The same check for every creditor named. A share filed against somebody else's person
             // would credit a stranger and read back on this account's ledger as a debt discharged.
             val creditors =

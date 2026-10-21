@@ -2,9 +2,11 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
+import com.sharpeyes.backend.events.EventTarget
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.events.tellLinkedOnWrite
+import com.sharpeyes.backend.notifications.noticeClear
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -37,7 +39,9 @@ fun Route.partyRoutes(
     spriteCache: SpriteCache,
 ) {
     // A pool, a roster, a split or a paid share: any of them is on a member's screen. See TellLinked.kt.
-    tellLinkedOnWrite(Topic.PARTY, Topic.LOOT, Topic.SETTLEMENT)
+    tellLinkedOnWrite(Topic.PARTY, Topic.LOOT, Topic.SETTLEMENT) { call ->
+        EventTarget(party = call.parameters["id"], loot = call.parameters["lootId"])
+    }
     get { listParties() }
     post { createPartyRoute(nexonLookupService, spriteCache) }
     // The parties somebody ELSE owns that a character of yours sits in. A read of its own rather
@@ -336,6 +340,7 @@ private suspend fun RoutingContext.setClearRoute() {
                         .first()
                 setPartyClear(found, boss[BossCatalog.id], boss[BossCatalog.reset], request.cleared, Clock.System.now())
                 publishToParty(partyId, Topic.CLEARS)
+                noticeClear(found, request.cleared)
             }
             if (found == null) null else findParty(partyId, userId)
         }

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { apiAssetUrl } from "@/lib/api";
-import { announce, backoffMs, TOPICS, topicsIn } from "@/lib/live-events";
+import { announce, backoffMs, eventsIn, TOPICS } from "@/lib/live-events";
 import { useAuth } from "@/lib/use-auth";
 
 /**
@@ -32,16 +32,16 @@ export function LiveEvents() {
           });
           if (!response.ok || !response.body) throw new Error(`events ${response.status}`);
           // Whatever moved while this was down was never heard, so every page reads again once.
-          if (failures > 0) TOPICS.forEach(announce);
+          if (failures > 0) TOPICS.forEach((topic) => announce(topic));
           failures = 0;
           const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
           let buffer = "";
           for (;;) {
             const { value, done } = await reader.read();
             if (done) break;
-            const read = topicsIn(buffer + value);
+            const read = eventsIn(buffer + value);
             buffer = read.rest;
-            read.topics.forEach(announce);
+            read.events.forEach(announce);
           }
         } catch {
           if (stop.signal.aborted) return;

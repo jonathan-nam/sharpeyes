@@ -4,6 +4,7 @@ import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.eventRoutes
+import com.sharpeyes.backend.events.rememberActor
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.friends.friendRoutes
 import com.sharpeyes.backend.invites.inviteRoutes
@@ -107,6 +108,8 @@ fun Application.configureRouting(
         // the auth service's JWKS, and the response value comes from a real database query, not
         // a hardcoded string.
         authenticate(SESSION_AUTH) {
+            // Who every write under here is by, for the live events it raises. See events/Actor.kt.
+            rememberActor()
             get("/api/ping") {
                 val principal = call.principal<JWTPrincipal>()
                 val userId = principal!!.payload.subject

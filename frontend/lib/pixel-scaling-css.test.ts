@@ -53,6 +53,8 @@ const NATURAL: Record<string, number> = {
 // violation would also like to hide behind.
 const NOT_PIXEL_ART: Record<string, string> = {
   ".capture-thumb": "a screenshot the user just uploaded, at whatever size their client runs",
+  ".changed-by": "a Discord avatar, a photo at any size",
+  ".notification-badge": "a Discord avatar, a photo at any size",
   ".drop-select-list.is-avatars .drop-select-icon": "a Discord avatar, a photo at any size",
   ".drop-select.is-avatars > .drop-select-icon": "a Discord avatar, a photo at any size",
 };
