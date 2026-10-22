@@ -84,20 +84,20 @@ export function PieceLedger({
   /** The coupon's own sprite, backend-relative. Null when the catalog has no art for it. */
   iconUrl: string | null;
   busy: boolean;
-  onAddSale: (
+  onAddSale?: (
     holder: Holder,
     pieces: number,
     amount: number,
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
-  onAddKept: (holder: Holder, pieces: number) => Promise<void>;
-  onAddBought: (
+  onAddKept?: (holder: Holder, pieces: number) => Promise<void>;
+  onAddBought?: (
     holder: Holder,
     pieces: number,
     amount: number,
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
-  onRemoveSale: (trancheId: string) => Promise<void>;
+  onRemoveSale?: (trancheId: string) => Promise<void>;
   /** Your own pile though another book keeps it, so it reads in the first person. See sharedPile. */
   yours?: boolean;
 }) {
@@ -159,20 +159,20 @@ function HolderCard({
   partyById: Map<string, Party>;
   iconUrl: string | null;
   busy: boolean;
-  onAddSale: (
+  onAddSale?: (
     holder: Holder,
     pieces: number,
     amount: number,
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
-  onAddKept: (holder: Holder, pieces: number) => Promise<void>;
-  onAddBought: (
+  onAddKept?: (holder: Holder, pieces: number) => Promise<void>;
+  onAddBought?: (
     holder: Holder,
     pieces: number,
     amount: number,
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
-  onRemoveSale: (trancheId: string) => Promise<void>;
+  onRemoveSale?: (trancheId: string) => Promise<void>;
   yours: boolean;
 }) {
   const [pieces, setPieces] = useState("");
@@ -316,7 +316,7 @@ function HolderCard({
             The pieces and the money were one flat list of chips, so "195 kept" and "4.86b paid" read as
             the same kind of thing when one is what became of the coupons and the other is what came
             back for them. See V50 and V51. */}
-        <span className="ledger-step">pieces</span>
+        {(onAddSale || shownTranches.length > 0) && <span className="ledger-step">pieces</span>}
         {/* Only the miscount. What is still owed is the header's, and it moves as the debt is
             answered, so "0 of 40 pieces accounted for" under "owes 40 pieces" was the same fact
             twice. More entered than the pile holds is a different fact and still speaks: a card that
@@ -338,7 +338,7 @@ function HolderCard({
             Never gated on the COUNT, which is what it looks like from here and is not the same thing.
             That would re-break what alsoHeldByYou exists for: a Sale Ledger that will not admit you
             hold the coupons cannot take the sale. */}
-        {outstanding > 0 ? (
+        {!onAddSale || !onAddKept || !onAddBought ? null : outstanding > 0 ? (
           <form
             className="add-fields"
             onSubmit={(e) => {
@@ -432,7 +432,7 @@ function HolderCard({
 
             Stated before it is saved, and listed on the row after, because a distribution nobody can
             see is one nobody can correct. */}
-        {priced && attributed.length > 0 && (
+        {onAddSale && priced && attributed.length > 0 && (
           <div className="ledger-attribution">
             {attributed.map((share) => {
               // Their slice of THIS tranche, at its own price. Exact within one, which is one lot at
@@ -481,19 +481,21 @@ function HolderCard({
                   {`${formatPieces(share.pieces)} ${creditorNames.get(holderKey(share.holder)) ?? "theirs"}`}
                 </span>
               ))}
-              <button
-                type="button"
-                className="link ledger-drop-sale"
-                disabled={busy}
-                onClick={() => void write(onRemoveSale(tranche.id), null)}
-                aria-label={
-                  tranche.amount === null
-                    ? `Remove ${formatPieces(tranche.pieces)} kept pieces`
-                    : `Remove ${formatPieces(tranche.pieces)} pieces for ${formatMesos(tranche.amount, true)}`
-                }
-              >
-                ×
-              </button>
+              {onRemoveSale && (
+                <button
+                  type="button"
+                  className="link ledger-drop-sale"
+                  disabled={busy}
+                  onClick={() => void write(onRemoveSale(tranche.id), null)}
+                  aria-label={
+                    tranche.amount === null
+                      ? `Remove ${formatPieces(tranche.pieces)} kept pieces`
+                      : `Remove ${formatPieces(tranche.pieces)} pieces for ${formatMesos(tranche.amount, true)}`
+                  }
+                >
+                  ×
+                </button>
+              )}
             </span>
           ))}
         </span>

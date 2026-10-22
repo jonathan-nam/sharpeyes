@@ -672,7 +672,7 @@ describe("the picker the card draws", () => {
   });
 
   it("gates the form on the debt, so a pile that owes nobody is not asked to type", () => {
-    expect(source).toMatch(/\{outstanding > 0 \? \(\s*<form/);
+    expect(source).toMatch(/outstanding > 0 \? \(\s*<form/);
   });
 
   it("never gates it on the count, which is the pile and not the question", () => {
@@ -735,7 +735,12 @@ describe("the piles the ledger holds back", () => {
     // empties the section underneath it. The revealed card is outside the section, so it is `drawn`
     // that decides, not the piles on screen.
     expect(page).not.toMatch(/anythingToPrice \|\| ledgers\.length > 0/);
-    expect(page).toMatch(/anythingToPrice \|\| drawn\.length > 0/);
+    expect(page).toMatch(/anythingToPrice \|\|\s*drawn\.length > 0/);
+  });
+
+  it("lists a linked member's pile without a form, since they sell it from their own Sales", () => {
+    expect(page).toMatch(/linkedKeys\.has\(holderKey\(ledger\.holder\)\)/);
+    expect(source).toMatch(/!onAddSale \|\| !onAddKept \|\| !onAddBought \? null/);
   });
 
   it("draws no card for somebody else's pile, whose debt is the Settlement Ledger's to state", () => {
@@ -758,7 +763,7 @@ describe("the piles the ledger holds back", () => {
   });
 
   it("counts only what draws, so the empty line is not held off by a card nobody sees", () => {
-    expect(page).toMatch(/holders: drawn\.length \+ sharedPiles\.length,/);
+    expect(page).toMatch(/holders: drawn\.length \+ sharedPiles\.length \+ theirPiles\.length,/);
   });
 });
 
