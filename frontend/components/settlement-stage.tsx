@@ -104,6 +104,9 @@ export function SettlementStage({
             ),
           )
         }
+        linked={
+          new Set(page.people.flatMap((person) => (person.linked ? [`person:${person.id}`] : [])))
+        }
         bossByKey={bossByKey}
         partyById={partyById}
         offsetShares={offsetShares}

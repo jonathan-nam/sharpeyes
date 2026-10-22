@@ -101,10 +101,13 @@ export function SettlementLedger({
   onOffsetAll,
   onSendAll,
   images = new Map(),
+  linked = new Set(),
 }: {
   rows: Settlement[];
   /** Linked people's Discord avatars, keyed by their card's key (`person:<id>`). */
   images?: Map<string, string>;
+  /** Cards of people who sign in, keyed like `row.key`. They record their own sales. */
+  linked?: Set<string>;
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   /** The shares an offset discharged, resolved, keyed by shareKey(). See V58. */
@@ -179,6 +182,7 @@ export function SettlementLedger({
           key={row.key}
           row={row}
           image={images.get(row.key) ?? null}
+          linked={linked.has(row.key)}
           bossByKey={bossByKey}
           partyById={partyById}
           offsetShares={offsetShares}
@@ -224,10 +228,13 @@ function SettlementCard({
   onOffsetAll,
   onSendAll,
   image,
+  linked,
 }: {
   row: Settlement;
   /** Their Discord avatar, when they are linked. */
   image: string | null;
+  /** They sign in, so what became of your coupons they hold is theirs to record, on their Sales. */
+  linked: boolean;
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   /** The shares an offset discharged, resolved, keyed by shareKey(). See V58. */
@@ -1262,7 +1269,7 @@ function SettlementCard({
                   ))}
                 </span>
               )}
-              {row.pieces > 0 && (
+              {row.pieces > 0 && !linked && (
                 <form
                   className="ledger-sale"
                   onSubmit={(e) => {

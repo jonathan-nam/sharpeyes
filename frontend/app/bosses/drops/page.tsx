@@ -25,7 +25,14 @@ import {
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { decidedSales, splittableDebts, yourPiles } from "@/lib/settlement";
-import { heldOfYoursBy, outstandingOf, stillAsking, worthDrawing } from "@/lib/ledger-fates";
+import {
+  type HeldOfYours,
+  heldOfYoursBy,
+  owedByCreditor,
+  outstandingOf,
+  stillAsking,
+  worthDrawing,
+} from "@/lib/ledger-fates";
 import { settlementView, VESTIGE, vestigeOf } from "@/lib/settlement-view";
 import {
   DEBTS_KEY,
@@ -504,6 +511,22 @@ export default function DropLogPage() {
   // Of your own piles, the ones with something to answer. A pile that owes nobody is not drawn at
   // all: it is a count with no question on it, and this tab is the list of what is still open.
   const { drawn } = worthDrawing(yours, recorded, heldOfYours);
+  // A pile held by somebody who signs in, which they sell from their own Sales tab (sharedPile).
+  // Listed here read-only, netted the same way their card nets it: what they hold of yours less
+  // what your pile owes them.
+  const linkedKeys = new Set(people.flatMap((p) => (p.linked ? [`person:${p.id}`] : [])));
+  const ownPile = yours[0];
+  const theirPiles = ledgers
+    .filter((ledger) => !ledger.closed && linkedKeys.has(holderKey(ledger.holder)))
+    .map((ledger) => {
+      const key = holderKey(ledger.holder);
+      const owedThem = ownPile
+        ? (owedByCreditor(ownPile).find((c) => c.key === key)?.pieces ?? 0)
+        : 0;
+      const held: HeldOfYours = new Map(owedThem > 0 ? [[SELF_KEY, owedThem]] : []);
+      return { ledger, heldOfYours: held };
+    })
+    .filter((pile) => outstandingOf(pile.ledger, pile.heldOfYours) > 0);
   // The piles of interchangeable drops waiting to be priced. Yours: a lot is filed against the seat
   // that sold it, and only your own seats are ones you can name as seller. A partner's pile stays on
   // its rows, where each names its own seller.
@@ -588,7 +611,7 @@ export default function DropLogPage() {
   const hasSales =
     saleCards({
       unanswered: open.length,
-      holders: drawn.length + sharedPiles.length,
+      holders: drawn.length + sharedPiles.length + theirPiles.length,
       lots: money ? lots.length : 0,
       rows: money ? alone.length : 0,
     }) > 0;
@@ -737,7 +760,10 @@ export default function DropLogPage() {
                   more of the same thing and there is nothing there to divide. */}
                 {/* Gated on what will actually draw, not on there being ledgers at all: a pile held
                   back for owing nobody leaves the heading standing over nothing. */}
-                {(anythingToPrice || drawn.length > 0 || sharedPiles.length > 0) && (
+                {(anythingToPrice ||
+                  drawn.length > 0 ||
+                  sharedPiles.length > 0 ||
+                  theirPiles.length > 0) && (
                   <section className="loot-pool">
                     <h2 className="loot-pool-title">Outstanding Sales</h2>
 
@@ -792,6 +818,19 @@ export default function DropLogPage() {
                             method: "DELETE",
                           })
                         }
+                      />
+                    ))}
+                    {theirPiles.map((pile) => (
+                      <PieceLedger
+                        key={holderKey(pile.ledger.holder)}
+                        ledgers={[pile.ledger]}
+                        heldOfYours={pile.heldOfYours}
+                        tranches={tranchesByHolder}
+                        decided={decided}
+                        bossByKey={bossByKey}
+                        partyById={new Map(logParties.map((p) => [p.id, p]))}
+                        iconUrl={vestigeIcon}
+                        busy={busy}
                       />
                     ))}
                   </section>
