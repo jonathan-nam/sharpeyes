@@ -114,6 +114,22 @@ function LotCard({
     ]),
   );
 
+  // Where the pile came from, before anything is typed: one line per boss and roster in the queue.
+  const sources = [
+    ...new Set(
+      drop.queue.map((row) => {
+        const boss = bossByKey.get(row.bossKey ?? "");
+        const party = partyById.get(row.partyId);
+        return [
+          boss ? bossLabel(boss.name, party?.difficulty ?? null) : null,
+          row.ran.map((s) => s.name).join(", "),
+        ]
+          .filter(Boolean)
+          .join(" · ");
+      }),
+    ),
+  ];
+
   const ready = proposal !== null && proposal.rows.length > 0 && total !== null && sharesReadable;
 
   async function sell() {
@@ -141,6 +157,11 @@ function LotCard({
         )}
         <span className="loot-title">
           <span className="loot-name">{drop.name}</span>
+          {sources.map((source) => (
+            <span key={source} className="loot-meta">
+              {source}
+            </span>
+          ))}
         </span>
         <span className="ledger-tally">
           {drop.units} unsold in {drop.queue.length} {drop.queue.length === 1 ? "drop" : "drops"}
@@ -160,6 +181,7 @@ function LotCard({
               className="split-input loot-count-input"
               value={count}
               onChange={(e) => setCount(e.target.value)}
+              placeholder="1"
               inputMode="numeric"
             />
           </Field>
