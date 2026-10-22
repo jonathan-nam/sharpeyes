@@ -521,7 +521,6 @@ function HolderCard({
                       one fact that fold would otherwise lose. */}
                   {drop.looterName} · week of {formatWeekStart(drop.weekStart)}
                 </span>
-                <span className="loot-share-nets">{formatPieces(drop.pieces)}</span>
               </div>
 
               {/* Pieces of this night that are somebody else's, in counts. No price: only the holder
