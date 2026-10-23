@@ -85,6 +85,21 @@ describe("dimming under a run filter", () => {
     expect(headDone(renderMixed("party"))).toBe(true);
   });
 
+  it("dims the sprite of a character with no runs of that kind", () => {
+    const soloOnly = (runFilter: RunFilter | null) =>
+      renderToStaticMarkup(
+        createElement(BossMatrix, {
+          bosses: [boss("will")],
+          characters: [{ id: "c1", name: "Aria", spriteImgUrl: null }],
+          clearsByCharacter: { c1: [{ ...clear("will"), cleared: false }] },
+          partyRuns: new Map(),
+          runFilter,
+        }),
+      );
+    expect(headDone(soloOnly("party"))).toBe(true);
+    expect(headDone(soloOnly(null))).toBe(false);
+  });
+
   it("dims a boss once every counted run of it is cleared", () => {
     expect(rowOf(renderMixed(null), "lotus")).toContain("is-row-cleared");
     expect(rowOf(renderMixed("solo"), "will")).not.toContain("is-row-");

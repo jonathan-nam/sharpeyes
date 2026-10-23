@@ -124,17 +124,19 @@ export function BossMatrix({
   // Nothing left to run, so the character steps back the way a finished row does. Counted over the
   // bosses on the table rather than over `bosses`, so a past week is judged on the weekly band it
   // actually shows, and over the cells the run filter counts. See columnFullyCleared for why
-  // silence is not a clear.
+  // silence is not a clear. Under a run filter, a character with no runs of that kind has nothing
+  // left in this view either, so it steps back too.
   const shownBosses = bands.flatMap((band) => band.inCadence);
-  const doneClass = (characterId: string) =>
-    !loading &&
-    columnFullyCleared(
-      byCharacter.get(characterId),
-      shownBosses.filter((boss) => counts(characterId, boss.bossKey)),
-      skipsBy.get(characterId),
-    )
-      ? " is-col-cleared"
-      : "";
+  const doneClass = (characterId: string) => {
+    if (loading) return "";
+    const clears = byCharacter.get(characterId);
+    const skips = skipsBy.get(characterId);
+    const counted = shownBosses.filter((boss) => counts(characterId, boss.bossKey));
+    const runsNone =
+      runFilter !== null &&
+      counted.every((boss) => cellState(clears, boss.bossKey, skips) === "skipped");
+    return runsNone || columnFullyCleared(clears, counted, skips) ? " is-col-cleared" : "";
+  };
 
   const statesOf = (characterId: string, list: Boss[]) =>
     list
