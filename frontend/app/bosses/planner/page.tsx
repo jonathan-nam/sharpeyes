@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } fr
 import { DifficultySelect } from "@/components/difficulty-select";
 import { IconSelect, type IconOption } from "@/components/icon-select";
 import { PageSwap } from "@/components/page-swap";
-import { apiAssetUrl, apiFetch, spriteUrl } from "@/lib/api";
+import { apiAssetUrl, apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { BOSS_ART } from "@/lib/boss-art";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { BOSS_MAX_PARTY } from "@/lib/boss-hp";
@@ -22,15 +22,20 @@ import {
   addCharacter,
   type Draft,
   DRAFT_KEY,
+  draftKey,
   draftWants,
   EMPTY_DRAFT,
   MAX_IGN,
   MAX_MINUTES,
   MIN_MINUTES,
-  readDraft,
+  type LocalDraft,
+  parseDraft,
+  pickDraft,
+  readLocal,
   removeCharacter,
   resolveCharacter,
   type RosterGroup,
+  type SavedPlanner,
   shownCharacters,
   YOU,
 } from "@/lib/planner-draft";
@@ -49,6 +54,7 @@ const PEOPLE_KEY = "/api/people";
 // Read only for the sprites of other people's characters, which the seats already looked up.
 const PARTIES_KEY = "/api/parties";
 const SEATED_KEY = "/api/parties/seated";
+const PLANNER_KEY = "/api/planner";
 
 const NO_BOSS: IconOption = { value: "", label: "Choose...", iconUrl: null };
 
@@ -71,25 +77,44 @@ function subscribeDraft(listener: () => void) {
   };
 }
 
-function currentDraft(): Draft {
-  if (draftCache === null) {
-    try {
-      draftCache = readDraft(localStorage.getItem(DRAFT_KEY));
-    } catch {
-      draftCache = EMPTY_DRAFT;
-    }
+function storedLocal(): LocalDraft | null {
+  try {
+    return readLocal(localStorage.getItem(DRAFT_KEY));
+  } catch {
+    return null;
   }
+}
+
+function currentDraft(): Draft {
+  if (draftCache === null) draftCache = storedLocal()?.draft ?? EMPTY_DRAFT;
   return draftCache;
 }
 
-function setDraft(next: Draft) {
+/** The working copy, kept in this browser. `editedAt` is a save's time when adopting the save. */
+function setDraft(next: Draft, editedAt = Date.now()) {
   draftCache = next;
   try {
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ draft: next, editedAt }));
   } catch {
     // A private window keeps the draft for this visit only.
   }
   for (const listener of draftListeners) listener();
+}
+
+/**
+ * Opens on whatever pickDraft says, and returns the account's save as the baseline for Save.
+ *
+ * Adopting the save is stamped with the save's own time, not now: it is not an edit, so it must not
+ * count as newer than the next save made on another device.
+ */
+function adoptSaved(result: SavedPlanner): Draft | null {
+  const baseline = result.draft == null ? null : parseDraft(result.draft);
+  const open = pickDraft(storedLocal(), result);
+  const fromSave = baseline !== null && draftKey(open) === draftKey(baseline);
+  if (fromSave && draftKey(open) !== draftKey(currentDraft())) {
+    setDraft(open, result.savedAt ? Date.parse(result.savedAt) : 0);
+  }
+  return baseline;
 }
 
 export default function PartyPlannerPage() {
@@ -105,6 +130,10 @@ export default function PartyPlannerPage() {
   const [seated, setSeated] = useState<SeatedParty[]>(peek<SeatedParty[]>(SEATED_KEY) ?? []);
   const [state, setState] = useState<LoadState>("loading");
   const draft = useSyncExternalStore(subscribeDraft, currentDraft, () => EMPTY_DRAFT);
+  // What the account last saved, or null before it answers or if it never has.
+  const [saved, setSaved] = useState<Draft | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -117,24 +146,48 @@ export default function PartyPlannerPage() {
           apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, withToken),
           apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, withToken),
           apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, withToken),
+          apiFetch<SavedPlanner>(PLANNER_KEY, { method: "GET" }, withToken),
         ]);
       })
-      .then(([bossResult, characterResult, peopleResult, partyResult, seatedResult]) => {
-        setBosses(bossResult);
-        setCharacters(characterResult);
-        setPeople(peopleResult);
-        setParties(partyResult);
-        setSeated(seatedResult);
-        put(BOSSES_KEY, bossResult);
-        put(CHARACTERS_KEY, characterResult);
-        put(PEOPLE_KEY, peopleResult);
-        put(PARTIES_KEY, partyResult);
-        put(SEATED_KEY, seatedResult);
-        setState("loaded");
-      })
+      .then(
+        ([bossResult, characterResult, peopleResult, partyResult, seatedResult, savedResult]) => {
+          setSaved(adoptSaved(savedResult));
+          setBosses(bossResult);
+          setCharacters(characterResult);
+          setPeople(peopleResult);
+          setParties(partyResult);
+          setSeated(seatedResult);
+          put(BOSSES_KEY, bossResult);
+          put(CHARACTERS_KEY, characterResult);
+          put(PEOPLE_KEY, peopleResult);
+          put(PARTIES_KEY, partyResult);
+          put(SEATED_KEY, seatedResult);
+          setState("loaded");
+        },
+      )
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
+
+  const changed = draftKey(draft) !== draftKey(saved ?? EMPTY_DRAFT);
+
+  async function save() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const result = await apiFetch<SavedPlanner>(
+        PLANNER_KEY,
+        { method: "PUT", body: JSON.stringify({ draft }) },
+        getToken,
+      );
+      setSaved(result.draft == null ? null : parseDraft(result.draft));
+      setDraft(draft, result.savedAt ? Date.parse(result.savedAt) : Date.now());
+    } catch (e) {
+      setSaveError(failureText(e, "Couldn't save. Try again."));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
   const bossOptions: IconOption[] = bosses
@@ -204,7 +257,22 @@ export default function PartyPlannerPage() {
 
   return (
     <main className="page">
-      <h1 className="page-title">Party Planner</h1>
+      <div className="page-head">
+        <h1 className="page-title">Party Planner</h1>
+        {state === "loaded" && (
+          <span className="page-head-links">
+            <button
+              type="button"
+              className="party-save"
+              disabled={!changed || saving}
+              onClick={() => void save()}
+            >
+              {saving ? "Saving..." : changed ? "Save" : "Saved"}
+            </button>
+          </span>
+        )}
+      </div>
+      {saveError && <p className="routine-error">{saveError}</p>}
       {state === "error" && (
         <p className="routine-error">Couldn&apos;t load your characters. Reload to try again.</p>
       )}
@@ -315,6 +383,7 @@ export default function PartyPlannerPage() {
                               }
                             >
                               <option value="">Any Size</option>
+                              <option value={1}>Solo</option>
                               {Array.from({ length: cap - 1 }, (_, k) => k + 2).map((n) => (
                                 <option key={n} value={n}>
                                   Up to {n}

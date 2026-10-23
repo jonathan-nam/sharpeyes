@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   addCharacter,
   type Draft,
+  draftKey,
   draftWants,
   EMPTY_DRAFT,
   MAX_IGN,
   MAX_MINUTES,
+  pickDraft,
   readDraft,
+  readLocal,
   removeCharacter,
   resolveCharacter,
   shownCharacters,
@@ -129,5 +132,49 @@ describe("what the planner is given", () => {
     });
     const wants = draftWants(d, shownCharacters(d, roster));
     expect(wants.map((w) => [w.character, w.personId])).toEqual([["Rune", YOU]]);
+  });
+});
+
+describe("saving and coming back", () => {
+  const saved = { ...EMPTY_DRAFT, maxMinutes: 20 };
+  const edited = { ...EMPTY_DRAFT, maxMinutes: 15 };
+  const at = "2026-10-23T12:00:00Z";
+  const ms = Date.parse(at);
+
+  it("opens on the account's save when this browser has nothing newer", () => {
+    expect(pickDraft(null, { draft: saved, savedAt: at })).toEqual(saved);
+    expect(pickDraft({ draft: edited, editedAt: ms - 1 }, { draft: saved, savedAt: at })).toEqual(
+      saved,
+    );
+  });
+
+  it("keeps this browser's edits made after the save", () => {
+    expect(pickDraft({ draft: edited, editedAt: ms + 1 }, { draft: saved, savedAt: at })).toEqual(
+      edited,
+    );
+  });
+
+  it("keeps this browser's copy when the account never saved", () => {
+    expect(pickDraft({ draft: edited, editedAt: 0 }, { draft: null, savedAt: null })).toEqual(
+      edited,
+    );
+    expect(pickDraft(null, { draft: null, savedAt: null })).toEqual(EMPTY_DRAFT);
+  });
+
+  it("reads a plain draft from before saving existed as never edited", () => {
+    const local = readLocal(JSON.stringify(edited));
+    expect(local).toEqual({ draft: edited, editedAt: 0 });
+    expect(readLocal(JSON.stringify({ draft: edited, editedAt: 5 }))).toEqual({
+      draft: edited,
+      editedAt: 5,
+    });
+    expect(readLocal("{broken")).toBeNull();
+  });
+
+  it("tells a changed draft from a saved one, whatever order the hidden names are in", () => {
+    expect(draftKey({ ...saved, hidden: ["b", "a"] })).toBe(
+      draftKey({ ...saved, hidden: ["a", "b"] }),
+    );
+    expect(draftKey(saved)).not.toBe(draftKey(edited));
   });
 });

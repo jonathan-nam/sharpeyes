@@ -808,3 +808,12 @@ object Notification : Table("notification") {
 
     override val primaryKey = PrimaryKey(id)
 }
+
+// The Party Planner's settings as last saved, one per account. See V93.
+object PartyPlannerDraft : Table("party_planner_draft") {
+    val userId = reference("user_id", Users.id)
+    val draft = jsonb<JsonElement>("draft", Json)
+    val savedAt = timestamp("saved_at")
+
+    override val primaryKey = PrimaryKey(userId)
+}

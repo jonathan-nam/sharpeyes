@@ -115,14 +115,55 @@ export const EMPTY_DRAFT: Draft = {
   wants: [],
 };
 
-export function readDraft(text: string | null): Draft {
-  if (!text) return EMPTY_DRAFT;
-  let raw: unknown;
+function parseJson(text: string | null): unknown {
+  if (!text) return null;
   try {
-    raw = JSON.parse(text);
+    return JSON.parse(text);
   } catch {
-    return EMPTY_DRAFT;
+    return null;
   }
+}
+
+export function readDraft(text: string | null): Draft {
+  return parseDraft(parseJson(text));
+}
+
+/** This browser's working copy, and when it was last edited. A save counts as an edit at its time. */
+export type LocalDraft = { draft: Draft; editedAt: number };
+
+/** The working copy as stored. A plain draft from before saving existed reads as never edited. */
+export function readLocal(text: string | null): LocalDraft | null {
+  const raw = parseJson(text);
+  if (typeof raw !== "object" || raw === null) return null;
+  const r = raw as Record<string, unknown>;
+  if (!("draft" in r)) return { draft: parseDraft(r), editedAt: 0 };
+  const editedAt = Number(r.editedAt);
+  return { draft: parseDraft(r.draft), editedAt: Number.isFinite(editedAt) ? editedAt : 0 };
+}
+
+/** What the account last saved. Mirrors the backend's SavedPlannerResponse. */
+export type SavedPlanner = { draft: unknown; savedAt: string | null };
+
+/**
+ * What the page opens on: this browser's edits if they came after the account's save, else the save.
+ *
+ * So an unsaved change survives a reload here, and another device's newer save is never hidden
+ * behind an old copy left in this one.
+ */
+export function pickDraft(local: LocalDraft | null, saved: SavedPlanner): Draft {
+  const savedAt = saved.savedAt === null ? Number.NaN : Date.parse(saved.savedAt);
+  if (saved.draft != null && (local === null || !(local.editedAt > savedAt))) {
+    return parseDraft(saved.draft);
+  }
+  return local?.draft ?? EMPTY_DRAFT;
+}
+
+/** Two drafts as one comparable string, for telling edited from saved. */
+export function draftKey(draft: Draft): string {
+  return JSON.stringify({ ...draft, hidden: [...draft.hidden].sort() });
+}
+
+export function parseDraft(raw: unknown): Draft {
   if (typeof raw !== "object" || raw === null) return EMPTY_DRAFT;
   const r = raw as Record<string, unknown>;
   const minutes = Number(r.maxMinutes);

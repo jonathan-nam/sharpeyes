@@ -7,9 +7,9 @@
 // party at 120 is assumed to take fifteen minutes. That is the whole model, and it is only as good
 // as the sliders, which is why the plan goes to every member for review before anything is made.
 //
-// A character who can solo is planned solo and never carries. Solo clearers keep their whole loot
-// over seating a weaker character, so a weak character nobody else can reach is reported as
-// unplaced rather than handed to a soloer.
+// A character who can solo runs its own party, never one with another soloer, and keeps its whole
+// loot over seating a weaker character. It carries only somebody no other party could take, and
+// only when its party size allows: "Solo" (1) never carries, any other size will.
 //
 // Everyone else is grouped per (world, boss, difficulty), ranked in order by:
 //
@@ -134,22 +134,29 @@ export function planParties(wants: Want[], settings: PlanSettings): Plan {
 
   const plan: Plan = { parties: [], unplaced: [], exact: true };
   for (const { bossKey, group } of groups.values()) {
-    const solos = group.filter((w) => w.strength >= SOLO);
-    for (const w of solos) plan.parties.push(party([w]));
-    const rest = group.filter((w) => w.strength < SOLO);
-    if (rest.length === 0) continue;
     const rules = groupRules(bossKey, settings);
+    const solos = group.filter((w) => w.strength >= SOLO).map((w) => [w]);
+    const rest = group.filter((w) => w.strength < SOLO);
     const found = rest.length <= EXACT_LIMIT ? searchExact(rest, rules) : searchGreedy(rest, rules);
     if (rest.length > EXACT_LIMIT) plan.exact = false;
-    for (const members of found) plan.parties.push(party(members));
     const placed = new Set(found.flat().map((w) => w.id));
     for (const w of rest) {
       if (placed.has(w.id)) continue;
+      // Nobody else could take them, so a soloer who will carry does, the emptiest first. Party
+      // size is the soloer's say: "Solo" (1) never carries. Not timed, since a carry is no slower.
+      const host = solos
+        .filter((members) => rules.mayJoin([...members, w]))
+        .sort((a, b) => a.length - b.length)[0];
+      if (host) {
+        host.push(w);
+        continue;
+      }
       plan.unplaced.push({
         wantId: w.id,
         reason: canJoinAny(w, rest, rules) ? "crowded" : "alone",
       });
     }
+    for (const members of [...solos, ...found]) plan.parties.push(party(members));
   }
   return plan;
 }

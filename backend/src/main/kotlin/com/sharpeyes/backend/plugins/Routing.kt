@@ -16,6 +16,7 @@ import com.sharpeyes.backend.parties.partyRoutes
 import com.sharpeyes.backend.parties.peopleRoutes
 import com.sharpeyes.backend.parties.sharedBookRoutes
 import com.sharpeyes.backend.parties.vestigeLedgerRoutes
+import com.sharpeyes.backend.planner.plannerRoutes
 import com.sharpeyes.backend.screenshots.screenshotRoutes
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.services.ScreenshotParser
@@ -160,9 +161,7 @@ fun Application.configureRouting(
             // Three paths, one feature, mounted together. See vestigeLedgerRoutes.
             vestigeLedgerRoutes()
 
-            route("/api/settings") {
-                settingsRoutes()
-            }
+            accountRoutes()
 
             socialRoutes()
 
@@ -171,6 +170,12 @@ fun Application.configureRouting(
             }
         }
     }
+}
+
+/** What an account keeps for itself alone. */
+private fun Route.accountRoutes() {
+    route("/api/settings") { settingsRoutes() }
+    route("/api/planner") { plannerRoutes() }
 }
 
 /** Other accounts, and what they do that reaches yours. */
