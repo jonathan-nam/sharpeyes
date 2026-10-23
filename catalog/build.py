@@ -111,7 +111,7 @@ DROP_WORLDS = {WORLD_INTERACTIVE, WORLD_HEROIC}
 # pinned, not "latest": "latest" is whatever got extracted last and can regress an id out from
 # under us, and a brand-new item is simply absent until the mirror ingests its patch. 268 was the
 # newest COMPLETE GMS dataset at adoption. Bump it deliberately and re-validate; do not float it.
-# An item with no icon_id has no official source (too new, or named differently) and keeps the
+# An item newer than that names a later dataset with `icon_version`. An item with no icon_id has no official source (too new, or named differently) and keeps the
 # hand-cut art already in the tree.
 ICON_VERSION = 268
 ICON_URL = "https://maplestory.io/api/GMS/{version}/item/{icon_id}/icon"

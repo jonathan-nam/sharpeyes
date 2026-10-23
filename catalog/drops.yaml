@@ -14,8 +14,9 @@
 # says it: the game calls it "Exceptional Hammer (Face Acc)", not "(Face Accessory)".
 #
 # `icon_id` is the Nexon item id the art comes from, read from GMS v268 (ICON_VERSION) unless
-# `icon_version` names a later one. Absent means no dataset the mirror serves has the item, and the
-# drop is drawn without art rather than with somebody else's.
+# `icon_version` names a later one (269 for items v268 predates; v270 500s on the mirror). Absent
+# means no dataset the mirror serves has the item, and the drop is drawn without art rather than
+# with somebody else's.
 #
 # `per_member` marks a drop each member receives their own copy of: ALWAYS, or HEROIC when it is
 # one drop for the party in Interactive worlds and one each in Heroic/Reboot. It is the one flag
@@ -71,14 +72,10 @@ drops:
   - key: immortal-legacy
     name: Immortal Legacy
     icon_id: 1143471
-  # No icon_id, for the reason given on eternal-armor-of-radiance-box: GMS v268 predates
-  # Malefic Star. Cut from a capture taken on black, which a glow is already premultiplied against,
-  # so the halo divides back out and only the solid core is left opaque. The downscale to
-  # ICON_CONTENT is done in that same space: resampling straight RGBA is what bleeds a glow.
   - key: blissful-nightmare
     name: Blissful Nightmare
-    art: cut
-  # GMS v269 is the only dataset that has it: v268 predates it and v270 500s on the mirror.
+    icon_id: 1113360
+    icon_version: 269
   - key: original-sin-of-pride
     name: Original Sin of Pride
     icon_id: 1012911
@@ -176,19 +173,16 @@ drops:
     name: Eternal Armor of Oaths Box
     icon_id: 2639253
     fungible: true
-  # No icon_id: GMS v268 does not carry this item. Cut instead from an in-game capture taken on
-  # black, which hid the chest outline. The five boxes above share one pixel-identical silhouette,
-  # so that mask is what gave the outline back.
+  # Two ids carry this name with the same art. The lower one is pinned.
   - key: eternal-armor-of-radiance-box
     name: Eternal Armor of Radiance Box
-    art: cut
+    icon_id: 2831105
+    icon_version: 269
     fungible: true
-  # v270, and cut the same way as the box above. What the black hid here is not the outline but
-  # the drop shadow, which is semi-transparent, so the alpha is the oaths box's: five of this
-  # one's pixels fall outside that silhouette and the rest of it is the same chest.
   - key: eternal-twisted-armor-box
     name: Eternal Twisted Armor Box
-    art: cut
+    icon_id: 2831106
+    icon_version: 269
     fungible: true
 
   # --- Selection and ring boxes ------------------------------------------------------
