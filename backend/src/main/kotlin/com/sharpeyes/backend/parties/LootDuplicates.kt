@@ -14,8 +14,8 @@ import kotlin.uuid.Uuid
 
 // Two keyboards on one pool is how one night gets logged twice, a count that looks right and is
 // not. Not a unique index: two copies of one drop in one period are real, so a second is asked
-// for rather than refused outright. The exception is a counted drop, see onlyOnceRefusal. Inside a
-// transaction, like the rest.
+// for rather than refused outright. That is a TYPED drop only: a catalog drop falls once per clear,
+// see onlyOnceRefusal. Inside a transaction, like the rest.
 
 /** A drop already in [partyId]'s pool for the same period of its boss, or null when there is none. */
 internal fun duplicateRefusal(
@@ -78,8 +78,10 @@ private fun isCountedDrop(
 }
 
 /**
- * Refuses a counted drop already in [partyId]'s pool for its period, with no way to add it again
- * (a plain Refusal is a 400, not Duplicate's 409). Every path that adds to a pool calls this.
+ * Refuses a catalog drop already in [partyId]'s pool for its period, with no way to add it again
+ * (a plain Refusal is a 400, not Duplicate's 409), and any but a counted one at more than 1. A boss
+ * drops each item once per clear, vestiges as one batch. A typed drop could be anything, so it is
+ * left to duplicateRefusal. Every path that adds to a pool calls this.
  */
 internal fun onlyOnceRefusal(
     partyId: Uuid,
@@ -94,8 +96,11 @@ internal fun onlyOnceRefusal(
         .where { Party.id eq partyId }
         .forUpdate()
         .firstOrNull()
-    if (!isCountedDrop(partyId, item, bossId)) return null
-    return duplicateRefusal(partyId, item, bossId, droppedOn, onlyOnce = true)
+    return when {
+        item.dropCatalogId == null -> null
+        item.quantity != 1 && !isCountedDrop(partyId, item, bossId) -> Refusal("This drop falls one at a time.")
+        else -> duplicateRefusal(partyId, item, bossId, droppedOn, onlyOnce = true)
+    }
 }
 
 /** Logs a validated drop into [partyId]'s pool, unless it looks like one already there. */
@@ -109,7 +114,7 @@ internal fun addPoolDrop(
 ): Any {
     val refused =
         onlyOnceRefusal(partyId, item, bossId, droppedOn)
-            ?: if (request.again || isCountedDrop(partyId, item, bossId)) {
+            ?: if (request.again || item.dropCatalogId != null) {
                 null
             } else {
                 duplicateRefusal(partyId, item, bossId, droppedOn)?.let(::Duplicate)

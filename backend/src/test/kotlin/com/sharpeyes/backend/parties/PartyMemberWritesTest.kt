@@ -186,7 +186,7 @@ class PartyMemberWritesTest {
     }
 
     @Test
-    fun `vestiges are logged once a week, and Add Again cannot log them twice`() {
+    fun `a catalog drop is logged once a week, and Add Again cannot log it twice`() {
         transaction {
             val party = shared()
             val vestiges = AddLootRequest(dropKey = "vestige-of-erion", quantity = 180, again = true)
@@ -198,11 +198,26 @@ class PartyMemberWritesTest {
             assertTrue(add(member, 0) is LootResponse)
             assertTrue(add(owner, 1) is Refusal)
             assertTrue(add(owner, 7) is LootResponse)
-            // Not counted, so a second still goes in when asked for.
+            // Every other catalog drop too, and only ever one of it.
             val faith = AddLootRequest(dropKey = "grindstone-of-faith", again = true)
             val grindstone = LootedDrop(dropIdForKey("grindstone-of-faith")!!)
+            val two = LootedDrop(dropIdForKey("grindstone-of-faith")!!, quantity = 2)
+            assertTrue(addPoolDrop(id(party), member, two, boss, night, faith) is Refusal)
             assertTrue(addPoolDrop(id(party), member, grindstone, boss, night, faith) is LootResponse)
-            assertTrue(addPoolDrop(id(party), member, grindstone, boss, night, faith) is LootResponse)
+            assertTrue(addPoolDrop(id(party), owner, grindstone, boss, night, faith) is Refusal)
+        }
+    }
+
+    @Test
+    fun `a typed drop can still be added again when asked`() {
+        transaction {
+            val party = shared()
+            val box = LootedDrop(null, "Mystery Box")
+            val boss = bossIdForKey("kalos-the-guardian")
+            val once = AddLootRequest(customName = "Mystery Box")
+            assertTrue(addPoolDrop(id(party), member, box, boss, night, once) is LootResponse)
+            assertTrue(addPoolDrop(id(party), member, box, boss, night, once) is Duplicate)
+            assertTrue(addPoolDrop(id(party), member, box, boss, night, once.copy(again = true)) is LootResponse)
         }
     }
 

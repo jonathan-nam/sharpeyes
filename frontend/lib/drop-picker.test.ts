@@ -5,6 +5,7 @@ import {
   addDropBody,
   defaultQuantity,
   dropOptionLabel,
+  isCountedDrop,
   parseQuantity,
   pickableDrops,
 } from "./drop-picker";
@@ -244,5 +245,14 @@ describe("the count the box opens with", () => {
   it("fills nothing for a world the drop has no count in", () => {
     // Not zero, and not the other world's figure. The catalog says nothing about this pair.
     expect(defaultQuantity(vestige, "EXTREME", "HEROIC")).toBe("");
+  });
+});
+
+describe("which drops ask how many", () => {
+  it("asks for a counted drop and for no other", () => {
+    // Every other drop falls once per clear, and the server refuses it at more than 1.
+    expect(isCountedDrop(drop({ pieces: { INTERACTIVE: { HARD: 60 } } }))).toBe(true);
+    expect(isCountedDrop(drop())).toBe(false);
+    expect(isCountedDrop(undefined)).toBe(false);
   });
 });

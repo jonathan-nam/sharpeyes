@@ -7,7 +7,13 @@ import { DropSelect } from "@/components/drop-select";
 import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
 import { StackAssign } from "@/components/stack-assign";
 import { StackPickupDraft } from "@/components/stack-pickup";
-import { OTHER, addDropBody, defaultQuantity, pickableDrops } from "@/lib/drop-picker";
+import {
+  OTHER,
+  addDropBody,
+  defaultQuantity,
+  isCountedDrop,
+  pickableDrops,
+} from "@/lib/drop-picker";
 import { draftBoxes, draftDrop, draftStacks } from "@/lib/vestige-pickup";
 import type { ShareConfig } from "@/lib/vestige-stacks";
 import type { PiecePileSlot } from "@/lib/use-piece-piles";
@@ -264,7 +270,7 @@ export function DropPicker({
         </Field>
       )}
 
-      {chosen !== "" && !pickedPiece && (
+      {(chosen === OTHER || isCountedDrop(drops.find((d) => d.dropKey === chosen))) && (
         <Field on={Boolean(card)} label="How many" cls="is-narrow">
           <input
             className="split-input loot-count-input"
