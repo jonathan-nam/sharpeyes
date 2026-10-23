@@ -24,6 +24,8 @@ export type SharedCard = {
   youHold: number;
   /** The sales behind `youHold`, oldest first, or none where they cannot be told exactly. */
   youHoldSales: CouponSale[];
+  /** The sales behind `holding`, the same way: their sales of your coupons, money undecided. */
+  holdingSales: CouponSale[];
   /** Your coupons in their inventory, and theirs in yours, after the counts wash. */
   piecesOwed: number;
   piecesOwe: number;
@@ -150,6 +152,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     holding: row.holding,
     youHold: row.heldByThem,
     youHoldSales: undecidedSales({ sales: row.salesHeldByThem, holding: row.heldByThem }),
+    holdingSales: undecidedSales(row),
     piecesOwed: row.piecesYouOwe,
     piecesOwe: row.pieces,
     usd: { owed: row.usd.owe, owe: row.usd.owed, net: -row.usd.net },

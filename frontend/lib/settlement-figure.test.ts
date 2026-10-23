@@ -14,7 +14,10 @@ import { describe, expect, it } from "vitest";
 // which formatter a literal in the header uses, and the way it goes wrong is somebody reaching for
 // the shorter one because it fits better.
 
-const source = readFileSync(join(__dirname, "..", "components", "settlement-ledger.tsx"), "utf8");
+// The card is settlement-ledger.tsx drawn through ledger-card.tsx, so a guard reads both.
+const source = ["settlement-ledger.tsx", "ledger-card.tsx"]
+  .map((file) => readFileSync(join(__dirname, "..", "components", file), "utf8"))
+  .join("\n");
 const page = readFileSync(join(__dirname, "..", "app", "bosses", "drops", "page.tsx"), "utf8");
 const summary = readFileSync(join(__dirname, "..", "components", "settlement-summary.tsx"), "utf8");
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
@@ -107,7 +110,7 @@ describe("what the card says a person owes", () => {
     // The same write either way. What differs is which way the money went, and the line knows.
     expect(source).toContain("onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }])");
     // Only what they owe you is marked on its own line. What you send is the lot's act.
-    expect(source).toContain('{line.direction === "owed" && (');
+    expect(source).toContain('act: line.direction === "owed" && (');
     // The Closing Actions face, not the paid pill's. They are the same kind of thing, and a pill
     // beside a squared button read as a different one.
     expect(source).toContain('className="party-save ledger-line-act"');
@@ -378,9 +381,9 @@ describe("what the card says a person owes", () => {
     // pasted, and it was the only one on the card with an act behind it and no way to take it.
     // The TOTAL now, the shares you owe added to it: one press of Offset moves both, so the figure
     // worth pasting into a trade box is the one the press comes to. See unsettledParts.
-    expect(source).toContain(
-      "<CopyAmount value={unsettled} display={formatMesos(unsettled, true)} />",
-    );
+    // The Held by You half's figure, drawn copyable by HeldBy (ledger-card.tsx).
+    expect(source).toContain('<HeldBy label="Held by You" mesos={unsettled}>');
+    expect(source).toContain("<CopyAmount value={mesos} display={formatMesos(mesos, true)} />");
     expect(source).toContain(
       "const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);",
     );
@@ -412,7 +415,7 @@ describe("what the card says a person owes", () => {
   it("offers the pin only on a PERSON, never on an unclaimed character", () => {
     // A character nobody has claimed is somebody the account cannot name yet, and pinning one would
     // keep a card for a human it may turn out to already have.
-    expect(source).toContain("{row.attributed && (");
+    expect(source).toContain("row.attributed && (");
   });
 
   it("does not offer to copy a COUNT of pieces, which is not a price", () => {

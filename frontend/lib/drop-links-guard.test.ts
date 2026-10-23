@@ -17,7 +17,9 @@ const source = (...parts: string[]) =>
 
 const droplog = source("app", "bosses", "drops", "page.tsx");
 const settled = source("components", "settled-view.tsx");
-const ledger = source("components", "settlement-ledger.tsx");
+// The card is settlement-ledger.tsx drawn through ledger-card.tsx, so a guard reads both.
+const ledger =
+  source("components", "settlement-ledger.tsx") + source("components", "ledger-card.tsx");
 
 describe("a row that names one drop opens that drop", () => {
   it("opens the drop from a Drop Ledger row and from each run behind a fold", () => {
@@ -46,7 +48,7 @@ describe("a row that names one drop opens that drop", () => {
     //
     // Through the helper, because the address is the config's readable name and not its id. What is
     // pinned here is which row opens a party, not how the path is spelled. See lib/party-path.ts.
-    expect(ledger).toContain("href={partyHrefById(line.partyId, partyById)}");
+    expect(ledger).toContain("href: partyHrefById(line.partyId, partyById),");
     expect(ledger).toContain("href={partyHrefById(drop.partyId, partyById)}");
   });
 

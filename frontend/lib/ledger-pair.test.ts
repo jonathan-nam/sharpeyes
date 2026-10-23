@@ -12,7 +12,8 @@ import { describe, expect, it } from "vitest";
 const root = join(__dirname, "..");
 const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
-const ledger = read("components", "settlement-ledger.tsx");
+// The card is settlement-ledger.tsx drawn through ledger-card.tsx, so a guard reads both.
+const ledger = read("components", "settlement-ledger.tsx") + read("components", "ledger-card.tsx");
 // The Settlement tab's body. See components/settlement-stage.tsx.
 const stage = read("components", "settlement-stage.tsx");
 const view = read("lib", "settlement-view.ts");
@@ -128,16 +129,15 @@ describe("one section for what is unsettled", () => {
   it("holds the shares and the coupon money in one, not a section each", () => {
     // Two sections with a rule between them said the same thing: these are the amounts standing
     // between you. One transfer of the difference closes both, and Closing Actions acts on both.
-    const at = ledger.indexOf('<span className="ledger-heading">Unsettled Amounts</span>');
-    expect(at, "the heading is gone").toBeGreaterThan(-1);
-    const section = ledger.slice(at, ledger.indexOf("Closing Actions", at));
+    // The heading is the shared layout's (ledger-card.tsx); the card fills its halves.
+    expect(ledger).toContain('<span className="ledger-heading">Unsettled Amounts</span>');
     // Each share under the half whose hands its money is in.
-    expect(section).toContain("linesYouHold.map(shareRow)");
-    expect(section).toContain("linesTheyHold.map(shareRow)");
+    expect(ledger).toContain("<ShareRows lines={linesYouHold.map(shareLine)} />");
+    expect(ledger).toContain("<ShareRows lines={linesTheyHold.map(shareLine)} />");
     // ONE FIGURE over the pair, which is what one press of Offset moves. The held money was the
     // whole of it, so the other half of the act had a figure nowhere and the two came off what they
     // owe you one after the other. See unsettledParts for why adding these two is safe.
-    expect(section).toContain("<CopyAmount value={unsettled}");
+    expect(ledger).toContain('<HeldBy label="Held by You" mesos={unsettled}>');
     expect(ledger).toContain("mesos: offset.amount,");
     expect(ledger).toContain("mesos: row.holding,");
     expect(ledger).not.toContain("coupon sales</span>");
@@ -175,10 +175,12 @@ describe("one section for what is unsettled", () => {
   it("puts each half's figure on its own line, over the drops that make it", () => {
     // A bare 500,000,000 on a row of its own under the heading read as a row of the list. On the
     // "Held by You" half, the one Offset moves; "Held by <name>" carries its own figure.
-    const at = ledger.indexOf('<span className="ledger-step">Held by You</span>');
-    expect(at, "the figure is off the heading's line").toBeGreaterThan(-1);
+    expect(ledger).toContain('<HeldBy label="Held by You" mesos={unsettled}>');
+    // The half's own line carries its figure, copyable. See HeldBy.
+    const at = ledger.indexOf('<span className="ledger-step">{label}</span>');
+    expect(at, "the figure is off the half's line").toBeGreaterThan(-1);
     const head = ledger.slice(at, ledger.indexOf("</div>", at));
-    expect(head).toContain("<CopyAmount value={unsettled}");
+    expect(head).toContain("<CopyAmount value={mesos}");
     // No summary row repeating the figure ("shares I owe Bro 2,468,431,118" under 2,468,431,118):
     // the drops themselves are listed.
     expect(ledger).not.toContain("{unsettledParts.map(");
@@ -192,9 +194,9 @@ describe("one section for what is unsettled", () => {
     // A list of drops that drops the icons is the one place you cannot tell two grindstones apart at
     // a glance. The share rows carried none at all, and then carried them at a clean half, where
     // nearest-neighbour takes every other row of the sprite and the art stops being readable.
-    expect(ledger).toContain(
-      '<img className="loot-icon" src={apiAssetUrl(line.iconUrl)} alt="" />',
-    );
+    // Through DropIcon, which every row in the shared layout draws its art with.
+    expect(ledger).toContain('<img className="loot-icon" src={apiAssetUrl(url)} alt="" />');
+    expect(ledger).toContain("iconUrl: line.iconUrl,");
     expect(wallet).toContain("iconUrl: loot.iconUrl,");
     // One rule over both lists, so neither can drift: an offset's row and a share's are the same
     // kind of row, and a sale row under the same heading is one too.
@@ -209,7 +211,8 @@ describe("one section for what is unsettled", () => {
     // "130 coupons" is the count and not what was sold. One item behaves this way, so the card can
     // spell it, and reading the name off the same drop row as the icon is what stops it drawing one
     // item and naming another.
-    expect(ledger).toContain("`${formatPieces(sale.pieces)} ${couponName}`");
+    // One row per side since 2026-10-23: the coupons' total, named. See CouponTotal.
+    expect(ledger).toContain('`${formatPieces(pieces)} ${couponName ?? "coupons"}`');
     expect(view).toContain(".find((drop) => drop.dropKey === VESTIGE) ?? null");
     expect(stage).toContain("const vestige = vestigeOf(page.drops);");
     expect(stage).toContain("iconUrl={vestige?.iconUrl ?? null}");
