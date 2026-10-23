@@ -4,6 +4,7 @@ import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.eventRoutes
+import com.sharpeyes.backend.events.presenceRoutes
 import com.sharpeyes.backend.events.rememberActor
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.friends.friendRoutes
@@ -186,6 +187,7 @@ private fun Route.socialRoutes() {
         partyInviteRoutes()
     }
     route("/api/events") { eventRoutes() }
+    route("/api/presence") { presenceRoutes() }
     // A member's writes into the owner's book. See SharedBookWrites.kt.
     route("/api/shared-books") { sharedBookRoutes() }
 }

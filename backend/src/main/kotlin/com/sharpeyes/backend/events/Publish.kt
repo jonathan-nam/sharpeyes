@@ -35,6 +35,8 @@ internal data class Event(
     /** Their Discord avatar. Looked up once here rather than by every browser that hears it. */
     val image: String? = null,
     val target: EventTarget = EventTarget(),
+    /** On a PRESENCE event only. The one event that carries what it is about. See Presence.kt. */
+    val presence: Presence? = null,
 )
 
 /** Tells [users]' open pages that [topic] changed. Inside a transaction. */
@@ -56,6 +58,12 @@ internal fun publishToParty(
     topic: String,
     loot: Uuid? = null,
 ) = publish(audienceOf(partyId), topic, EventTarget(party = partyId.toString(), loot = loot?.toString()))
+
+/** Sends [event] as it is, for a writer that built its own. Inside a transaction. */
+internal fun send(event: Event) {
+    val payload = Json.encodeToString(Event.serializer(), event)
+    TransactionManager.current().exec("SELECT pg_notify(?, ?)", listOf(textArg(CHANNEL), textArg(payload)))
+}
 
 private fun textArg(value: String) =
     org.jetbrains.exposed.v1.core
