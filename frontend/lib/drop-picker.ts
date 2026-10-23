@@ -73,6 +73,14 @@ export function defaultQuantity(
   return pieces === undefined ? "" : String(pieces);
 }
 
+/**
+ * Whether this boss drops a COUNT of it (vestige coupons). Every other drop falls once, so the
+ * server takes one at quantity 1 (see onlyOnceRefusal) and the form asks for no count.
+ */
+export function isCountedDrop(drop: BossDrop | undefined): boolean {
+  return Object.values(drop?.pieces ?? {}).some((byMode) => Object.keys(byMode).length > 0);
+}
+
 /** The name, and whether everyone walks away with one. */
 export function dropOptionLabel(drop: BossDrop, world: WorldType): string {
   return isPerMember(drop.perMember, world) ? `${drop.name} (one each)` : drop.name;
