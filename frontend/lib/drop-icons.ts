@@ -21,7 +21,7 @@ const warmed = new Set<string>();
  *
  * Nothing asks for one until a picker is opened, so the first open of a row's panel would otherwise
  * paint blank frames for as long as the download takes. The page is holding the URLs already, from
- * /api/bosses/drops, so it can start that click early. Bounded by the catalog: 20 icons of 46px.
+ * /api/bosses/drops, so it can start that click early. Bounded by the catalog, a few dozen icons of 46px.
  *
  * `new Image()` and not the `preload` of lib/preload-boss-art.ts, for the reason useSeatSprites
  * gives: a `<link rel=preload>` for art the page has not drawn yet is warned about in the console
