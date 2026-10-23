@@ -463,9 +463,9 @@ describe("what the figures on the card are counted in", () => {
     // built from `pay` on both sides and offsetOf sums `pay`, so a line drawn in `nets` put a
     // 703,703,488 offset directly under the 668,518,313 share it was made of. The party page this
     // row links to leads with `pay` too, and carries the fee underneath.
-    expect(source).toContain(
-      'signed(line.direction === "owe" ? -line.pay : line.pay, line.currency)',
-    );
+    // Unsigned since 2026-10-23: each share sits under the Held by half its money is in, which says
+    // the direction. Never `nets`.
+    expect(source).not.toContain("formatMoney(line.nets");
     // And in the line's OWN unit. A share of a sale made in real money is cents, so drawing it
     // through the meso formatter would state $333.34 as 33,334 mesos: a thousandth of the debt,
     // with nothing on screen to say which unit was meant. See lib/money.ts.

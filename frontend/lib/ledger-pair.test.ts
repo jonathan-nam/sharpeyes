@@ -32,12 +32,11 @@ describe("`owed` and `offsets` are half a card each", () => {
     expect(at, "the pair is gone").toBeGreaterThan(-1);
     const owed = ledger.indexOf('<span className="ledger-heading">Owed</span>');
     const offsets = ledger.indexOf('<span className="ledger-heading">Paid</span>');
-    const shares = ledger.indexOf('<span className="ledger-step">shares</span>');
     expect(at).toBeLessThan(owed);
     expect(owed).toBeLessThan(offsets);
-    // `shares` is the detail behind ONE row of the left half, not a third question, so it follows
-    // the pair rather than sitting in it.
-    expect(offsets).toBeLessThan(shares);
+    // The share lines are not in the pair: each sits under the Unsettled half whose hands its money
+    // is in (2026-10-23), so there is no `shares` step of its own any more.
+    expect(ledger).not.toContain('<span className="ledger-step">shares</span>');
   });
 
   it("gives the width back on a card with no offsets on it", () => {
@@ -77,7 +76,8 @@ describe("folding `owed`", () => {
     // rows made that figure. Open by default it also disagreed with its own arrow.
     expect(ledger).toContain("const [showOwed, setShowOwed] = useState(false);");
     expect(ledger).toContain("const [showOff, setShowOff] = useState(false);");
-    expect(ledger).toContain("const [showUnsettled, setShowUnsettled] = useState(false);");
+    // Unsettled Amounts does not fold: what stands open is the card's point, listed in full.
+    expect(ledger).not.toContain("showUnsettled");
   });
 
   it("draws no chevron where there is no list to fold", () => {
@@ -124,7 +124,9 @@ describe("one section for what is unsettled", () => {
     const at = ledger.indexOf('<span className="ledger-heading">Unsettled Amounts</span>');
     expect(at, "the heading is gone").toBeGreaterThan(-1);
     const section = ledger.slice(at, ledger.indexOf("Closing Actions", at));
-    expect(section).toContain('<span className="ledger-step">shares</span>');
+    // Each share under the half whose hands its money is in.
+    expect(section).toContain("linesYouHold.map(shareRow)");
+    expect(section).toContain("linesTheyHold.map(shareRow)");
     // ONE FIGURE over the pair, which is what one press of Offset moves. The held money was the
     // whole of it, so the other half of the act had a figure nowhere and the two came off what they
     // owe you one after the other. See unsettledParts for why adding these two is safe.
@@ -163,28 +165,20 @@ describe("one section for what is unsettled", () => {
     expect(ledger).toContain("{bothWays && <span className=");
   });
 
-  it("puts the figure on the heading's line, opening onto the parts that make it", () => {
-    // A bare 500,000,000 on a row of its own under the heading read as a row of the list. What it is
-    // still NOT is a total of the whole section: the shares running the other way are under `Owed`,
-    // and a count of coupons is the one thing this account never adds to a pile of mesos.
-    // On the "Held by You" half, the one Offset moves. "Held by <name>" carries its own figure.
-    const at = ledger.indexOf(
-      '<div className="ledger-step-line">\n              <span className="ledger-step">Held by You',
-    );
+  it("puts each half's figure on its own line, over the drops that make it", () => {
+    // A bare 500,000,000 on a row of its own under the heading read as a row of the list. On the
+    // "Held by You" half, the one Offset moves; "Held by <name>" carries its own figure.
+    const at = ledger.indexOf('<span className="ledger-step">Held by You</span>');
     expect(at, "the figure is off the heading's line").toBeGreaterThan(-1);
     const head = ledger.slice(at, ledger.indexOf("</div>", at));
     expect(head).toContain("<CopyAmount value={unsettled}");
-    expect(head).toContain("aria-controls={`unsettled-${row.key}`}");
-    // The fold names both parts, so what the heading became is not a total nobody can decompose:
-    // the sum is the card's own, on the card, exactly as `owedTotal` is.
-    expect(ledger).toContain("id={`unsettled-${row.key}`}");
-    // But only where it says something the figure does not: one part was the figure again.
-    expect(ledger).toContain(
-      "const unsettledFolds = unsettledParts.length > 1 || held.length > 0;",
-    );
+    // No summary row repeating the figure ("shares I owe Bro 2,468,431,118" under 2,468,431,118):
+    // the drops themselves are listed.
+    expect(ledger).not.toContain("{unsettledParts.map(");
     expect(ledger).toContain(
       "const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);",
     );
+    expect(ledger).toContain("const theyHold = row.heldByThem + theyHoldShares;");
   });
 
   it("draws the art on both lists in the section, at one size and legibly", () => {
