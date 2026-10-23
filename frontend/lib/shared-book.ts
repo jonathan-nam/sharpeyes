@@ -42,6 +42,8 @@ export type SharedPart = {
   remove?: { kind: "debts" | "payments" | "disposals"; id: string };
   /** A share of a drop you sold, still unsent: the payout to mark. */
   send?: { partyId: string; lootId: string; payeeId: string };
+  /** The drop's art, on a share row. */
+  iconUrl?: string | null;
 };
 
 /**
@@ -111,6 +113,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
         mesos: line.pay,
         // A share of a drop YOU sold is yours to send, which the payout route lets the seller mark.
         send: { partyId: line.partyId, lootId: line.lootId, payeeId: line.payeeId },
+        iconUrl: line.iconUrl,
       }))
     : [{ key: "shares", label: "Your shares", mesos: row.parts.shares }];
   // Who wrote each typed row and each receipt, so the card can name the owner's and offer your own back.
