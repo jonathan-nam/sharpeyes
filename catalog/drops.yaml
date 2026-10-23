@@ -84,6 +84,35 @@ drops:
     icon_id: 1012911
     icon_version: 269
 
+  # --- Pitched Boss Set --------------------------------------------------------------
+  # One piece per boss from Lotus to Darknell, Lotus excepted with two. Guardian Angel Slime drops
+  # none. Will drops the selection box rather than one of its four spellbooks, as Seren does
+  # Mitra's Rage.
+  - key: berserked
+    name: Berserked
+    icon_id: 1012632
+  - key: total-control
+    name: Total Control
+    icon_id: 1672095
+  - key: magic-eyepatch
+    name: Magic Eyepatch
+    icon_id: 1022278
+  - key: dreamy-belt
+    name: Dreamy Belt
+    icon_id: 1132308
+  - key: wills-cursed-spellbook-selection-box
+    name: Will's Cursed Spellbook Selection Box
+    icon_id: 2633926
+  - key: endless-terror
+    name: Endless Terror
+    icon_id: 1113306
+  - key: source-of-suffering
+    name: Source of Suffering
+    icon_id: 1122430
+  - key: commanding-force-earring
+    name: Commanding Force Earring
+    icon_id: 1032316
+
   # --- Badges ------------------------------------------------------------------------
   # The mirror 504s on this item's METADATA while serving its icon fine, so probing by id reads as
   # absent and it was nearly filed as having no art. The icon endpoint is the one that matters.
@@ -224,6 +253,29 @@ drops:
 #
 # `worlds` is the exception, and only because a world is a fact we hold: see the flag's note above.
 tables:
+  # Pitched pieces drop on Hard and up (Chaos for Gloom), and Total Control on Extreme only.
+  lotus:
+    - berserked
+    - total-control
+
+  damien:
+    - magic-eyepatch
+
+  lucid:
+    - dreamy-belt
+
+  will:
+    - wills-cursed-spellbook-selection-box
+
+  gloom:
+    - endless-terror
+
+  verus-hilla:
+    - source-of-suffering
+
+  darknell:
+    - commanding-force-earring
+
   limbo:
     - whisper-of-the-source
     - grindstone-of-life
