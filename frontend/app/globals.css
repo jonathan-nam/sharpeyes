@@ -7858,60 +7858,6 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   color: var(--ink);
 }
 
-/* Other people on the page (components/presence.tsx). Never in the way of a click: under the nav
-   veil, over everything else, and transparent to the pointer. */
-.presence-layer {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  pointer-events: none;
-}
-
-.presence-cursor {
-  position: absolute;
-  top: 0;
-  left: 0;
-  display: flex;
-  align-items: flex-start;
-  /* One ping's worth, so a cursor glides between pings rather than jumping. */
-  transition: transform 90ms linear;
-}
-
-.presence-name {
-  margin: 14px 0 0 -2px;
-  padding: 1px 6px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  color: #fff;
-  white-space: nowrap;
-}
-
-.presence-outline {
-  position: absolute;
-  border: 2px solid;
-  border-radius: var(--radius-md);
-}
-
-.presence-viewers {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.presence-face {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border: 2px solid;
-  border-radius: 50%;
-  object-fit: cover;
-  font-size: var(--text-sm);
-  color: #fff;
-}
-
 .invite-title {
   margin: 0 0 16px;
   font-size: var(--text-lg);
@@ -8346,7 +8292,7 @@ a.notification-sentence:hover {
   object-fit: cover;
   box-shadow: 0 2px 6px rgb(0 0 0 / 30%);
   pointer-events: none;
-  animation: changed-by 2.5s ease-out both;
+  animation: changed-by 3s ease-out both;
 }
 
 @keyframes changed-by {
@@ -8361,6 +8307,27 @@ a.notification-sentence:hover {
   20% {
     transform: scale(1);
   }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* The control somebody else just pressed, ringed for as long as their face is on it. */
+.changed-by-ring {
+  position: absolute;
+  inset: -3px;
+  z-index: 2;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius-md);
+  pointer-events: none;
+  animation: changed-by-ring 3s ease-out both;
+}
+
+@keyframes changed-by-ring {
+  0%,
   70% {
     opacity: 1;
   }
