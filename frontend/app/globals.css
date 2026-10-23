@@ -7107,8 +7107,26 @@ button.link:disabled {
 
 .ledger-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+/* The person, large enough to find a card by, with the figure beside them. */
+.ledger-who.is-large {
+  gap: 10px;
+  font-size: var(--text-lg);
+}
+
+.ledger-history-open {
+  margin-left: auto;
+}
+
+/* Owed and Paid side by side, which wants more room than the invite dialog it borrows. */
+.invite-dialog.ledger-history {
+  max-width: 880px;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .ledger-tally {
