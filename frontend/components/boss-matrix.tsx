@@ -66,7 +66,7 @@ export function BossMatrix({
   busy?: boolean;
   /** Boss keys each character ran with a party this week, from partyRunsByCharacter, which runFilter sorts by. */
   partyRuns?: Map<string, Set<string>>;
-  /** Dims the other kind's cells in place and counts only this kind in every figure. */
+  /** Blanks the other kind's cells, and counts only this kind in every figure and every dim. */
   runFilter?: RunFilter | null;
 }) {
   const isParty = (characterId: string, bossKey: string) =>
@@ -123,13 +123,20 @@ export function BossMatrix({
 
   // Nothing left to run, so the character steps back the way a finished row does. Counted over the
   // bosses on the table rather than over `bosses`, so a past week is judged on the weekly band it
-  // actually shows. See columnFullyCleared for why silence is not a clear.
+  // actually shows, and over the cells the run filter counts. See columnFullyCleared for why
+  // silence is not a clear. Under a run filter, a character with no runs of that kind has nothing
+  // left in this view either, so it steps back too.
   const shownBosses = bands.flatMap((band) => band.inCadence);
-  const doneClass = (characterId: string) =>
-    !loading &&
-    columnFullyCleared(byCharacter.get(characterId), shownBosses, skipsBy.get(characterId))
-      ? " is-col-cleared"
-      : "";
+  const doneClass = (characterId: string) => {
+    if (loading) return "";
+    const clears = byCharacter.get(characterId);
+    const skips = skipsBy.get(characterId);
+    const counted = shownBosses.filter((boss) => counts(characterId, boss.bossKey));
+    const runsNone =
+      runFilter !== null &&
+      counted.every((boss) => cellState(clears, boss.bossKey, skips) === "skipped");
+    return runsNone || columnFullyCleared(clears, counted, skips) ? " is-col-cleared" : "";
+  };
 
   const statesOf = (characterId: string, list: Boss[]) =>
     list
@@ -155,13 +162,15 @@ export function BossMatrix({
    *
    * Two ways for a row to step back and they are not the same fact: everyone who runs it is done,
    * or nobody runs it at all. See rowFullyCleared for why an unreported character counts as
-   * neither.
+   * neither. Under a run filter only the counted cells are asked, and a row with none left has
+   * nothing to run in this view.
    */
   const rowClass = (bossKey: string) => {
-    const ids = columns.map((c) => c.id);
+    const ids = columns.map((c) => c.id).filter((id) => counts(id, bossKey));
     const parts: string[] = [];
     if (!loading) {
-      if (rowNobodyRuns(ids, bossKey, skipsBy)) parts.push("is-row-unrun");
+      if (rowNobodyRuns(ids, bossKey, skipsBy) || (ids.length === 0 && columns.length > 0))
+        parts.push("is-row-unrun");
       else if (rowFullyCleared(byCharacter, ids, bossKey, skipsBy)) parts.push("is-row-cleared");
     }
     if (hoveredRow === bossKey) parts.push("is-row-hover");
