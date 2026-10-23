@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { AlreadyPartied } from "@/components/already-partied";
 import { LiveEvents } from "@/components/live-events";
 import { NavPending } from "@/components/nav-pending";
 import { SiteFooter } from "@/components/site-footer";
@@ -61,6 +62,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* Above the header so it covers every link on the page, the header's included. */}
         <NavPending />
         <LiveEvents />
+        <AlreadyPartied />
         <SiteHeader />
         <SetupGate />
         {children}

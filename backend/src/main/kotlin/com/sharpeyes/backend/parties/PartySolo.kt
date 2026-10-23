@@ -277,3 +277,22 @@ internal fun pinWeeksAlreadyDropped(partyId: Uuid) {
             }
         }
 }
+
+/**
+ * Writes who ran [week].
+ *
+ * A pool opened for a boss run alone has no seats to name, so saying somebody ran that week is also
+ * saying it is not a solo config. Done here rather than by a POST first, because the two must not
+ * come apart: adopting through POST /api/parties writes the names as the STANDING roster, and every
+ * later week nobody answers for would then claim those same people ran. See openSoloParty.
+ */
+internal fun writeWeek(
+    partyId: Uuid,
+    characterId: Uuid,
+    week: LocalDate,
+    members: List<String>?,
+    context: SeatContext,
+) {
+    if (!members.isNullOrEmpty() && isSoloParty(partyId)) openSoloParty(partyId, week, context.now)
+    saveWeekRoster(partyId, characterId, week, members, context)
+}

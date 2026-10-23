@@ -160,14 +160,14 @@ private suspend fun RoutingContext.createPartyRoute(
     spriteCache: SpriteCache,
 ) {
     val (userId, email) = call.principalIdAndEmail()
-    val request = call.receive<SavePartyRequest>()
-    val sprites = lookUpSprites(userId, request.members, email, nexonLookupService, spriteCache)
+    val typed = call.receive<SavePartyRequest>()
+    val sprites = lookUpSprites(userId, typed.members, email, nexonLookupService, spriteCache)
 
     val outcome =
         dbQuery {
             val now = Clock.System.now()
-            val characterId = Uuid.parseOrNull(request.characterId)
-            val bossId = bossIdForKey(request.bossKey)
+            val characterId = Uuid.parseOrNull(typed.characterId)
+            val bossId = bossIdForKey(typed.bossKey)
             // Ownership first, so a characterId that is not this user's cannot reach a config
             // through the pair lookup, which does not filter by user.
             val held =
@@ -176,38 +176,42 @@ private suspend fun RoutingContext.createPartyRoute(
                 } else {
                     partyIdFor(characterId, bossId)
                 }
-            val putBack = held?.takeIf { request.oneOff && request.members.isNotEmpty() && isSkippedStanding(it, now) }
-            val takeOver = held?.takeIf { takesOverConfig(it, request, now) }
-            if (putBack != null) {
-                val problem = validatePutBack(userId, putBack, request)
-                if (problem != null) {
-                    problem
+            // Friends' characters are invited, not seated. See PartyInvites.kt.
+            val (request, invitees) = typed.inviting(userId, held)
+            val putBack = held?.takeIf { typed.oneOff && typed.members.isNotEmpty() && isSkippedStanding(it, now) }
+            val takeOver = held?.takeIf { takesOverConfig(it, typed, now) }
+            val saved =
+                if (putBack != null) {
+                    val problem = validatePutBack(userId, putBack, request)
+                    if (problem != null) {
+                        problem
+                    } else {
+                        putBackForWeek(userId, putBack, request, now, sprites)
+                        findParty(putBack, userId)!!
+                    }
+                } else if (takeOver != null) {
+                    // The request's kind, not the row's: takeOverParty writes request.oneOff over it.
+                    val problem = validateSavedParty(userId, takeOver, request, now, request.oneOff)
+                    if (problem != null) {
+                        problem
+                    } else {
+                        takeOverParty(userId, takeOver, request, now, sprites)
+                        findParty(takeOver, userId)!!
+                    }
                 } else {
-                    putBackForWeek(userId, putBack, request, now, sprites)
-                    findParty(putBack, userId)!!
+                    val problem =
+                        validateNewParty(request, userId, characterId, bossId, now)
+                            ?: request.separate.takeIf { !it }?.let {
+                                sharedDuplicateOf(userId, characterId!!, bossId!!, typed.members)
+                            }
+                    if (problem != null) {
+                        problem
+                    } else {
+                        val id = createParty(userId, characterId!!, bossId!!, request, now, sprites)
+                        findParty(id, userId)!!
+                    }
                 }
-            } else if (takeOver != null) {
-                // The request's kind, not the row's: takeOverParty writes request.oneOff over it.
-                val problem = validateSavedParty(userId, takeOver, request, now, request.oneOff)
-                if (problem != null) {
-                    problem
-                } else {
-                    takeOverParty(userId, takeOver, request, now, sprites)
-                    findParty(takeOver, userId)!!
-                }
-            } else {
-                val problem =
-                    validateNewParty(request, userId, characterId, bossId, now)
-                        ?: request.separate.takeIf { !it }?.let {
-                            sharedDuplicateOf(userId, characterId!!, bossId!!, request.members)
-                        }
-                if (problem != null) {
-                    problem
-                } else {
-                    val id = createParty(userId, characterId!!, bossId!!, request, now, sprites)
-                    findParty(id, userId)!!
-                }
-            }
+            saved.withInvites(userId, invitees, now)
         }
     respondToSave(outcome, HttpStatusCode.Created)
 }
@@ -218,8 +222,8 @@ private suspend fun RoutingContext.savePartyRoute(
 ) {
     val (userId, email) = call.principalIdAndEmail()
     val partyId = call.parseUuidParam("id") ?: return
-    val request = call.receive<SavePartyRequest>()
-    val sprites = lookUpSprites(userId, request.members, email, nexonLookupService, spriteCache)
+    val typed = call.receive<SavePartyRequest>()
+    val sprites = lookUpSprites(userId, typed.members, email, nexonLookupService, spriteCache)
 
     val outcome =
         dbQuery {
@@ -227,14 +231,16 @@ private suspend fun RoutingContext.savePartyRoute(
             if (!ownsParty(partyId, userId)) {
                 null
             } else {
+                val (request, invitees) = typed.inviting(userId, partyId)
                 // The row's kind, not the request's: oneOff is read at create only, so an edit
                 // leaves it as it was.
                 val problem = validateSavedParty(userId, partyId, request, now, isOneOff(partyId))
                 if (problem != null) {
                     problem
                 } else {
-                    saveParty(userId, partyId, request, now, sprites)
-                    findParty(partyId, userId)!!
+                    // Everyone else invited rather than removed: still a party, not a solo pool.
+                    saveParty(userId, partyId, request, now, sprites, keepParty = invitees.isNotEmpty())
+                    findParty(partyId, userId)!!.withInvites(userId, invitees, now)
                 }
             }
         }
@@ -277,10 +283,13 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
             // Omitted means this week. Which week THIS is comes from the server's clock rather than
             // the payload, so a browser a day out cannot file a roster in the neighbouring week.
             val week = asked ?: thisWeek
+            // A friend not yet in the party is invited to it, the same as from its own roster.
+            val asking = weekInvites(userId, partyId, request.members)
+            val named = asking.named
             val problem =
                 validateRosterWeek(partyId, week, thisWeek)
-                    ?: validateRosterClear(partyId, request.members)
-                    ?: request.members?.let { members ->
+                    ?: validateRosterClear(partyId, named)
+                    ?: named?.let { members ->
                         validateMembers(members)
                             ?: bossIdOfParty(partyId)?.let { boss ->
                                 validateWeekRoster(
@@ -297,17 +306,8 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
                 problem != null -> problem
                 else -> {
                     val now = Clock.System.now()
-                    // A pool opened for a boss run alone has no seats to name, so saying somebody
-                    // ran that week is also saying it is not a solo config. Done here rather than
-                    // by a POST first, because the two must not come apart: adopting through
-                    // POST /api/parties writes the names as the STANDING roster, and every later
-                    // week nobody answers for would then claim those same people ran. See
-                    // openSoloParty.
-                    if (!request.members.isNullOrEmpty() && isSoloParty(partyId)) {
-                        openSoloParty(partyId, week, now)
-                    }
-                    saveWeekRoster(partyId, characterId, week, request.members, SeatContext(userId, sprites, now))
-                    findParty(partyId, userId)!!
+                    if (asking.writes) writeWeek(partyId, characterId, week, named, SeatContext(userId, sprites, now))
+                    findParty(partyId, userId)!!.withInvites(userId, asking.invitees, now)
                 }
             }
         }

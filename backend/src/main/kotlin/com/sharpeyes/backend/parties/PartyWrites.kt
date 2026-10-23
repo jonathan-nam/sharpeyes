@@ -127,6 +127,8 @@ internal fun saveParty(
     request: SavePartyRequest,
     now: Instant,
     sprites: Map<String, String?> = emptyMap(),
+    // Invites went out with this save, so an empty roster is a party waiting on them.
+    keepParty: Boolean = false,
 ) {
     val characterId =
         Party
@@ -144,7 +146,7 @@ internal fun saveParty(
     // now is: off Party View, on every period, holding every drop it already had. Refusing the edit
     // instead would leave you deleting the config to say it, and deleting takes the pool with it.
     // See soloAgain, which is the same move a spent night makes.
-    if (request.members.isEmpty()) {
+    if (request.members.isEmpty() && !keepParty) {
         soloAgain(userId, partyId, characterId, bossResetOf(bossIdOfParty(partyId)!!)!!, now)
     } else {
         writeMembers(

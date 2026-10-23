@@ -775,6 +775,17 @@ object AuthUser : Table("auth_user") {
 }
 
 // A friend request, until it is accepted, declined or cancelled. See V86.
+// A seat offered to a friend's character, written only once they accept. See V92__party_invite.sql.
+object PartyInvite : Table("party_invite") {
+    val id = uuid("id")
+    val partyId = reference("party_id", Party.id)
+    val characterId = reference("character_id", Characters.id)
+    val invitedBy = reference("invited_by", Users.id)
+    val createdAt = timestamp("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
 object FriendRequest : Table("friend_request") {
     val id = uuid("id")
     val fromUserId = reference("from_user_id", Users.id)

@@ -121,6 +121,7 @@ internal fun partiesFromRows(
     val modes = periodDifficulties(partyIds) { periodShown(resets.getValue(it), week, now) }
     val characterSlugs = characterSlugsFor(userId)
     val accounts = accountsFor(partyIds, userId)
+    val invites = pendingInvitesFor(partyIds)
 
     return rows.map { row ->
         val id = row[Party.id]
@@ -137,7 +138,7 @@ internal fun partiesFromRows(
                     clear = clears[id] ?: ClearState(null, false),
                     week = WeekState(id !in spelledOut, skippedThisPeriod = id in off, ranAsParty, modes[id]),
                 ).copy(accounts = accounts[id].orEmpty())
-        if (id in asCharacter) party.asMember(userId) else party
+        if (id in asCharacter) party.asMember(userId) else party.copy(pendingInvites = invites[id].orEmpty())
     }
 }
 
@@ -184,7 +185,11 @@ internal fun findParty(
                 clear = clears[partyId] ?: ClearState(null, false),
                 week = state,
             ).copy(accounts = accountsFor(listOf(partyId), userId)[partyId].orEmpty())
-    return if (viewer.owner) party else party.asMember(userId)
+    return if (viewer.owner) {
+        party.copy(pendingInvites = pendingInvitesFor(listOf(partyId))[partyId].orEmpty())
+    } else {
+        party.asMember(userId)
+    }
 }
 
 /** True when the config exists and belongs to this user. The ownership check every write starts with. */
