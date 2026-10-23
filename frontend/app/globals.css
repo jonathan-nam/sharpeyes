@@ -7179,6 +7179,15 @@ button.link:disabled {
   gap: 10px;
 }
 
+/* The net beside Unsettled Amounts: the one figure the acts move, so it is read first. */
+.ledger-net {
+  margin-left: auto;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--bad);
+}
+
 /* What a folding step holds. Its own column, so folding one keeps the gap the entry had between
    the parts inside it. `hidden` needs saying because the display here would beat it. */
 .ledger-fold {
