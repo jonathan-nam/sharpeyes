@@ -6,6 +6,7 @@ import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
@@ -181,6 +182,27 @@ class PartyMemberWritesTest {
             assertNotNull(duplicateRefusal(id(party), item, boss, night.plus(1, DateTimeUnit.DAY)))
             assertNull(duplicateRefusal(id(party), item, boss, night.plus(7, DateTimeUnit.DAY)))
             assertNull(duplicateRefusal(id(party), LootedDrop(dropIdForKey("grindstone-of-life")!!), boss, night))
+        }
+    }
+
+    @Test
+    fun `vestiges are logged once a week, and Add Again cannot log them twice`() {
+        transaction {
+            val party = shared()
+            val vestiges = AddLootRequest(dropKey = "vestige-of-erion", quantity = 180, again = true)
+            val item = LootedDrop(dropIdForKey("vestige-of-erion")!!, quantity = 180)
+            val boss = bossIdForKey("kalos-the-guardian")
+            val add = { by: String, days: Int ->
+                addPoolDrop(id(party), by, item, boss, night.plus(days, DateTimeUnit.DAY), vestiges)
+            }
+            assertTrue(add(member, 0) is LootResponse)
+            assertTrue(add(owner, 1) is Refusal)
+            assertTrue(add(owner, 7) is LootResponse)
+            // Not counted, so a second still goes in when asked for.
+            val faith = AddLootRequest(dropKey = "grindstone-of-faith", again = true)
+            val grindstone = LootedDrop(dropIdForKey("grindstone-of-faith")!!)
+            assertTrue(addPoolDrop(id(party), member, grindstone, boss, night, faith) is LootResponse)
+            assertTrue(addPoolDrop(id(party), member, grindstone, boss, night, faith) is LootResponse)
         }
     }
 

@@ -4,7 +4,13 @@ import { Fragment, type RefObject, useEffect, useRef, useState } from "react";
 
 import { DropPicker, pieceDraft, type StackDraft } from "@/components/drop-picker";
 import type { PiecePileSlot } from "@/lib/use-piece-piles";
-import { SAVED_BUT_STALE, StaleAfterWrite, apiAssetUrl } from "@/lib/api";
+import {
+  SAVED_BUT_STALE,
+  StaleAfterWrite,
+  apiAssetUrl,
+  failureText,
+  isDuplicateDrop,
+} from "@/lib/api";
 import { BOSS_ART_2X } from "@/lib/boss-art";
 import { clearStateLabel, nextClear } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
@@ -437,7 +443,9 @@ export function RunPlan({
                               setAddError(SAVED_BUT_STALE);
                               return;
                             }
-                            setAddError("That didn't save.");
+                            // The picker says a duplicate itself, with the button that answers it.
+                            if (!isDuplicateDrop(e))
+                              setAddError(failureText(e, "That didn't save."));
                             // Rethrown so the picker keeps what was chosen, ready to try again.
                             throw e;
                           }
