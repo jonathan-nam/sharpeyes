@@ -21,9 +21,10 @@ everything below is out. The list is `PLANNER_BOSSES` in `frontend/lib/party-pla
 
 **General**
 
-- The characters that need parties: your own, and any character of a person on your People page
-  (a linked friend's own characters, or names you have filed under somebody who does not use the
-  app).
+- The characters that need parties: your own, any character of a person on your People page (a
+  linked friend's own characters, or names you have filed under somebody who does not use the
+  app), and any other IGN typed in. A typed IGN nobody holds is a standalone character, counted as
+  its own player, so one person can plan for characters the app has no record of.
 - Run Length: a slider from Fastest (runs of at most 10 minutes) to Min Cut (30). It is a hard
   ceiling on any party of two or more. A party that would take longer is not proposed.
 
@@ -109,12 +110,15 @@ party config:
 - **Leader.** The linked account whose character has the most shares (they deal the most damage,
   and the logger sells, see `the-logger-sells`). A tie goes to the plan's owner, then to whoever
   leads fewest. A leader has to have a character in the party, because `party.character_id` is the
-  owner's own character. A party with nobody on the app in it is not created, and says so.
+  owner's own character. A party with nobody on the app in it (all standalone characters, say) is
+  not created, and stays in the plan as the answer it is.
 - The config is written as the leader's: their character, the boss and mode, the estimated minutes,
   and the strength-based shares.
 - **Invites.** Every other linked account's character gets a party invite through #800
   (`party_invite`, `sendInvites`, the `PARTY_INVITE` bell entry). Accepting seats it, as for any
-  invite. A character of somebody not on the app is written as a plain name seat, as today.
+  invite. A character of somebody not on the app, standalone ones included, is written as a plain
+  name seat, as today, and its sprite is looked up when the seat is saved.
+- **Review.** Only linked accounts are asked. The plan's owner answers for everyone else.
 - A character already in a standing party for that boss (#800's `inPartyFor`, and the
   `(character_id, boss)` unique index) is flagged in the draft and blocks sending for review,
   rather than being dropped or replaced at creation.
