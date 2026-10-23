@@ -290,12 +290,15 @@ describe("a card that runs both ways at once", () => {
 });
 
 describe("what the closing actions say they move", () => {
-  const source = readFileSync(join(__dirname, "..", "components", "settlement-ledger.tsx"), "utf8");
+  // The card is settlement-ledger.tsx drawn through ledger-card.tsx, so a guard reads both.
+  const source = ["settlement-ledger.tsx", "ledger-card.tsx"]
+    .map((file) => readFileSync(join(__dirname, "..", "components", file), "utf8"))
+    .join("\n");
 
   it("puts the collecting act on the line, the aggregate that hid it being gone", () => {
     // It used to be the aggregate Settle, whose caption named only the mesos and so said nothing
     // about the $333.33 it also collected. See settlement-figure for why that button went entirely.
-    expect(source).toContain('{line.direction === "owed" && (');
+    expect(source).toContain('act: line.direction === "owed" && (');
     expect(source).not.toContain("{collectable && (");
   });
 
