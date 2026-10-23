@@ -19,6 +19,7 @@ import {
   type Want,
 } from "@/lib/party-planner";
 import {
+  addCharacter,
   type Draft,
   DRAFT_KEY,
   draftWants,
@@ -27,8 +28,10 @@ import {
   MAX_MINUTES,
   MIN_MINUTES,
   readDraft,
+  removeCharacter,
   resolveCharacter,
   type RosterGroup,
+  shownCharacters,
   YOU,
 } from "@/lib/planner-draft";
 import { preloadBossArt } from "@/lib/preload-boss-art";
@@ -155,31 +158,27 @@ export default function PartyPlannerPage() {
   }, [characters, people]);
   const personName = (id: string) =>
     id === YOU ? null : (roster.find((g) => g.personId === id)?.label ?? null);
-  const added = new Set(draft.characters.map((c) => c.name));
+  const shown = useMemo(() => shownCharacters(draft, roster), [draft, roster]);
+  const onPage = new Set(shown.map((c) => c.name));
   const [typed, setTyped] = useState("");
-  const adding = resolveCharacter(typed, roster, draft);
+  const adding = resolveCharacter(typed, roster, shown);
 
-  const wants = useMemo(() => draftWants(draft), [draft]);
+  const wants = useMemo(() => draftWants(draft, shown), [draft, shown]);
   const plan = useMemo(() => planParties(wants, { maxMinutes: draft.maxMinutes }), [wants, draft]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
   // The buff note once, under the first slider on the page.
   const firstShown =
-    draft.characters
-      .map((c) => draft.wants.findIndex((w) => w.character === c.name))
-      .find((i) => i >= 0) ?? -1;
+    shown.map((c) => draft.wants.findIndex((w) => w.character === c.name)).find((i) => i >= 0) ??
+    -1;
 
-  function addCharacter() {
+  function add() {
     if (adding === null) return;
-    setDraft({ ...draft, characters: [...draft.characters, adding] });
+    setDraft(addCharacter(draft, roster, adding));
     setTyped("");
   }
 
-  function removeCharacter(name: string) {
-    setDraft({
-      ...draft,
-      characters: draft.characters.filter((c) => c.name !== name),
-      wants: draft.wants.filter((w) => w.character !== name),
-    });
+  function remove(name: string) {
+    setDraft(removeCharacter(draft, roster, name));
   }
 
   function addWant(character: string) {
@@ -234,7 +233,7 @@ export default function PartyPlannerPage() {
           </label>
 
           <section className="planner-characters">
-            {draft.characters.map((c) => {
+            {shown.map((c) => {
               const sprite = sprites.get(c.name);
               const owner = personName(c.personId);
               return (
@@ -253,7 +252,7 @@ export default function PartyPlannerPage() {
                       type="button"
                       className="planner-remove"
                       aria-label={`Remove ${c.name}`}
-                      onClick={() => removeCharacter(c.name)}
+                      onClick={() => remove(c.name)}
                     >
                       ×
                     </button>
@@ -379,7 +378,7 @@ export default function PartyPlannerPage() {
               className="planner-add-character"
               onSubmit={(e) => {
                 e.preventDefault();
-                addCharacter();
+                add();
               }}
             >
               <label className="split-field">
@@ -401,7 +400,7 @@ export default function PartyPlannerPage() {
               <datalist id="planner-known">
                 {roster.flatMap((g) =>
                   g.names
-                    .filter((name) => !added.has(name))
+                    .filter((name) => !onPage.has(name))
                     .map((name) => (
                       <option key={`${g.personId}\n${name}`} value={name}>
                         {g.label}
