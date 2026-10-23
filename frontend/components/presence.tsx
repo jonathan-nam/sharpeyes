@@ -36,13 +36,27 @@ const subscribe = (watcher: () => void) => {
   return () => watchers.delete(watcher);
 };
 
-/** The faces of everybody else on this page. Nothing at all when you are alone on it. */
+/** The faces of everybody on this page, yours first. */
 export function CurrentlyViewing() {
-  const shown = useSyncExternalStore(
+  const others = useSyncExternalStore(
     subscribe,
     () => viewers,
     () => viewers,
   );
+  const { user } = useSessionUser();
+  // You first, always: alone on the page the row was nothing at all, which cannot be told from
+  // the feature being broken.
+  const shown: Viewer[] = user
+    ? [
+        {
+          actor: user.id,
+          name: user.name ?? null,
+          image: user.image ?? null,
+          color: colorOf(user.id),
+        },
+        ...others.filter((v) => v.actor !== user.id),
+      ]
+    : others;
   if (shown.length === 0) return null;
   return (
     <div className="presence-viewers" role="group" aria-label="Currently Viewing">
@@ -97,7 +111,9 @@ export function PresenceLayer({ page }: { page: string }) {
             next.set(actor, {
               actor,
               name: ping.name ?? null,
-              image: event.image ? apiAssetUrl(event.image) : null,
+              // A Discord CDN URL, already absolute: through apiAssetUrl it became the API host
+              // glued to it, and the face never loaded.
+              image: event.image ?? null,
               color: colorOf(actor),
               scope: ping.scope ?? null,
               x: ping.x ?? null,
