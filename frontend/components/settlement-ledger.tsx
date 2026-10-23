@@ -554,12 +554,18 @@ function SettlementCard({
       ? named.join(", ")
       : `${named.slice(0, 3).join(", ")} and ${named.length - 3} more`;
   };
-  const heldByThemFor = listed([coupons(theirHeld, row.heldByThem)]);
+  const theirCoupons = coupons(theirHeld, row.heldByThem);
   const offsetFor = listed([
     ...(offset.offered ? sharesOwed(false) : []),
     coupons(held, row.holding),
+    theirCoupons,
   ]);
-  const sentFor = listed([...sharesOwed(true), coupons(held, row.holding)]);
+  const sentFor = listed([...sharesOwed(true), coupons(held, row.holding), theirCoupons]);
+
+  // Both directions netted (Jonathan, 2026-10-23): each act also closes the money of yours they
+  // hold, so its figure is the difference and one press settles the pair. Negative runs their way.
+  const offsetNet = (offset.offered ? offset.amount : 0) + row.holding - row.heldByThem;
+  const sendNet = owes + row.holding - row.heldByThem;
 
   /**
    * What is still to settle with them, in the two shapes it comes in. See offsetOf and V61.
@@ -640,6 +646,22 @@ function SettlementCard({
    * disagree with: see offsetOf for why an offset is the meso half alone.
    */
   const sendAll = () => onSendAll(row.holder, owedByYouShares(row), heldOrNone);
+
+  /**
+   * The two acts with their money of yours folded in, so each settles both directions (see
+   * offsetNet). Offset then takes what they hold off what you owe them; Mark Sent then marks it
+   * received, which is the same books as them sending it and you sending the whole. Mesos only:
+   * the dollar shares are marked as before, there being no rate to net them at. Two requests: if
+   * the second is refused the first stands, and the refusal line says so.
+   */
+  const offsetNetted = async () => {
+    if (offsettable) await offsetAll();
+    if (row.heldByThem > 0) await onDecideHeld(row.holder, "OFFSET", row.heldByThem);
+  };
+  const sendNetted = async () => {
+    if (sendable) await sendAll();
+    if (row.heldByThem > 0) await onDecideHeld(row.holder, "PAID", row.heldByThem);
+  };
 
   /**
    * The nights one act discharged, named. Off the pools rather than the wallet's lines: the settle
@@ -1202,6 +1224,21 @@ function SettlementCard({
             </span>
           )}
 
+          {/* Both halves open: the difference, which is what the acts below move. */}
+          {unsettled > 0 && row.heldByThem > 0 && (
+            <div className="ledger-step-line">
+              <span className="ledger-step">
+                {unsettled >= row.heldByThem ? `Net to ${row.name}` : `Net from ${row.name}`}
+              </span>
+              <span className="ledger-amount">
+                <CopyAmount
+                  value={Math.abs(unsettled - row.heldByThem)}
+                  display={formatMesos(Math.abs(unsettled - row.heldByThem), true)}
+                />
+              </span>
+            </div>
+          )}
+
           {/* Both directions, each line signed, so a list holding both ways round says which is
               which without a word. `pay`, not `nets`: every other figure on this card is pre-fee, so
               a line drawn net of it disagreed with the Offset below by the 5%, listing a 703,703,488
@@ -1450,52 +1487,28 @@ function SettlementCard({
         <div className="ledger-entry">
           <span className="ledger-heading">Closing Actions</span>
 
-          {/* Your money in their hands (`Held by <name>` above). Not called Offset: that word is the act
-              on money you hold, and two buttons wearing it was a card nobody could read. */}
-          {row.heldByThem > 0 && (
-            <>
-              <span className="ledger-settle">
-                <button
-                  type="button"
-                  className="party-save"
-                  disabled={busy}
-                  onClick={() =>
-                    void write(onDecideHeld(row.holder, "OFFSET", row.heldByThem), null)
-                  }
-                >
-                  {`Take ${formatMesos(row.heldByThem, true)} Off Owed Amount`}
-                </button>
-                {heldByThemFor && <span className="ledger-progress">{heldByThemFor}</span>}
-              </span>
-              <span className="ledger-settle">
-                <button
-                  type="button"
-                  className="party-save"
-                  disabled={busy}
-                  onClick={() => void write(onDecideHeld(row.holder, "PAID", row.heldByThem), null)}
-                >
-                  {`Mark ${formatMesos(row.heldByThem, true)} Received`}
-                </button>
-                {heldByThemFor && <span className="ledger-progress">{heldByThemFor}</span>}
-              </span>
-            </>
-          )}
-
           {/* Discharged against what they owe you, rather than by money crossing.
 
               What YOU owe, and only that. Handed every line it also marked their shares to you paid,
               so the offset quietly collected money nobody had sent: the net fell by whatever they
               owed. Settle is the act that covers both directions, because there a transfer of the
               difference really did happen. */}
-          {offsettable && (
+          {/* Only where there is something of theirs to offset against, or their held money is all
+              that is open: with nothing to offset, it would close their half alone and leave your
+              shares standing, which is not the netted act. */}
+          {(offsettable || (row.heldByThem > 0 && !sendable)) && (
             <span className="ledger-settle">
               <button
                 type="button"
                 className="party-save"
                 disabled={busy}
-                onClick={() => void write(offsetAll(), null)}
+                onClick={() => void write(offsetNetted(), null)}
               >
-                {`Offset ${moved(offset.offered ? offset.amount : 0)}`}
+                {row.heldByThem === 0
+                  ? `Offset ${moved(offset.offered ? offset.amount : 0)}`
+                  : offsetNet >= 0
+                    ? `Offset ${formatMesos(offsetNet, true)}`
+                    : `Take ${formatMesos(-offsetNet, true)} Off Owed Amount`}
               </button>
               {offsetFor && <span className="ledger-progress">{offsetFor}</span>}
               {/* What it leaves behind, where their debt cannot cover the shares, because the
@@ -1512,15 +1525,19 @@ function SettlementCard({
 
           {/* You actually sent them the mesos. Named for the direction, so it cannot be read as the
               collecting act below it or as the offset above. */}
-          {sendable && (
+          {(sendable || row.heldByThem > 0) && (
             <span className="ledger-settle">
               <button
                 type="button"
                 className="party-save"
                 disabled={busy}
-                onClick={() => void write(sendAll(), null)}
+                onClick={() => void write(sendNetted(), null)}
               >
-                {`Mark ${movedBoth(owes, row.usd.owe)} Sent`}
+                {row.heldByThem === 0
+                  ? `Mark ${movedBoth(owes, row.usd.owe)} Sent`
+                  : sendNet >= 0
+                    ? `Mark ${movedBoth(owes - row.heldByThem, row.usd.owe)} Sent`
+                    : `Mark ${formatMesos(-sendNet, true)} Received`}
               </button>
               {sentFor && <span className="ledger-progress">{sentFor}</span>}
             </span>

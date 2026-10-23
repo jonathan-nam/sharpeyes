@@ -270,8 +270,10 @@ describe("every act in one step", () => {
     // amount it moves. Settle is gone: see settlement-figure.
     expect(ledger).toContain("`Offset ${moved(offset.offered ? offset.amount : 0)}`");
     expect(ledger).toContain("`Mark ${movedBoth(owes, row.usd.owe)} Sent`");
-    expect(ledger).toContain("`Take ${formatMesos(row.heldByThem, true)} Off Owed Amount`");
-    expect(ledger).toContain("`Mark ${formatMesos(row.heldByThem, true)} Received`");
+    // Netted against the money of yours they hold, both directions in one act (2026-10-23).
+    expect(ledger).toContain("`Take ${formatMesos(-offsetNet, true)} Off Owed Amount`");
+    expect(ledger).toContain("`Mark ${formatMesos(-sendNet, true)} Received`");
+    expect(ledger).toContain("`Mark ${movedBoth(owes - row.heldByThem, row.usd.owe)} Sent`");
     expect(ledger).not.toMatch(/^\s*Settle$/gm);
     // Received on the line; sent only for the lot, under Closing Actions.
     expect(ledger).toContain("Mark Received");
