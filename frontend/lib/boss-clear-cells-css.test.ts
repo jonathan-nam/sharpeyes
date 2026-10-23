@@ -10,16 +10,15 @@ const rule = (selector: string) => {
   return css.slice(at, css.indexOf("}", at));
 };
 
-// The matrix draws its four states as marks with no fills, so three of them are glyphs and the
-// fourth is the gap between them. That only works while the glyphs are visible: make the dash
-// transparent and "no capture" becomes an empty cell, which is "not cleared" as far as anyone
-// reading the table can tell. Nothing errors when it happens, the table just starts answering a
-// question it was not asked, which is the failure this project exists to prevent.
+// The matrix draws its states as marks with no fills, and not-cleared is the gap between them. That
+// only works while the glyphs are visible: make the dash transparent and "no capture" becomes an
+// empty cell, which is "not cleared" as far as anyone reading the table can tell. Nothing errors
+// when it happens, the table just starts answering a question it was not asked, which is the
+// failure this project exists to prevent.
 describe("boss clear marks stay visible", () => {
-  it("gives the three marked states a colour and leaves only not-cleared blank", () => {
+  it("gives the marked states a colour and leaves not-cleared blank", () => {
     expect(rule(".boss-cell.is-cleared")).toMatch(/color:\s*var\(--ink\)/);
     expect(rule(".boss-cell.is-unseen")).toMatch(/color:\s*var\(--muted-2\)/);
-    expect(rule(".boss-cell.is-skipped")).toMatch(/color:\s*var\(--muted-2\)/);
     expect(rule(".boss-cell.is-pending")).toMatch(/color:\s*transparent/);
   });
 
@@ -48,7 +47,7 @@ describe("boss clear marks stay visible", () => {
   it("does not fill the cells, so the state is the mark and not the background", () => {
     // Colouring the cells was tried twice and taken back out: the fill landed in the same channel
     // as the row striping below, and read as shading rather than as a state.
-    for (const state of ["is-cleared", "is-pending", "is-unseen", "is-skipped"]) {
+    for (const state of ["is-cleared", "is-pending", "is-unseen"]) {
       expect(rule(`.boss-cell.${state}`)).not.toMatch(/background/);
     }
   });
@@ -101,31 +100,13 @@ describe("a finished character's head dims", () => {
   });
 });
 
-describe("a filtered-out cell", () => {
-  const grey = (token: string) => {
-    const hex = css.match(new RegExp(`--${token}:\\s*#([0-9a-f]+);`))?.[1] ?? "";
-    expect(hex, `--${token} is missing`).not.toBe("");
-    return parseInt(hex.length === 3 ? hex[0]!.repeat(2) : hex.slice(0, 2), 16);
-  };
-
-  it("fades a left-out tick well below the quietest live mark", () => {
-    // Nearer the background than halfway to a live dash, so the two cannot be mistaken.
-    const opacity = Number(
-      rule(".boss-cell.is-filtered-out > span").match(/opacity:\s*([\d.]+)/)?.[1],
-    );
-    const bg = grey("bg");
-    const fadedTick = bg + opacity * (grey("ink") - bg);
-    expect(fadedTick).toBeLessThan((bg + grey("muted-2")) / 2);
-  });
-
+describe("a run filter", () => {
   it("brightens the marks of the cells it counts, a step above their resting colour", () => {
     expect(rule(".is-filtering .boss-cell.is-cleared:not(.is-filtered-out)")).toMatch(
       /color:\s*var\(--ink-strong\)/,
     );
-    expect(
-      rule(
-        ".is-filtering .boss-cell.is-unseen:not(.is-filtered-out),\n.is-filtering .boss-cell.is-skipped:not(.is-filtered-out)",
-      ),
-    ).toMatch(/color:\s*var\(--ink\)/);
+    expect(rule(".is-filtering .boss-cell.is-unseen:not(.is-filtered-out)")).toMatch(
+      /color:\s*var\(--ink\)/,
+    );
   });
 });

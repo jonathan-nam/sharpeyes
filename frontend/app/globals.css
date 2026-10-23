@@ -3066,17 +3066,16 @@ button.link:disabled {
   cursor: default;
 }
 
-/* Four states, three marks and one gap, no fills. Each says its own name: a tick for done, nothing
-   at all for still to do, a dash for nothing reported, a dot for a boss this character does not
-   run. Filling the cells was tried and taken back out: colour put the state in the same channel as
+/* Two marks and a gap, no fills: a tick for done, a dash for nothing reported, and nothing for
+   still to do. A boss this character does not run, and a cell the run filter leaves out, are blank
+   too (see the mark in boss-matrix.tsx). Filling the cells was tried and taken back out: colour put the state in the same channel as
    the row striping, and every palette for it was an argument about the palette rather than about
    the table. */
 .boss-cell.is-cleared {
   color: var(--ink);
 }
 
-/* Deliberately empty, and the loudest thing in the table by being the only gap in a column of
-   marks. */
+/* Deliberately empty. */
 .boss-cell.is-pending {
   color: transparent;
 }
@@ -3088,32 +3087,13 @@ button.link:disabled {
   color: var(--muted-2);
 }
 
-/* A boss this character does not run. A mark and not a gap: the gap is already "not cleared", and
-   the whole point of the mark is that those two were the same cell before it existed. Quiet, but
-   not so quiet it reads as the gap, for the reason the dash has a floor. */
-.boss-cell.is-skipped {
-  color: var(--muted-2);
-}
-
-/* The cells a Solo or Party chip leaves out keep their place with their marks faded well below
-   the quietest live mark (--muted-2), so a left-out tick cannot pass for a live dash. Fainter than
-   a finished portrait or sprite on purpose: those sit beside full-weight neighbours, and these sit
-   among marks that are already grey. */
-.boss-cell.is-filtered-out > span {
-  opacity: 0.2;
-  filter: saturate(0.3);
-  transition:
-    opacity 0.12s ease,
-    filter 0.12s ease;
-}
-
-/* And the cells it counts brighten a step, each mark keeping its place relative to the others. */
+/* The cells a Solo or Party chip counts brighten a step, each mark keeping its place relative to
+   the others. */
 .is-filtering .boss-cell.is-cleared:not(.is-filtered-out) {
   color: var(--ink-strong);
 }
 
-.is-filtering .boss-cell.is-unseen:not(.is-filtered-out),
-.is-filtering .boss-cell.is-skipped:not(.is-filtered-out) {
+.is-filtering .boss-cell.is-unseen:not(.is-filtered-out) {
   color: var(--ink);
 }
 
@@ -3169,8 +3149,7 @@ button.link:disabled {
   border-radius: var(--radius-sm);
 }
 
-.boss-key.is-unseen,
-.boss-key.is-skipped {
+.boss-key.is-unseen {
   color: var(--muted-2);
 }
 
@@ -7890,8 +7869,8 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 
 /* --- Setting up an account ----------------------------------------------------------------- */
 
-/* Where a new account is in /welcome, one row with arrows between. The Individual View's filter
-   reading: what is still ahead fades the way a left-out mark does, and what is done brightens. */
+/* Where a new account is in /welcome, one row with arrows between: what is still ahead fades, and
+   what is done brightens. */
 .welcome-steps {
   display: flex;
   align-items: center;
