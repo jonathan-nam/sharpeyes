@@ -1115,7 +1115,21 @@ function SettlementCard({
         row.heldByThem > 0 ||
         paidIn.length > 0) && (
         <div className="ledger-entry">
-          <span className="ledger-heading">Unsettled Amounts</span>
+          {/* The net on the heading's line, where it is read first: it is what the acts below move.
+              Not drawn while shares they owe you are open: those are settled line by line, not by
+              those acts, so the difference would be a figure nothing on the card closes. */}
+          <div className="ledger-step-line">
+            <span className="ledger-heading">Unsettled Amounts</span>
+            {unsettled > 0 && row.heldByThem > 0 && theyHoldShares === 0 && (
+              <span className="ledger-net">
+                {unsettled >= row.heldByThem ? `Net to ${row.name} ` : `Net from ${row.name} `}
+                <CopyAmount
+                  value={Math.abs(unsettled - row.heldByThem)}
+                  display={formatMesos(Math.abs(unsettled - row.heldByThem), true)}
+                />
+              </span>
+            )}
+          </div>
           {/* Two halves, one per direction, each with its own figure: they run opposite ways, so
               one total over both would be a net nobody chose (see V61, V91).
 
@@ -1240,23 +1254,6 @@ function SettlementCard({
                 </span>
               ))}
             </span>
-          )}
-
-          {/* Both halves open: the difference, which is what the acts below move. Not drawn while
-              shares they owe you are open: those are settled line by line, not by those acts, so the
-              difference would be a figure nothing on the card closes. */}
-          {unsettled > 0 && row.heldByThem > 0 && theyHoldShares === 0 && (
-            <div className="ledger-step-line">
-              <span className="ledger-step">
-                {unsettled >= row.heldByThem ? `Net to ${row.name}` : `Net from ${row.name}`}
-              </span>
-              <span className="ledger-amount">
-                <CopyAmount
-                  value={Math.abs(unsettled - row.heldByThem)}
-                  display={formatMesos(Math.abs(unsettled - row.heldByThem), true)}
-                />
-              </span>
-            </div>
           )}
 
           {/* Only what was SENT to them. A decision to offset took something off what they owe you,

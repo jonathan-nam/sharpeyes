@@ -101,7 +101,8 @@ describe("folding `owed`", () => {
   it("wears one shape in all three sections: heading, chevron, figure", () => {
     // They grew up separately and read as three kinds of thing. Offsets carried its total and its
     // chevron on a ROW inside the list, and the chevron belongs to the heading, not to a row of it.
-    for (const heading of ["Owed", "Paid", "Unsettled Amounts"]) {
+    // Not Unsettled Amounts: it does not fold (2026-10-23), and its line carries the net instead.
+    for (const heading of ["Owed", "Paid"]) {
       const at = ledger.indexOf(`<span className="ledger-heading">${heading}</span>`);
       expect(at, heading).toBeGreaterThan(-1);
       // The heading opens a `.ledger-step-line`, and the chevron and the figure are on it.
@@ -114,6 +115,12 @@ describe("folding `owed`", () => {
     }
     // And no total is left on a row inside a list.
     expect(ledger).not.toContain('<span className="loot-name">{offsets}</span>');
+  });
+
+  it("puts the net on Unsettled Amounts' own line, where it is read first", () => {
+    const at = ledger.indexOf('<span className="ledger-heading">Unsettled Amounts</span>');
+    const head = ledger.slice(at, ledger.indexOf("</div>", at));
+    expect(head).toContain('className="ledger-net"');
   });
 });
 
