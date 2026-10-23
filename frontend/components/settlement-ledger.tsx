@@ -599,6 +599,9 @@ function SettlementCard({
   ].filter((part) => part.mesos > 0);
   /** The sum of its own rows and nothing else, the way `owedTotal` is. */
   const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);
+  // A fold of one part only repeats the figure on its own line, and the shares part is listed line
+  // by line under `shares` anyway. Held sales are the one list that says something new.
+  const unsettledFolds = unsettledParts.length > 1 || held.length > 0;
 
   // Every night that owed anything, sold or not, so a week reads as what it owed. See PieceNights.
   const theirNights = row.drops.filter((drop) => drop.pieces + drop.sold > 0);
@@ -1056,7 +1059,7 @@ function SettlementCard({
           {unsettled > 0 && (
             <div className="ledger-step-line">
               <span className="ledger-step">Held by You</span>
-              {unsettledParts.length > 0 && (
+              {unsettledFolds && (
                 <button
                   type="button"
                   className="party-row-toggle"
@@ -1092,8 +1095,12 @@ function SettlementCard({
 
               Keyed by position, a tranche's id having nothing to say here that its coupons and its
               day do not. */}
-          <div className="ledger-fold" id={`unsettled-${row.key}`} hidden={!showUnsettled}>
-            {unsettledParts.length > 0 && (
+          <div
+            className="ledger-fold"
+            id={`unsettled-${row.key}`}
+            hidden={!showUnsettled || !unsettledFolds}
+          >
+            {unsettledParts.length > 1 && (
               <ul className="ledger-queue">
                 {unsettledParts.map((part) => (
                   <li key={part.key} className="ledger-drop">

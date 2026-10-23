@@ -177,7 +177,11 @@ describe("one section for what is unsettled", () => {
     expect(head).toContain("aria-controls={`unsettled-${row.key}`}");
     // The fold names both parts, so what the heading became is not a total nobody can decompose:
     // the sum is the card's own, on the card, exactly as `owedTotal` is.
-    expect(ledger).toContain('<div className="ledger-fold" id={`unsettled-${row.key}`}');
+    expect(ledger).toContain("id={`unsettled-${row.key}`}");
+    // But only where it says something the figure does not: one part was the figure again.
+    expect(ledger).toContain(
+      "const unsettledFolds = unsettledParts.length > 1 || held.length > 0;",
+    );
     expect(ledger).toContain(
       "const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);",
     );
