@@ -3,6 +3,9 @@
 // In the browser until plans are stored server-side (docs/party-planner-plan.md, phase 2). Read
 // defensively: an old tab or a hand-edited value must come back as a smaller draft, never as a
 // throw or as a strength outside the slider.
+//
+// Every character the app knows of (yours, and your People's) has a card by default, so the draft
+// stores only the exceptions: the known ones taken off the page, and the typed IGNs nobody holds.
 
 import { SOLO, type Want } from "@/lib/party-planner";
 
@@ -24,7 +27,10 @@ export type DraftWant = {
 
 export type Draft = {
   maxMinutes: number;
+  /** Characters added by hand: typed IGNs, and known ones from before they were shown by default. */
   characters: DraftCharacter[];
+  /** Known characters taken off the page, lowercased. */
+  hidden: string[];
   wants: DraftWant[];
 };
 
@@ -39,32 +45,75 @@ export function standaloneId(name: string): string {
 /** The longest IGN the game allows. */
 export const MAX_IGN = 12;
 
+/** Whose a known character is, keyed by its lowercased name. The first group to name it wins. */
+function knownCharacters(roster: RosterGroup[]): Map<string, DraftCharacter> {
+  const known = new Map<string, DraftCharacter>();
+  for (const group of roster) {
+    for (const name of group.names) {
+      const key = name.toLowerCase();
+      if (!known.has(key)) known.set(key, { name, personId: group.personId });
+    }
+  }
+  return known;
+}
+
+/** The cards on the page: every known character not hidden, in roster order, then the typed ones. */
+export function shownCharacters(draft: Draft, roster: RosterGroup[]): DraftCharacter[] {
+  const known = knownCharacters(roster);
+  const hidden = new Set(draft.hidden);
+  const shown = [...known].filter(([key]) => !hidden.has(key)).map(([, c]) => c);
+  const typed = draft.characters.filter(
+    (c) => !known.has(c.name.toLowerCase()) && !hidden.has(c.name.toLowerCase()),
+  );
+  return [...shown, ...typed];
+}
+
 /**
  * What a typed name adds: a known character with its owner, else a standalone one, else nothing.
  *
  * Names match case-blind, as the game's do, and a known one comes back spelled as it is on record.
- * Null for a blank, an over-long name, or a character the draft already has.
+ * Null for a blank, a name the game would not take, or a character already on the page.
  */
 export function resolveCharacter(
   typed: string,
   roster: RosterGroup[],
-  draft: Draft,
+  shown: DraftCharacter[],
 ): DraftCharacter | null {
   const name = typed.trim();
   if (name === "" || name.length > MAX_IGN || /\s/.test(name)) return null;
   const key = name.toLowerCase();
-  if (draft.characters.some((c) => c.name.toLowerCase() === key)) return null;
-  for (const group of roster) {
-    const known = group.names.find((n) => n.toLowerCase() === key);
-    if (known) return { name: known, personId: group.personId };
+  if (shown.some((c) => c.name.toLowerCase() === key)) return null;
+  return knownCharacters(roster).get(key) ?? { name, personId: standaloneId(name) };
+}
+
+/** The draft with a character back on the page: a known one unhidden, a typed one added. */
+export function addCharacter(draft: Draft, roster: RosterGroup[], c: DraftCharacter): Draft {
+  const key = c.name.toLowerCase();
+  if (knownCharacters(roster).has(key)) {
+    return { ...draft, hidden: draft.hidden.filter((h) => h !== key) };
   }
-  return { name, personId: standaloneId(name) };
+  return { ...draft, characters: [...draft.characters, c] };
+}
+
+/** The draft without a character or its bosses. A known one is hidden, since it would come back. */
+export function removeCharacter(draft: Draft, roster: RosterGroup[], name: string): Draft {
+  const key = name.toLowerCase();
+  const wants = draft.wants.filter((w) => w.character !== name);
+  if (knownCharacters(roster).has(key)) {
+    return { ...draft, hidden: [...new Set([...draft.hidden, key])], wants };
+  }
+  return { ...draft, characters: draft.characters.filter((c) => c.name !== name), wants };
 }
 
 export const MIN_MINUTES = 10;
 export const MAX_MINUTES = 30;
 
-export const EMPTY_DRAFT: Draft = { maxMinutes: MAX_MINUTES, characters: [], wants: [] };
+export const EMPTY_DRAFT: Draft = {
+  maxMinutes: MAX_MINUTES,
+  characters: [],
+  hidden: [],
+  wants: [],
+};
 
 export function readDraft(text: string | null): Draft {
   if (!text) return EMPTY_DRAFT;
@@ -80,11 +129,13 @@ export function readDraft(text: string | null): Draft {
   const characters = (Array.isArray(r.characters) ? r.characters : []).filter(
     (c): c is DraftCharacter => typeof c?.name === "string" && typeof c?.personId === "string",
   );
-  const names = new Set(characters.map((c) => c.name));
+  const hidden = (Array.isArray(r.hidden) ? r.hidden : []).filter(
+    (h): h is string => typeof h === "string",
+  );
+  // Not checked against `characters`: a known character's bosses belong to a card the roster draws.
   const wants = (Array.isArray(r.wants) ? r.wants : []).filter(
     (w): w is DraftWant =>
       typeof w?.character === "string" &&
-      names.has(w.character) &&
       typeof w.bossKey === "string" &&
       typeof w.difficulty === "string" &&
       Number.isInteger(w.strength) &&
@@ -98,23 +149,28 @@ export function readDraft(text: string | null): Draft {
         ? minutes
         : MAX_MINUTES,
     characters,
+    hidden: hidden.map((h) => h.toLowerCase()),
     wants,
   };
 }
 
-/** The rows that are filled in, as the planner takes them. */
-export function draftWants(draft: Draft): Want[] {
-  const owner = new Map(draft.characters.map((c) => [c.name, c.personId]));
-  return draft.wants
-    .filter((w) => w.bossKey !== "" && w.difficulty !== "")
-    .map((w) => ({
-      id: `${w.character}\n${w.bossKey}`,
-      character: w.character,
-      personId: owner.get(w.character)!,
-      world: null,
-      bossKey: w.bossKey,
-      difficulty: w.difficulty,
-      strength: w.strength,
-      maxParty: w.maxParty,
-    }));
+/** The filled-in rows of the characters on the page, as the planner takes them. */
+export function draftWants(draft: Draft, shown: DraftCharacter[]): Want[] {
+  const owner = new Map(shown.map((c) => [c.name, c.personId]));
+  return draft.wants.flatMap((w) => {
+    const personId = owner.get(w.character);
+    if (personId === undefined || w.bossKey === "" || w.difficulty === "") return [];
+    return [
+      {
+        id: `${w.character}\n${w.bossKey}`,
+        character: w.character,
+        personId,
+        world: null,
+        bossKey: w.bossKey,
+        difficulty: w.difficulty,
+        strength: w.strength,
+        maxParty: w.maxParty,
+      },
+    ];
+  });
 }
