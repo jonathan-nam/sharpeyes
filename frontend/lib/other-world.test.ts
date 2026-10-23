@@ -16,7 +16,7 @@ const root = join(__dirname, "..");
  * The pages whose emptiness the toggle can cause, and the empty state each one draws.
  *
  * Not every page: the Drop Log's own tabs collapse to one in Heroic (see dropSections) and the
- * Split Utility leaves the menu entirely, so neither can sit there looking empty for a reason it
+ * Drop Splitter leaves the menu entirely, so neither can sit there looking empty for a reason it
  * will not name.
  */
 const NARROWED = [

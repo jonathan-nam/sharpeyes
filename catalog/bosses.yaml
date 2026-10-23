@@ -155,6 +155,7 @@ bosses:
     reset: MONTHLY
     difficulties: [HARD, EXTREME]
     hp: {HARD: 472.50T, EXTREME: 4.81Q}
+    max_party: 6
 
   # --- Daily (not tracked) ------------------------------------------------------------
   # The tracker is weekly-and-up. Dailies reset before a once-a-day capture can say anything

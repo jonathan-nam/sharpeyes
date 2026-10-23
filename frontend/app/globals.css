@@ -8290,3 +8290,140 @@ a.notification-sentence:hover {
     }
   }
 }
+
+/* --- Party Planner ----------------------------------------------------------------------------- */
+
+.planner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.planner-characters,
+.planner-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.planner-heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--ink-strong);
+}
+
+.planner-value {
+  margin-left: 6px;
+  color: var(--ink-strong);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.planner input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.planner-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+}
+
+.planner-sub {
+  font-size: var(--text-sm);
+}
+
+.planner-character-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Pushes the × to the card's right edge. */
+.planner-character-head .planner-remove {
+  margin-left: auto;
+}
+
+.planner-remove {
+  font: inherit;
+  font-size: var(--text-lg);
+  line-height: 1;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.planner-remove:hover {
+  color: var(--ink-strong);
+}
+
+.planner-want {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.planner-want-picks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* The boss takes the row's spare width, so on a phone it fills its own line. */
+.planner-want-picks > .drop-select {
+  flex: 1 1 264px;
+  max-width: 420px;
+}
+
+/* Mode and size share what is left, so the × stays on their line at phone width. */
+.planner-want-picks > select {
+  flex: 1 1 100px;
+  max-width: 200px;
+}
+
+/* .config-difficulty is Party View's compact size. Here it sits beside full-size inputs. */
+.planner-want-picks .config-difficulty {
+  font-size: var(--text-lg);
+  padding: 9px 12px;
+  max-width: none;
+}
+
+.planner-add,
+.planner-add-character {
+  align-self: flex-start;
+}
+
+.planner-seats {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-base);
+}
+
+.planner-seats li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Character, boss, reason: columns, so the bosses line up down the list. */
+.planner-unplaced .planner-seats li {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+}
+
+.planner-share {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-strong);
+}

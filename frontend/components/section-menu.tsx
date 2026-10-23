@@ -18,7 +18,7 @@ export function SectionMenu() {
   const active = activeHref(pathname);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  // Nothing splits in a Heroic world, so the Split Utility is off the list while one is shown. It
+  // Nothing splits in a Heroic world, so the Drop Splitter is off the list while one is shown. It
   // still routes either way, and prefetching it costs nothing worth branching on.
   const sections = sectionsFor(useAccountSettings()?.trades);
 
