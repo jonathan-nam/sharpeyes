@@ -367,18 +367,20 @@ export function BossMatrix({
                             boss.bossKey,
                             skipsBy.get(character.id),
                           );
+                          // A cell the run filter leaves out is a mark too, so a tick cannot land
+                          // on a run the figures above are not counting.
+                          const counted = counts(character.id, boss.bossKey);
+
                           // Decorative; `said` is what a screen reader gets, and "not reported" is
-                          // deliberately not "not cleared". Not-cleared is the empty one of the four:
-                          // it is the only state you find by the gap it leaves, and the others have to
-                          // be marks so that gap means something.
-                          const mark =
-                            state === "cleared"
+                          // deliberately not "not cleared". A boss they do not run, and a cell the
+                          // run filter leaves out, show nothing at all.
+                          const mark = !counted
+                            ? ""
+                            : state === "cleared"
                               ? "✓"
                               : state === "unseen"
                                 ? "–"
-                                : state === "skipped"
-                                  ? "·"
-                                  : "";
+                                : "";
                           const said =
                             state === "cleared" || state === "pending"
                               ? `${boss.name} ${cellStateLabel(state)} by ${character.name}`
@@ -387,9 +389,6 @@ export function BossMatrix({
                           // A boss this character does not run has no clear to tick, so the cell is a
                           // mark and not a control. Which bosses they run is answered on the routine
                           // page, where the whole set is visible at once.
-                          // A cell the run filter leaves out is a mark too, so a tick cannot land
-                          // on a run the figures above are not counting.
-                          const counted = counts(character.id, boss.bossKey);
                           const clickable = !!onToggle && state !== "skipped" && counted;
                           const title = state === "cleared" ? "Mark not cleared" : "Mark cleared";
                           return (
@@ -479,7 +478,6 @@ export function BossMatrix({
             <span className="boss-key is-pending" /> {cellStateLabel("pending")}
             <span className="boss-key is-unseen">–</span> {cellStateLabel("unseen")}: no capture
             this period
-            <span className="boss-key is-skipped">·</span> {cellStateLabel("skipped")}
           </p>
           {/* Said, not left as an absence: a reader who knows Zakum is in the catalog should not
               read its missing row as the week having lost it. Why only weekly is answerable is in
