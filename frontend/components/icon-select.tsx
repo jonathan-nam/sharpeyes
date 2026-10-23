@@ -30,6 +30,7 @@ export function IconSelect({
   onChange,
   label,
   avatars = false,
+  bosses = false,
   disabled = false,
 }: {
   options: IconOption[];
@@ -40,6 +41,8 @@ export function IconSelect({
   label: string;
   /** Discord avatars rather than item art: round, and smaller. */
   avatars?: boolean;
+  /** Boss portraits rather than item art, drawn at their own 26px. */
+  bosses?: boolean;
   disabled?: boolean;
 }) {
   // -1 for nothing picked, and for a value that is not on the list any more: both are the
@@ -132,7 +135,7 @@ export function IconSelect({
     }
   }
 
-  const variant = avatars ? " is-avatars" : "";
+  const variant = avatars ? " is-avatars" : bosses ? " is-bosses" : "";
   return (
     <>
       <button

@@ -4581,6 +4581,20 @@ button.link:disabled {
   height: 18px;
 }
 
+/* Boss portraits are cut at 26px (see .boss-portrait), so they are drawn at 26 in the list and the
+   field alike, never at the item icon's 46 or 23. */
+.drop-select-list.is-bosses .drop-select-icon,
+.drop-select.is-bosses > .drop-select-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+}
+
+.drop-select-list.is-bosses .drop-select-blank {
+  width: 26px;
+  height: 26px;
+}
+
 .drop-select-label {
   min-width: 0;
   overflow: hidden;
@@ -8370,23 +8384,33 @@ a.notification-sentence:hover {
   border-top: 1px solid var(--line-soft);
 }
 
+/* Bottom-aligned, so the × sits level with the boxes rather than with their labels. */
 .planner-want-picks {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 
-/* The boss takes the row's spare width, so on a phone it fills its own line. */
-.planner-want-picks > .drop-select {
-  flex: 1 1 264px;
-  max-width: 420px;
+/* Mode and size share what is left, so the × stays on their line at phone width. */
+.planner-want-picks > .split-field {
+  flex: 1 1 100px;
+  min-width: 0;
+  max-width: 200px;
 }
 
-/* Mode and size share what is left, so the × stays on their line at phone width. */
-.planner-want-picks > select {
-  flex: 1 1 100px;
-  max-width: 200px;
+/* One height for the boss picker and the two selects, so their labels line up. */
+.planner-want-picks .split-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+}
+
+/* The boss takes the row's spare width, so on a phone it fills its own line. */
+.planner-want-picks > .planner-boss {
+  flex: 1 1 264px;
+  max-width: 420px;
 }
 
 /* .config-difficulty is Party View's compact size. Here it sits beside full-size inputs. */
@@ -8401,29 +8425,35 @@ a.notification-sentence:hover {
   align-self: flex-start;
 }
 
-.planner-seats {
+.planner-character-name {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: var(--text-base);
+  gap: 2px;
 }
 
-.planner-seats li {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-/* Character, boss, reason: columns, so the bosses line up down the list. */
-.planner-unplaced .planner-seats li {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+/* A character with no sprite on record: the frame Party View draws for one. */
+.seat-sprite.is-empty {
+  box-sizing: border-box;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  opacity: 0.5;
 }
 
 .planner-share {
+  font-size: var(--text-base);
   font-variant-numeric: tabular-nums;
   color: var(--ink-strong);
+}
+
+.planner-tile-boss {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.planner-tile-note {
+  font-size: var(--text-sm);
+  color: var(--warn);
 }

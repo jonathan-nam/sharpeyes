@@ -35,6 +35,8 @@ const NATURAL: Record<string, number> = {
   ".finder-suggest-row img": 46,
   ".drop-select-icon": 46,
   ".drop-select > .drop-select-icon": 46, // half size in the closed field
+  ".drop-select-list.is-bosses .drop-select-icon": 26, // boss portrait, 1:1
+  ".drop-select.is-bosses > .drop-select-icon": 26,
   ".finder-row li img": 46,
   ".boss-portrait": 26, // planner portrait, the game's own size
   ".boss-portrait.is-small": 26,

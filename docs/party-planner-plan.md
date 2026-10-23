@@ -91,7 +91,7 @@ already reads, so the owner never has to interpret prose, and the plan can be re
 | Party too big | one of their characters, and a cap | that want's `maxParty` |
 | Runs too long | a run length | a per-person ceiling, read as the lowest in the party |
 | Not with this person | a person in the same party | an `apart` pair |
-| Wrong mode | one of their characters, and a mode | that want's `difficulty` |
+| Wrong difficulty | one of their characters, and a difficulty | that want's `difficulty` |
 | Drop this boss | one of their characters | removes that want |
 | Other | up to 200 characters | nothing: the plan waits for the owner |
 
