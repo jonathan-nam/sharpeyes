@@ -167,8 +167,9 @@ describe("one section for what is unsettled", () => {
     // A bare 500,000,000 on a row of its own under the heading read as a row of the list. What it is
     // still NOT is a total of the whole section: the shares running the other way are under `Owed`,
     // and a count of coupons is the one thing this account never adds to a pile of mesos.
+    // On the "Held by You" half, the one Offset moves. "Held by <name>" carries its own figure.
     const at = ledger.indexOf(
-      '<div className="ledger-step-line">\n            <span className="ledger-heading">Unsettled Amounts',
+      '<div className="ledger-step-line">\n              <span className="ledger-step">Held by You',
     );
     expect(at, "the figure is off the heading's line").toBeGreaterThan(-1);
     const head = ledger.slice(at, ledger.indexOf("</div>", at));
