@@ -177,7 +177,11 @@ describe("one section for what is unsettled", () => {
     expect(head).toContain("aria-controls={`unsettled-${row.key}`}");
     // The fold names both parts, so what the heading became is not a total nobody can decompose:
     // the sum is the card's own, on the card, exactly as `owedTotal` is.
-    expect(ledger).toContain('<div className="ledger-fold" id={`unsettled-${row.key}`}');
+    expect(ledger).toContain("id={`unsettled-${row.key}`}");
+    // But only where it says something the figure does not: one part was the figure again.
+    expect(ledger).toContain(
+      "const unsettledFolds = unsettledParts.length > 1 || held.length > 0;",
+    );
     expect(ledger).toContain(
       "const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);",
     );
@@ -266,8 +270,10 @@ describe("every act in one step", () => {
     // amount it moves. Settle is gone: see settlement-figure.
     expect(ledger).toContain("`Offset ${moved(offset.offered ? offset.amount : 0)}`");
     expect(ledger).toContain("`Mark ${movedBoth(owes, row.usd.owe)} Sent`");
-    expect(ledger).toContain("`Take ${formatMesos(row.heldByThem, true)} Off Owed Amount`");
-    expect(ledger).toContain("`Mark ${formatMesos(row.heldByThem, true)} Received`");
+    // Netted against the money of yours they hold, both directions in one act (2026-10-23).
+    expect(ledger).toContain("`Take ${formatMesos(-offsetNet, true)} Off Owed Amount`");
+    expect(ledger).toContain("`Mark ${formatMesos(-sendNet, true)} Received`");
+    expect(ledger).toContain("`Mark ${movedBoth(owes - row.heldByThem, row.usd.owe)} Sent`");
     expect(ledger).not.toMatch(/^\s*Settle$/gm);
     // Received on the line; sent only for the lot, under Closing Actions.
     expect(ledger).toContain("Mark Received");
