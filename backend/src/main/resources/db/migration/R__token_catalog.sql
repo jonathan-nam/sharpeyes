@@ -23,7 +23,7 @@ FROM (VALUES
     ('kalos-residual-determination-fragment', 'Kalos''s Residual Determination Fragment', 'Kalos the Guardian', 'kalos-residual-determination-fragment.png', 'Eternal Pieces', 17),
     ('ferocious-entanglement-ring-fragment', 'Ferocious Entanglement Ring Fragment', 'Kaling', 'ferocious-entanglement-ring-fragment.png', 'Eternal Pieces', 18),
     ('whisper-ancient-resolve', 'Whisper of Ancient Resolve', 'First Adversary', 'whisper-ancient-resolve.png', 'Eternal Pieces', 19),
-    ('blissful-fantasy-fragment', 'Blissful Fantasy Fragment', 'Malefic Star', NULL, 'Eternal Pieces', 20),
+    ('blissful-fantasy-fragment', 'Blissful Fantasy Fragment', 'Malefic Star', 'blissful-fantasy-fragment.png', 'Eternal Pieces', 20),
     ('sayram-elixir', 'Sayram''s Elixir', 'The Collector', 'sayram-elixir.png', 'Consumables', 40),
     ('aurelia-elixir', 'Aurelia''s Elixir', 'The Collector', 'aurelia-elixir.png', 'Consumables', 41),
     ('honorable-elixir', 'Honorable Elixir', 'The Collector', 'honorable-elixir.png', 'Consumables', 42),

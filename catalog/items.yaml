@@ -25,8 +25,9 @@
 # build.py still refuses is a template the manifest does not know about, which is an item the
 # parser can detect and the app cannot name.
 #
-# `icon_id` is the maplestory.io item id the picture comes from, and `art: cut` says it was cut by
-# hand for an item the pinned dataset does not carry. Neither is required either: an item with no
+# `icon_id` is the maplestory.io item id the picture comes from, read from GMS v268 unless
+# `icon_version` names a later one, and `art: cut` says it was cut by hand for an item no dataset
+# the mirror serves carries. Neither is required either: an item with no
 # picture is drawn as an empty slot, which is honest, and is what the drop side has always done.
 #
 # `name` is prose for humans, and can be reworded freely.
@@ -71,7 +72,8 @@ items:
     per_member: HEROIC
     per_clear:
       HARD: { interactive: { total: 18, bundles: 6 }, heroic: 2 }
-    art: cut
+    icon_id: 2831103
+    icon_version: 269
 
   - key: distorted-ambition
     name: Distorted Ambition
@@ -148,12 +150,6 @@ items:
       NORMAL: 1
       HARD: 2
 
-  # No icon_id: GMS v268 is the newest dataset the mirror carries and this is a v270 item, so there
-  # is no sprite to point at. Cut instead from a capture taken on black, which hides two different
-  # things here. Inside the silhouette the capture IS the colour, dark shading and all; outside it
-  # the halo arrives premultiplied and divides back out into real alpha. Keying the whole sprite off
-  # brightness, the way Blissful Nightmare's glow was, would have holed that shading, and the slot
-  # behind it is light. What the black did take is the outline, which no sibling shares here.
   - key: lingering-twisted-desire
     name: Lingering Twisted Desire
     boss: Jupiter
@@ -166,7 +162,8 @@ items:
     per_clear:
       NORMAL: 1
       HARD: 2
-    art: cut
+    icon_id: 2831104
+    icon_version: 269
 
   # --- Fragments ---------------------------------------------------------------------
   # Half a piece each: two make one of the tokens above, so TWENTY buy one Eternal piece. That is
@@ -221,13 +218,14 @@ items:
     per_clear:
       NORMAL: { interactive: 4, heroic: 2 }
 
-  # No art, for the same reason as Jupiter's token above: v270, and the mirror stops at v268.
   - key: blissful-fantasy-fragment
     name: Blissful Fantasy Fragment
     boss: Malefic Star
     category: REDEMPTION_TOKEN
     group: Eternal Pieces
     sort: 20
+    icon_id: 2831408
+    icon_version: 269
     redeem_threshold: 20
     redeem_slots: [Hat, Top, Bottom, Shoulder]
     per_member: HEROIC
@@ -264,7 +262,9 @@ items:
     category: CONSUMABLE
     group: Consumables
     sort: 42
-    art: cut
+    # Two ids carry this name with the same art. The lower one is pinned.
+    icon_id: 2024304
+    icon_version: 269
 
   - key: collector-elixir
     name: Collector's Elixir

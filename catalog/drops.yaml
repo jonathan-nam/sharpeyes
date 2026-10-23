@@ -13,9 +13,10 @@
 # `name` is the in-game display name as maplestory.io has it, which is not always how a player
 # says it: the game calls it "Exceptional Hammer (Face Acc)", not "(Face Accessory)".
 #
-# `icon_id` is the Nexon item id the art comes from. Absent means the pinned dataset (GMS v268,
-# see ICON_VERSION) does not have the item yet, and the drop is drawn without art rather than with
-# somebody else's.
+# `icon_id` is the Nexon item id the art comes from, read from GMS v268 (ICON_VERSION) unless
+# `icon_version` names a later one (269 for items v268 predates; v270 500s on the mirror). Absent
+# means no dataset the mirror serves has the item, and the drop is drawn without art rather than
+# with somebody else's.
 #
 # `per_member` marks a drop each member receives their own copy of: ALWAYS, or HEROIC when it is
 # one drop for the party in Interactive worlds and one each in Heroic/Reboot. It is the one flag
@@ -71,24 +72,43 @@ drops:
   - key: immortal-legacy
     name: Immortal Legacy
     icon_id: 1143471
-  # No icon_id, for the reason given on eternal-armor-of-radiance-box: GMS v268 predates
-  # Malefic Star. Cut from a capture taken on black, which a glow is already premultiplied against,
-  # so the halo divides back out and only the solid core is left opaque. The downscale to
-  # ICON_CONTENT is done in that same space: resampling straight RGBA is what bleeds a glow.
   - key: blissful-nightmare
     name: Blissful Nightmare
-    art: cut
-  # v270 as well, and its capture has a framed panel behind it, which is not the dead end it looks.
-  # Nothing in the overlap is BLENDED: every pixel there is on the 4-bit grid the sprite's palette
-  # uses, and the 53 that are not sit clear of the panel in the glow over black. So the sprite is
-  # opaque wherever it covers the panel and the two palettes separate exactly.
-  #
-  # 85 pixels along that join are decided by palette rather than by an outline, 22 of them near
-  # white, so the pale edge of the face could be a pixel short. Judge it against the game before
-  # trusting it that far.
+    icon_id: 1113360
+    icon_version: 269
   - key: original-sin-of-pride
     name: Original Sin of Pride
-    art: cut
+    icon_id: 1012911
+    icon_version: 269
+
+  # --- Pitched Boss Set --------------------------------------------------------------
+  # One piece per boss from Lotus to Darknell, Lotus excepted with two. Guardian Angel Slime drops
+  # none. Will drops the selection box rather than one of its four spellbooks, as Seren does
+  # Mitra's Rage.
+  - key: berserked
+    name: Berserked
+    icon_id: 1012632
+  - key: total-control
+    name: Total Control
+    icon_id: 1672095
+  - key: magic-eyepatch
+    name: Magic Eyepatch
+    icon_id: 1022278
+  - key: dreamy-belt
+    name: Dreamy Belt
+    icon_id: 1132308
+  - key: wills-cursed-spellbook-selection-box
+    name: Will's Cursed Spellbook Selection Box
+    icon_id: 2633926
+  - key: endless-terror
+    name: Endless Terror
+    icon_id: 1113306
+  - key: source-of-suffering
+    name: Source of Suffering
+    icon_id: 1122430
+  - key: commanding-force-earring
+    name: Commanding Force Earring
+    icon_id: 1032316
 
   # --- Badges ------------------------------------------------------------------------
   # The mirror 504s on this item's METADATA while serving its icon fine, so probing by id reads as
@@ -153,19 +173,16 @@ drops:
     name: Eternal Armor of Oaths Box
     icon_id: 2639253
     fungible: true
-  # No icon_id: GMS v268 is the newest complete dataset the mirror has and it does not carry this
-  # item. Cut instead from an in-game capture taken on black, which hid the chest outline. The five
-  # boxes above share one pixel-identical silhouette, so that mask is what gave the outline back.
+  # Two ids carry this name with the same art. The lower one is pinned.
   - key: eternal-armor-of-radiance-box
     name: Eternal Armor of Radiance Box
-    art: cut
+    icon_id: 2831105
+    icon_version: 269
     fungible: true
-  # v270, and cut the same way as the box above. What the black hid here is not the outline but
-  # the drop shadow, which is semi-transparent, so the alpha is the oaths box's: five of this
-  # one's pixels fall outside that silhouette and the rest of it is the same chest.
   - key: eternal-twisted-armor-box
     name: Eternal Twisted Armor Box
-    art: cut
+    icon_id: 2831106
+    icon_version: 269
     fungible: true
 
   # --- Selection and ring boxes ------------------------------------------------------
@@ -197,9 +214,9 @@ drops:
   # could only ever be right for one boss. The counts and their bundling are in `tables` below.
   # What a party actually looted is typed on the pool row.
   #
-  # `art: cut` rather than an icon_id: this is a v270 item and the pinned dataset is GMS v268. The
-  # mirror has no v269 or v270 at all, so there is no version to point at and the sprite is supplied
-  # by hand instead, the same way the boss portraits are.
+  # `art: cut` rather than an icon_id: this is a v270 item, and the mirror's v270 500s, so there is
+  # no version to point at and the sprite is supplied by hand instead, the same way the boss
+  # portraits are.
   #
   # This one is the game's own 37x37 sprite, with its real per-pixel alpha. That matters: the glow is
   # semi-transparent, and the first five attempts here cut it out of a screenshot where it had been
@@ -230,6 +247,29 @@ drops:
 #
 # `worlds` is the exception, and only because a world is a fact we hold: see the flag's note above.
 tables:
+  # Pitched pieces drop on Hard and up (Chaos for Gloom), and Total Control on Extreme only.
+  lotus:
+    - berserked
+    - total-control
+
+  damien:
+    - magic-eyepatch
+
+  lucid:
+    - dreamy-belt
+
+  will:
+    - wills-cursed-spellbook-selection-box
+
+  gloom:
+    - endless-terror
+
+  verus-hilla:
+    - source-of-suffering
+
+  darknell:
+    - commanding-force-earring
+
   limbo:
     - whisper-of-the-source
     - grindstone-of-life
