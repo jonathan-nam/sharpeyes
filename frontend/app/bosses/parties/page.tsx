@@ -8,7 +8,6 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AddForWeek } from "@/components/add-for-week";
 import { KnownCharacters } from "@/components/known-characters";
 import { PartyCard } from "@/components/party-card";
-import { CurrentlyViewing, PresenceLayer } from "@/components/presence";
 import { ResetTimer } from "@/components/reset-timer";
 import { RosterStrip } from "@/components/roster-strip";
 import { WeekStepper } from "@/components/week-stepper";
@@ -984,7 +983,6 @@ export default function PartiesPage() {
 
   return (
     <main className="page">
-      <PresenceLayer page="party-view" />
       {/* Beside the title, not among the tabs below: those pick what the list shows, so a link
           that leaves the page read as another one of them. */}
       <div className="page-head">
@@ -1044,7 +1042,7 @@ export default function PartiesPage() {
               />
             )}
 
-            <section className="party-filters" data-presence="toolbar">
+            <section className="party-filters">
               <h2 className="party-filters-title">Filter Options</h2>
               <div className="party-toolbar-tabs">
                 <div className="basis-row" role="group" aria-label="Group parties by">
@@ -1070,8 +1068,6 @@ export default function PartiesPage() {
                     By Party
                   </button>
                 </div>
-
-                <CurrentlyViewing />
 
                 {/* What is left this week, without reading past what is done. "Not Cleared" holds the
                   unreported ones too. The counts do not move when you switch tabs: they are of every

@@ -12,7 +12,6 @@ export const TOPICS = [
   "settlement",
   "friends",
   "notifications",
-  "presence",
 ] as const;
 export type Topic = (typeof TOPICS)[number];
 
@@ -27,18 +26,6 @@ export type LiveEvent = {
   actor?: string | null;
   image?: string | null;
   target?: LiveTarget;
-  /** On a presence event only: where they are. See lib/presence.ts. */
-  presence?: PresencePing & { name?: string | null };
-};
-
-/** Where one account is on a page. Mirrors the backend's events/Presence.kt. */
-export type PresencePing = {
-  page: string;
-  here: boolean;
-  scope?: string | null;
-  x?: number | null;
-  y?: number | null;
-  target?: string | null;
 };
 
 function dataOf(line: string | undefined): Omit<LiveEvent, "topic"> {

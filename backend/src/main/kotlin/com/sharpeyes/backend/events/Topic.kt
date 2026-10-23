@@ -22,7 +22,4 @@ object Topic {
 
     /** Something arrived on your bell. */
     const val NOTIFICATIONS = "notifications"
-
-    /** Where somebody you share a party with is on a page, right now. Carries `presence`. */
-    const val PRESENCE = "presence"
 }

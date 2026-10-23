@@ -19,6 +19,7 @@ import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Party } from "@/types/party";
 import { partyHref } from "@/lib/party-path";
 import { PartyAccounts } from "@/components/party-accounts";
+import { ChangedBy } from "@/components/changed-by";
 import { ConfirmAct } from "@/components/confirm-act";
 
 // One config: who ran this boss this week, and what its pool is up to.
@@ -194,15 +195,16 @@ export function PartyCard({
     }
   }
 
+  // Another member ticking this run's clear: their face on the button, and a ring round it.
+  const clearedBy = <ChangedBy topics={["clears"]} matches={(t) => t.party === party.id} outline />;
+
   return (
     // Cleared rows step back so the list reads as what is left. Strictly `=== true`: null is "no
     // capture has said anything", which is a row that still needs an answer, not a finished one.
-    // A presence region: somebody else's cursor over this row is drawn over it here. See presence.tsx.
     <article
       className={`party-row${expanded ? " is-open" : ""}${
         clear.cleared === true ? " is-cleared" : ""
       }`}
-      data-presence={`party:${party.id}`}
     >
       <header className="party-row-head">
         {/* A disclosure of its own rather than the whole header, which already holds two links and
@@ -216,7 +218,6 @@ export function PartyCard({
             className="party-row-toggle"
             aria-expanded={open}
             aria-controls={panelId}
-            data-presence-key="toggle"
             // Closing drops a failed add's message with it. Kept, it would greet the next open
             // still claiming a save that is no longer being attempted.
             onClick={() => {
@@ -253,6 +254,8 @@ export function PartyCard({
             href={partyHref(party)}
           >
             {poolLine.text}
+            {/* Somebody else's drop landing in this pool: their face, and a ring on the count. */}
+            <ChangedBy topics={["loot"]} matches={(t) => t.party === party.id} outline />
           </Link>
         )}
 
@@ -269,15 +272,16 @@ export function PartyCard({
             disabled={busy}
             onClick={() => onToggleClear(nextClear(clear.cleared))}
             title={clear.cleared === null ? "No capture yet" : undefined}
-            data-presence-key="clear"
           >
             {clearStateLabel(clear.cleared)}
+            {clearedBy}
           </button>
         ) : (
           <span
             className={`changed-by-anchor party-clear is-${clearClass(clear.cleared)} is-readonly`}
           >
             {clearStateLabel(clear.cleared)}
+            {clearedBy}
           </span>
         )}
       </header>

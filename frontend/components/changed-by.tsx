@@ -5,7 +5,7 @@ import { type LiveEvent, type LiveTarget, onLive, type Topic, TOPICS } from "@/l
 import { useSessionUser } from "@/lib/use-auth";
 
 /** As long as the face stays up, matching the `changed-by` animation in globals.css. */
-export const CHANGED_BY_MS = 2_500;
+export const CHANGED_BY_MS = 3_000;
 
 type Heard = { event: LiveEvent; at: number };
 
@@ -21,8 +21,7 @@ let listening = false;
 function remember() {
   if (listening || typeof window === "undefined") return;
   listening = true;
-  // Not presence: it is a cursor moving, not a change, and it arrives many times a second.
-  for (const topic of TOPICS.filter((t) => t !== "presence")) {
+  for (const topic of TOPICS) {
     onLive(topic, (event) => {
       const now = Date.now();
       recent = [...recent.filter((h) => now - h.at < CHANGED_BY_MS), { event, at: now }];
@@ -77,26 +76,42 @@ export function useChangedBy(
   return shown;
 }
 
-/** The face, over the corner of the nearest positioned parent. Decorative: the change is the news. */
+/**
+ * The face, over the corner of the nearest positioned parent. Decorative: the change is the news.
+ * With `outline`, the control it sits on is ringed too, so which one they pressed is plain.
+ */
 export function ChangedBy({
   topics,
   matches,
+  outline = false,
 }: {
   topics: Topic[];
   matches: (target: LiveTarget) => boolean;
+  outline?: boolean;
 }) {
   const shown = useChangedBy(topics, matches);
   if (!shown) return null;
   // Keyed by time, so a second change inside the window starts the fade again. Started part way in
   // when it mounted after the change, so it ends when it would have.
+  const timing = { animationDelay: `${-shown.late}ms` };
   return (
-    <img
-      key={shown.at}
-      className="changed-by"
-      src={shown.image}
-      alt=""
-      aria-hidden="true"
-      style={{ animationDelay: `${-shown.late}ms` }}
-    />
+    <>
+      {outline && (
+        <span
+          key={`ring-${shown.at}`}
+          className="changed-by-ring"
+          aria-hidden="true"
+          style={timing}
+        />
+      )}
+      <img
+        key={shown.at}
+        className="changed-by"
+        src={shown.image}
+        alt=""
+        aria-hidden="true"
+        style={timing}
+      />
+    </>
   );
 }
