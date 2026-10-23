@@ -158,19 +158,15 @@ export default function PartyPlannerPage() {
   const plan = useMemo(() => planParties(wants, { maxMinutes: draft.maxMinutes }), [wants, draft]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
   // The buff note once, under the first slider on the page.
-  const firstShown = draft.wants.findIndex((w) => w.character === draft.characters[0]?.name);
+  const firstShown =
+    draft.characters
+      .map((c) => draft.wants.findIndex((w) => w.character === c.name))
+      .find((i) => i >= 0) ?? -1;
 
   function addCharacter(value: string) {
     const [personId, name] = value.split("\n");
     if (!personId || !name || added.has(name)) return;
-    setDraft({
-      ...draft,
-      characters: [...draft.characters, { name, personId }],
-      wants: [
-        ...draft.wants,
-        { character: name, bossKey: "", difficulty: "", strength: 0, maxParty: null },
-      ],
-    });
+    setDraft({ ...draft, characters: [...draft.characters, { name, personId }] });
   }
 
   function removeCharacter(name: string) {
