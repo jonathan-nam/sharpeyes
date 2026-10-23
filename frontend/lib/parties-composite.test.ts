@@ -58,7 +58,11 @@ describe("Party View reads its screen in two requests", () => {
   // Only the LOAD path. Refetching after a write still uses the individual endpoints, and should:
   // a write refreshes what it changed rather than re-reading the whole screen. See refreshPools.
   it("does not also GET the reads the composites cover, on load", () => {
-    const start = page.indexOf("const ticket = ++latestWeek.current;");
+    // The load effect's own ticket, not loadWeek's, which comes first and is not the load path.
+    const start = page.indexOf(
+      "const ticket = ++latestWeek.current;",
+      page.indexOf("// A ticket like loadWeek's"),
+    );
     const end = page.indexOf("}, [isLoaded]);", start);
     expect(start, "could not find the load effect").toBeGreaterThan(-1);
     expect(end, "could not find the end of the load effect").toBeGreaterThan(start);

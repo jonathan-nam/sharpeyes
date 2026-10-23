@@ -254,11 +254,19 @@ export default function PartiesPage() {
     return true;
   }
 
-  // A party member ticking a clear, or one written through to you, is on screen without a reload.
-  useLive(
-    ["clears", "loot", "party"],
-    () => void loadWeek(week, { clearsOptional: true }).catch(() => {}),
-  );
+  /** The pools alone, for a live event: loadWeek already reads the party list for the week shown. */
+  async function refetchPools() {
+    const next = await apiFetch<PartyLootPool[]>(POOLS_KEY, { method: "GET" }, getToken);
+    setPools(next);
+    put(POOLS_KEY, next);
+  }
+
+  // A party member ticking a clear or logging a drop, or one written through to you, is on screen
+  // without a reload. The pools as well, or a member's drop never reached an open panel.
+  useLive(["clears", "loot", "party"], () => {
+    void loadWeek(week, { clearsOptional: true }).catch(() => {});
+    void refetchPools().catch(() => {});
+  });
 
   async function selectWeek(target: string | null) {
     setStepping(true);
@@ -573,6 +581,18 @@ export default function PartiesPage() {
     });
   }
 
+  /** The same POST into a party somebody else owns, read back through its shared row. */
+  async function addSharedDrop(party: Party, body: AddLootBody) {
+    await write(party.id, async () => {
+      await apiFetch<unknown>(
+        `${PARTIES_KEY}/${party.id}/loot`,
+        { method: "POST", body: JSON.stringify(body) },
+        getToken,
+      );
+      await readBack(() => loadWeek(null));
+    });
+  }
+
   /**
    * One write against one drop, keyed by that drop so only its row dims.
    *
@@ -824,9 +844,9 @@ export default function PartiesPage() {
   );
 
   /**
-   * A party somebody else owns, as a row among yours. The clear is the one write it carries, being
-   * the whole party's run (see toggleSharedClear). The pool and the roster are its owner's, and the
-   * party's own page is where a member records into it. Coupons owed are reckoned over your own
+   * A party somebody else owns, as a row among yours. It carries the clear (see toggleSharedClear)
+   * and Add Drop, the two things any seat may write. The pool and the roster are its owner's, so
+   * selling and settling stay on the party's own page. Coupons owed are reckoned over your own
    * pools, which this is not one of, so the badge is absent rather than claiming none are out.
    */
   function sharedCard(party: Party, heading: ReactNode) {
@@ -839,6 +859,8 @@ export default function PartiesPage() {
         heading={heading}
         busy={isSaving(party.id)}
         onToggleClear={history ? undefined : (cleared) => toggleSharedClear(party, cleared)}
+        dropTable={dropTables[party.bossKey]}
+        onAddDrop={canAddDrops ? (body) => addSharedDrop(party, body) : undefined}
       />
     );
   }

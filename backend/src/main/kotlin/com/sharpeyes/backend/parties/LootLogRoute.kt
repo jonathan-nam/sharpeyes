@@ -81,22 +81,25 @@ internal suspend fun RoutingContext.logDropRoute() {
                         clash
                     } else {
                         val partyId = poolFor(userId, characterId, bossId, now)
-                        val lootId =
-                            addLoot(
-                                partyId,
-                                LootedDrop(dropId, customName, request.quantity),
-                                bossId,
-                                droppedOn,
-                                now,
-                                LootSource(solo = true),
-                            )
-                        findLoot(lootId, partyId)!!
+                        addSoloDrop(partyId, LootedDrop(dropId, customName, request.quantity), bossId, droppedOn, now)
                     }
                 }
             }
         }
     respondToLoot(outcome, HttpStatusCode.Created)
 }
+
+private fun addSoloDrop(
+    partyId: Uuid,
+    item: LootedDrop,
+    bossId: Uuid,
+    droppedOn: LocalDate,
+    now: kotlin.time.Instant,
+): Any =
+    onlyOnceRefusal(partyId, item, bossId, droppedOn) ?: run {
+        val lootId = addLoot(partyId, item, bossId, droppedOn, now, LootSource(solo = true))
+        findLoot(lootId, partyId)!!
+    }
 
 /**
  * The day to file a drop under, today when it is not said, or null once a refusal has been sent.

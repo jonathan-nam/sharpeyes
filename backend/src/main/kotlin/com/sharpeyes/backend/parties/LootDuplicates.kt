@@ -1,9 +1,12 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.bosses.periodOf
+import com.sharpeyes.backend.db.BossDropAmount
+import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.datetime.LocalDate
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import kotlin.time.Clock
@@ -11,7 +14,8 @@ import kotlin.uuid.Uuid
 
 // Two keyboards on one pool is how one night gets logged twice, a count that looks right and is
 // not. Not a unique index: two copies of one drop in one period are real, so a second is asked
-// for rather than refused outright. Inside a transaction, like the rest.
+// for rather than refused outright. The exception is a counted drop, see onlyOnceRefusal. Inside a
+// transaction, like the rest.
 
 /** A drop already in [partyId]'s pool for the same period of its boss, or null when there is none. */
 internal fun duplicateRefusal(
@@ -19,6 +23,7 @@ internal fun duplicateRefusal(
     item: LootedDrop,
     bossCatalogId: Uuid?,
     droppedOn: LocalDate,
+    onlyOnce: Boolean = false,
 ): Refusal? {
     val reset = (bossCatalogId ?: bossIdOfParty(partyId))?.let { bossResetOf(it) } ?: return null
     val period = periodOf(reset, droppedOn)
@@ -41,12 +46,10 @@ internal fun duplicateRefusal(
             "MONTHLY" -> "month"
             else -> "week"
         }
-    return if (logged) {
-        Refusal(
-            "This drop is already logged for that $span. Add it again only if a second one fell.",
-        )
-    } else {
-        null
+    return when {
+        !logged -> null
+        onlyOnce -> Refusal("This drop is already logged for that $span.")
+        else -> Refusal("This drop is already logged for that $span. Add it again only if a second one fell.")
     }
 }
 
@@ -54,6 +57,46 @@ internal fun duplicateRefusal(
 internal data class Duplicate(
     val refusal: Refusal,
 )
+
+/**
+ * Whether the catalog counts this drop for its boss (vestige coupons). A boss drops one batch per
+ * clear, so a second row in one period is always the same night logged twice, never a second drop.
+ */
+private fun isCountedDrop(
+    partyId: Uuid,
+    item: LootedDrop,
+    bossCatalogId: Uuid?,
+): Boolean {
+    val dropId = item.dropCatalogId
+    val bossId = bossCatalogId ?: bossIdOfParty(partyId)
+    return dropId != null &&
+        bossId != null &&
+        !BossDropAmount
+            .selectAll()
+            .where { (BossDropAmount.bossCatalogId eq bossId) and (BossDropAmount.dropCatalogId eq dropId) }
+            .empty()
+}
+
+/**
+ * Refuses a counted drop already in [partyId]'s pool for its period, with no way to add it again
+ * (a plain Refusal is a 400, not Duplicate's 409). Every path that adds to a pool calls this.
+ */
+internal fun onlyOnceRefusal(
+    partyId: Uuid,
+    item: LootedDrop,
+    bossId: Uuid?,
+    droppedOn: LocalDate,
+): Refusal? {
+    // Two members adding at once would both pass the check. Holding the party row makes the second
+    // wait for the first to commit, and then see its row.
+    Party
+        .selectAll()
+        .where { Party.id eq partyId }
+        .forUpdate()
+        .firstOrNull()
+    if (!isCountedDrop(partyId, item, bossId)) return null
+    return duplicateRefusal(partyId, item, bossId, droppedOn, onlyOnce = true)
+}
 
 /** Logs a validated drop into [partyId]'s pool, unless it looks like one already there. */
 internal fun addPoolDrop(
@@ -64,8 +107,14 @@ internal fun addPoolDrop(
     droppedOn: LocalDate,
     request: AddLootRequest,
 ): Any {
-    val duplicate = if (request.again) null else duplicateRefusal(partyId, item, bossId, droppedOn)
-    if (duplicate != null) return Duplicate(duplicate)
+    val refused =
+        onlyOnceRefusal(partyId, item, bossId, droppedOn)
+            ?: if (request.again || isCountedDrop(partyId, item, bossId)) {
+                null
+            } else {
+                duplicateRefusal(partyId, item, bossId, droppedOn)?.let(::Duplicate)
+            }
+    if (refused != null) return refused
     val lootId = addLoot(partyId, item, bossId, droppedOn, Clock.System.now(), LootSource(recordedBy = userId))
     addedBundles(lootId, partyId, request.bundles)
     poolChanged(partyId, lootId)

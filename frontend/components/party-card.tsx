@@ -403,7 +403,7 @@ export function PartyCard({
                       return;
                     }
                     // The picker says this one itself, with the button that answers it.
-                    if (!isDuplicateDrop(e)) setAddError("That didn't save.");
+                    if (!isDuplicateDrop(e)) setAddError(failureText(e, "That didn't save."));
                     // Rethrown so the picker keeps what was chosen, ready to try again.
                     throw e;
                   }
