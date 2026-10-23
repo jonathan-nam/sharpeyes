@@ -23,9 +23,12 @@ import {
   DRAFT_KEY,
   draftWants,
   EMPTY_DRAFT,
+  MAX_IGN,
   MAX_MINUTES,
   MIN_MINUTES,
   readDraft,
+  resolveCharacter,
+  type RosterGroup,
   YOU,
 } from "@/lib/planner-draft";
 import { preloadBossArt } from "@/lib/preload-boss-art";
@@ -141,7 +144,7 @@ export default function PartyPlannerPage() {
   );
 
   const roster = useMemo(() => {
-    const groups: { personId: string; label: string; names: string[] }[] = [
+    const groups: RosterGroup[] = [
       { personId: YOU, label: "You", names: characters.map((c) => c.name) },
     ];
     for (const p of people) {
@@ -153,6 +156,8 @@ export default function PartyPlannerPage() {
   const personName = (id: string) =>
     id === YOU ? null : (roster.find((g) => g.personId === id)?.label ?? null);
   const added = new Set(draft.characters.map((c) => c.name));
+  const [typed, setTyped] = useState("");
+  const adding = resolveCharacter(typed, roster, draft);
 
   const wants = useMemo(() => draftWants(draft), [draft]);
   const plan = useMemo(() => planParties(wants, { maxMinutes: draft.maxMinutes }), [wants, draft]);
@@ -163,10 +168,10 @@ export default function PartyPlannerPage() {
       .map((c) => draft.wants.findIndex((w) => w.character === c.name))
       .find((i) => i >= 0) ?? -1;
 
-  function addCharacter(value: string) {
-    const [personId, name] = value.split("\n");
-    if (!personId || !name || added.has(name)) return;
-    setDraft({ ...draft, characters: [...draft.characters, { name, personId }] });
+  function addCharacter() {
+    if (adding === null) return;
+    setDraft({ ...draft, characters: [...draft.characters, adding] });
+    setTyped("");
   }
 
   function removeCharacter(name: string) {
@@ -370,30 +375,41 @@ export default function PartyPlannerPage() {
               );
             })}
 
-            <label className="split-field planner-add-character">
-              <span>Add Character</span>
-              <select
-                className="split-input"
-                aria-label="Add a character"
-                value=""
-                onChange={(e) => addCharacter(e.target.value)}
-              >
-                <option value="">Choose...</option>
-                {roster.map((g) => (
-                  <optgroup key={g.personId} label={g.label}>
-                    {g.names.map((name) => (
-                      <option
-                        key={name}
-                        value={`${g.personId}\n${name}`}
-                        disabled={added.has(name)}
-                      >
-                        {name}
+            <form
+              className="planner-add-character"
+              onSubmit={(e) => {
+                e.preventDefault();
+                addCharacter();
+              }}
+            >
+              <label className="split-field">
+                <span>Add Character</span>
+                <input
+                  className="split-input"
+                  list="planner-known"
+                  placeholder="IGN"
+                  maxLength={MAX_IGN}
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                />
+              </label>
+              <button type="submit" className="party-save" disabled={adding === null}>
+                Add
+              </button>
+              <datalist id="planner-known">
+                {roster.flatMap((g) =>
+                  g.names
+                    .filter((name) => !added.has(name))
+                    .map((name) => (
+                      <option key={`${g.personId}\n${name}`} value={name}>
+                        {g.label}
                       </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
+                    )),
+                )}
+              </datalist>
+            </form>
           </section>
 
           {[3, 6].map((n) => (

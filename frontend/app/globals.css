@@ -8420,9 +8420,24 @@ a.notification-sentence:hover {
   max-width: none;
 }
 
-.planner-add,
-.planner-add-character {
+.planner-add {
   align-self: flex-start;
+}
+
+/* The IGN box and its Add on one line, the button level with the box rather than its label. */
+.planner-add-character {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.planner-add-character .split-input {
+  width: 12em;
+  max-width: 100%;
+}
+
+.planner-add-character .party-save {
+  height: 40px;
 }
 
 .planner-character-name {

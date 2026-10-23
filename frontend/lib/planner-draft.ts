@@ -28,6 +28,39 @@ export type Draft = {
   wants: DraftWant[];
 };
 
+/** Characters you know of, grouped by who plays them. */
+export type RosterGroup = { personId: string; label: string; names: string[] };
+
+/** A typed IGN that is nobody's on record. Its own player, so no rule mistakes it for an alt. */
+export function standaloneId(name: string): string {
+  return `ign:${name.toLowerCase()}`;
+}
+
+/** The longest IGN the game allows. */
+export const MAX_IGN = 12;
+
+/**
+ * What a typed name adds: a known character with its owner, else a standalone one, else nothing.
+ *
+ * Names match case-blind, as the game's do, and a known one comes back spelled as it is on record.
+ * Null for a blank, an over-long name, or a character the draft already has.
+ */
+export function resolveCharacter(
+  typed: string,
+  roster: RosterGroup[],
+  draft: Draft,
+): DraftCharacter | null {
+  const name = typed.trim();
+  if (name === "" || name.length > MAX_IGN || /\s/.test(name)) return null;
+  const key = name.toLowerCase();
+  if (draft.characters.some((c) => c.name.toLowerCase() === key)) return null;
+  for (const group of roster) {
+    const known = group.names.find((n) => n.toLowerCase() === key);
+    if (known) return { name: known, personId: group.personId };
+  }
+  return { name, personId: standaloneId(name) };
+}
+
 export const MIN_MINUTES = 10;
 export const MAX_MINUTES = 30;
 
