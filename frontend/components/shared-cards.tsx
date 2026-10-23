@@ -25,7 +25,9 @@ export type SharedWrites = {
     amount: number,
     note: string,
   ) => Promise<void>;
-  remove: (personId: string, kind: "debts" | "payments", id: string) => Promise<void>;
+  remove: (personId: string, kind: "debts" | "payments" | "disposals", id: string) => Promise<void>;
+  /** What became of their money you hold: off what they owe you, or sent. See V91. */
+  decide: (personId: string, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
   /** Marks a share of a drop you sold as sent. */
   send: (to: NonNullable<SharedPart["send"]>) => Promise<void>;
 };
@@ -79,6 +81,12 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
             {card.holding > 0 && (
               <span>{`holding ${formatMesos(card.holding, true)} of yours`}</span>
             )}
+            {card.youHold > 0 && (
+              <CopyAmount
+                value={card.youHold}
+                display={`you hold ${formatMesos(card.youHold, true)} of theirs`}
+              />
+            )}
             {card.piecesOwed > 0 && (
               <span>{`${formatPieces(card.piecesOwed)} of your coupons`}</span>
             )}
@@ -123,6 +131,29 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
           ]}
           {...controls}
         />
+      )}
+
+      {/* Their money from your sale of their coupons, until one of you says which: off what they
+          owe you, or sent. See V91. */}
+      {card.youHold > 0 && (
+        <div className="loot-actions">
+          <button
+            type="button"
+            className="party-save"
+            disabled={writes.busy}
+            onClick={() => act(writes.decide(card.personId, "OFFSET", card.youHold))}
+          >
+            {`Take ${formatMesos(card.youHold, true)} Off Owed Amount`}
+          </button>
+          <button
+            type="button"
+            className="party-save"
+            disabled={writes.busy}
+            onClick={() => act(writes.decide(card.personId, "PAID", card.youHold))}
+          >
+            {`Mark ${formatMesos(card.youHold, true)} Sent`}
+          </button>
+        </div>
       )}
 
       {sendable.length > 0 && (

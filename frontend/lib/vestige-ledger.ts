@@ -1137,13 +1137,20 @@ export type SaleCredit = {
   /** Money of YOURS they are holding, from a sale of yours entered against their pile. */
   toYou: number;
   /**
+   * What they owe for coupons of yours they KEPT, at the price you entered (BOUGHT on their pile).
+   * Netted: the price is the decision. A sale is not, see `toYou`.
+   */
+  keptByThem?: number;
+  /**
    * The tranches behind `toThem`, in the order the API returned them, which is oldest first.
    *
-   * That side alone, because it is the side with an act on it: the money sits in your hands until
-   * somebody decides about it, and a decision names no tranche, so the card can only say which sales
-   * it was made of by matching them off in this order. See moneyRows.
+   * The money sits in your hands until somebody decides about it, and a decision names no tranche,
+   * so the card can only say which sales it was made of by matching them off in this order. See
+   * moneyRows.
    */
   sales: CouponSale[];
+  /** The same for `toYou`, which waits on a decision too since V91. */
+  salesToYou?: CouponSale[];
 };
 
 /**
@@ -1185,15 +1192,22 @@ export function saleCredits(rows: (TrancheRow & { id: string })[]): Map<string, 
       // The row is listed off the same figure it is counted by, in one pass: a second walk to
       // itemise what this one totalled is a second answer, and the rounding above is exactly the
       // kind of step the two would come to disagree over.
-      if (pile === SELF_KEY)
-        add(creditor, "toThem", mesos).sales.push({
-          trancheId: row.id,
-          pieces: share.pieces,
-          mesos,
-          lot: { pieces: row.pieces, amount: row.amount },
-          soldAt: row.soldAt ?? null,
-        });
-      else add(pile, "toYou", mesos);
+      const sale = {
+        trancheId: row.id,
+        pieces: share.pieces,
+        mesos,
+        lot: { pieces: row.pieces, amount: row.amount },
+        soldAt: row.soldAt ?? null,
+      };
+      if (pile === SELF_KEY) {
+        add(creditor, "toThem", mesos).sales.push(sale);
+      } else if (isBought(row)) {
+        const seen = add(pile, "toYou", 0);
+        seen.keptByThem = (seen.keptByThem ?? 0) + mesos;
+      } else {
+        const seen = add(pile, "toYou", mesos);
+        seen.salesToYou = [...(seen.salesToYou ?? []), sale];
+      }
     }
   }
   return out;

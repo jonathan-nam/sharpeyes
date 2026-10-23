@@ -650,6 +650,10 @@ object VestigeProceedsDisposal : Table("vestige_proceeds_disposal") {
     val amount = long("amount")
     val kind = text("kind")
 
+    // YOU or THEM: whose hands the money is in. See V91__proceeds_held_by.sql.
+    val heldBy = text("held_by")
+    val recordedByUserId = optReference("recorded_by_user_id", Users.id)
+
     val decidedAt = timestamp("decided_at")
     val createdAt = timestamp("created_at")
 

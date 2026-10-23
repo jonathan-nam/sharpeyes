@@ -6,6 +6,7 @@ import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.VestigePayment
+import com.sharpeyes.backend.db.VestigeProceedsDisposal
 import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.db.VestigeTrancheShare
 import org.jetbrains.exposed.v1.core.JoinType
@@ -152,6 +153,32 @@ internal fun insertSharedPayment(
     }
 }
 
+/**
+ * The member's decision about coupon money between them: [heldBy] in the owner's terms, so THEM is
+ * the member holding the owner's money.
+ */
+internal fun insertSharedDisposal(
+    book: SharedBook,
+    writer: String,
+    amount: Long,
+    kind: String,
+    heldBy: String,
+    now: Instant,
+) {
+    VestigeProceedsDisposal.insert {
+        it[id] = Uuid.random()
+        it[userId] = book.owner
+        it[holderKind] = PERSON
+        it[personId] = book.personId
+        it[VestigeProceedsDisposal.amount] = amount
+        it[VestigeProceedsDisposal.kind] = kind
+        it[VestigeProceedsDisposal.heldBy] = heldBy
+        it[decidedAt] = now
+        it[createdAt] = now
+        it[recordedByUserId] = writer
+    }
+}
+
 /** Takes back one row [writer] wrote into [book]. False when there is no such row of theirs. */
 internal fun deleteSharedRow(
     book: SharedBook,
@@ -175,7 +202,12 @@ internal fun deleteSharedRow(
                 (VestigePayment.id eq id) and (VestigePayment.userId eq book.owner) and
                     (VestigePayment.recordedByUserId eq writer)
             }
+        SharedRow.DISPOSAL ->
+            VestigeProceedsDisposal.deleteWhere {
+                (VestigeProceedsDisposal.id eq id) and (VestigeProceedsDisposal.userId eq book.owner) and
+                    (VestigeProceedsDisposal.recordedByUserId eq writer)
+            }
     } > 0
 
-/** The three kinds of row a member writes into a shared book. */
-internal enum class SharedRow { TRANCHE, DEBT, PAYMENT }
+/** The kinds of row a member writes into a shared book. */
+internal enum class SharedRow { TRANCHE, DEBT, PAYMENT, DISPOSAL }

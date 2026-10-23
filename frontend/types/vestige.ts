@@ -161,6 +161,13 @@ export type ProceedsDisposal = {
   amount: number;
   kind: "OFFSET" | "PAID";
   decidedAt: string;
+  // Whose hands the money is in: YOU, your pile sold their coupons; THEM, their pile sold yours. For
+  // THEM, OFFSET comes off what you owe them and PAID means they sent it. See V91. Absent in a
+  // response cached before it existed, which is YOU.
+  heldBy?: "YOU" | "THEM";
+  // Who wrote it, when the other side of a shared book did. See V88.
+  recordedByYou?: boolean;
+  recordedByName?: string | null;
 };
 
 // POST /api/proceeds-disposals. Answers with every row, not the one added.
@@ -168,6 +175,7 @@ export type AddProceedsDisposalBody = {
   holder: Holder;
   amount: number;
   kind: "OFFSET" | "PAID";
+  heldBy?: "YOU" | "THEM";
 };
 
 // One share an offset discharged. The PAYOUT, since one drop owes several people and only one of

@@ -86,7 +86,7 @@ internal fun bookBetween(
         payments = paymentsFor(owner, viewer = member).filter { names(it.holder) },
         settlements = settlements,
         debts = debtsFor(owner, viewer = member).filter { names(it.holder) },
-        disposals = disposalsFor(owner).filter { names(it.holder) },
+        disposals = disposalsFor(owner, viewer = member).filter { names(it.holder) },
     )
 }
 

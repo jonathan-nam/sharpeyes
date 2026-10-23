@@ -248,12 +248,11 @@ describe("every act in one step", () => {
     }
   });
 
-  it("says what Settle Both Sides closes and never how much of it", () => {
-    // Every act carries a line saying what pressing it will record, this one included. What it must
-    // not carry is a figure: counting the nights back matched nothing else on the card (22 was
-    // eleven rows in each pile), and a count of coupons would overclaim, a night shared with a third
-    // person being one this cannot close. That much is said with the lists themselves.
-    expect(ledger.match(/^\s*Settle Both Sides$/gm)).toHaveLength(1);
+  it("offers no act that closes the coupon nights wholesale", () => {
+    // Settle Both Sides marked every open night handed over in both directions. Removed at the
+    // user's request (2026-10-23): coupon counts close through a sale or a keep at a price.
+    expect(ledger).not.toContain("Settle Both Sides");
+    expect(ledger).not.toContain("onSettlePair");
     expect(ledger).not.toContain("row.piecesNet)} coupons`");
     // Nor the count of what it will NOT close, which was the same reasoning stopping one step
     // short. Each of those nights says so on its own row: see the marker in PieceNights.
@@ -266,7 +265,8 @@ describe("every act in one step", () => {
     // amount it moves. Settle is gone: see settlement-figure.
     expect(ledger).toContain("`Offset ${moved(offset.offered ? offset.amount : 0)}`");
     expect(ledger).toContain("`Mark ${movedBoth(owes, row.usd.owe)} Sent`");
-    expect(ledger.match(/^\s*Settle Both Sides$/gm)).toHaveLength(1);
+    expect(ledger).toContain("`Take ${formatMesos(row.heldByThem, true)} Off Owed Amount`");
+    expect(ledger).toContain("`Mark ${formatMesos(row.heldByThem, true)} Received`");
     expect(ledger).not.toMatch(/^\s*Settle$/gm);
     // Received on the line; sent only for the lot, under Closing Actions.
     expect(ledger).toContain("Mark Received");

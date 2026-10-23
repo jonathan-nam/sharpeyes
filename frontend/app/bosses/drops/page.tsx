@@ -220,6 +220,16 @@ export default function DropLogPage() {
         );
         await readBack(load);
       }),
+    // Money of theirs you hold from a sale of their coupons: THEM in their book. See V91.
+    decide: (personId, kind, amount) =>
+      writes.track(async () => {
+        await apiFetch<unknown>(
+          `/api/shared-books/${encodeURIComponent(personId)}/disposals`,
+          { method: "POST", body: JSON.stringify({ amount, kind, heldBy: "THEM" }) },
+          getToken,
+        );
+        await readBack(load);
+      }),
     // The payout route, which lets the seller mark their own drop's share sent. See LootPermissions.
     send: (to) =>
       writes.track(async () => {
@@ -884,7 +894,7 @@ export default function DropLogPage() {
               anybody, and nothing here can be taken back.
 
               A Reopen used to sit on every row and it undid HALF of a settlement. Closing a coupon
-              pair is ONE act that writes one row per inventory (see onSettlePair), so deleting one of
+              pair was ONE act that wrote one row per inventory (Settle Both Sides, since removed), so deleting one of
               them left a night shut in their pile and open in yours: a user hit it by accident and
               60 coupons reappeared on the Sale Ledger with the other side still closed. A button
               whose one effect is to half-undo a paired act is a trap however it is labelled, the same

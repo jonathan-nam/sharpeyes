@@ -181,14 +181,20 @@ export type Settlement = {
      * The rest is `holding`. See V61.
      */
     soldOfTheirs: number;
-    /** Your coupons sold out of a pile filed as theirs. Positive, and rare: see saleCredits. */
+    /** What they owe for coupons of yours they kept, at the price you entered. Positive. */
     soldOfYours: number;
+    /**
+     * Your money they held from a sale of your coupons, AS FAR AS somebody has said it comes off what
+     * you owe them. Positive. A discharge, so listed under offsets and never in the owed list, the
+     * same as `soldOfTheirs`. The rest is `heldByThem`. See V91.
+     */
+    offsetOfYours: number;
     /**
      * Mesos that have arrived from them. Negative: a payment is a debt going away.
      *
      * All of it, even past what they owe: the excess is an overpayment and lands in `owedByYou`. It
      * used to be held apart as payment for their unpriced coupons of yours, which hid 48b a user
-     * owed Owen. A coupon of yours they sell is priced by its sale (`soldOfYours`), so no payment has
+     * owed Owen. A coupon of yours they sell is priced by its sale (`heldByThem`), so no payment has
      * to stand in for it.
      *
      * How much of the money LANDED, which is not what the card draws: the receipts themselves are
@@ -216,7 +222,15 @@ export type Settlement = {
    * derived from these, the money being saleCredits' and the counts the tranches' own.
    */
   sales: CouponSale[];
-  /** What has been decided, so a wrong one can be taken back off. See V61. */
+  /**
+   * Mesos of YOURS they are holding from a sale of your coupons out of their pile, undecided. `holding`
+   * from the other end, outside the net for the same reason: it comes off what you owe them, or they
+   * send it. See V91.
+   */
+  heldByThem: number;
+  /** The sales behind `heldByThem`, oldest first. */
+  salesHeldByThem: CouponSale[];
+  /** What has been decided, either direction, so a wrong one can be taken back off. See V61. */
   disposals: ProceedsDisposal[];
   /** Drawn whatever it says, because somebody said to keep it. See V59. */
   pinned: boolean;
@@ -260,9 +274,11 @@ const blank = (key: string, name: string): Settlement => ({
   owedByYou: 0,
   sharesYouOwe: 0,
   usd: { owe: 0, owed: 0, net: 0 },
-  parts: { shares: 0, entered: 0, soldOfTheirs: 0, soldOfYours: 0, received: 0 },
+  parts: { shares: 0, entered: 0, soldOfTheirs: 0, soldOfYours: 0, offsetOfYours: 0, received: 0 },
   holding: 0,
   sales: [],
+  heldByThem: 0,
+  salesHeldByThem: [],
   disposals: [],
   pinned: false,
   entries: [],
@@ -406,7 +422,8 @@ export function buildSettlement(
 
     const row = rowFor(holderKey(ledger.holder), ledger.holderName);
     // The mirror of the subtraction above: coupons of yours THEY sold out of their own pile and said
-    // were yours. `soldOfYours` carries what those fetched, so the count stops here too.
+    // were yours. `heldByThem` (or `soldOfYours`, for a keep) carries the money, so the count stops
+    // here too.
     const spent = withSold(
       drops,
       spendSales(drops, answered.get(answeredKey(holderKey(ledger.holder), SELF_KEY)) ?? []),
@@ -461,11 +478,16 @@ export function buildSettlement(
   // It lands in `holding` and NOT in the net. Which of the two things happens to it is the pair's
   // decision: it comes off what they owe you, or you send it and their debt does not move. Netting it
   // on arrival took Owen's 253.19b to 250.78b with nothing on screen to agree to. See V61.
+  //
+  // The other direction, your coupons sold out of their pile, is held the same way in their hands
+  // (V91). Netting it on arrival hid a member's sale inside what was owed to them, with nothing to act on.
   for (const [key, credit] of credits) {
     const row = rowFor(key);
     row.holding += credit.toThem;
     row.sales.push(...credit.sales);
-    row.parts.soldOfYours += credit.toYou;
+    row.heldByThem += credit.toYou;
+    row.salesHeldByThem.push(...(credit.salesToYou ?? []));
+    row.parts.soldOfYours += credit.keptByThem ?? 0;
   }
 
   // What has been decided about it. An OFFSET is the netting, now chosen rather than assumed, so it
@@ -475,9 +497,18 @@ export function buildSettlement(
   // Capped at what you are holding, and the excess is said rather than absorbed: deciding about money
   // you do not have is a miscount, and a card that quietly clamped it would hide the typo. Same rule
   // as the pieces, and the same reason the server does not refuse it.
+  //
+  // Money of yours THEY hold the same way round: an OFFSET comes off what you owe them, PAID means
+  // they sent it.
   for (const disposal of disposals) {
     const row = rowFor(holderKey(disposal.holder));
     row.disposals.push(disposal);
+    if (heldByThem(disposal)) {
+      const spent = Math.min(row.heldByThem, disposal.amount);
+      row.heldByThem -= spent;
+      if (disposal.kind === "OFFSET") row.parts.offsetOfYours += spent;
+      continue;
+    }
     const spent = Math.min(row.holding, disposal.amount);
     row.holding -= spent;
     if (disposal.kind === "OFFSET") row.parts.soldOfTheirs -= spent;
@@ -536,7 +567,8 @@ export function buildSettlement(
         // Money of theirs you are sitting on with nothing decided about it. The one thing on this
         // card somebody still has to act on, so a card dropped for lack of a net would be the act
         // going missing along with it.
-        row.holding > 0,
+        row.holding > 0 ||
+        row.heldByThem > 0,
     )
     .sort(
       (a, b) =>
@@ -660,15 +692,30 @@ export function decidedSales(
     // Their own decisions, in the order they were made, which is the order buildSettlement spends
     // them in. Two people's decisions never queue against one another's money.
     const theirs = disposals.filter((d) => holderKey(d.holder) === key);
-    for (const sales of couponSalesBehind(credit.sales, theirs).values()) {
-      for (const sale of sales) {
-        const creditors = out.get(sale.trancheId) ?? new Set<string>();
-        creditors.add(key);
-        out.set(sale.trancheId, creditors);
+    const decide = (sales: CouponSale[], by: ProceedsDisposal[], creditor: string) => {
+      for (const taken of couponSalesBehind(sales, by).values()) {
+        for (const sale of taken) {
+          const creditors = out.get(sale.trancheId) ?? new Set<string>();
+          creditors.add(creditor);
+          out.set(sale.trancheId, creditors);
+        }
       }
-    }
+    };
+    // Your pile's sales of their coupons, and theirs of yours, each spent by its own direction's
+    // decisions. The creditor of the second is you.
+    decide(
+      credit.sales,
+      theirs.filter((d) => !heldByThem(d)),
+      key,
+    );
+    decide(credit.salesToYou ?? [], theirs.filter(heldByThem), SELF_KEY);
   }
   return out;
+}
+
+/** Whether a decision is about money of yours they hold, rather than theirs you hold. See V91. */
+export function heldByThem(disposal: ProceedsDisposal): boolean {
+  return disposal.heldBy === "THEM";
 }
 
 /**
@@ -766,20 +813,30 @@ export function moneyRows(
   // Only the decisions that took something off get a ROW, but every one of them spent money you were
   // holding, so the matching has to see the lot. Handed the offsets alone it would give the second one
   // the sales the first payment out had already used up.
-  const behind = couponSalesBehind(row.sales, row.disposals);
+  // Each direction is its own pile of money, matched against its own sales.
+  const behind = new Map([
+    ...couponSalesBehind(
+      row.sales,
+      row.disposals.filter((d) => !heldByThem(d)),
+    ),
+    ...couponSalesBehind(row.salesHeldByThem, row.disposals.filter(heldByThem)),
+  ]);
 
   // Only the decisions that took something off. Paying them out discharged money of THEIRS in your
   // hands and left what they owe you exactly where it was, so it belongs where that money is said.
+  // An offset of money THEY hold came off what you owe them, so it is signed the way a payment of
+  // yours is (V89).
   for (const disposal of row.disposals) {
     if (disposal.kind !== "OFFSET") continue;
     discharges.push({
       id: disposal.id,
       source: "PROCEEDS",
-      amount: disposal.amount,
+      amount: heldByThem(disposal) ? -disposal.amount : disposal.amount,
       label: "coupon sale",
       at: disposal.decidedAt,
       payouts: [],
       sales: behind.get(disposal.id) ?? [],
+      by: writerOf(disposal),
     });
   }
 
