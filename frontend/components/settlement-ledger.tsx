@@ -310,11 +310,8 @@ function SettlementCard({
   // is on the heading's line either way, so what opening it adds is which rows made that figure, and
   // it opened with its arrow pointing at a closed panel besides.
   const [showOwed, setShowOwed] = useState(false);
-  // Whether the parts of what is unsettled are open, and the sales behind the held half with them.
-  // Folded, like the offsets history: the figure is what you act on and the rows are the check on it.
-  const [showUnsettled, setShowUnsettled] = useState(false);
   const [showYouOwe, setShowYouOwe] = useState(false);
-  // Closed to start, the way the held sales above are. The step says the count, which is the fact
+  // Closed to start. The step says the count, which is the fact
   // this section is read for; WHICH nights it came off is the follow-up question.
   const [showNights, setShowNights] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -605,9 +602,58 @@ function SettlementCard({
   ].filter((part) => part.mesos > 0);
   /** The sum of its own rows and nothing else, the way `owedTotal` is. */
   const unsettled = unsettledParts.reduce((sum, part) => sum + part.mesos, 0);
-  // A fold of one part only repeats the figure on its own line, and the shares part is listed line
-  // by line under `shares` anyway. Held sales are the one list that says something new.
-  const unsettledFolds = unsettledParts.length > 1 || held.length > 0;
+
+  // Each share under the half whose hands its money is in: one you owe under Held by You, one they
+  // owe you under Held by <name>. A share's money sits with whoever sold the drop.
+  const linesYouHold = row.lines.filter((line) => line.direction === "owe");
+  const linesTheyHold = row.lines.filter((line) => line.direction === "owed");
+  // Their half's figure: their coupon money of yours, and the meso shares they owe you.
+  const theyHoldShares = linesTheyHold
+    .filter((line) => line.currency === "MESO")
+    .reduce((sum, line) => sum + line.pay, 0);
+  const theyHold = row.heldByThem + theyHoldShares;
+
+  /**
+   * One share, as every drop row on this account reads: its art, its name, the boss, whose share,
+   * and `pay`, not `nets`: every other figure on this card is pre-fee, so a line drawn net of it
+   * disagreed with Offset by the 5%. A share they owe you carries its own Mark Received: collecting
+   * one is its own day, while what you send is Closing Actions' act for the lot (2026-10-21).
+   */
+  const shareRow = (line: (typeof row.lines)[number]) => {
+    const boss = bossByKey.get(line.bossKey ?? "");
+    const party = partyById.get(line.partyId);
+    return (
+      <li key={`${line.lootId}:${line.theirsId}`} className="ledger-drop">
+        <div className="ledger-drop-head">
+          {line.iconUrl ? (
+            <img className="loot-icon" src={apiAssetUrl(line.iconUrl)} alt="" />
+          ) : (
+            <span className="loot-icon" aria-hidden="true" />
+          )}
+          <Link href={partyHrefById(line.partyId, partyById)} className="loot-name">
+            {line.name}
+          </Link>
+          <span className="loot-meta">
+            {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"} · {line.theirs}
+          </span>
+          <span className="ledger-amount">{formatMoney(line.pay, line.currency, true)}</span>
+          {line.direction === "owed" && (
+            <button
+              type="button"
+              className="party-save ledger-line-act"
+              disabled={busy}
+              onClick={() =>
+                void write(onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }]), null)
+              }
+              aria-label={`Mark the ${line.name} share received from ${line.theirs}`}
+            >
+              Mark Received
+            </button>
+          )}
+        </div>
+      </li>
+    );
+  };
 
   // Every night that owed anything, sold or not, so a week reads as what it owed. See PieceNights.
   const theirNights = row.drops.filter((drop) => drop.pieces + drop.sold > 0);
@@ -1073,34 +1119,23 @@ function SettlementCard({
           {/* Two halves, one per direction, each with its own figure: they run opposite ways, so
               one total over both would be a net nobody chose (see V61, V91).
 
-              Held by You: the sub-step, its chevron, then the figure, which is what one press of
-              Offset moves: the shares you owe and their own money you are holding, added. Copyable,
-              because sending it means pasting it into a trade box. Not a total of the section: the
-              shares running the other way are under `Owed`, and a count of coupons is the one thing
-              this account never adds to a pile of mesos. See unsettledParts. */}
-          {unsettled > 0 && (
+              Held by You: the figure is what one press of Offset moves, the shares you owe and their
+              own money you are holding, added. Copyable, because sending it means pasting it into a
+              trade box. The drops it is made of are listed under it, not folded behind a row that
+              said the figure again. A count of coupons is the one thing this account never adds to a
+              pile of mesos. See unsettledParts. */}
+          {(unsettled > 0 || linesYouHold.length > 0) && (
             <div className="ledger-step-line">
               <span className="ledger-step">Held by You</span>
-              {unsettledFolds && (
-                <button
-                  type="button"
-                  className="party-row-toggle"
-                  aria-expanded={showUnsettled}
-                  aria-controls={`unsettled-${row.key}`}
-                  onClick={() => setShowUnsettled((o) => !o)}
-                >
-                  <span className="party-row-chevron" aria-hidden="true" />
-                  <span className="visually-hidden">
-                    {showUnsettled
-                      ? `Hide what is unsettled with ${row.name}`
-                      : `Show what is unsettled with ${row.name}`}
-                  </span>
-                </button>
+              {unsettled > 0 && (
+                <span className="ledger-amount">
+                  <CopyAmount value={unsettled} display={formatMesos(unsettled, true)} />
+                </span>
               )}
-              <span className="ledger-amount">
-                <CopyAmount value={unsettled} display={formatMesos(unsettled, true)} />
-              </span>
             </div>
+          )}
+          {linesYouHold.length > 0 && (
+            <ul className="ledger-queue">{linesYouHold.map(shareRow)}</ul>
           )}
 
           {/* Their money, in your hands, with nothing decided about it yet.
@@ -1110,34 +1145,14 @@ function SettlementCard({
               it was. Until one is recorded it is outside the net entirely, which is why this is not
               a part under `owed`. See V61.
 
-              The sales it is made of, folded, one to a row. It arrived as a bare 2.41b with nothing
-              anywhere saying that was 130 coupons over two nights. They add up to the figure above
+              The sales it is made of, one to a row. It arrived as a bare 2.41b with nothing anywhere
+              saying that was 130 coupons over two nights. They add up to their part of the figure
               exactly, or there are none of them at all: undecidedSales refuses a list it cannot land
               on a sale boundary rather than name coupons whose money has partly gone.
 
               Keyed by position, a tranche's id having nothing to say here that its coupons and its
               day do not. */}
-          <div
-            className="ledger-fold"
-            id={`unsettled-${row.key}`}
-            hidden={!showUnsettled || !unsettledFolds}
-          >
-            {unsettledParts.length > 1 && (
-              <ul className="ledger-queue">
-                {unsettledParts.map((part) => (
-                  <li key={part.key} className="ledger-drop">
-                    {/* The nights behind the figure, where there are any, the way the same row
-                        carries them under `Owed`. Unsigned, both parts running the one way. */}
-                    <div className="ledger-drop-head" title={part.detail || undefined}>
-                      <span className={part.detail ? "loot-name has-detail" : "loot-name"}>
-                        {part.label}
-                      </span>
-                      <span className="ledger-amount">{formatMesos(part.mesos, true)}</span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
+          <div className="ledger-held">
             {held.length > 0 && (
               <ul className="loot-shares">
                 {held.map((sale, i) => (
@@ -1167,15 +1182,18 @@ function SettlementCard({
 
           {/* Your money in THEIR hands, from a sale of your coupons out of their pile: the half above
               the other way round, and outside the net until one of the acts below. See V91. */}
-          {(row.heldByThem > 0 || paidIn.length > 0) && (
+          {(theyHold > 0 || paidIn.length > 0 || linesTheyHold.length > 0) && (
             <div className="ledger-step-line">
               <span className="ledger-step">{`Held by ${row.name}`}</span>
-              {row.heldByThem > 0 && (
+              {theyHold > 0 && (
                 <span className="ledger-amount">
-                  <CopyAmount value={row.heldByThem} display={formatMesos(row.heldByThem, true)} />
+                  <CopyAmount value={theyHold} display={formatMesos(theyHold, true)} />
                 </span>
               )}
             </div>
+          )}
+          {linesTheyHold.length > 0 && (
+            <ul className="ledger-queue">{linesTheyHold.map(shareRow)}</ul>
           )}
           {theirHeld.length > 0 && (
             <ul className="loot-shares">
@@ -1224,8 +1242,10 @@ function SettlementCard({
             </span>
           )}
 
-          {/* Both halves open: the difference, which is what the acts below move. */}
-          {unsettled > 0 && row.heldByThem > 0 && (
+          {/* Both halves open: the difference, which is what the acts below move. Not drawn while
+              shares they owe you are open: those are settled line by line, not by those acts, so the
+              difference would be a figure nothing on the card closes. */}
+          {unsettled > 0 && row.heldByThem > 0 && theyHoldShares === 0 && (
             <div className="ledger-step-line">
               <span className="ledger-step">
                 {unsettled >= row.heldByThem ? `Net to ${row.name}` : `Net from ${row.name}`}
@@ -1237,65 +1257,6 @@ function SettlementCard({
                 />
               </span>
             </div>
-          )}
-
-          {/* Both directions, each line signed, so a list holding both ways round says which is
-              which without a word. `pay`, not `nets`: every other figure on this card is pre-fee, so
-              a line drawn net of it disagreed with the Offset below by the 5%, listing a 703,703,488
-              offset as a 668,518,313 share. See settlement-figure for the whole card's unit. */}
-          {row.lines.length > 0 && (
-            <>
-              <span className="ledger-step">shares</span>
-              <ul className="ledger-queue">
-                {row.lines.map((line) => {
-                  const boss = bossByKey.get(line.bossKey ?? "");
-                  const party = partyById.get(line.partyId);
-                  return (
-                    <li key={`${line.lootId}:${line.theirsId}`} className="ledger-drop">
-                      <div className="ledger-drop-head">
-                        {/* The art the rest of the account reads drops by. A list of drops that
-                            drops the icons is the one place you cannot tell two grindstones apart
-                            at a glance. */}
-                        {line.iconUrl ? (
-                          <img className="loot-icon" src={apiAssetUrl(line.iconUrl)} alt="" />
-                        ) : (
-                          <span className="loot-icon" aria-hidden="true" />
-                        )}
-                        <Link href={partyHrefById(line.partyId, partyById)} className="loot-name">
-                          {line.name}
-                        </Link>
-                        <span className="loot-meta">
-                          {boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"} ·{" "}
-                          {line.theirs}
-                        </span>
-                        <span className="ledger-amount">
-                          {signed(line.direction === "owe" ? -line.pay : line.pay, line.currency)}
-                        </span>
-                        {/* Received, on the line it is about: collecting one share is its own day.
-                            What you send is Closing Actions' "Mark Sent" for the lot, not a button
-                            per drop (Jonathan, 2026-10-21). */}
-                        {line.direction === "owed" && (
-                          <button
-                            type="button"
-                            className="party-save ledger-line-act"
-                            disabled={busy}
-                            onClick={() =>
-                              void write(
-                                onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }]),
-                                null,
-                              )
-                            }
-                            aria-label={`Mark the ${line.name} share received from ${line.theirs}`}
-                          >
-                            Mark Received
-                          </button>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </>
           )}
 
           {/* Only what was SENT to them. A decision to offset took something off what they owe you,
