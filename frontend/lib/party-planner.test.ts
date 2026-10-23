@@ -61,12 +61,38 @@ describe("the strength slider", () => {
 });
 
 describe("planParties", () => {
-  it("plans a solo clearer alone, even when that strands someone", () => {
+  it("has a soloer carry somebody nobody else can take, keeping the loot", () => {
+    // The Hard Limbo report: a soloer at Any Size and a character doing no damage.
     const solo = want("a", SOLO);
+    const passenger = want("b", 0);
+    const plan = planParties([solo, passenger], MIN_CUT);
+    expect(plan.unplaced).toEqual([]);
+    const [carry] = plan.parties;
+    expect(carry?.seats.map((s) => s.shares)).toEqual([1, 0]);
+    expect(carry?.minutes).toBe(30);
+  });
+
+  it("never has a soloer set to Solo carry anybody", () => {
+    const solo = want("a", SOLO, { maxParty: 1 });
     const weak = want("b", 20);
     const plan = planParties([solo, weak], MIN_CUT);
     expect(shape(plan, [solo, weak])).toEqual([[SOLO]]);
     expect(plan.unplaced).toEqual([{ wantId: weak.id, reason: "alone" }]);
+  });
+
+  it("carries only who no other party could take, and never pairs two soloers", () => {
+    const soloA = want("a", SOLO);
+    const soloB = want("b", SOLO);
+    const pair = [want("c", 30), want("d", 30)];
+    const plan = planParties([soloA, soloB, ...pair], MIN_CUT);
+    expect(shape(plan, [soloA, soloB, ...pair])).toEqual([[SOLO], [SOLO], [30, 30]]);
+  });
+
+  it("spreads passengers over the soloers before doubling any up", () => {
+    const solos = [want("a", SOLO), want("b", SOLO)];
+    const riders = [want("c", 0), want("d", 0)];
+    const plan = planParties([...solos, ...riders], MIN_CUT);
+    expect(plan.parties.map((p) => p.seats.length)).toEqual([2, 2]);
   });
 
   it("makes as many parties as clear, the most loot and the smallest runs", () => {

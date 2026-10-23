@@ -1,7 +1,7 @@
 # Party Planner: permanent parties for many characters at once
 
-Status: phase 1 in progress (planner page, local draft, solver). Phases 2 and 3 are designed here
-and not built.
+Status: phase 1 shipped (planner page, solver, settings saved per account). Phases 2 and 3 are
+designed here and not built.
 
 ## The problem
 
@@ -35,7 +35,8 @@ everything below is out. The list is `PLANNER_BOSSES` in `frontend/lib/party-pla
   Damage to Solo. Ticks sit at each fraction of the boss's party cap (1/6 to 5/6 for a six-person
   boss, 1/3 and 2/3 for a three-person one) and the slider snaps to a tick within 2 units but can
   rest anywhere. Damage buffs the character gives the party count towards it.
-- Largest party: Any Size, or a cap. Destiny Liberation progresses faster in smaller parties.
+- Party Size: Any Size, Solo, or a cap. Destiny Liberation progresses faster in smaller parties.
+  On a character that can solo, Solo means it never carries, and any other size means it will.
 
 A Split Preference setting was considered and left out for now. Splits follow strength, below.
 
@@ -50,12 +51,14 @@ review before anything is made.
 
 **Hard rules**
 
-1. A character that can solo is planned solo and never carries. Solo clearers keep their whole
-   loot over seating a weaker character.
+1. A character that can solo runs its own party, never with another soloer. It carries only a
+   character no other party could take, and only if its Party Size is not Solo. Splits follow
+   strength, so the soloer keeps its loot and a passenger doing nothing takes none.
 2. Two characters of one person are never in the same run (one account, one client).
 3. A party never exceeds the boss's cap (`max_party` in `catalog/bosses.yaml`) or any member's own
    cap.
-4. A party of two or more clears within the Run Length.
+4. A party of two or more clears within the Run Length, except a soloer's carry, which is no slower
+   than its solo.
 5. Parties never cross a world or a difficulty.
 6. People a reviewer asked to be kept apart are kept apart.
 
@@ -146,14 +149,21 @@ hold, and nobody's want was dropped.
 ## Phases
 
 1. **Planner page** (this PR). `/bosses/planner` under a new Utility menu group, beside the Drop
-   Splitter (the Split Utility, renamed). Inputs kept in the browser, plan recomputed live.
+   Splitter (the Split Utility, renamed). Plan recomputed live; settings saved on the account
+   (`party_planner_draft`, V93), with unsaved edits kept in the browser.
 2. **Plans and review.** Server-side plans, sending for review, Accept and Reject with structured
    reasons, automatic re-plan, bell entries.
 3. **Creation.** Leaders, configs, and invites. Needs #800.
 
 ## Open questions
 
-- A soloer never carries. Should a soloer be able to opt in to carrying a weaker character?
+Raised by comparing the planner with Jonathan's real parties (2026-10-23):
+
+- Two soloers pair up for a faster run in real parties (15 minutes instead of 30), which rule 1
+  forbids, and Strength stops at Solo, so "solos in 20 minutes" cannot be said.
+- Run times differ by boss (15 minutes on some, 30 on others), where Run Length is one setting.
+- Who runs with whom among equals is a preference the planner cannot see.
+- A character in two parties for one boss (a rotation) is refused outright.
 - The Run Length ceiling applies to parties only. A Solo strength means a solo clear within 30
   minutes, so a soloer is always planned solo whatever the Run Length.
 - The world is the account's lens for now (`world: null`). Kronos and Hyperion characters are not
