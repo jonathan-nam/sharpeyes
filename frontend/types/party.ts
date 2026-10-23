@@ -104,6 +104,11 @@ export type Party = {
   // Every account the party reaches, leader first. Empty unless somebody besides you is linked, and
   // absent on a cached payload, so read it `?? []`.
   accounts?: PartyAccount[];
+  // Seats offered to friends and not yet answered, the owner's only. Absent on a cached payload.
+  pendingInvites?: { id: string; name: string }[];
+  // On a save's answer only: friends it invited, and those already in a party for this boss.
+  invited?: string[];
+  alreadyPartied?: string[];
   createdAt: string;
   updatedAt: string;
 };

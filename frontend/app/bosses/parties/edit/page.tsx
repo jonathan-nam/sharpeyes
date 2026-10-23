@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { CharacterPicker } from "@/components/character-picker";
 import { PartyConfigEditor } from "@/components/party-config-editor";
 import { apiFetch, duplicatePartyIn, failureText } from "@/lib/api";
+import { announceInvites } from "@/lib/invite-notice";
 import { DuplicateParty } from "@/components/duplicate-party";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
@@ -108,11 +109,12 @@ export default function EditPartiesPage() {
     setDuplicate(null);
     try {
       await write(partyId ?? ADD_PARTY, async () => {
-        await apiFetch<Party>(
+        const saved = await apiFetch<Party>(
           partyId ? `${PARTIES_KEY}/${partyId}` : PARTIES_KEY,
           { method: partyId ? "PUT" : "POST", body: JSON.stringify(body) },
           getToken,
         );
+        announceInvites(saved);
         // Refetched rather than spliced in: the server decides seat ids and which seat is yours.
         await loadParties();
       });
