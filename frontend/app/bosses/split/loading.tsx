@@ -8,7 +8,7 @@ import { RouteLoading } from "@/components/route-loading";
 export default function Loading() {
   return (
     <RouteLoading>
-      <h1 className="page-title">Split Utility</h1>
+      <h1 className="page-title">Drop Splitter</h1>
     </RouteLoading>
   );
 }

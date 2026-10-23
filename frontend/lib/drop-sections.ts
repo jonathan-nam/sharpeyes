@@ -22,7 +22,7 @@ export type DropSection = {
    *
    * Three of the four stages exist because something changed hands, and nothing does in a Heroic
    * world. Their pools are narrowed to the shown world server-side (LootQueries), so these are not
-   * tabs that happen to be empty, they are tabs that cannot fill. Same rule as the Split Utility's
+   * tabs that happen to be empty, they are tabs that cannot fill. Same rule as the Drop Splitter's
    * on the section menu, and the way back is the same one click on the world toggle.
    */
   interactiveOnly?: boolean;

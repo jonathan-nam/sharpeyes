@@ -899,6 +899,11 @@ def boss_hp_ts(bosses: list[dict]) -> str:
         for b in bosses
         if b.get("tracked", True)
     )
+    sizes = "\n".join(
+        f"  {prop(b['key'])}: {b['max_party']},"
+        for b in bosses
+        if b.get("tracked", True) and "max_party" in b
+    )
     return f"""// GENERATED FROM catalog/bosses.yaml. DO NOT EDIT BY HAND.
 // Regenerate with:  python catalog/build.py
 //
@@ -907,6 +912,11 @@ def boss_hp_ts(bosses: list[dict]) -> str:
 
 export const BOSS_HP: Record<string, Record<string, number>> = {{
 {rows}
+}};
+
+// How many players each boss admits. A boss nobody has counted is absent, not unlimited.
+export const BOSS_MAX_PARTY: Record<string, number> = {{
+{sizes}
 }};
 """
 

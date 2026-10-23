@@ -22,7 +22,7 @@ what fell, and who is owed what.
   scheduled. Copies as text.
 - **Drop Log.** Four stages in one direction: what fell, what you sold, what that leaves owed, and
   what is settled. A share is stated in mesos where it can be sold, and in pieces where it cannot.
-- **Split Utility.** A GMS Reg Server split, from the listed price or from what landed.
+- **Drop Splitter.** A GMS Reg Server split, from the listed price or from what landed.
 
 ## Items
 

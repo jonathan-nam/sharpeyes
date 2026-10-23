@@ -4581,6 +4581,20 @@ button.link:disabled {
   height: 18px;
 }
 
+/* Boss portraits are cut at 26px (see .boss-portrait), so they are drawn at 26 in the list and the
+   field alike, never at the item icon's 46 or 23. */
+.drop-select-list.is-bosses .drop-select-icon,
+.drop-select.is-bosses > .drop-select-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+}
+
+.drop-select-list.is-bosses .drop-select-blank {
+  width: 26px;
+  height: 26px;
+}
+
 .drop-select-label {
   min-width: 0;
   overflow: hidden;
@@ -8370,4 +8384,172 @@ a.notification-sentence:hover {
       opacity: 0;
     }
   }
+}
+
+/* --- Party Planner ----------------------------------------------------------------------------- */
+
+.planner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.planner-characters,
+.planner-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.planner-heading {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--ink-strong);
+}
+
+.planner-value {
+  margin-left: 6px;
+  color: var(--ink-strong);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.planner input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.planner-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+}
+
+.planner-sub {
+  font-size: var(--text-sm);
+}
+
+.planner-character-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Pushes the × to the card's right edge. */
+.planner-character-head .planner-remove {
+  margin-left: auto;
+}
+
+.planner-remove {
+  font: inherit;
+  font-size: var(--text-lg);
+  line-height: 1;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.planner-remove:hover {
+  color: var(--ink-strong);
+}
+
+.planner-want {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+/* Bottom-aligned, so the × sits level with the boxes rather than with their labels. */
+.planner-want-picks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* Mode and size share what is left, so the × stays on their line at phone width. */
+.planner-want-picks > .split-field {
+  flex: 1 1 100px;
+  min-width: 0;
+  max-width: 200px;
+}
+
+/* One height for the boss picker and the two selects, so their labels line up. */
+.planner-want-picks .split-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+}
+
+/* The boss takes the row's spare width, so on a phone it fills its own line. */
+.planner-want-picks > .planner-boss {
+  flex: 1 1 264px;
+  max-width: 420px;
+}
+
+/* .config-difficulty is Party View's compact size. Here it sits beside full-size inputs. */
+.planner-want-picks .config-difficulty {
+  font-size: var(--text-lg);
+  padding: 9px 12px;
+  max-width: none;
+}
+
+.planner-add {
+  align-self: flex-start;
+}
+
+/* The IGN box and its Add on one line, the button level with the box rather than its label. */
+.planner-add-character {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.planner-add-character .split-input {
+  width: 12em;
+  max-width: 100%;
+}
+
+.planner-add-character .party-save {
+  height: 40px;
+}
+
+.planner-character-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* A character with no sprite on record: the frame Party View draws for one. */
+.seat-sprite.is-empty {
+  box-sizing: border-box;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  opacity: 0.5;
+}
+
+.planner-share {
+  font-size: var(--text-base);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-strong);
+}
+
+.planner-tile-boss {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.planner-tile-note {
+  font-size: var(--text-sm);
+  color: var(--warn);
 }

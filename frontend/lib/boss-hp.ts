@@ -23,3 +23,16 @@ export const BOSS_HP: Record<string, Record<string, number>> = {
   jupiter: { NORMAL: 10260, HARD: 49400 },
   "black-mage": { HARD: 472.5, EXTREME: 4810 },
 };
+
+// How many players each boss admits. A boss nobody has counted is absent, not unlimited.
+export const BOSS_MAX_PARTY: Record<string, number> = {
+  "chosen-seren": 6,
+  "kalos-the-guardian": 6,
+  "first-adversary": 3,
+  kaling: 6,
+  "malefic-star": 3,
+  limbo: 3,
+  baldrix: 3,
+  jupiter: 3,
+  "black-mage": 6,
+};

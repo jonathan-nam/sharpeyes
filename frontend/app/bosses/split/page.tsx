@@ -66,7 +66,7 @@ export default function DropSplitPage() {
 
   return (
     <main className="page">
-      <h1 className="page-title">Split Utility</h1>
+      <h1 className="page-title">Drop Splitter</h1>
 
       <div className="split-form">
         <div className="split-field">

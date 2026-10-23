@@ -54,11 +54,17 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
       { href: "/bosses/people", label: "Edit People", hidden: true },
       { href: "/bosses/drops", label: "Drop Log" },
       { href: "/bosses/order", label: "Run Order" },
-      { href: "/bosses/split", label: "Split Utility", interactiveOnly: true },
     ],
   },
   {
     items: [{ href: "/inventory", label: "Inventory" }],
+  },
+  {
+    group: "Utility",
+    items: [
+      { href: "/bosses/planner", label: "Party Planner" },
+      { href: "/bosses/split", label: "Drop Splitter", interactiveOnly: true },
+    ],
   },
 ];
 
@@ -87,7 +93,7 @@ function menuGroup(href: string): string {
 /**
  * What the welcome-back screen offers, in the order it draws them.
  *
- * A way in, not a second copy of the menu: the Split Utility is reached from the hamburger like
+ * A way in, not a second copy of the menu: the Drop Splitter is reached from the hamburger like
  * everything else. Labels are looked up in SECTIONS rather than written again, so a section renamed
  * there cannot keep its old name here.
  */
@@ -127,7 +133,7 @@ export function sectionsFor(trades: boolean | undefined) {
 /**
  * Which entry to light up for this path, or undefined for none.
  *
- * Longest match wins, so /bosses/split lights "Split Utility" alone: a plain startsWith would
+ * Longest match wins, so /bosses/split lights "Drop Splitter" alone: a plain startsWith would
  * light "Individual View" too, since one section nests under the other. A hidden href can win,
  * and then nothing is highlighted, which is the point of it winning.
  */

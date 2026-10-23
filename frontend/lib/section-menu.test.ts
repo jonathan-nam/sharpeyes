@@ -16,7 +16,8 @@ describe("which section a path belongs to", () => {
     expect(labelFor("/bosses")).toBe("Individual View");
     expect(labelFor("/bosses/parties")).toBe("Party View");
     expect(labelFor("/bosses/order")).toBe("Run Order");
-    expect(labelFor("/bosses/split")).toBe("Split Utility");
+    expect(labelFor("/bosses/split")).toBe("Drop Splitter");
+    expect(labelFor("/bosses/planner")).toBe("Party Planner");
     expect(labelFor("/bosses/drops")).toBe("Drop Log");
   });
 
@@ -78,8 +79,9 @@ describe("what the menu lists", () => {
       "/bosses/parties",
       "/bosses/drops",
       "/bosses/order",
-      "/bosses/split",
       "/inventory",
+      "/bosses/planner",
+      "/bosses/split",
     ]);
   });
 });
@@ -126,7 +128,7 @@ describe("what the welcome-back screen offers", () => {
 });
 
 describe("what an account with nothing to trade is offered", () => {
-  it("drops the Split Utility, which has nothing to split there", () => {
+  it("drops the Drop Splitter, which has nothing to split there", () => {
     expect(listedFor(false)).not.toContain("/bosses/split");
     expect(listedFor(false)).toContain("/bosses/parties");
   });
