@@ -62,6 +62,12 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
   const sendAll = async () => {
     for (const part of sendable) await writes.send(part.send!);
   };
+  // What each closing act is about, beside its button. See the owner's card, SettlementCard.
+  const heldPieces = card.youHoldSales.reduce((sum, sale) => sum + sale.pieces, 0);
+  const heldFor =
+    heldPieces > 0
+      ? `${formatPieces(heldPieces)} coupons of ${card.name}'s`
+      : `Coupons of ${card.name}'s`;
   return (
     <section className="changed-by-anchor ledger-card">
       <ChangedBy topics={["settlement"]} matches={(t) => t.person === card.personId} />
@@ -136,43 +142,80 @@ function SharedCardView({ card, writes }: { card: SharedCard; writes: SharedWrit
       {/* Their money from your sale of their coupons, until one of you says which: off what they
           owe you, or sent. See V91. */}
       {card.youHold > 0 && (
-        <div className="loot-actions">
-          <button
-            type="button"
-            className="party-save"
-            disabled={writes.busy}
-            onClick={() => act(writes.decide(card.personId, "OFFSET", card.youHold))}
-          >
-            {`Take ${formatMesos(card.youHold, true)} Off Owed Amount`}
-          </button>
-          <button
-            type="button"
-            className="party-save"
-            disabled={writes.busy}
-            onClick={() => act(writes.decide(card.personId, "PAID", card.youHold))}
-          >
-            {`Mark ${formatMesos(card.youHold, true)} Sent`}
-          </button>
-        </div>
+        <Fold
+          title="Unsettled Amounts"
+          amount={card.youHold}
+          rows={
+            card.youHoldSales.length > 0
+              ? card.youHoldSales.map((sale, i) => ({
+                  key: `${sale.trancheId}:${i}`,
+                  label: `${formatPieces(sale.pieces)} coupons of ${card.name}'s sold`,
+                  mesos: sale.mesos,
+                }))
+              : [{ key: "held", label: `Coupons of ${card.name}'s sold`, mesos: card.youHold }]
+          }
+          {...controls}
+        />
       )}
 
-      {sendable.length > 0 && (
-        <button
-          type="button"
-          className="party-save"
-          disabled={writes.busy}
-          onClick={() => act(sendAll())}
-        >
-          {`Mark ${formatMesos(
-            sendable.reduce((sum, part) => sum + part.mesos, 0),
-            true,
-          )} Sent`}
-        </button>
+      {(card.youHold > 0 || sendable.length > 0) && (
+        <div className="ledger-entry">
+          <span className="ledger-heading">Closing Actions</span>
+          {card.youHold > 0 && (
+            <>
+              <span className="ledger-settle">
+                <button
+                  type="button"
+                  className="party-save"
+                  disabled={writes.busy}
+                  onClick={() => act(writes.decide(card.personId, "OFFSET", card.youHold))}
+                >
+                  {`Take ${formatMesos(card.youHold, true)} Off Owed Amount`}
+                </button>
+                <span className="ledger-progress">{heldFor}</span>
+              </span>
+              <span className="ledger-settle">
+                <button
+                  type="button"
+                  className="party-save"
+                  disabled={writes.busy}
+                  onClick={() => act(writes.decide(card.personId, "PAID", card.youHold))}
+                >
+                  {`Mark ${formatMesos(card.youHold, true)} Sent`}
+                </button>
+                <span className="ledger-progress">{heldFor}</span>
+              </span>
+            </>
+          )}
+          {sendable.length > 0 && (
+            <span className="ledger-settle">
+              <button
+                type="button"
+                className="party-save"
+                disabled={writes.busy}
+                onClick={() => act(sendAll())}
+              >
+                {`Mark ${formatMesos(
+                  sendable.reduce((sum, part) => sum + part.mesos, 0),
+                  true,
+                )} Sent`}
+              </button>
+              <span className="ledger-progress">{listed(sendable.map((part) => part.label))}</span>
+            </span>
+          )}
+        </div>
       )}
 
       {refusal && <span className="split-error">{refusal}</span>}
     </section>
   );
+}
+
+/** At most three names, then how many more. */
+function listed(items: string[]): string {
+  return items.length <= 3
+    ? items.join(", ")
+    : `${items.slice(0, 3).join(", ")} and ${items.length - 3} more`;
 }
 
 /** A heading with its chevron and total, folding the rows it is made of. SettlementCard's shape. */

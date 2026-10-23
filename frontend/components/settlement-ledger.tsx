@@ -518,6 +518,39 @@ function SettlementCard({
   const held = undecidedSales(row);
   const theirHeld = undecidedSales({ sales: row.salesHeldByThem, holding: row.heldByThem });
 
+  // What each closing act is about, said beside its button: the drops behind the shares it moves
+  // and the coupons behind the money. A count only where the sales can be told exactly (see
+  // undecidedSales), never a guess.
+  const coupons = (sales: CouponSale[], mesos: number) =>
+    mesos > 0
+      ? countedLabel(
+          sales.reduce((sum, sale) => sum + sale.pieces, 0),
+          couponName ?? "coupons",
+        )
+      : null;
+  const sharesOwed = (all: boolean) =>
+    row.lines
+      .filter((line) => line.direction === "owe" && (all || line.currency === "MESO"))
+      .map((line) => {
+        const boss = bossByKey.get(line.bossKey ?? "");
+        const party = partyById.get(line.partyId);
+        return boss
+          ? `${line.name} · ${bossLabel(boss.name, party?.difficulty ?? null)}`
+          : line.name;
+      });
+  const listed = (items: (string | null)[]) => {
+    const named = items.filter((item): item is string => !!item);
+    return named.length <= 3
+      ? named.join(", ")
+      : `${named.slice(0, 3).join(", ")} and ${named.length - 3} more`;
+  };
+  const heldByThemFor = listed([coupons(theirHeld, row.heldByThem)]);
+  const offsetFor = listed([
+    ...(offset.offered ? sharesOwed(false) : []),
+    coupons(held, row.holding),
+  ]);
+  const sentFor = listed([...sharesOwed(true), coupons(held, row.holding)]);
+
   /**
    * What is still to settle with them, in the two shapes it comes in. See offsetOf and V61.
    *
@@ -1376,24 +1409,32 @@ function SettlementCard({
           {/* Your money in their hands (`Is Holding` above). Not called Offset: that word is the act
               on money you hold, and two buttons wearing it was a card nobody could read. */}
           {row.heldByThem > 0 && (
-            <span className="ledger-settle">
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy}
-                onClick={() => void write(onDecideHeld(row.holder, "OFFSET", row.heldByThem), null)}
-              >
-                {`Take ${formatMesos(row.heldByThem, true)} Off Owed Amount`}
-              </button>
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy}
-                onClick={() => void write(onDecideHeld(row.holder, "PAID", row.heldByThem), null)}
-              >
-                {`Mark ${formatMesos(row.heldByThem, true)} Received`}
-              </button>
-            </span>
+            <>
+              <span className="ledger-settle">
+                <button
+                  type="button"
+                  className="party-save"
+                  disabled={busy}
+                  onClick={() =>
+                    void write(onDecideHeld(row.holder, "OFFSET", row.heldByThem), null)
+                  }
+                >
+                  {`Take ${formatMesos(row.heldByThem, true)} Off Owed Amount`}
+                </button>
+                {heldByThemFor && <span className="ledger-progress">{heldByThemFor}</span>}
+              </span>
+              <span className="ledger-settle">
+                <button
+                  type="button"
+                  className="party-save"
+                  disabled={busy}
+                  onClick={() => void write(onDecideHeld(row.holder, "PAID", row.heldByThem), null)}
+                >
+                  {`Mark ${formatMesos(row.heldByThem, true)} Received`}
+                </button>
+                {heldByThemFor && <span className="ledger-progress">{heldByThemFor}</span>}
+              </span>
+            </>
           )}
 
           {/* Discharged against what they owe you, rather than by money crossing.
@@ -1412,6 +1453,7 @@ function SettlementCard({
               >
                 {`Offset ${moved(offset.offered ? offset.amount : 0)}`}
               </button>
+              {offsetFor && <span className="ledger-progress">{offsetFor}</span>}
               {/* What it leaves behind, where their debt cannot cover the shares, because the
                   alternative is a button promising to take 800m off a 500m debt. Only where the
                   shares are the whole act: with their money in it too the remainder is a subtraction
@@ -1436,6 +1478,7 @@ function SettlementCard({
               >
                 {`Mark ${movedBoth(owes, row.usd.owe)} Sent`}
               </button>
+              {sentFor && <span className="ledger-progress">{sentFor}</span>}
             </span>
           )}
         </div>

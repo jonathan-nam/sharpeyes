@@ -1,7 +1,8 @@
 import { bossLabel } from "@/lib/boss-difficulty";
-import { moneyRows, type SettlementTotals } from "@/lib/settlement";
+import { moneyRows, type SettlementTotals, undecidedSales } from "@/lib/settlement";
 import { settlementView } from "@/lib/settlement-view";
 import { paymentsSinceClosing } from "@/lib/vestige-ledger";
+import type { CouponSale } from "@/lib/vestige-ledger";
 import type { Owings, WalletLine } from "@/lib/wallet";
 import type { Boss } from "@/types/boss";
 import type { SharedBook } from "@/types/page";
@@ -21,6 +22,8 @@ export type SharedCard = {
   holding: number;
   /** Money of THEIRS you are holding from your sale of their coupons, undecided. See V91. */
   youHold: number;
+  /** The sales behind `youHold`, oldest first, or none where they cannot be told exactly. */
+  youHoldSales: CouponSale[];
   /** Your coupons in their inventory, and theirs in yours, after the counts wash. */
   piecesOwed: number;
   piecesOwe: number;
@@ -143,6 +146,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     owe: row.mesos,
     holding: row.holding,
     youHold: row.heldByThem,
+    youHoldSales: undecidedSales({ sales: row.salesHeldByThem, holding: row.heldByThem }),
     piecesOwed: row.piecesYouOwe,
     piecesOwe: row.pieces,
     usd: { owed: row.usd.owe, owe: row.usd.owed, net: -row.usd.net },
