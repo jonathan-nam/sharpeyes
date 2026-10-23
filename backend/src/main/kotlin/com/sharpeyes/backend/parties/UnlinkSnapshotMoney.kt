@@ -25,8 +25,7 @@ import kotlin.uuid.Uuid
 //   - a coupon sale and a closing swap holders, the owner's pile becoming the person's and the
 //     reader's pile becoming SELF. A share of a sale naming somebody else is left behind: they are
 //     the owner's people, not the reader's;
-//   - money the owner SENT them out of a sale of their coupons is a payment from the owner. One they
-//     offset needs no row: the reader's book counts that money against the owner already.
+//   - a decision about coupon money (V61) keeps its kind and swaps whose hands the money is in (V91).
 // Written as the reader's own (no recorded_by): it is their book, theirs to change.
 
 internal class MoneyRow(
@@ -46,6 +45,14 @@ internal class TrancheRow(
     val otherSides: Double,
 )
 
+internal class Decision(
+    val amount: Long,
+    val kind: String,
+    /** In the READER's terms, already flipped. */
+    val heldBy: String,
+    val at: Instant,
+)
+
 internal class ClosureRow(
     val ownersPile: Boolean,
     val unpaid: Long,
@@ -58,21 +65,11 @@ internal class SharedMoney(
     val payments: List<MoneyRow>,
     val tranches: List<TrancheRow>,
     val closures: List<ClosureRow>,
-    /** The reader's decisions to write: their sales of the owner's coupons, offset. See coupon money below. */
-    val offsets: List<MoneyRow>,
+    /** The reader's decisions about the owner's money they hold, to write as theirs. See V91. */
+    val decisions: List<Decision>,
 ) {
     fun isEmpty() = debts.isEmpty() && payments.isEmpty() && tranches.isEmpty() && closures.isEmpty()
 }
-
-/**
- * One side's share of a priced sale, as saleCredits in lib/vestige-ledger.ts rounds it: to the meso,
- * half up, which is what Math.round does in both languages.
- */
-internal fun shareOfSale(
-    sharePieces: Double,
-    amount: Long,
-    pieces: Double,
-): Long = Math.round(sharePieces * amount / pieces)
 
 /** What [owner]'s book files under [person], and the coupon acts between the two piles. */
 internal fun readMoney(
@@ -90,67 +87,21 @@ internal fun readMoney(
             .selectAll()
             .where { (VestigePayment.userId eq owner) and (VestigePayment.personId eq person) }
             .map { MoneyRow(it[VestigePayment.amount], it[VestigePayment.note], it[VestigePayment.receivedAt]) }
-    // Their coupon money the owner sent them. See the file comment for why an offset is not here.
-    val sent =
-        VestigeProceedsDisposal
-            .selectAll()
-            .where {
-                (VestigeProceedsDisposal.userId eq owner) and (VestigeProceedsDisposal.personId eq person) and
-                    (VestigeProceedsDisposal.kind eq "PAID")
-            }.map {
-                MoneyRow(
-                    -it[VestigeProceedsDisposal.amount],
-                    "coupon money sent",
-                    it[VestigeProceedsDisposal.decidedAt],
-                )
-            }
-    val tranches = readTranches(owner, person)
-    val decided =
+    // Coupon money is held outside the net by whichever side's pile sold it, in both books (V61, V91),
+    // so the copied sales need nothing beside them but the decisions, each from the other end.
+    val decisions =
         VestigeProceedsDisposal
             .selectAll()
             .where { (VestigeProceedsDisposal.userId eq owner) and (VestigeProceedsDisposal.personId eq person) }
-            .sumOf { it[VestigeProceedsDisposal.amount] }
-    val money = couponMoney(tranches, decided)
-    return SharedMoney(debts + money.held, payments + sent, tranches, readClosures(owner, person), money.offsets)
-}
-
-private class CouponMoney(
-    val held: List<MoneyRow>,
-    val offsets: List<MoneyRow>,
-)
-
-/**
- * Coupon money, which the two books count differently, so the copy says what the owner's book did.
- *
- * The holder of the money decides about it (V61): until they do it is outside the net. So:
- *  - the reader's pile sold the owner's coupons: the OWNER's book counts that money in what the
- *    reader owes. In the reader's book it is money they hold, undecided, so the copy records the
- *    decision the owner's book already assumed: offset;
- *  - the owner's pile sold the reader's coupons and the owner has not decided all of it: the
- *    owner's book holds the rest outside the net, and the reader's would count it in, so the copy
- *    says the owner still holds it, as an entry they can take back once it is settled.
- */
-private fun couponMoney(
-    tranches: List<TrancheRow>,
-    decided: Long,
-): CouponMoney {
-    val priced = tranches.filter { it.amount != null && it.pieces > 0 && it.otherSides > 0 }
-    val offsets =
-        priced
-            .filter { !it.ownersPile }
-            .map { MoneyRow(shareOfSale(it.otherSides, it.amount!!, it.pieces), null, it.soldAt) }
-    val owed = priced.filter { it.ownersPile }.sumOf { shareOfSale(it.otherSides, it.amount!!, it.pieces) }
-    val stillHeld = owed - minOf(owed, decided)
-    // Written negated, like every debt here: what the reader is owed less of, until it is decided.
-    val held =
-        if (stillHeld >
-            0
-        ) {
-            listOf(MoneyRow(stillHeld, "coupon money they still hold", priced.maxOf { it.soldAt }))
-        } else {
-            emptyList()
-        }
-    return CouponMoney(held, offsets)
+            .map {
+                Decision(
+                    it[VestigeProceedsDisposal.amount],
+                    it[VestigeProceedsDisposal.kind],
+                    if (it[VestigeProceedsDisposal.heldBy] == HELD_BY_YOU) HELD_BY_THEM else HELD_BY_YOU,
+                    it[VestigeProceedsDisposal.decidedAt],
+                )
+            }
+    return SharedMoney(debts, payments, readTranches(owner, person), readClosures(owner, person), decisions)
 }
 
 private fun readTranches(
@@ -252,16 +203,17 @@ internal fun writeMoney(
             it[createdAt] = now
         }
     }
-    for (offset in money.offsets) {
+    for (decision in money.decisions) {
         VestigeProceedsDisposal.insert {
             it[id] = Uuid.random()
             it[userId] = reader
             it[holderKind] = PERSON
             it[personId] = person
             it[characterName] = null
-            it[amount] = offset.amount
-            it[kind] = "OFFSET"
-            it[decidedAt] = offset.at
+            it[amount] = decision.amount
+            it[kind] = decision.kind
+            it[heldBy] = decision.heldBy
+            it[decidedAt] = decision.at
             it[createdAt] = now
         }
     }

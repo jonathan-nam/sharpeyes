@@ -16,9 +16,12 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -41,15 +44,25 @@ private const val MAX_AMOUNT = 1_000_000_000_000L
 
 private const val OFFSET = "OFFSET"
 private const val PAID = "PAID"
+internal const val HELD_BY_YOU = "YOU"
+internal const val HELD_BY_THEM = "THEM"
 
 @Serializable
 data class ProceedsDisposalResponse(
     val id: String,
     val holder: VestigeHolder,
     val amount: Long,
-    /** OFFSET: it came off their debt. PAID: you sent it to them. */
+    /**
+     * OFFSET: it came off their debt (THEM: off yours). PAID: you sent it to them (THEM: they sent it
+     * to you).
+     */
     val kind: String,
     val decidedAt: String,
+    /** YOU: your pile sold their coupons. THEM: their pile sold yours. See V91. */
+    val heldBy: String = HELD_BY_YOU,
+    /** Whether the viewer wrote it. See V88. */
+    val recordedByYou: Boolean = true,
+    val recordedByName: String? = null,
 )
 
 @Serializable
@@ -57,6 +70,7 @@ data class AddProceedsDisposalRequest(
     val holder: VestigeHolder,
     val amount: Long,
     val kind: String,
+    val heldBy: String = HELD_BY_YOU,
 )
 
 fun Route.proceedsDisposalRoutes() {
@@ -82,7 +96,7 @@ private suspend fun RoutingContext.addDisposalRoute() {
     call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
 
-    val refusal = disposalRefusal(holder, request.amount, request.kind)
+    val refusal = disposalRefusal(holder, request.amount, request.kind, request.heldBy)
     if (refusal != null) return call.respond(HttpStatusCode.BadRequest, refusal)
 
     val result =
@@ -101,6 +115,7 @@ private suspend fun RoutingContext.addDisposalRoute() {
                 it[characterName] = holder.characterName
                 it[amount] = request.amount
                 it[kind] = request.kind
+                it[heldBy] = request.heldBy
                 it[decidedAt] = now
                 it[createdAt] = now
             }
@@ -123,8 +138,11 @@ private suspend fun RoutingContext.deleteDisposalRoute() {
             ensureUser(userId, email)
             val gone =
                 VestigeProceedsDisposal.deleteWhere {
-                    (VestigeProceedsDisposal.id eq disposalId) and
-                        (VestigeProceedsDisposal.userId eq userId)
+                    // Not a row a member wrote into this book: each side takes back only its own. V88.
+                    val yours =
+                        VestigeProceedsDisposal.recordedByUserId.isNull() or
+                            (VestigeProceedsDisposal.recordedByUserId eq userId)
+                    (VestigeProceedsDisposal.id eq disposalId) and (VestigeProceedsDisposal.userId eq userId) and yours
                 } > 0
             if (gone) disposalsFor(userId) else null
         }
@@ -143,11 +161,13 @@ internal fun disposalRefusal(
     holder: VestigeHolder,
     amount: Long,
     kind: String,
+    heldBy: String = HELD_BY_YOU,
 ): String? =
     when {
         holder.kind !in setOf("PERSON", "SELF", "CHARACTER") ->
             "holder.kind must be one of PERSON, SELF, CHARACTER"
         kind !in setOf(OFFSET, PAID) -> "kind must be one of $OFFSET, $PAID"
+        heldBy !in setOf(HELD_BY_YOU, HELD_BY_THEM) -> "heldBy must be one of $HELD_BY_YOU, $HELD_BY_THEM"
         // The kind and the reference cannot disagree, matching the checks in V61.
         (holder.kind == "PERSON") != (holder.personId != null) ->
             "a PERSON holder needs a personId, and nothing else does"
@@ -169,25 +189,36 @@ internal fun disposalRefusal(
  *
  * Must run inside a transaction.
  */
-internal fun disposalsFor(userId: String): List<ProceedsDisposalResponse> =
-    VestigeProceedsDisposal
-        .selectAll()
-        .where { VestigeProceedsDisposal.userId eq userId }
-        .orderBy(
-            VestigeProceedsDisposal.decidedAt to SortOrder.ASC,
-            VestigeProceedsDisposal.createdAt to SortOrder.ASC,
-        ).map {
-            val holder =
-                VestigeHolder(
-                    kind = it[VestigeProceedsDisposal.holderKind],
-                    personId = it[VestigeProceedsDisposal.personId]?.toString(),
-                    characterName = it[VestigeProceedsDisposal.characterName],
-                )
-            ProceedsDisposalResponse(
-                id = it[VestigeProceedsDisposal.id].toString(),
-                holder = holder,
-                amount = it[VestigeProceedsDisposal.amount],
-                kind = it[VestigeProceedsDisposal.kind],
-                decidedAt = it[VestigeProceedsDisposal.decidedAt].toString(),
+internal fun disposalsFor(
+    userId: String,
+    viewer: String = userId,
+): List<ProceedsDisposalResponse> {
+    val rows =
+        VestigeProceedsDisposal
+            .selectAll()
+            .where { VestigeProceedsDisposal.userId eq userId }
+            .orderBy(
+                VestigeProceedsDisposal.decidedAt to SortOrder.ASC,
+                VestigeProceedsDisposal.createdAt to SortOrder.ASC,
+            ).toList()
+    val writer = { row: ResultRow -> row[VestigeProceedsDisposal.recordedByUserId] ?: userId }
+    val names = loggerNames(viewer, rows.map(writer))
+    return rows.map {
+        val holder =
+            VestigeHolder(
+                kind = it[VestigeProceedsDisposal.holderKind],
+                personId = it[VestigeProceedsDisposal.personId]?.toString(),
+                characterName = it[VestigeProceedsDisposal.characterName],
             )
-        }
+        ProceedsDisposalResponse(
+            id = it[VestigeProceedsDisposal.id].toString(),
+            holder = holder,
+            amount = it[VestigeProceedsDisposal.amount],
+            kind = it[VestigeProceedsDisposal.kind],
+            decidedAt = it[VestigeProceedsDisposal.decidedAt].toString(),
+            heldBy = it[VestigeProceedsDisposal.heldBy],
+            recordedByYou = writer(it) == viewer,
+            recordedByName = names[writer(it)],
+        )
+    }
+}

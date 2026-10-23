@@ -23,7 +23,7 @@ import {
   sliceActToWeek,
   owedByYouShares,
   undecidedSales,
-  settleThePair,
+  heldByThem,
   shareKey,
 } from "@/lib/settlement";
 import { apiAssetUrl, failureText } from "@/lib/api";
@@ -95,14 +95,16 @@ export function SettlementLedger({
   onRemoveDisposal,
   onKeepPieces,
   onRemoveKeep,
-  onSettlePair,
   onSettleShares,
   onPin,
   onOffsetAll,
   onSendAll,
+  onDecideHeld,
   images = new Map(),
   linked = new Set(),
 }: {
+  /** What became of money of yours they hold: off what you owe them, or sent to you. See V91. */
+  onDecideHeld: (holder: Holder, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
   rows: Settlement[];
   /** Linked people's Discord avatars, keyed by their card's key (`person:<id>`). */
   images?: Map<string, string>;
@@ -140,8 +142,6 @@ export function SettlementLedger({
   onKeepPieces: (holder: Holder, pieces: number, amount: number) => Promise<void>;
   /** Taking one of those back off, which nothing else on any screen can do. */
   onRemoveKeep: (trancheId: string) => Promise<void>;
-  /** Closes the coupon books with this person, BOTH sides at once. See settleThePair. */
-  onSettlePair: (holder: Holder, theirs: string[], yours: string[]) => Promise<void>;
   onSettleShares: (payouts: { lootId: string; memberId: string }[]) => Promise<void>;
   /** Keeps this person's card drawn with nothing outstanding, or stops. See V59. */
   onPin: (row: Settlement, pinned: boolean) => Promise<void>;
@@ -196,11 +196,11 @@ export function SettlementLedger({
           onRemoveDisposal={onRemoveDisposal}
           onKeepPieces={onKeepPieces}
           onRemoveKeep={onRemoveKeep}
-          onSettlePair={onSettlePair}
           onSettleShares={onSettleShares}
           onPin={onPin}
           onOffsetAll={onOffsetAll}
           onSendAll={onSendAll}
+          onDecideHeld={onDecideHeld}
         />
       ))}
     </>
@@ -222,14 +222,15 @@ function SettlementCard({
   onRemoveDisposal,
   onKeepPieces,
   onRemoveKeep,
-  onSettlePair,
   onSettleShares,
   onPin,
   onOffsetAll,
   onSendAll,
+  onDecideHeld,
   image,
   linked,
 }: {
+  onDecideHeld: (holder: Holder, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
   row: Settlement;
   /** Their Discord avatar, when they are linked. */
   image: string | null;
@@ -261,8 +262,6 @@ function SettlementCard({
   onKeepPieces: (holder: Holder, pieces: number, amount: number) => Promise<void>;
   /** Taking one of those back off, which nothing else on any screen can do. */
   onRemoveKeep: (trancheId: string) => Promise<void>;
-  /** Closes the coupon books with this person, BOTH sides at once. See settleThePair. */
-  onSettlePair: (holder: Holder, theirs: string[], yours: string[]) => Promise<void>;
   onSettleShares: (payouts: { lootId: string; memberId: string }[]) => Promise<void>;
   /** Keeps this person's card drawn with nothing outstanding, or stops. See V59. */
   onPin: (row: Settlement, pinned: boolean) => Promise<void>;
@@ -402,9 +401,11 @@ function SettlementCard({
     // has said comes off their debt, which makes it a discharge, and discharges are listed once
     // under `offsets`. It was in both lists at once: 2,412,222,150 read as a row of the owed
     // list and again inside the fold below it, so the two lists came to more than the card did.
+    // Only what they KEPT at a price. A sale of mine out of their pile is under `Is Holding` until
+    // decided, then under `offsets`; piecesAnswered counts both, so no count rides this row.
     {
       key: "theirs",
-      label: countedLabel(row.piecesAnswered.yours, `coupons of mine ${row.name} sold`),
+      label: `coupons of mine ${row.name} kept`,
       mesos: row.parts.soldOfYours,
     },
   ].filter((part) => part.mesos !== 0);
@@ -448,11 +449,9 @@ function SettlementCard({
   // rows, each naming which act it was.
   const offsets = plural(discharges.length, "payment");
   // Money you SENT them, which took nothing off what they owe you and so is not in `discharges`.
-  const paidOut = row.disposals.filter((d) => d.kind === "PAID");
-
-  // The nights one handover finishes, both sides. Offered whenever either side has one: a debt that
-  // runs only one way is still a pair, with nothing on the other end.
-  const pair = settleThePair(row);
+  const paidOut = row.disposals.filter((d) => d.kind === "PAID" && !heldByThem(d));
+  // Money of yours THEY sent you out of a sale of your coupons. See V91.
+  const paidIn = row.disposals.filter((d) => d.kind === "PAID" && heldByThem(d));
 
   const offset = offsetOf(row);
   // Mesos a settle would declare you have ALREADY sent. Off the offset, rather than summed again
@@ -517,6 +516,7 @@ function SettlementCard({
 
   // The sales the held money is still sitting on, where they can be told exactly. See undecidedSales.
   const held = undecidedSales(row);
+  const theirHeld = undecidedSales({ sales: row.salesHeldByThem, holding: row.heldByThem });
 
   /**
    * What is still to settle with them, in the two shapes it comes in. See offsetOf and V61.
@@ -962,6 +962,67 @@ function SettlementCard({
         </div>
       )}
 
+      {/* Your money in THEIR hands, from a sale of your coupons out of their pile: Unsettled Amounts
+          the other way round, and outside the net until one of the two acts below. See V91. */}
+      {(row.heldByThem > 0 || paidIn.length > 0) && (
+        <div className="ledger-entry">
+          <div className="ledger-step-line">
+            <span className="ledger-heading">{`${row.name} Is Holding`}</span>
+            {row.heldByThem > 0 && (
+              <span className="ledger-amount">
+                <CopyAmount value={row.heldByThem} display={formatMesos(row.heldByThem, true)} />
+              </span>
+            )}
+          </div>
+          {theirHeld.length > 0 && (
+            <ul className="loot-shares">
+              {theirHeld.map((sale, i) => (
+                <li key={`their-held-${i}`} className="loot-sale-row">
+                  {iconUrl ? (
+                    <img className="loot-icon" src={apiAssetUrl(iconUrl)} alt="" />
+                  ) : (
+                    <span className="loot-icon" aria-hidden="true" />
+                  )}
+                  <div className="ledger-offset-text">
+                    <span className="loot-share-name">
+                      {couponName
+                        ? `${formatPieces(sale.pieces)} ${couponName}`
+                        : `${formatPieces(sale.pieces)} coupons`}
+                    </span>
+                    <span className="ledger-offset-sub">
+                      <span className="ledger-amount">{formatMesos(sale.mesos, true)}</span>
+                    </span>
+                  </div>
+                  <span className="ledger-when">{sale.soldAt && dayOf(sale.soldAt)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {paidIn.length > 0 && (
+            <span className="ledger-tranches">
+              {paidIn.map((disposal) => (
+                <span key={disposal.id} className="ledger-tranche">
+                  {`${formatMesos(disposal.amount, true)} received`}
+                  {disposal.recordedByYou === false ? (
+                    <span className="loot-meta">{` · ${disposal.recordedByName || row.name}`}</span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="link ledger-drop-sale"
+                      disabled={busy}
+                      onClick={() => void write(onRemoveDisposal(disposal.id), null)}
+                      aria-label={`Undo ${formatMesos(disposal.amount, true)} received from ${row.name}`}
+                    >
+                      ×
+                    </button>
+                  )}
+                </span>
+              ))}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Everything outstanding, itemised, in the two shapes it is outstanding in: shares of a
           night, and their own money a sale of their coupons left in your hands. One section, because
           one transfer of the difference closes both and Closing Actions acts on both at once. Two
@@ -1308,9 +1369,32 @@ function SettlementCard({
 
           Last on the card on purpose: it is what you do about the figures, so it comes after all of
           them. */}
-      {(offsettable || sendable || pair.offered) && (
+      {(offsettable || sendable || row.heldByThem > 0) && (
         <div className="ledger-entry">
           <span className="ledger-heading">Closing Actions</span>
+
+          {/* Your money in their hands (`Is Holding` above). Not called Offset: that word is the act
+              on money you hold, and two buttons wearing it was a card nobody could read. */}
+          {row.heldByThem > 0 && (
+            <span className="ledger-settle">
+              <button
+                type="button"
+                className="party-save"
+                disabled={busy}
+                onClick={() => void write(onDecideHeld(row.holder, "OFFSET", row.heldByThem), null)}
+              >
+                {`Take ${formatMesos(row.heldByThem, true)} Off Owed Amount`}
+              </button>
+              <button
+                type="button"
+                className="party-save"
+                disabled={busy}
+                onClick={() => void write(onDecideHeld(row.holder, "PAID", row.heldByThem), null)}
+              >
+                {`Mark ${formatMesos(row.heldByThem, true)} Received`}
+              </button>
+            </span>
+          )}
 
           {/* Discharged against what they owe you, rather than by money crossing.
 
@@ -1351,25 +1435,6 @@ function SettlementCard({
                 onClick={() => void write(sendAll(), null)}
               >
                 {`Mark ${movedBoth(owes, row.usd.owe)} Sent`}
-              </button>
-            </span>
-          )}
-
-          {/* The coupons, both sides at once. Closing a single side is what took your own out of the
-              netting and answered "60 to hand over" by asking for 80. See settleThePair. */}
-          {pair.offered && (
-            <span className="ledger-settle">
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy}
-                onClick={() => void write(onSettlePair(row.holder, pair.theirs, pair.yours), null)}
-              >
-                {/* WHAT it closes, not how much: a count of nights matched nothing else on the card,
-                    and a night shared with a third person is not closed here. Both sides is the
-                    fact worth carrying, closing one alone being what put the figure UP. See
-                    settleThePair. */}
-                Settle Both Sides
               </button>
             </span>
           )}

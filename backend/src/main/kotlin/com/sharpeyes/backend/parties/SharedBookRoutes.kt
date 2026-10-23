@@ -51,6 +51,27 @@ fun Route.sharedBookRoutes() {
         delete("/tranches/{rowId}") { remove(SharedRow.TRANCHE) }
         delete("/debts/{rowId}") { remove(SharedRow.DEBT) }
         delete("/payments/{rowId}") { remove(SharedRow.PAYMENT) }
+        post("/disposals") { addDisposal() }
+        delete("/disposals/{rowId}") { remove(SharedRow.DISPOSAL) }
+    }
+}
+
+@Serializable
+data class SharedDisposalRequest(
+    val amount: Long,
+    /** OFFSET or PAID. */
+    val kind: String,
+    /** In the owner's terms: THEM is the member holding the owner's money. */
+    val heldBy: String,
+)
+
+private suspend fun RoutingContext.addDisposal() {
+    val request = call.receive<SharedDisposalRequest>()
+    inBook { book, writer ->
+        disposalRefusal(book.holder, request.amount, request.kind, request.heldBy) ?: run {
+            insertSharedDisposal(book, writer, request.amount, request.kind, request.heldBy, Clock.System.now())
+            null
+        }
     }
 }
 

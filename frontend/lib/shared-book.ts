@@ -19,6 +19,8 @@ export type SharedCard = {
   owe: number;
   /** Money of yours they are holding from a sale of your coupons, with nothing decided yet. */
   holding: number;
+  /** Money of THEIRS you are holding from your sale of their coupons, undecided. See V91. */
+  youHold: number;
   /** Your coupons in their inventory, and theirs in yours, after the counts wash. */
   piecesOwed: number;
   piecesOwe: number;
@@ -34,7 +36,7 @@ export type SharedPart = {
   /** Who wrote it, when it was the owner and not you. See V88. */
   by?: string | null;
   /** A row you wrote, which you may take back: which list, and its id. */
-  remove?: { kind: "debts" | "payments"; id: string };
+  remove?: { kind: "debts" | "payments" | "disposals"; id: string };
   /** A share of a drop you sold, still unsent: the payout to mark. */
   send?: { partyId: string; lootId: string; payeeId: string };
 };
@@ -121,12 +123,18 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
   });
   const owe: SharedPart[] = [
     ...shares,
-    { key: "sold", label: `Coupons of ${book.ownerName}'s you sold`, mesos: row.parts.soldOfYours },
+    { key: "sold", label: `Coupons of ${book.ownerName}'s you kept`, mesos: row.parts.soldOfYours },
     ...typed.filter((entry) => entry.amount > 0).map(enteredPart),
   ].filter((part) => part.mesos !== 0);
   const paidLabel = { PAYMENT: "You paid", DEBT: "Offset", PROCEEDS: "Coupon sale" } as const;
+  const disposalsById = new Map(book.disposals.map((d) => [d.id, d]));
   const writtenBy = (id: string, source: string) =>
-    source === "PAYMENT" ? paymentsById.get(id) : source === "DEBT" ? debtsById.get(id) : undefined;
+    source === "PAYMENT"
+      ? paymentsById.get(id)
+      : source === "DEBT"
+        ? debtsById.get(id)
+        : disposalsById.get(id);
+  const removable = { PAYMENT: "payments", DEBT: "debts", PROCEEDS: "disposals" } as const;
   return {
     name: book.ownerName,
     image: book.ownerImage ?? null,
@@ -134,6 +142,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     owed: row.owedByYou + row.sharesYouOwe,
     owe: row.mesos,
     holding: row.holding,
+    youHold: row.heldByThem,
     piecesOwed: row.piecesYouOwe,
     piecesOwe: row.pieces,
     usd: { owed: row.usd.owe, owe: row.usd.owed, net: -row.usd.net },
@@ -152,13 +161,11 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
                 : act.label,
           mesos: act.amount,
           by: row?.recordedByYou === false ? (row.recordedByName ?? book.ownerName) : null,
-          // Only a typed credit or a receipt: an offset is the owner's act on their own shares.
+          // Only a typed credit, a receipt or a coupon-money decision: an offset of shares is the
+          // owner's act on their own shares.
           remove:
-            row?.recordedByYou === true && (act.source === "PAYMENT" || act.payouts.length === 0)
-              ? {
-                  kind: act.source === "PAYMENT" ? ("payments" as const) : ("debts" as const),
-                  id: act.id,
-                }
+            row?.recordedByYou === true && (act.source !== "DEBT" || act.payouts.length === 0)
+              ? { kind: removable[act.source], id: act.id }
               : undefined,
         };
       }),

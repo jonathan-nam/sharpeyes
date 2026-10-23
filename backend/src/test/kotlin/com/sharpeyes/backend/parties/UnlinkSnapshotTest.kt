@@ -13,6 +13,7 @@ import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.PersonCharacter
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.VestigePayment
+import com.sharpeyes.backend.db.VestigeProceedsDisposal
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
@@ -248,6 +249,37 @@ class UnlinkSnapshotTest {
     }
 
     @Test
+    fun `a decision about coupon money keeps its kind and swaps whose hands the money is in`() {
+        transaction {
+            val night = night()
+            val now = Clock.System.now()
+            listOf(HELD_BY_YOU to "PAID", HELD_BY_THEM to "OFFSET").forEach { (held, act) ->
+                VestigeProceedsDisposal.insert {
+                    it[id] = Uuid.random()
+                    it[userId] = owner
+                    it[holderKind] = PERSON
+                    it[personId] = night.owen
+                    it[amount] = 1 * b
+                    it[kind] = act
+                    it[heldBy] = held
+                    it[decidedAt] = now
+                    it[createdAt] = now
+                }
+            }
+
+            assertTrue(unlinkPerson(owner, night.owen))
+
+            val copied =
+                VestigeProceedsDisposal
+                    .selectAll()
+                    .where { VestigeProceedsDisposal.userId eq member }
+                    .map { it[VestigeProceedsDisposal.heldBy] to it[VestigeProceedsDisposal.kind] }
+                    .toSet()
+            assertEquals(setOf(HELD_BY_THEM to "PAID", HELD_BY_YOU to "OFFSET"), copied)
+        }
+    }
+
+    @Test
     fun `the member gets the money the other way round, and this week's clear as their own`() {
         transaction {
             val night = night()
@@ -327,15 +359,4 @@ class UnlinkSnapshotTest {
             .selectAll()
             .where { (PersonCharacter.userId eq userId) and (PersonCharacter.personId eq person) }
             .map { it[PersonCharacter.name] }
-}
-
-/** The copy's share of a coupon sale must be the figure saleCredits (lib/vestige-ledger.ts) computes. */
-class ShareOfSaleTest {
-    @Test
-    fun `rounds to the meso, half up, like Math round`() {
-        assertEquals(6_000_000_000, shareOfSale(30.0, 12_000_000_000, 60.0))
-        assertEquals(3, shareOfSale(1.0, 10, 3.0)) // 3.33
-        assertEquals(3, shareOfSale(1.0, 5, 2.0)) // 2.5, up
-        assertEquals(7, shareOfSale(2.0, 10, 3.0)) // 6.67
-    }
 }

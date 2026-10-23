@@ -12,7 +12,6 @@ import {
   DISPOSALS_KEY,
   type DropLogWrites,
   PAYMENTS_KEY,
-  SETTLEMENTS_KEY,
   TRANCHES_KEY,
 } from "@/lib/use-drop-log-writes";
 import { type Holder, paymentsSinceClosing, SELF_HOLDER } from "@/lib/vestige-ledger";
@@ -151,28 +150,6 @@ export function SettlementStage({
         onRemoveKeep={(trancheId) =>
           writes.saleWrite(`${TRANCHES_KEY}/${trancheId}`, { method: "DELETE" })
         }
-        // Two acts, because a closure is one PILE's decision and the pair has two piles: their
-        // nights close against them, yours against you. One button, since one handover finishes
-        // both and closing a single side is what put the figure UP.
-        //
-        // Sequential, not parallel: each answers with the whole list and the last answer wins, so
-        // racing them would redraw the card from whichever landed second.
-        onSettlePair={async (holder: Holder, theirs, yours) => {
-          if (theirs.length > 0) {
-            await writes.settlementWrite(SETTLEMENTS_KEY, {
-              method: "POST",
-              // Nothing written off: a piece debt was never priced, so there is no shortfall to
-              // record. What they sent is on the receipts.
-              body: JSON.stringify({ holder, lootIds: theirs, unpaid: 0 }),
-            });
-          }
-          if (yours.length > 0) {
-            await writes.settlementWrite(SETTLEMENTS_KEY, {
-              method: "POST",
-              body: JSON.stringify({ holder: SELF_HOLDER, lootIds: yours, unpaid: 0 }),
-            });
-          }
-        }}
         onSettleShares={writes.settleShares}
         onPin={async (row, pinned) => {
           if (row.holder.personId === null) return;
@@ -201,6 +178,12 @@ export function SettlementStage({
         // moves are the two the Unsettled Amounts figure is made of.
         onSendAll={(holder: Holder, parts, holding) =>
           writes.closeWrite("sent", { holder, parts, holding })
+        }
+        onDecideHeld={(holder: Holder, kind, amount) =>
+          writes.disposalWrite(DISPOSALS_KEY, {
+            method: "POST",
+            body: JSON.stringify({ holder, amount, kind, heldBy: "THEM" }),
+          })
         }
       />
 

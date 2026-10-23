@@ -1544,7 +1544,7 @@ describe("them keeping coupons of yours, at a price", () => {
       [ledger(OWEN, "Owen", { owedToYou: 20, drops: [owing("l1", "baldrix", 20)] })],
       wallet([]),
       [],
-      new Map([["person:p-owen", { toThem: 0, toYou: 400 * M, sales: [] }]]),
+      new Map([["person:p-owen", { toThem: 0, toYou: 0, keptByThem: 400 * M, sales: [] }]]),
       new Map(),
       new Map(),
       new Set(),
@@ -1553,6 +1553,44 @@ describe("them keeping coupons of yours, at a price", () => {
     expect([row!.pieces, row!.piecesAnswered.yours]).toEqual([0, 20]);
     expect(row!.parts.soldOfYours).toBe(400 * M);
     expect(row!.mesos).toBe(400 * M);
+  });
+
+  it("holds their SALE of your coupons out of the net until somebody decides", () => {
+    // Their pile sold 20 of yours for 400m: that money is in their hands, not a debt the card may
+    // net on its own. Offset moves it into the net, Paid takes it off the card. See V91.
+    const sale = (disposals: ProceedsDisposal[]) =>
+      buildSettlement(
+        [ledger(OWEN, "Owen", { owedToYou: 20, drops: [owing("l1", "baldrix", 20)] })],
+        wallet([]),
+        [],
+        new Map([["person:p-owen", { toThem: 0, toYou: 400 * M, sales: [] }]]),
+        new Map(),
+        new Map(),
+        new Set(),
+        new Map([[answeredKey("person:p-owen", "self"), sold(20)]]),
+        disposals,
+      )[0]!;
+    const decided = (kind: "OFFSET" | "PAID", amount: number): ProceedsDisposal => ({
+      id: kind,
+      holder: OWEN,
+      amount,
+      kind,
+      decidedAt: "2026-10-23T00:00:00Z",
+      heldBy: "THEM",
+    });
+
+    const undecided = sale([])!;
+    expect([undecided.heldByThem, undecided.mesos, undecided.parts.soldOfYours]).toEqual([
+      400 * M,
+      0,
+      0,
+    ]);
+
+    const offset = sale([decided("OFFSET", 150 * M)])!;
+    expect([offset.heldByThem, offset.mesos]).toEqual([250 * M, 150 * M]);
+
+    // Sent in full, nothing is left between them, so there is no card.
+    expect(sale([decided("PAID", 400 * M)])).toBeUndefined();
   });
 });
 
