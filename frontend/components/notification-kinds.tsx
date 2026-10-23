@@ -80,9 +80,26 @@ function ledgerText(p: Payload, who: string): string {
   return p.toYou ? `${who} recorded ${amount} owed to you` : `${who} recorded ${amount} you owe`;
 }
 
+/** The party an invite is about, as the bell names it: the leader's character and the boss. */
+function partyOf(p: Payload): string {
+  const boss = bossLabel(str(p.boss) || "a boss", str(p.difficulty) || null);
+  return p.leader ? `${str(p.leader)}'s ${boss}` : boss;
+}
+
 const KINDS: Record<string, Kind> = {
   FRIEND_REQUEST: { title: "Friend Request", actions: FriendRequestActions },
   FRIEND_ACCEPTED: { title: "Friend Request Accepted" },
+  PARTY_INVITE: {
+    text: (p, who) => `${who} invited ${str(p.character)} to ${partyOf(p)}`,
+    actions: PartyInviteActions,
+  },
+  PARTY_INVITE_ANSWERED: {
+    text: (p, who) =>
+      p.accepted
+        ? `${who} joined ${partyOf(p)} as ${str(p.character)}`
+        : `${who} declined ${partyOf(p)}`,
+    href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
+  },
   SALE_RECORDED: {
     text: (p, who) => `${who} sold ${str(p.item)} for ${priceOf(p)}`,
     icon: artOf,
@@ -105,6 +122,33 @@ const KINDS: Record<string, Kind> = {
 /** Null for a kind this build does not know, which the bell leaves out rather than guesses at. */
 export function kindOf(kind: string): Kind | null {
   return KINDS[kind] ?? null;
+}
+
+function PartyInviteActions({ notification, busy, run }: KindActions) {
+  const path = `/api/party-invites/${encodeURIComponent(notification.subjectId ?? "")}`;
+  const answer = (accept: boolean) =>
+    run(
+      async (getToken) => {
+        await apiFetch<unknown>(
+          accept ? `${path}/accept` : path,
+          { method: accept ? "POST" : "DELETE" },
+          getToken,
+        );
+        // A seat gained shows on Party View, Run Order and Sales.
+        if (accept) invalidate("/api/parties");
+      },
+      accept ? "Couldn't join." : "Couldn't decline.",
+    );
+  return (
+    <>
+      <button type="button" className="party-save" disabled={busy} onClick={() => answer(true)}>
+        Accept
+      </button>
+      <button type="button" className="party-cancel" disabled={busy} onClick={() => answer(false)}>
+        Decline
+      </button>
+    </>
+  );
 }
 
 function FriendRequestActions({ notification, busy, run }: KindActions) {

@@ -19,7 +19,7 @@ import type { AddLootBody, Loot, SellLootBody } from "@/types/loot";
 import type { Party } from "@/types/party";
 import { partyHref } from "@/lib/party-path";
 import { PartyAccounts } from "@/components/party-accounts";
-import { ChangedBy } from "@/components/changed-by";
+import { ConfirmAct } from "@/components/confirm-act";
 
 // One config: who ran this boss this week, and what its pool is up to.
 //
@@ -53,9 +53,15 @@ export function PartyCard({
   pool,
   onSaveRoster,
   onTakeOff,
+  onLeave,
+  onWithdrawInvite,
   stacks,
   piecePile,
 }: {
+  /** A member taking their own seat out. Omitted for the party's leader. */
+  onLeave?: () => Promise<void>;
+  /** The leader taking back a seat offered and not yet answered. See party.pendingInvites. */
+  onWithdrawInvite?: (inviteId: string) => Promise<void>;
   /** The week's pile of Eternal pieces, added or to add, where this party drops one. */
   piecePile?: PiecePileSlot;
   party: Party;
@@ -165,7 +171,9 @@ export function PartyCard({
     Boolean(pool?.loot.length) ||
     Boolean(onAddDrop) ||
     Boolean(onSaveRoster) ||
-    Boolean(onTakeOff);
+    Boolean(onTakeOff) ||
+    Boolean(onLeave);
+  const invites = party.pendingInvites ?? [];
 
   const saved = others.map((m) => m.name);
   const cleaned = draft.map((m) => m.trim()).filter((m) => m !== "");
@@ -186,15 +194,15 @@ export function PartyCard({
     }
   }
 
-  const clearedBy = <ChangedBy topics={["clears"]} matches={(t) => t.party === party.id} />;
-
   return (
     // Cleared rows step back so the list reads as what is left. Strictly `=== true`: null is "no
     // capture has said anything", which is a row that still needs an answer, not a finished one.
+    // A presence region: somebody else's cursor over this row is drawn over it here. See presence.tsx.
     <article
       className={`party-row${expanded ? " is-open" : ""}${
         clear.cleared === true ? " is-cleared" : ""
       }`}
+      data-presence={`party:${party.id}`}
     >
       <header className="party-row-head">
         {/* A disclosure of its own rather than the whole header, which already holds two links and
@@ -208,6 +216,7 @@ export function PartyCard({
             className="party-row-toggle"
             aria-expanded={open}
             aria-controls={panelId}
+            data-presence-key="toggle"
             // Closing drops a failed add's message with it. Kept, it would greet the next open
             // still claiming a save that is no longer being attempted.
             onClick={() => {
@@ -244,8 +253,6 @@ export function PartyCard({
             href={partyHref(party)}
           >
             {poolLine.text}
-            {/* Open, the drop that moved shows it instead. */}
-            {!expanded && <ChangedBy topics={["loot"]} matches={(t) => t.party === party.id} />}
           </Link>
         )}
 
@@ -262,16 +269,15 @@ export function PartyCard({
             disabled={busy}
             onClick={() => onToggleClear(nextClear(clear.cleared))}
             title={clear.cleared === null ? "No capture yet" : undefined}
+            data-presence-key="clear"
           >
             {clearStateLabel(clear.cleared)}
-            {clearedBy}
           </button>
         ) : (
           <span
             className={`changed-by-anchor party-clear is-${clearClass(clear.cleared)} is-readonly`}
           >
             {clearStateLabel(clear.cleared)}
-            {clearedBy}
           </span>
         )}
       </header>
@@ -323,13 +329,47 @@ export function PartyCard({
           ) : (
             <div className="party-row-roster">
               {others.length > 0 && <RosterStrip members={others} />}
+              {invites.length > 0 && (
+                <span className="ledger-tranches">
+                  {invites.map((invite) => (
+                    <span key={invite.id} className="ledger-tranche">
+                      {`Invited ${invite.name}`}
+                      {onWithdrawInvite && (
+                        <button
+                          type="button"
+                          className="link ledger-drop-sale"
+                          disabled={busy}
+                          onClick={() => void onWithdrawInvite(invite.id).catch(() => {})}
+                          aria-label={`Withdraw the invite to ${invite.name}`}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </span>
+              )}
               {/* The panel's corner, not the end of the roster. Both act on the row, and sitting
                   them after the last sprite read as being about that character. Behind the
                   disclosure either way, rather than in the header, which already holds the clear
                   button: the one control pressed every week should not sit beside the one that
                   takes the row off the page. */}
-              {(onSaveRoster || onTakeOff) && (
+              {(onSaveRoster || onTakeOff || onLeave) && (
                 <div className="party-row-actions">
+                  {onLeave && (
+                    <ConfirmAct
+                      label="Leave"
+                      question="Leave this party?"
+                      keep="Stay"
+                      busy={busy ?? false}
+                      onConfirm={() => {
+                        setOffError(null);
+                        onLeave().catch((e) =>
+                          setOffError(failureText(e, "Couldn't leave that party. Try again.")),
+                        );
+                      }}
+                    />
+                  )}
                   {onSaveRoster && (
                     <button
                       type="button"

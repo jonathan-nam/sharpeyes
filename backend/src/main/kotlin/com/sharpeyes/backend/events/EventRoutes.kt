@@ -62,7 +62,8 @@ private data class LiveData(
     val actor: String?,
     val image: String?,
     val target: EventTarget,
+    val presence: Presence? = null,
 )
 
 private fun dataOf(event: Event): String =
-    Json.encodeToString(LiveData.serializer(), LiveData(event.actor, event.image, event.target))
+    Json.encodeToString(LiveData.serializer(), LiveData(event.actor, event.image, event.target, event.presence))

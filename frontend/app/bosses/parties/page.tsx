@@ -8,6 +8,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AddForWeek } from "@/components/add-for-week";
 import { KnownCharacters } from "@/components/known-characters";
 import { PartyCard } from "@/components/party-card";
+import { CurrentlyViewing, PresenceLayer } from "@/components/presence";
 import { ResetTimer } from "@/components/reset-timer";
 import { RosterStrip } from "@/components/roster-strip";
 import { WeekStepper } from "@/components/week-stepper";
@@ -21,10 +22,11 @@ import {
   StaleAfterWrite,
   SAVED_BUT_STALE,
 } from "@/lib/api";
+import { announceInvites } from "@/lib/invite-notice";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
 import { asYourRow } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
-import { peek, put, storedAt } from "@/lib/cache";
+import { invalidate, peek, put, storedAt } from "@/lib/cache";
 import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
 import { replaceQuery, useQueryString } from "@/lib/url-state";
 import { reportDataReady } from "@/lib/rum";
@@ -473,11 +475,12 @@ export default function PartiesPage() {
    */
   async function saveRoster(party: Party, members: string[] | null) {
     await write(party.id, async () => {
-      await apiFetch<Party>(
+      const saved = await apiFetch<Party>(
         `${PARTIES_KEY}/${party.id}/roster`,
         { method: "PUT", body: JSON.stringify({ members } satisfies SaveWeekRosterBody) },
         getToken,
       );
+      announceInvites(saved);
       const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
       setEveryParty(refreshed);
       put(PARTY_LIST_KEY, refreshed);
@@ -521,11 +524,12 @@ export default function PartiesPage() {
     setAddError(null);
     try {
       await write(ADD_FOR_WEEK, async () => {
-        await apiFetch<Party>(
+        const saved = await apiFetch<Party>(
           PARTIES_KEY,
           { method: "POST", body: JSON.stringify(body) },
           getToken,
         );
+        announceInvites(saved);
         const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
         setEveryParty(refreshed);
         put(PARTY_LIST_KEY, refreshed);
@@ -590,6 +594,27 @@ export default function PartiesPage() {
         getToken,
       );
       await readBack(() => loadWeek(null));
+    });
+  }
+
+  /** Takes your seat out of a party somebody else leads. The party page's same route. */
+  async function leaveShared(party: Party) {
+    await write(party.id, async () => {
+      await apiFetch<unknown>(`${PARTIES_KEY}/${party.id}/leave`, { method: "POST" }, getToken);
+      invalidate(PARTIES_KEY);
+      await readBack(() => loadWeek(null));
+    });
+  }
+
+  /** Takes back a seat offered to a friend, before they answer. */
+  async function withdrawInvite(party: Party, inviteId: string) {
+    await write(party.id, async () => {
+      await apiFetch<unknown>(
+        `/api/party-invites/${encodeURIComponent(inviteId)}`,
+        { method: "DELETE" },
+        getToken,
+      );
+      await readBack(() => loadWeek(week));
     });
   }
 
@@ -861,6 +886,7 @@ export default function PartiesPage() {
         onToggleClear={history ? undefined : (cleared) => toggleSharedClear(party, cleared)}
         dropTable={dropTables[party.bossKey]}
         onAddDrop={canAddDrops ? (body) => addSharedDrop(party, body) : undefined}
+        onLeave={history ? undefined : () => leaveShared(party)}
       />
     );
   }
@@ -898,6 +924,7 @@ export default function PartiesPage() {
         piecePile={piecePileFor(party)}
         onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
         onTakeOff={history ? undefined : () => takeOff(party)}
+        onWithdrawInvite={(inviteId) => withdrawInvite(party, inviteId)}
         heading={
           <>
             {boss?.iconUrl && (
@@ -930,6 +957,7 @@ export default function PartiesPage() {
         piecePile={piecePileFor(party)}
         onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
         onTakeOff={history ? undefined : () => takeOff(party)}
+        onWithdrawInvite={(inviteId) => withdrawInvite(party, inviteId)}
         heading={bossGroupHeading(party)}
       />
     );
@@ -956,6 +984,7 @@ export default function PartiesPage() {
 
   return (
     <main className="page">
+      <PresenceLayer page="party-view" />
       {/* Beside the title, not among the tabs below: those pick what the list shows, so a link
           that leaves the page read as another one of them. */}
       <div className="page-head">
@@ -1015,7 +1044,7 @@ export default function PartiesPage() {
               />
             )}
 
-            <section className="party-filters">
+            <section className="party-filters" data-presence="toolbar">
               <h2 className="party-filters-title">Filter Options</h2>
               <div className="party-toolbar-tabs">
                 <div className="basis-row" role="group" aria-label="Group parties by">
@@ -1041,6 +1070,8 @@ export default function PartiesPage() {
                     By Party
                   </button>
                 </div>
+
+                <CurrentlyViewing />
 
                 {/* What is left this week, without reading past what is done. "Not Cleared" holds the
                   unreported ones too. The counts do not move when you switch tabs: they are of every

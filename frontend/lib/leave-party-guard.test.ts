@@ -53,11 +53,12 @@ describe("a pool somebody else keeps", () => {
     expect(row).toContain("{readOnly ? ( <span");
   });
 
-  it("lists a shared party with the clear and Add Drop as its only writes", () => {
+  it("lists a shared party with the clear, Add Drop and Leave as its only writes", () => {
     // The card a party somebody else owns is drawn with on Party View. Any seat may tick the
-    // party's clear and log a drop into its pool; selling and settling are done on its own page.
+    // party's clear, log a drop into its pool, and leave; selling and settling are done on its
+    // own page.
     const card = /function sharedCard\([\s\S]*?\); \}/.exec(list)?.[0] ?? "";
     expect(card).toContain("<PartyCard");
-    expect(card.match(/ on[A-Z]\w+=/g)).toEqual([" onToggleClear=", " onAddDrop="]);
+    expect(card.match(/ on[A-Z]\w+=/g)).toEqual([" onToggleClear=", " onAddDrop=", " onLeave="]);
   });
 });

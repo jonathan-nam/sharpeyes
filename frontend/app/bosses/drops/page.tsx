@@ -552,6 +552,7 @@ export default function DropLogPage() {
   // an Outstanding Sales section at all. A heading over no cards is a heading over nothing.
   const anythingToPrice = money && (lots.length > 0 || alone.length > 0);
   const vestigeIcon = vestigeOf(dropTables)?.iconUrl ?? null;
+  const coupon = { iconUrl: vestigeIcon, name: vestigeOf(dropTables)?.name ?? null };
 
   // What fell, and what it was sold for, one at a time. Both halves are entered into rather than
   // read, so they stay on one page: a drop and the sale that prices it are the same evening's work.
@@ -888,7 +889,9 @@ export default function DropLogPage() {
               />
             )}
 
-            {shown === "settlement" && <SharedCards cards={sharedCards} writes={sharedWrites} />}
+            {shown === "settlement" && (
+              <SharedCards cards={sharedCards} writes={sharedWrites} coupon={coupon} />
+            )}
 
             {/* The end of the pipeline, and it only runs one way: nothing here is waiting on
               anybody, and nothing here can be taken back.

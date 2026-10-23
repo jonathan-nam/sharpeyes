@@ -21,7 +21,8 @@ let listening = false;
 function remember() {
   if (listening || typeof window === "undefined") return;
   listening = true;
-  for (const topic of TOPICS) {
+  // Not presence: it is a cursor moving, not a change, and it arrives many times a second.
+  for (const topic of TOPICS.filter((t) => t !== "presence")) {
     onLive(topic, (event) => {
       const now = Date.now();
       recent = [...recent.filter((h) => now - h.at < CHANGED_BY_MS), { event, at: now }];

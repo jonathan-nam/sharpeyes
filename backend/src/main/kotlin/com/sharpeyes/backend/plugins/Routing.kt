@@ -4,6 +4,7 @@ import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.eventRoutes
+import com.sharpeyes.backend.events.presenceRoutes
 import com.sharpeyes.backend.events.rememberActor
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.friends.friendRoutes
@@ -11,6 +12,7 @@ import com.sharpeyes.backend.invites.inviteRoutes
 import com.sharpeyes.backend.invites.joinRoutes
 import com.sharpeyes.backend.notifications.notificationRoutes
 import com.sharpeyes.backend.pages.pageRoutes
+import com.sharpeyes.backend.parties.partyInviteRoutes
 import com.sharpeyes.backend.parties.partyRoutes
 import com.sharpeyes.backend.parties.peopleRoutes
 import com.sharpeyes.backend.parties.sharedBookRoutes
@@ -179,7 +181,13 @@ private fun Route.socialRoutes() {
         friendRoutes()
     }
     route("/api/notifications") { notificationRoutes() }
+    route("/api/party-invites") {
+        // The party gains a seat, so its members' screens move. See TellLinked.kt.
+        tellLinkedOnWrite(Topic.PARTY)
+        partyInviteRoutes()
+    }
     route("/api/events") { eventRoutes() }
+    route("/api/presence") { presenceRoutes() }
     // A member's writes into the owner's book. See SharedBookWrites.kt.
     route("/api/shared-books") { sharedBookRoutes() }
 }

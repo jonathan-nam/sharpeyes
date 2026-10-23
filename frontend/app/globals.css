@@ -7121,8 +7121,26 @@ button.link:disabled {
 
 .ledger-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+}
+
+/* The person, large enough to find a card by, with the figure beside them. */
+.ledger-who.is-large {
+  gap: 10px;
+  font-size: var(--text-lg);
+}
+
+.ledger-history-open {
+  margin-left: auto;
+}
+
+/* Owed and Paid side by side, which wants more room than the invite dialog it borrows. */
+.invite-dialog.ledger-history {
+  max-width: 880px;
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 .ledger-tally {
@@ -7173,6 +7191,15 @@ button.link:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+/* The net beside Unsettled Amounts: the one figure the acts move, so it is read first. */
+.ledger-net {
+  margin-left: auto;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--bad);
 }
 
 /* What a folding step holds. Its own column, so folding one keeps the gap the entry had between
@@ -7829,6 +7856,60 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   margin: 0 0 16px;
   font-size: var(--text-base);
   color: var(--ink);
+}
+
+/* Other people on the page (components/presence.tsx). Never in the way of a click: under the nav
+   veil, over everything else, and transparent to the pointer. */
+.presence-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.presence-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: flex-start;
+  /* One ping's worth, so a cursor glides between pings rather than jumping. */
+  transition: transform 90ms linear;
+}
+
+.presence-name {
+  margin: 14px 0 0 -2px;
+  padding: 1px 6px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.presence-outline {
+  position: absolute;
+  border: 2px solid;
+  border-radius: var(--radius-md);
+}
+
+.presence-viewers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.presence-face {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid;
+  border-radius: 50%;
+  object-fit: cover;
+  font-size: var(--text-sm);
+  color: #fff;
 }
 
 .invite-title {

@@ -116,8 +116,20 @@ data class PartyResponse(
     val yourSeats: List<String> = emptyList(),
     // Every account the party reaches, owner first. Empty unless somebody besides you is linked.
     val accounts: List<PartyAccountResponse> = emptyList(),
+    // Seats offered to friends and not yet answered. The owner's only. See PartyInvites.kt.
+    val pendingInvites: List<PendingInviteView> = emptyList(),
+    // On a save's answer only: the friends it invited, and those it did not because they are already
+    // in a party for this boss.
+    val invited: List<String> = emptyList(),
+    val alreadyPartied: List<String> = emptyList(),
     val createdAt: String,
     val updatedAt: String,
+)
+
+/** The party an accepted invite seated you in. See PartyInviteRoutes.kt. */
+@Serializable
+data class JoinedPartyResponse(
+    val partyId: String,
 )
 
 /** One account a party reaches: what to draw for it, and whether it keeps the party's book. See accountsFor. */
