@@ -13,9 +13,9 @@
 # `name` is the in-game display name as maplestory.io has it, which is not always how a player
 # says it: the game calls it "Exceptional Hammer (Face Acc)", not "(Face Accessory)".
 #
-# `icon_id` is the Nexon item id the art comes from. Absent means the pinned dataset (GMS v268,
-# see ICON_VERSION) does not have the item yet, and the drop is drawn without art rather than with
-# somebody else's.
+# `icon_id` is the Nexon item id the art comes from, read from GMS v268 (ICON_VERSION) unless
+# `icon_version` names a later one. Absent means no dataset the mirror serves has the item, and the
+# drop is drawn without art rather than with somebody else's.
 #
 # `per_member` marks a drop each member receives their own copy of: ALWAYS, or HEROIC when it is
 # one drop for the party in Interactive worlds and one each in Heroic/Reboot. It is the one flag
@@ -78,17 +78,11 @@ drops:
   - key: blissful-nightmare
     name: Blissful Nightmare
     art: cut
-  # v270 as well, and its capture has a framed panel behind it, which is not the dead end it looks.
-  # Nothing in the overlap is BLENDED: every pixel there is on the 4-bit grid the sprite's palette
-  # uses, and the 53 that are not sit clear of the panel in the glow over black. So the sprite is
-  # opaque wherever it covers the panel and the two palettes separate exactly.
-  #
-  # 85 pixels along that join are decided by palette rather than by an outline, 22 of them near
-  # white, so the pale edge of the face could be a pixel short. Judge it against the game before
-  # trusting it that far.
+  # GMS v269 is the only dataset that has it: v268 predates it and v270 500s on the mirror.
   - key: original-sin-of-pride
     name: Original Sin of Pride
-    art: cut
+    icon_id: 1012911
+    icon_version: 269
 
   # --- Badges ------------------------------------------------------------------------
   # The mirror 504s on this item's METADATA while serving its icon fine, so probing by id reads as
@@ -153,9 +147,9 @@ drops:
     name: Eternal Armor of Oaths Box
     icon_id: 2639253
     fungible: true
-  # No icon_id: GMS v268 is the newest complete dataset the mirror has and it does not carry this
-  # item. Cut instead from an in-game capture taken on black, which hid the chest outline. The five
-  # boxes above share one pixel-identical silhouette, so that mask is what gave the outline back.
+  # No icon_id: GMS v268 does not carry this item. Cut instead from an in-game capture taken on
+  # black, which hid the chest outline. The five boxes above share one pixel-identical silhouette,
+  # so that mask is what gave the outline back.
   - key: eternal-armor-of-radiance-box
     name: Eternal Armor of Radiance Box
     art: cut
@@ -197,9 +191,9 @@ drops:
   # could only ever be right for one boss. The counts and their bundling are in `tables` below.
   # What a party actually looted is typed on the pool row.
   #
-  # `art: cut` rather than an icon_id: this is a v270 item and the pinned dataset is GMS v268. The
-  # mirror has no v269 or v270 at all, so there is no version to point at and the sprite is supplied
-  # by hand instead, the same way the boss portraits are.
+  # `art: cut` rather than an icon_id: this is a v270 item, and the mirror's v270 500s, so there is
+  # no version to point at and the sprite is supplied by hand instead, the same way the boss
+  # portraits are.
   #
   # This one is the game's own 37x37 sprite, with its real per-pixel alpha. That matters: the glow is
   # semi-transparent, and the first five attempts here cut it out of a screenshot where it had been

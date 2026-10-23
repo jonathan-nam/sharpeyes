@@ -148,12 +148,12 @@ items:
       NORMAL: 1
       HARD: 2
 
-  # No icon_id: GMS v268 is the newest dataset the mirror carries and this is a v270 item, so there
-  # is no sprite to point at. Cut instead from a capture taken on black, which hides two different
-  # things here. Inside the silhouette the capture IS the colour, dark shading and all; outside it
-  # the halo arrives premultiplied and divides back out into real alpha. Keying the whole sprite off
-  # brightness, the way Blissful Nightmare's glow was, would have holed that shading, and the slot
-  # behind it is light. What the black did take is the outline, which no sibling shares here.
+  # No icon_id: this is a v270 item and the mirror's v270 500s, so there is no sprite to point at.
+  # Cut instead from a capture taken on black, which hides two different things here. Inside the
+  # silhouette the capture IS the colour, dark shading and all; outside it the halo arrives
+  # premultiplied and divides back out into real alpha. Keying the whole sprite off brightness, the
+  # way Blissful Nightmare's glow was, would have holed that shading, and the slot behind it is
+  # light. What the black did take is the outline, which no sibling shares here.
   - key: lingering-twisted-desire
     name: Lingering Twisted Desire
     boss: Jupiter
@@ -221,7 +221,7 @@ items:
     per_clear:
       NORMAL: { interactive: 4, heroic: 2 }
 
-  # No art, for the same reason as Jupiter's token above: v270, and the mirror stops at v268.
+  # No art, for the same reason as Jupiter's token above: v270, which the mirror 500s on.
   - key: blissful-fantasy-fragment
     name: Blissful Fantasy Fragment
     boss: Malefic Star
