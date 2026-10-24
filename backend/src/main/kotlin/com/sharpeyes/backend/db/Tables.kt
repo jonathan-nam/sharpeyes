@@ -242,6 +242,9 @@ object Party : Table("party") {
     // When the standing roster started standing for weeks nobody wrote down. See V80__party_since.sql.
     val partySince = timestamp("party_since").defaultExpression(CurrentTimestamp)
 
+    // Retired by combining it into this party. See V98 and CombineParties.kt.
+    val combinedInto = uuid("combined_into").nullable()
+
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 
@@ -794,6 +797,26 @@ object FriendRequest : Table("friend_request") {
 
     /** The sender's person this links on accept, when sent from People (V97). */
     val personId = uuid("person_id").nullable()
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+// How much of a party's pool another account reads: from sharedFrom on, none when null. See V98.
+object PartyReadCutoff : Table("party_read_cutoff") {
+    val partyId = reference("party_id", Party.id)
+    val userId = reference("user_id", Users.id)
+    val sharedFrom = date("shared_from").nullable()
+
+    override val primaryKey = PrimaryKey(partyId, userId)
+}
+
+// A proposal to combine two linked accounts' parties, waiting on the other owner. See V98.
+object PartyCombine : Table("party_combine") {
+    val id = uuid("id")
+    val keepPartyId = reference("keep_party_id", Party.id)
+    val retirePartyId = reference("retire_party_id", Party.id)
+    val proposedBy = reference("proposed_by", Users.id)
+    val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)
 }

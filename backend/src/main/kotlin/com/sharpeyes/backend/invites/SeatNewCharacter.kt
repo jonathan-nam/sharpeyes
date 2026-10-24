@@ -6,6 +6,7 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.parties.bossesRunInOwnParty
 import com.sharpeyes.backend.parties.linkedRosterFor
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
@@ -23,8 +24,8 @@ import kotlin.uuid.Uuid
  *
  * Invite accept binds only the characters it was handed, so one added later sat unbound beside an
  * owner's seat that already named it. Only accounts linked to this one (person.linked_user_id), only
- * seats nobody holds, and only parties in the character's own world: a name can repeat across
- * worlds and those players cannot party. Inside a transaction, like the rest.
+ * seats nobody holds, only standing parties, and only in the character's own world: a name can repeat
+ * across worlds and those players cannot party. Inside a transaction, like the rest.
  */
 internal fun seatInLinkedParties(
     userId: String,
@@ -43,11 +44,15 @@ internal fun seatInLinkedParties(
     // it is, so their seats are left for them to settle. See LinkedRoster.
     val clear = owners.filter { linkedRosterFor(it).soleCharacter(name) == characterId }
     if (clear.isEmpty()) return
+    // Not a boss they already run in a party of their own: two pools for one night, until the two
+    // owners combine them. See CombineParties.kt.
+    val ownBosses = bossesRunInOwnParty(userId, name)
     val parties =
         Party
             .join(Characters, JoinType.INNER, Party.characterId, Characters.id)
             .selectAll()
-            .where { (Party.userId inList clear) and (Characters.worldType eq worldType) }
+            .where { (Party.userId inList clear) and (Characters.worldType eq worldType) and (Party.standing eq true) }
+            .filter { it[Party.bossCatalogId] !in ownBosses }
             .map { it[Party.id] }
     for (partyId in parties) {
         val bound =

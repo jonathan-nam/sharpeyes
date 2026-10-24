@@ -68,6 +68,14 @@ const KINDS: Record<string, Kind> = {
         : `${who} declined ${partyOf(p)}`,
     href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
   },
+  PARTY_COMBINE: {
+    text: (p, who) => `${who} asked to combine your ${partyOf(p)} parties`,
+    href: () => "/bosses/parties/combine",
+  },
+  PARTY_COMBINED: {
+    text: (p, who) => `${who} combined your ${partyOf(p)} parties`,
+    href: partyPage,
+  },
   SALE_RECORDED: {
     text: (p, who) => `${who} sold ${str(p.item)} for ${priceOf(p)}`,
     icon: artOf,

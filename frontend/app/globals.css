@@ -5501,6 +5501,41 @@ button.link:disabled {
   padding-inline: 8px;
 }
 
+/* Combine Parties: the two parties side by side, stacked on a phone. */
+.combine-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.combine-side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.combine-members {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.combine-with {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  font-weight: 400;
+}
+
 /* The Discord username box, stacked like the buttons it replaces. */
 .link-account {
   display: flex;

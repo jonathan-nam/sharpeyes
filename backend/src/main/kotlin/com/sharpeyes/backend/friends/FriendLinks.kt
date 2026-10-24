@@ -103,7 +103,7 @@ private fun freeName(
         ?: generateSequence(2) { it + 1 }.map { "${wanted.first()} $it" }.first { it.lowercase() !in taken }
 }
 
-/** Binds every seat that already names one of [userId]'s characters, in parties of accounts linked to them. */
+/** Binds seats naming [userId]'s characters in linked accounts' parties. See seatInLinkedParties. */
 internal fun seatCharacters(userId: String) {
     Characters
         .selectAll()

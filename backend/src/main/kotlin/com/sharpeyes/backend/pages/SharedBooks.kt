@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.backend.db.PartyReadCutoff
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.invites.senderNameFor
 import com.sharpeyes.backend.parties.PERSON
@@ -19,6 +20,7 @@ import com.sharpeyes.backend.users.ensureUser
 import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
+import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -50,16 +52,23 @@ internal fun bookBetween(
 
     // The parties where a seat is yours as the owner files it. Those are the only nights your card
     // in their book is made of; the rest of their account says nothing about you.
+    // A combined party is read from its cutoff, and the one retired into it not at all, so a night
+    // both books logged is not counted from both. See CombineParties.kt.
+    val cutoffs = readCutoffsFor(member)
     val parties =
         partiesFor(owner, week = null, includeSolo = true, includeRetired = true)
             .filter { party -> party.seats.any { it.personId == personId } }
+            .filterNot { cutoffs.containsKey(it.id) && cutoffs[it.id] == null }
     val ids = parties.map { it.id }.toSet()
     val lootIds = mutableSetOf<String>()
     val pools =
         // Who logged each drop is answered as the member: the one who logged it is who sells it.
         allLootFor(owner, viewer = member)
             .filter { it.partyId in ids }
-            .onEach { pool -> pool.loot.forEach { lootIds += it.id } }
+            .map { pool ->
+                val from = cutoffs[pool.partyId] ?: return@map pool
+                pool.copy(loot = pool.loot.filter { LocalDate.parse(it.droppedOn) >= from })
+            }.onEach { pool -> pool.loot.forEach { lootIds += it.id } }
 
     // Their own pile's sales stay whole, because a sale out of it re-prices every coupon in it, but
     // a share naming somebody else is not yours to read. A sale out of your pile is yours.
@@ -89,6 +98,13 @@ internal fun bookBetween(
         disposals = disposalsFor(owner, viewer = member).filter { names(it.holder) },
     )
 }
+
+/** Each party [reader] reads only part of, by id: from that date on, or none of it when null. */
+private fun readCutoffsFor(reader: String): Map<String, LocalDate?> =
+    PartyReadCutoff
+        .selectAll()
+        .where { PartyReadCutoff.userId eq reader }
+        .associate { it[PartyReadCutoff.partyId].toString() to it[PartyReadCutoff.sharedFrom] }
 
 /** [member]'s own person row for [owner]'s account, if they have one. */
 private fun personFor(
