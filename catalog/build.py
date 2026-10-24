@@ -989,12 +989,8 @@ def fetch_drop_icons(drops: list[dict]) -> None:
         print(f"  {d['key']:36} <- {icon_id} (v{version})")
     print(f"fetched {got} drop icons into {DROP_ICONS.relative_to(ROOT)}")
 
-    # No hand-cut pass here, unlike fetch_icons. Do not add one that calls _normalize_icon: the cap
-    # measures the alpha bbox, and a hand-cut sprite may be mostly glow. Vestige of Erion is 37x37
-    # of which the solid core is 33 (a>128), already inside the 26-32 the fetched icons occupy, so
-    # capping its bbox at 32 would shrink the core below the pack AND resample away the crisp
-    # outline. `art: cut` art is sized by a human; check_drop_art refuses it if it misses the
-    # canvas, which is the honest answer rather than a silent rescale.
+    # No hand-cut pass here, unlike fetch_icons: `art: cut` art is sized by a human, and
+    # check_drop_art refuses it off the canvas rather than silently rescaling it.
 
 
 def _refuse_missing_art(problems: list[str]) -> None:

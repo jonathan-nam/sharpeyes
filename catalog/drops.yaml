@@ -14,7 +14,7 @@
 # says it: the game calls it "Exceptional Hammer (Face Acc)", not "(Face Accessory)".
 #
 # `icon_id` is the Nexon item id the art comes from, read from GMS v268 (ICON_VERSION) unless
-# `icon_version` names a later one (269 for items v268 predates; v270 500s on the mirror). Absent
+# `icon_version` names a later one (269 for items v268 predates). Absent
 # means no dataset the mirror serves has the item, and the drop is drawn without art rather than
 # with somebody else's.
 #
@@ -214,28 +214,16 @@ drops:
   # could only ever be right for one boss. The counts and their bundling are in `tables` below.
   # What a party actually looted is typed on the pool row.
   #
-  # `art: cut` rather than an icon_id: this is a v270 item, and the mirror's v270 500s, so there is
-  # no version to point at and the sprite is supplied by hand instead, the same way the boss
-  # portraits are.
-  #
-  # This one is the game's own 37x37 sprite, with its real per-pixel alpha. That matters: the glow is
-  # semi-transparent, and the first five attempts here cut it out of a screenshot where it had been
-  # flattened over a light grey slot. Those pixels are part grey by construction, so no key or
-  # un-multiply recovers them, and every version was either boxed in grey or wrong in colour. If this
-  # ever needs replacing, replace it with a sprite and not a capture.
-  #
-  # It is stored centred on the 46x46 canvas and scaled to ICON_CONTENT, which its 37x37 sprite was
-  # 16% over. Scale a replacement PREMULTIPLIED: 42% of these pixels are semi-transparent and the
-  # transparent ones carry black and magenta, which a straight RGBA resample bleeds into the glow.
-  # Multiplying by alpha first zeroes them, so they contribute nothing.
+  # Two ids carry this name with the same art. The lower one is pinned.
   # Instanced in Heroic: Reboot hands each member their own count and there is no pile to share
   # out. Pooled there, it had a Heroic night dividing coupons everybody already held and naming a
   # creditor for the shortfall.
   # The Heroic COUNT is a separate fact and not yet one we hold: see `pieces` below.
   - key: vestige-of-erion
     name: Vestige of Erion Coupon
+    icon_id: 2831435
+    icon_version: 269
     per_member: HEROIC
-    art: cut
 
 # What each boss drops. Keys on the left are catalog/bosses.yaml boss keys; a boss with no entry
 # simply has no table recorded yet, which the UI says rather than showing an empty one.
