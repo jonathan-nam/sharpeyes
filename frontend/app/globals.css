@@ -3805,6 +3805,27 @@ button.link:disabled {
   overflow-wrap: anywhere;
 }
 
+/* Run Order's explanation, in the same collapsed shell as Show the Math. */
+.night-how {
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.night-how > summary {
+  font-size: var(--text-sm);
+}
+.night-how p {
+  margin: 10px 0 4px;
+}
+.night-how ul {
+  margin: 0;
+  padding-left: 20px;
+}
+.night-how b {
+  color: var(--ink-strong);
+}
+
 .split-caveat {
   margin: 22px 0 0;
   max-width: 60ch;

@@ -1013,6 +1013,49 @@ export default function RunOrderPage() {
               {`${assumed} ${assumed === 1 ? "run" : "runs"} assumed at ${formatDuration(DEFAULT_MINUTES)}.`}
             </p>
           )}
+
+          {/* Mirrors the ranking in betterState (lib/boss-run-plan.ts). Reorder it there, reword it here. */}
+          <details className="split-math night-how">
+            <summary>How Is This Calculated?</summary>
+            <p>
+              Many orders are tried, and the best one wins. Orders are compared on these, top first.
+              A lower one only matters when everything above it is tied.
+            </p>
+            <ul>
+              <li>
+                <b>Most bosses.</b> Fit in as many bosses as the time allows.
+              </li>
+              <li>
+                <b>Biggest parties first.</b> Bosses that need the most people go early, before
+                anyone has to leave.
+              </li>
+              <li>
+                <b>Least waiting.</b> Someone in two bosses does them back to back, instead of
+                sitting through the ones in between.
+              </li>
+              <li>
+                <b>Fewest switches.</b> Everyone stays on the same character as long as possible.
+                Logging in for your first boss doesn&apos;t count.
+              </li>
+              <li>
+                <b>Earliest finish.</b>
+              </li>
+            </ul>
+            <p>Which bosses can be in the plan at all:</p>
+            <ul>
+              <li>Every member of the party has to be on.</li>
+              <li>
+                With Exclude Party Member Subsets ticked, the party has to include everyone who is
+                on.
+              </li>
+              <li>
+                With Time Configuration on, a boss has to finish before anyone in it has to leave,
+                and waits for anyone who is free later.
+              </li>
+              <li>Cleared bosses keep their place, so clearing one never reshuffles the rest.</li>
+              <li>The tabs above offer shorter plans when dropping a boss saves switches.</li>
+            </ul>
+          </details>
         </section>
       )}
 
