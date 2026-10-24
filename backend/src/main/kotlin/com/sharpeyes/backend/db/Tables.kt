@@ -817,3 +817,14 @@ object PartyPlannerDraft : Table("party_planner_draft") {
 
     override val primaryKey = PrimaryKey(userId)
 }
+
+// Nexon's answer per typed IGN, shared by every account. See V95 and sprites/IgnSprites.kt.
+object IgnSprite : Table("ign_sprite") {
+    // The name lowercased: the game's names are case-blind.
+    val nameKey = text("name_key")
+    val name = text("name")
+    val spriteImgUrl = text("sprite_img_url").nullable()
+    val lookedUpAt = timestamp("looked_up_at")
+
+    override val primaryKey = PrimaryKey(nameKey)
+}
