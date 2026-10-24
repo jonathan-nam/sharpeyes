@@ -12,7 +12,6 @@ import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.io.File
 
 // Replays what frontend/lib/money.golden.test.ts recorded at each module boundary. See
 // docs/backend-arithmetic-plan.md. One adapter per function: decode its arguments, call the port,
@@ -26,18 +25,11 @@ internal class Call(
     val throws: Boolean,
 )
 
-/** The fixture files whose names start with [prefix]: the repo's, or an audit's under MONEY_GOLDEN_DIR. */
-internal fun goldenFiles(prefix: String): List<File> {
-    val dir =
-        System.getenv("MONEY_GOLDEN_DIR")?.let(::File) ?: File(Call::class.java.getResource("/money-golden")!!.toURI())
-    return dir.listFiles { f -> f.name.startsWith(prefix) && f.name.endsWith(".json") }!!.sortedBy { it.name }
-}
-
 /** Every recorded call of one module, by `module.function`, one file per function. */
 internal fun moduleCalls(module: String): Map<String, List<Call>> =
-    goldenFiles("module-$module.")
+    goldenFixtures("module-$module.")
         .flatMap { file ->
-            moneyJson.parseToJsonElement(file.readText()).jsonObject.map { (fn, calls) ->
+            moneyJson.parseToJsonElement(file.text()).jsonObject.map { (fn, calls) ->
                 fn to
                     calls.jsonArray.map {
                         val call = it.jsonObject

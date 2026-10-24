@@ -52,7 +52,7 @@ import type { DropLogPage, SharedBook } from "@/types/page";
 import type { VestigePayment, VestigeTranche } from "@/types/vestige";
 
 // The money the Drop Log page and its cards draw, composed from frontend/lib exactly as they do. The
-// spec of what the backend serves (backend/money DropLogFigures.kt): the golden fixtures record it and
+// spec of what the backend serves (shared/money DropLogFigures.kt): the golden fixtures record it and
 // lib/money-shadow.ts compares it against the server. Goes once those screens read the server instead.
 // See docs/backend-arithmetic-plan.md.
 

@@ -95,6 +95,11 @@ jobs:
               # The reusable workflow that holds this job's actual commands.
               - '.github/workflows/backend-verify.yml'
               - 'backend/**'
+              # The backend's build includes the shared money module, and reads the version catalog and
+              # the detekt config from beside it.
+              - 'shared/money/**'
+              - 'gradle/libs.versions.toml'
+              - 'config/detekt/**'
             frontend:
               - *workflow
               - 'frontend/**'
@@ -102,6 +107,8 @@ jobs:
               # out of this file rather than repeating it. lib/tab-marks.test.ts reads it too, so a
               # change here has to run this job.
               - 'catalog/drops.yaml'
+              # The money golden tests read and write the fixtures the shared module replays.
+              - 'shared/money/src/commonTest/resources/money-golden/**'
             auth:
               - *workflow
               - 'auth/**'
@@ -131,6 +138,25 @@ jobs:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     uses: ./.github/workflows/backend-verify.yml
+
+  # The image a deploy runs, built as publish-images.yml builds it but not pushed. Tests run on
+  # Gradle's classpath, not the image, so a Dockerfile that misses a module (#831 shipped one) passed
+  # every check and broke only the publish after merge.
+  backend-image:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: false
+          # Reads the cache publish-images writes, and writes none, so a PR cannot change what master
+          # builds from.
+          cache-from: type=gha,scope=backend
 
   frontend:
     needs: changes
@@ -258,7 +284,7 @@ jobs:
   # cancelled; a skipped upstream job counts as a pass. Add every new CI job to `needs`, or it
   # merges unenforced.
   required-checks:
-    needs: [changes, backend, frontend, auth, vision, catalog, infra]
+    needs: [changes, backend, backend-image, frontend, auth, vision, catalog, infra]
     if: always()
     runs-on: ubuntu-latest
     steps:

@@ -1,14 +1,20 @@
 # syntax=docker/dockerfile:1
+#
+# Built from the REPO ROOT (context: ., file: backend/Dockerfile), because the backend's build reads
+# what sits beside it: the shared money module (includeBuild), the version catalog and the detekt
+# config. backend/Dockerfile.dockerignore keeps the context to those. The layout under /app mirrors
+# the repo's, so the relative paths in settings.gradle.kts hold.
 FROM eclipse-temurin:21-jdk AS build
-WORKDIR /app
+WORKDIR /app/backend
 
-COPY gradlew gradlew.bat build.gradle.kts settings.gradle.kts gradle.properties detekt.yml ./
-COPY gradle ./gradle
+COPY gradle/libs.versions.toml /app/gradle/libs.versions.toml
+COPY config /app/config
+COPY backend/gradlew backend/gradlew.bat backend/build.gradle.kts backend/settings.gradle.kts backend/gradle.properties ./
+COPY backend/gradle ./gradle
 RUN chmod +x gradlew && ./gradlew --version
 
-COPY src ./src
-# Every project settings.gradle.kts includes, or :installDist cannot resolve it.
-COPY money ./money
+COPY shared/money /app/shared/money
+COPY backend/src ./src
 
 # installDist, not buildFatJar. The fat jar shades every dependency into one
 # archive, and duplicate META-INF/services files get overwritten rather than
@@ -30,7 +36,7 @@ RUN ./gradlew installDist --no-daemon
 FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
 RUN useradd --system --create-home appuser
-COPY --from=build /app/build/install/sharpeyes-backend ./
+COPY --from=build /app/backend/build/install/sharpeyes-backend ./
 USER appuser
 
 EXPOSE 8080

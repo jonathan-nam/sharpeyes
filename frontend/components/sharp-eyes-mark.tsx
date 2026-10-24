@@ -3,7 +3,7 @@
 // matches the favicon (app/icon.png) exactly.
 //
 // The 32x32 sprite is inlined as a data URI inside an <svg><image>, not an <img>:
-// self-contained like <Chest>, crisp at integer multiples of 32 (image-rendering:
+// self-contained, crisp at integer multiples of 32 (image-rendering:
 // pixelated), and it sidesteps the next/no-img-element lint rule. Regenerate from the
 // sprite if it changes, do not hand-edit the base64.
 //

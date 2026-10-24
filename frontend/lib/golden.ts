@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 // change to the arithmetic cannot leave the fixtures behind. UPDATE_GOLDEN=1 rewrites them instead.
 
 const DIR = fileURLToPath(
-  new URL("../../backend/money/src/jvmTest/resources/money-golden/", import.meta.url),
+  new URL("../../shared/money/src/commonTest/resources/money-golden/", import.meta.url),
 );
 
 /** One case: what went in, and what came out or that it was refused. */
