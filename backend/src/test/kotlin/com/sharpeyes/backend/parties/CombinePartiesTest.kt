@@ -7,7 +7,8 @@ import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Notification
 import com.sharpeyes.backend.db.Party
-import com.sharpeyes.backend.db.PartyCombine
+import com.sharpeyes.backend.db.PartyCombineItem
+import com.sharpeyes.backend.db.PartyCombineRequest
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
@@ -110,8 +111,24 @@ class CombinePartiesTest {
         }
     }
 
-    private fun proposalFor(partyId: Uuid) =
-        PartyCombine.selectAll().where { PartyCombine.keepPartyId eq partyId }.toList()
+    /** [of]'s person row for the other account. */
+    private fun friendOf(of: String) = Person.selectAll().where { Person.userId eq of }.single()[Person.id]
+
+    /** The request [from] sent, if any, and its items as keep to retire. */
+    private fun requestFrom(from: String): Pair<Uuid, Map<Uuid, Uuid>>? {
+        val id =
+            PartyCombineRequest
+                .selectAll()
+                .where { PartyCombineRequest.fromUserId eq from }
+                .firstOrNull()
+                ?.get(PartyCombineRequest.id) ?: return null
+        val items =
+            PartyCombineItem
+                .selectAll()
+                .where { PartyCombineItem.requestId eq id }
+                .associate { it[PartyCombineItem.keepPartyId] to it[PartyCombineItem.retirePartyId] }
+        return id to items
+    }
 
     private fun drop(
         partyId: Uuid,
@@ -202,9 +219,15 @@ class CombinePartiesTest {
             assertEquals(setOf(myOld), readAcross(yew, xan))
             assertEquals(setOf(theirOld), readAcross(xan, yew))
 
-            assertIs<CombineAnswer.Done>(proposeCombine(xan, mine, theirs, Clock.System.now()))
-            val proposal = proposalFor(mine).single()[PartyCombine.id]
+            // The same people on both sides: no conflict, and the sender's copy is kept.
+            assertIs<CombineAnswer.Done>(sendCombine(xan, friendOf(xan), emptyList(), Clock.System.now()))
+            val (proposal, items) = requestFrom(xan)!!
+            assertEquals(mapOf(mine to theirs), items)
             assertEquals(NotificationKind.PARTY_COMBINE, notificationsFor(yew).notifications.single().kind)
+            // Yew answers the one request rather than being offered to send one back.
+            val page = combinePage(yew, Clock.System.now())
+            assertEquals(listOf(1 to 1), page.incoming.map { it.total to it.keepsTheirs })
+            assertEquals(emptyList(), page.friends)
             // The one who asked cannot answer for the other owner.
             assertIs<CombineAnswer.NotFound>(acceptCombine(xan, proposal, Clock.System.now()))
 
@@ -243,7 +266,7 @@ class CombinePartiesTest {
     }
 
     @Test
-    fun `only the party already seating the other owner can be kept`() {
+    fun `a pair only one side can keep settles itself, whatever the sender chose`() {
         transaction {
             val thorn = character(xan, "Thornwick")
             val pell = character(yew, "Pellmoor")
@@ -252,25 +275,50 @@ class CombinePartiesTest {
             link()
 
             assertEquals(listOf(mine), combinablePairs(xan).single().keepable)
-            assertIs<CombineAnswer.Refused>(proposeCombine(xan, theirs, mine, Clock.System.now()))
-            assertEquals(emptyList(), proposalFor(theirs))
+            val wrong = CombineChoice(mine, theirs, keep = theirs)
+            assertIs<CombineAnswer.Done>(sendCombine(xan, friendOf(xan), listOf(wrong), Clock.System.now()))
+            assertEquals(mapOf(mine to theirs), requestFrom(xan)!!.second)
         }
     }
 
     @Test
-    fun `declining clears the proposal and its notification`() {
+    fun `a conflict needs the sender's answer, and the answer is what is sent`() {
         transaction {
             val thorn = character(xan, "Thornwick")
             val pell = character(yew, "Pellmoor")
-            val mine = party(xan, thorn, "Pellmoor")
+            // Both seat each other, but Xan's has a third seat Yew's does not.
+            val mine = party(xan, thorn, "Pellmoor", "Larkspur")
             val theirs = party(yew, pell, "Thornwick")
             link()
-            proposeCombine(xan, mine, theirs, Clock.System.now())
-            val proposal = proposalFor(mine).single()[PartyCombine.id]
+            val friend = friendOf(xan)
+
+            assertEquals(1, planWith(xan, yew).conflicts.size)
+            assertIs<CombineAnswer.Refused>(sendCombine(xan, friend, emptyList(), Clock.System.now()))
+            // Leaving the only pair separate leaves nothing to send.
+            val separate = CombineChoice(mine, theirs, keep = null)
+            assertIs<CombineAnswer.Refused>(sendCombine(xan, friend, listOf(separate), Clock.System.now()))
+            assertNull(requestFrom(xan))
+
+            val keepTheirs = CombineChoice(mine, theirs, keep = theirs)
+            assertIs<CombineAnswer.Done>(sendCombine(xan, friend, listOf(keepTheirs), Clock.System.now()))
+            assertEquals(mapOf(theirs to mine), requestFrom(xan)!!.second)
+        }
+    }
+
+    @Test
+    fun `declining clears the request and its notification`() {
+        transaction {
+            val thorn = character(xan, "Thornwick")
+            val pell = character(yew, "Pellmoor")
+            party(xan, thorn, "Pellmoor")
+            val theirs = party(yew, pell, "Thornwick")
+            link()
+            sendCombine(xan, friendOf(xan), emptyList(), Clock.System.now())
+            val (proposal, _) = requestFrom(xan)!!
 
             assertEquals(true, dropCombine(yew, proposal))
 
-            assertEquals(emptyList(), proposalFor(mine))
+            assertNull(requestFrom(xan))
             assertEquals(emptyList(), notificationsFor(yew).notifications)
             assertEquals(true, Party.selectAll().where { Party.id eq theirs }.single()[Party.standing])
         }

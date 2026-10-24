@@ -810,15 +810,23 @@ object PartyReadCutoff : Table("party_read_cutoff") {
     override val primaryKey = PrimaryKey(partyId, userId)
 }
 
-// A proposal to combine two linked accounts' parties, waiting on the other owner. See V98.
-object PartyCombine : Table("party_combine") {
+// A request to combine every matching party with one friend, waiting on them. See V98.
+object PartyCombineRequest : Table("party_combine_request") {
     val id = uuid("id")
-    val keepPartyId = reference("keep_party_id", Party.id)
-    val retirePartyId = reference("retire_party_id", Party.id)
-    val proposedBy = reference("proposed_by", Users.id)
+    val fromUserId = reference("from_user_id", Users.id)
+    val toUserId = reference("to_user_id", Users.id)
     val createdAt = timestamp("created_at")
 
     override val primaryKey = PrimaryKey(id)
+}
+
+// One pair of a combine request: the party kept and the one retired into it. See V98.
+object PartyCombineItem : Table("party_combine_item") {
+    val requestId = reference("request_id", PartyCombineRequest.id)
+    val keepPartyId = reference("keep_party_id", Party.id)
+    val retirePartyId = reference("retire_party_id", Party.id)
+
+    override val primaryKey = PrimaryKey(requestId, retirePartyId)
 }
 
 // One notification, of any kind. See V86 and notifications/.
