@@ -24,6 +24,7 @@ import {
 } from "@/lib/api";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
+import { shadowCompare } from "@/lib/money-shadow";
 import { decidedSales, splittableDebts, yourPiles } from "@/lib/settlement";
 import {
   type HeldOfYours,
@@ -277,6 +278,7 @@ export default function DropLogPage() {
     put(DROPS_KEY, page.drops);
     put(CHARACTERS_KEY, page.characters);
     put(PEOPLE_KEY, page.people);
+    return { page, books };
   }
 
   useEffect(() => {
@@ -285,9 +287,10 @@ export default function DropLogPage() {
     // One token, one request. getToken() can round-trip to auth, so it is spent once either way.
     getToken()
       .then((token) => load(token))
-      .then(() => {
+      .then(({ page, books }) => {
         setState("loaded");
         reportDataReady();
+        shadowCompare(page, books, getToken);
       })
       // The pools are never cached, so there is nothing to fall back to. One request also means
       // one outcome: the people list used to be allowed to fail on its own (it only NAMES a card),

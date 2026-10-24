@@ -19,9 +19,8 @@ export type SharedPile = {
 /**
  * Your pile as the owner's book keeps it: their ledger for your person row, unchanged.
  *
- * Nothing is flipped. That ledger is already the pile your coupons are in, and a sale typed into it
- * writes exactly the row their book needs (holder: you; shares: theirs as SELF). Only the names are
- * yours: the title, and the owner where their book says "you". Draw it with PieceLedger's `yours`.
+ * Nothing is flipped: a sale typed into it writes exactly the row their book needs (holder: you;
+ * shares: theirs as SELF). Only the names change. Draw it with PieceLedger's `yours`.
  *
  * Null when the book holds no pile of yours.
  */

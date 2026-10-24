@@ -20,7 +20,8 @@ private val json = Json { ignoreUnknownKeys = true }
 // "data-ready" is ours, sent by lib/rum.ts, and carries a route like the rest so one name covers
 // every page. Held in step with the frontend by frontend/lib/rum-names.test.ts, because the name it
 // replaced sat here thresholded for months with nothing sending it, and dropping is silent.
-private val ALLOWED_NAMES = setOf("LCP", "FCP", "CLS", "INP", "TTFB", "FID", "data-ready", "auth-ready")
+private val ALLOWED_NAMES =
+    setOf("LCP", "FCP", "CLS", "INP", "TTFB", "FID", "data-ready", "auth-ready", "money-browser", "money-fetch")
 
 // Google's web-vitals "poor" cutoffs (ms, except CLS which is unitless), plus our own
 // mark. A real user over these gets a louder level, mirroring Timing.kt's SLOW: a slow
@@ -40,6 +41,12 @@ private const val DATA_READY_POOR_MS = 2500.0
 // done. A second of that is not a slow network, it is the auth service in trouble.
 private const val AUTH_READY_POOR_MS = 1000.0
 
+// The Drop Log's money, from lib/money-shadow.ts. `money-browser` is the composition run on the main
+// thread: two 50ms long-task budgets is a stall a click can land in. `money-fetch` is the server's
+// figures round trip, which a page reading the server (Phase 5) would wait on instead.
+private const val MONEY_BROWSER_POOR_MS = 100.0
+private const val MONEY_FETCH_POOR_MS = 1000.0
+
 private val POOR =
     mapOf(
         "LCP" to LCP_POOR_MS,
@@ -50,6 +57,8 @@ private val POOR =
         "FID" to FID_POOR_MS,
         "data-ready" to DATA_READY_POOR_MS,
         "auth-ready" to AUTH_READY_POOR_MS,
+        "money-browser" to MONEY_BROWSER_POOR_MS,
+        "money-fetch" to MONEY_FETCH_POOR_MS,
     )
 
 // Below this, keep decimals (CLS is a small fraction); at or above, a whole millisecond.

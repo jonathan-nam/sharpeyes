@@ -20,7 +20,14 @@ private val json = Json { ignoreUnknownKeys = true }
 // `http` the request got a response and it was not ok. Timing.kt has the server's side of it.
 // `network` no response at all. This is the one the server cannot see for itself: a CORS
 //           rejection, a dropped connection, a backend that is down.
-private val ALLOWED_KINDS = setOf("http", "network")
+// `parity`  the browser's money figures and the server's disagreed (lib/money-shadow.ts). Only
+//           where: the first differing JSON path and how many differ, never a value.
+private val ALLOWED_KINDS = setOf("http", "network", "parity")
+
+/** A JSON path like `view.settlement.2.mesos`: names, indices and dots only, and short. */
+private val FIELD_PATH = Regex("^[A-Za-z0-9_.]{1,160}$")
+
+private const val MAX_COUNT = 1_000_000
 
 private const val MIN_STATUS = 100
 private const val MAX_STATUS = 599
@@ -58,6 +65,10 @@ private data class ClientErrorReport(
     val tz: String? = null,
     val lang: String? = null,
     val v: String? = null,
+    /** A parity report's first differing path. */
+    val field: String? = null,
+    /** A parity report's number of differing paths. */
+    val count: Int? = null,
 )
 
 fun Route.clientErrorRoutes() {
@@ -79,6 +90,8 @@ fun Route.clientErrorRoutes() {
                     field("tz", report.tz)
                     field("lang", report.lang)
                     field("v", report.v)
+                    field("field", report.field?.takeIf { FIELD_PATH.matches(it) })
+                    field("count", report.count?.takeIf { it in 1..MAX_COUNT }?.toString())
                 }
             log.warn(line)
         }

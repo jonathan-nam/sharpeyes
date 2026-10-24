@@ -54,6 +54,15 @@ describe("rum metric names", () => {
     expect(thresholdedNames()).toContain(sent);
   });
 
+  it("sends money timing names the backend accepts and rates", () => {
+    for (const constant of ["MONEY_BROWSER", "MONEY_FETCH"]) {
+      const sent = rum.match(new RegExp(`const ${constant} = "([^"]+)"`))?.[1];
+      expect(sent, `lib/rum.ts should define ${constant}`).toBeTruthy();
+      expect(allowedNames()).toContain(sent);
+      expect(thresholdedNames()).toContain(sent);
+    }
+  });
+
   it("gives data-ready a threshold, or a slow load never warns", () => {
     const sent = rum.match(/const DATA_READY = "([^"]+)"/)?.[1];
     expect(thresholdedNames()).toContain(sent);

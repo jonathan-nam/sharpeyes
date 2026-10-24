@@ -10,6 +10,7 @@ val hikariVersion = "6.2.1"
 
 plugins {
     kotlin("jvm") version "2.4.0"
+    kotlin("multiplatform") version "2.4.0" apply false
     kotlin("plugin.serialization") version "2.4.0"
     id("io.ktor.plugin") version "3.5.0"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
@@ -45,6 +46,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
+    implementation(project(":money"))
+
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposedVersion")
@@ -79,4 +82,7 @@ ktlint {
 
 tasks.test {
     useJUnitPlatform()
+    // A multiplatform module has no `test` task, only `jvmTest`, so CI's `./gradlew test` reaches the
+    // money module's golden tests through this.
+    dependsOn(":money:jvmTest")
 }
