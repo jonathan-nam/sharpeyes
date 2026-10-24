@@ -7,6 +7,9 @@ COPY gradle ./gradle
 RUN chmod +x gradlew && ./gradlew --version
 
 COPY src ./src
+# The money module settings.gradle.kts includes. Without it :money resolves to an empty project and
+# installDist fails on "No matching variant of project :money".
+COPY money ./money
 
 # installDist, not buildFatJar. The fat jar shades every dependency into one
 # archive, and duplicate META-INF/services files get overwritten rather than
