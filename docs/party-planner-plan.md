@@ -25,8 +25,6 @@ everything below is out. The list is `PLANNER_BOSSES` in `frontend/lib/party-pla
   linked friend's own characters, or names you have filed under somebody who does not use the
   app), and any other IGN typed in. A typed IGN nobody holds is a standalone character, counted as
   its own player, so one person can plan for characters the app has no record of.
-- Run Length: a slider from Fastest (runs of at most 10 minutes) to Min Cut (30). It is a hard
-  ceiling on any party of two or more. A party that would take longer is not proposed.
 
 **Per character, per boss**
 
@@ -57,8 +55,8 @@ review before anything is made.
 2. Two characters of one person are never in the same run (one account, one client).
 3. A party never exceeds the boss's cap (`max_party` in `catalog/bosses.yaml`) or any member's own
    cap.
-4. A party of two or more clears within the Run Length, except a soloer's carry, which is no slower
-   than its solo.
+4. A party of two or more clears inside the 30 minutes: its strengths add up to a solo's worth. A
+   Run Length slider once set a shorter ceiling and was removed (2026-10-24) as not needed.
 5. Parties never cross a world or a difficulty.
 6. People a reviewer asked to be kept apart are kept apart.
 
@@ -78,7 +76,7 @@ common. A 40 and a 20 split 2:1, and a member doing nothing takes nothing. These
 party's seats get when it is created (V44 `shares`).
 
 **Unplaced.** A character with no party is listed with why: Can't clear in time (no party it could
-be in clears within the Run Length) or No room (one could, but seating it cost more elsewhere).
+be in clears inside the 30 minutes) or No room (one could, but seating it cost more elsewhere).
 
 ## Review (phase 2)
 
@@ -157,14 +155,13 @@ hold, and nobody's want was dropped.
 
 ## Open questions
 
-Raised by comparing the planner with Jonathan's real parties (2026-10-23):
+Raised by comparing the planner with a real account's parties (2026-10-23):
 
 - Two soloers pair up for a faster run in real parties (15 minutes instead of 30), which rule 1
   forbids, and Strength stops at Solo, so "solos in 20 minutes" cannot be said.
-- Run times differ by boss (15 minutes on some, 30 on others), where Run Length is one setting.
+- Run times differ by boss (15 minutes on some, 30 on others), and the planner only asks that a
+  party can clear at all.
 - Who runs with whom among equals is a preference the planner cannot see.
 - A character in two parties for one boss (a rotation) is refused outright.
-- The Run Length ceiling applies to parties only. A Solo strength means a solo clear within 30
-  minutes, so a soloer is always planned solo whatever the Run Length.
 - The world is the account's lens for now (`world: null`). Kronos and Hyperion characters are not
   told apart until wants carry their character's world (phase 2).

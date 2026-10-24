@@ -40,6 +40,13 @@ internal class PersonCharacters(
             .groupBy({ it.personId }) { it.name }
             .mapValues { (_, names) -> names.sorted() }
 
+    /** Each owned character's job, by person, for the ones their account recorded one for. */
+    val ownedJobs: Map<Uuid, Map<String, String>> =
+        linkedCharacters
+            .mapNotNull { c -> c.jobName?.let { job -> c.personId to (c.name to job) } }
+            .groupBy({ it.first }) { it.second }
+            .mapValues { (_, pairs) -> pairs.toMap() }
+
     /** Lowercased character name to whoever plays them. */
     fun byCharacter(): Map<String, Uuid> =
         buildMap {
@@ -66,6 +73,7 @@ internal data class LinkedCharacter(
     val personId: Uuid,
     val name: String,
     val spriteImgUrl: String?,
+    val jobName: String? = null,
 )
 
 internal fun personCharacters(userId: String): PersonCharacters {
@@ -125,6 +133,7 @@ private fun ownedByLinkedAccounts(userId: String): List<LinkedCharacter> {
                         personId = personId,
                         name = name,
                         spriteImgUrl = row[Characters.spriteImgUrl],
+                        jobName = row[Characters.jobName],
                     )
                 }
             }
