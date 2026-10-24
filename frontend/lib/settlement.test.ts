@@ -11,6 +11,7 @@ import {
   keptOfYours,
   moneyRows,
   offsetOf,
+  heldMesos,
   owedByYouShares,
   splittableDebts,
   settleThePair,
@@ -2184,5 +2185,37 @@ describe("sliceActToWeek", () => {
       ["kalos", 60, 90],
       ["adversary", 80, 120],
     ]);
+  });
+});
+
+describe("what each side holds for the other", () => {
+  it("is the meso shares each way, apart and never netted", () => {
+    // A listing is posted for one of these exactly, so a share running the other way must not
+    // come off it.
+    const row = buildSettlement(
+      [],
+      wallet([
+        counterparty("person:p-owen", "Owen", [
+          line("l1", 500 * M, "owe"),
+          line("l2", 300 * M, "owe"),
+          line("l3", 700 * M, "owed"),
+        ]),
+      ]),
+    )[0]!;
+    expect(heldMesos(row)).toEqual({ byYou: 800 * M, byThem: 700 * M });
+  });
+
+  it("is nothing either way on a card of entered debts alone", () => {
+    const row = buildSettlement([], wallet([]), [
+      {
+        id: "d-1",
+        holder: OWEN,
+        amount: 2_000 * M,
+        note: null,
+        payouts: [],
+        incurredAt: "2026-08-10T00:00:00Z",
+      },
+    ])[0]!;
+    expect(heldMesos(row)).toEqual({ byYou: 0, byThem: 0 });
   });
 });

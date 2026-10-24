@@ -1152,6 +1152,21 @@ export function offsetOf(row: Settlement): Offset {
   };
 }
 
+/**
+ * Mesos each side of a card is holding for the other: the two Held By figures.
+ *
+ * ONE function because both cards (yours, and theirs read from the other end) draw these figures,
+ * and an auction house listing is only good for the exact amount it was posted for. Two copies of
+ * this sum that disagreed would delete every listing the moment the other side looked at it. See
+ * backend SettlementListings.kt.
+ */
+export function heldMesos(row: Settlement): { byYou: number; byThem: number } {
+  const theirShares = row.lines
+    .filter((line) => line.direction === "owed" && line.currency === "MESO")
+    .reduce((sum, line) => sum + line.pay, 0);
+  return { byYou: offsetOf(row).amount + row.holding, byThem: row.heldByThem + theirShares };
+}
+
 /** Nothing stands between you either way. */
 export function isEmpty(row: Settlement): boolean {
   return (

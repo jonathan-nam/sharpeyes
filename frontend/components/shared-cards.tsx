@@ -4,7 +4,11 @@ import { ChangedBy } from "@/components/changed-by";
 import { formatPieces } from "@/lib/piece-ledger";
 import { useCallback, useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
+import { type ListingKit, ListingThumb, PostListingDialog } from "@/components/settlement-listing";
+import { liveListing } from "@/lib/settlement-listings";
+import type { SettlementListing } from "@/types/settlement-listing";
 import {
+  type ClosingAct,
   ClosingActions,
   CouponTotal,
   HeldBy,
@@ -50,17 +54,25 @@ export function SharedCards({
   cards,
   writes,
   coupon,
+  listings,
 }: {
   cards: SharedCard[];
   writes: SharedWrites;
   coupon: Coupon;
+  listings?: ListingKit;
 }) {
   if (cards.length === 0) return null;
   return (
     <section className="loot-pool">
       <h2 className="loot-pool-title">Shared Parties</h2>
       {cards.map((card) => (
-        <SharedCardView key={card.personId} card={card} writes={writes} coupon={coupon} />
+        <SharedCardView
+          key={card.personId}
+          card={card}
+          writes={writes}
+          coupon={coupon}
+          listings={listings}
+        />
       ))}
     </section>
   );
@@ -70,13 +82,32 @@ function SharedCardView({
   card,
   writes,
   coupon,
+  listings,
 }: {
   card: SharedCard;
   writes: SharedWrites;
   coupon: Coupon;
+  listings?: ListingKit;
 }) {
   const { detail } = card;
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
+  // You are the MEMBER here. Yours is for what the owner holds; theirs is for what you hold.
+  const yourListing = listings
+    ? liveListing(listings.listings, card.personId, "OWNER", card.held.byOwner)
+    : null;
+  const theirListing = listings
+    ? liveListing(listings.listings, card.personId, "MEMBER", card.held.byYou)
+    : null;
+  /** Their listing beside the act that pays it: Mark Sent for your shares, else for their coupon money. */
+  const withListingBeside = (listing: SettlementListing | null, acts: ClosingAct[]) => {
+    const send = acts.findIndex((one) => one.key === "send");
+    const at = send >= 0 ? send : acts.findIndex((one) => one.key === "paid");
+    if (!listing || !listings || at < 0) return acts;
+    return acts.map((one, i) =>
+      i === at ? { ...one, after: <ListingThumb listing={listing} kit={listings} /> } : one,
+    );
+  };
   const [showHistory, setShowHistory] = useState(false);
   const closeHistory = useCallback(() => setShowHistory(false), []);
   const act = (action: Promise<void>) => {
@@ -199,7 +230,7 @@ function SharedCardView({
 
       <ClosingActions
         busy={writes.busy}
-        acts={[
+        acts={withListingBeside(theirListing, [
           ...(card.youHold > 0
             ? [
                 {
@@ -226,8 +257,34 @@ function SharedCardView({
                 },
               ]
             : []),
-        ]}
+          ...(listings && card.held.byOwner > 0
+            ? [
+                {
+                  key: "listing",
+                  label: yourListing
+                    ? "Replace Listing"
+                    : `Post Listing for ${formatMesos(card.held.byOwner, true)}`,
+                  after: yourListing && (
+                    <ListingThumb
+                      listing={yourListing}
+                      kit={listings}
+                      onRemove={() => act(listings.remove(yourListing.id))}
+                    />
+                  ),
+                  onClick: () => setPosting(true),
+                },
+              ]
+            : []),
+        ])}
       />
+
+      {posting && listings && (
+        <PostListingDialog
+          amount={card.held.byOwner}
+          onPost={(image) => listings.post(card.personId, card.held.byOwner, image)}
+          onClose={() => setPosting(false)}
+        />
+      )}
 
       {refusal && <span className="split-error">{refusal}</span>}
     </section>
