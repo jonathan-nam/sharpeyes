@@ -19,17 +19,17 @@ import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /**
- * The one lookup every typed IGN goes through (V95): it asks Nexon once per name and answers from
+ * The one lookup every typed IGN goes through (V95, V96): it asks Nexon once per name and answers from
  * what it recorded until the answer is a week old, misses included.
  */
 class IgnSpritesTest {
@@ -101,19 +101,37 @@ class IgnSpritesTest {
     fun `asks Nexon once, then answers from what it recorded, case-blind`() =
         runBlocking {
             val (nexon, cache) = services()
-            assertEquals(spriteUrl, lookUpIgns(listOf(found), nexon, cache, now)[found.lowercase()])
+            val answer = IgnAnswer(spriteUrl, "Hero")
+            assertEquals(answer, lookUpIgns(listOf(found), nexon, cache, now)[found.lowercase()])
             val asked = nexonCalls
             val again = lookUpIgns(listOf(found.uppercase()), nexon, cache, now + 1.days)
-            assertEquals(spriteUrl, again[found.lowercase()])
+            assertEquals(answer, again[found.lowercase()])
             assertEquals(asked, nexonCalls)
-            assertEquals(mapOf(found.lowercase() to spriteUrl), transaction { knownIgnSprites(listOf(found)) })
+            assertEquals(mapOf(found.lowercase() to answer), transaction { knownIgns(listOf(found)) })
+        }
+
+    @Test
+    fun `asks again about a character found before its job was kept`() =
+        runBlocking {
+            val (nexon, cache) = services()
+            val key = found.lowercase()
+            transaction {
+                IgnSprite.insert {
+                    it[nameKey] = key
+                    it[name] = found
+                    it[spriteImgUrl] = spriteUrl
+                    it[lookedUpAt] = now
+                }
+            }
+            assertEquals("Hero", lookUpIgns(listOf(found), nexon, cache, now + 1.days)[key]?.jobName)
+            assertEquals(true, nexonCalls > 0)
         }
 
     @Test
     fun `records a miss, and asks about it again only after a week`() =
         runBlocking {
             val (nexon, cache) = services()
-            assertNull(lookUpIgns(listOf(missing), nexon, cache, now)[missing.lowercase()])
+            assertEquals(IgnAnswer(null, null), lookUpIgns(listOf(missing), nexon, cache, now)[missing.lowercase()])
             val asked = nexonCalls
             lookUpIgns(listOf(missing), nexon, cache, now + 6.days)
             assertEquals(asked, nexonCalls)

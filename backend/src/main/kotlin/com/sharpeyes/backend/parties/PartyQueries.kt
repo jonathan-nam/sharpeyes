@@ -7,7 +7,7 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
-import com.sharpeyes.backend.sprites.knownIgnSprites
+import com.sharpeyes.backend.sprites.knownIgns
 import com.sharpeyes.backend.sprites.spriteProxyPath
 import com.sharpeyes.backend.users.inActiveWorld
 import kotlinx.datetime.LocalDate
@@ -222,12 +222,14 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
             .where { Party.userId eq userId }
             .mapTo(mutableSetOf()) { it[PartyMember.name].lowercase() }
     val images = imagesOf(people.mapNotNull { it[Person.linkedUserId] })
-    val sprites = knownIgnSprites(characters.attributed.values.flatten())
+    val looked = knownIgns(characters.attributed.values.flatten())
 
     return people.map {
         val attributed = characters.attributed[it[Person.id]].orEmpty()
         val account = it[Person.linkedUserId]
-        val drawn = attributed.mapNotNull { name -> sprites[name.lowercase()]?.let { name to spriteProxyPath(it) } }
+        val answers = attributed.mapNotNull { name -> looked[name.lowercase()]?.let { name to it } }
+        val drawn = answers.mapNotNull { (name, a) -> a.spriteImgUrl?.let { name to spriteProxyPath(it) } }
+        val jobs = answers.mapNotNull { (name, a) -> a.jobName?.let { name to it } }
         PersonResponse(
             id = it[Person.id].toString(),
             name = it[Person.name],
@@ -235,6 +237,7 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
             ownedCharacters = characters.owned[it[Person.id]].orEmpty(),
             ownedJobs = characters.ownedJobs[it[Person.id]].orEmpty(),
             sprites = drawn.toMap(),
+            jobs = jobs.toMap(),
             linked = it[Person.linkedUserId] != null,
             image = account?.let(images::get),
             notOnAccount = roster.notOnAccount(account, attributed),

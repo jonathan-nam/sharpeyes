@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
 import { DifficultySelect } from "@/components/difficulty-select";
 import { FilterOptions, GroupingTabs } from "@/components/grouping-tabs";
 import { IconSelect, type IconOption } from "@/components/icon-select";
@@ -40,9 +40,10 @@ import {
   YOU,
 } from "@/lib/planner-draft";
 import { MAX_IGN_LENGTH } from "@/lib/ign";
+import { partySizeLabel } from "@/lib/parties";
 import { byBoss, byCharacter, type PlanGrouping } from "@/lib/planner-view";
 import { preloadBossArt } from "@/lib/preload-boss-art";
-import { useCharacterSprites } from "@/lib/ign-sprites";
+import { useCharacterLookup } from "@/lib/ign-sprites";
 import { knownSprite, spriteByName } from "@/lib/sprite-by-name";
 import { useAuth } from "@/lib/use-auth";
 import type { Boss } from "@/types/boss";
@@ -220,32 +221,63 @@ export default function PartyPlannerPage() {
   const [typed, setTyped] = useState("");
   const adding = resolveCharacter(typed, roster, shown);
 
-  const knownJobs = useMemo(() => {
+  // What the page knows of each job: your characters', a linked person's own, and what Nexon said
+  // for a character filed under somebody (People `jobs`). Lowercased names.
+  const accountJobs = useMemo(() => {
     const jobs = new Map<string, string>();
-    for (const c of characters) if (c.jobName) jobs.set(c.name.toLowerCase(), c.jobName);
     for (const p of people) {
-      for (const [name, job] of Object.entries(p.ownedJobs ?? {}))
+      for (const [name, job] of Object.entries(p.jobs ?? {})) jobs.set(name.toLowerCase(), job);
+      for (const [name, job] of Object.entries(p.ownedJobs ?? {})) {
         jobs.set(name.toLowerCase(), job);
+      }
     }
+    for (const c of characters) if (c.jobName) jobs.set(c.name.toLowerCase(), c.jobName);
     return jobs;
   }, [characters, people]);
-  const wants = useMemo(() => draftWants(draft, shown, knownJobs), [draft, shown, knownJobs]);
-  // Every card's sprite, a typed IGN's included: looked up when the page has none. See ign-sprites.
-  const spriteOf = useCharacterSprites(
+  // Every card's sprite and job, a typed IGN's included: looked up where the page has none.
+  const lookup = useCharacterLookup(
     shown.map((c) => c.name),
     knownSprite(sprites, people),
+    (name) => accountJobs.get(name.toLowerCase()) ?? null,
+  );
+  const spriteOf = lookup.sprite;
+  const knownJobs = new Map(accountJobs);
+  for (const c of shown) {
+    const job = lookup.job(c.name);
+    if (job) knownJobs.set(c.name.toLowerCase(), job);
+  }
+  const jobsKey = [...knownJobs].join("\n");
+  const wants = useMemo(
+    () => draftWants(draft, shown, knownJobs),
+    // jobsKey stands for knownJobs, which is rebuilt each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [draft, shown, jobsKey],
   );
   const plan = useMemo(() => planParties(wants), [wants]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
-  const card = (p: PlannedParty) => (
-    <PlannedCard
-      key={p.seats.map((s) => s.wantId).join("|")}
-      party={p}
-      boss={bossByKey.get(p.bossKey)}
-      sprite={(name) => spriteOf(name) ?? undefined}
-      personName={personName}
-    />
-  );
+  /** A party as a row: under a character it is named by its boss, under a boss by its members. */
+  const row = (p: PlannedParty, by: PlanGrouping) => {
+    const boss = bossByKey.get(p.bossKey);
+    const art = bossArt(boss, p.bossKey);
+    return (
+      <PlannedRow
+        key={p.seats.map((s) => s.wantId).join("|")}
+        party={p}
+        sprite={(name) => spriteOf(name) ?? undefined}
+        personName={personName}
+        heading={
+          by === "character" ? (
+            <>
+              {art && <img className="boss-portrait" src={art} alt="" />}
+              <h3 className="party-row-name">{bossLabel(boss?.name ?? p.bossKey, p.difficulty)}</h3>
+            </>
+          ) : (
+            <h3 className="party-row-name">{p.seats.map((x) => x.character).join(" + ")}</h3>
+          )
+        }
+      />
+    );
+  };
   // The buff note once, under the first slider on the page.
   const firstShown =
     shown.map((c) => draft.wants.findIndex((w) => w.character === c.name)).find((i) => i >= 0) ??
@@ -554,7 +586,9 @@ export default function PartyPlannerPage() {
                           {group.parties.length} {group.parties.length === 1 ? "boss" : "bosses"}
                         </span>
                       </header>
-                      <div className="planner-grid">{group.parties.map(card)}</div>
+                      <div className="party-list">
+                        {group.parties.map((p) => row(p, "character"))}
+                      </div>
                     </section>
                   );
                 })}
@@ -571,7 +605,7 @@ export default function PartyPlannerPage() {
                           {bossLabel(boss?.name ?? bossKey, difficulty)}
                         </h2>
                       </header>
-                      <div className="planner-grid">{group.parties.map(card)}</div>
+                      <div className="party-list">{group.parties.map((p) => row(p, "boss"))}</div>
                     </section>
                   );
                 })}
@@ -640,42 +674,56 @@ function SeatTile({
   );
 }
 
-function PlannedCard({
+/**
+ * A proposed party as Party View draws one: a row with the boss (or its members) and its size, that
+ * opens to the roster.
+ */
+function PlannedRow({
   party,
-  boss,
+  heading,
   sprite,
   personName,
 }: {
   party: PlannedParty;
-  boss: Boss | undefined;
+  heading: ReactNode;
   sprite: (name: string) => string | undefined;
   personName: (id: string) => string | null;
 }) {
-  const total = party.seats.reduce((sum, s) => sum + s.shares, 0);
-  const art = bossArt(boss, party.bossKey);
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   return (
-    <div className="party-card">
-      <div className="planner-character-head">
-        {art && <img className="boss-portrait" src={art} alt="" />}
-        <h3 className="party-card-name">
-          {bossLabel(boss?.name ?? party.bossKey, party.difficulty)}
-        </h3>
-        <span className="party-card-size">~{party.minutes} min</span>
-      </div>
-      <ul className="roster-strip">
-        {party.seats.map((s) => (
-          <SeatTile
-            key={s.wantId}
-            want={s}
-            sprite={sprite(s.character)}
-            owner={personName(s.personId)}
-          >
-            <span className="planner-share">
-              {party.seats.length === 1 ? "Solo" : `${Math.round((s.shares / total) * 100)}%`}
-            </span>
-          </SeatTile>
-        ))}
-      </ul>
-    </div>
+    <article className={`party-row${open ? " is-open" : ""}`}>
+      <header className="party-row-head">
+        <button
+          type="button"
+          className="party-row-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <span className="party-row-chevron" aria-hidden="true" />
+          <span className="visually-hidden">{open ? "Hide this party" : "Show this party"}</span>
+        </button>
+        <span className="party-row-heading">{heading}</span>
+        <span className="party-row-label">{partySizeLabel(party.seats.length)}</span>
+        <span className="party-row-label">~{party.minutes} min</span>
+      </header>
+      {open && (
+        <div id={panelId} className="party-row-panel">
+          <div className="party-row-roster">
+            <ul className="roster-strip">
+              {party.seats.map((s) => (
+                <SeatTile
+                  key={s.wantId}
+                  want={s}
+                  sprite={sprite(s.character)}
+                  owner={personName(s.personId)}
+                />
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </article>
   );
 }

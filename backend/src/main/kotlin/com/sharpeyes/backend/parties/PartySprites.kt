@@ -47,5 +47,5 @@ internal suspend fun RoutingContext.lookUpSprites(
 
     // The shared IGN lookup, which also answers from what any other screen already asked.
     val found = lookUpIgns(wanted, nexonLookupService, spriteCache, now)
-    return wanted.associateWith { found[it.lowercase()] }
+    return wanted.associateWith { found[it.lowercase()]?.spriteImgUrl }
 }

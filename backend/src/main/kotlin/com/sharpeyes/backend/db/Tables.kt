@@ -824,6 +824,7 @@ object IgnSprite : Table("ign_sprite") {
     val nameKey = text("name_key")
     val name = text("name")
     val spriteImgUrl = text("sprite_img_url").nullable()
+    val jobName = text("job_name").nullable()
     val lookedUpAt = timestamp("looked_up_at")
 
     override val primaryKey = PrimaryKey(nameKey)

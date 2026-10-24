@@ -23,8 +23,9 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
-// The one lookup every typed IGN goes through: what a character looks like, by name. Party saves
-// use it for their seats, and the page-side lookup uses it for any name on screen. See V95.
+// The one lookup every typed IGN goes through: what a character looks like and what job it is, by
+// name. Party saves use it for their seats, and the page-side lookup uses it for any name on
+// screen. See V95 and V96.
 
 /** An answer is asked for again after this long: a miss is usually a typo or a new character. */
 internal val IGN_LOOKUP_RETRY_AFTER = 7.days
@@ -35,30 +36,36 @@ internal const val MAX_IGN_LENGTH = 12
 /** How many names one lookup request may ask about. Each new one is an outbound call per world. */
 internal const val MAX_LOOKUP_NAMES = 30
 
-/** The Nexon sprite URL already known for each name, lowercased, or null where it found none. */
-internal fun knownIgnSprites(names: Collection<String>): Map<String, String?> {
+/** What Nexon said about one IGN: its sprite URL and job, both null for a name it does not have. */
+internal data class IgnAnswer(
+    val spriteImgUrl: String?,
+    val jobName: String?,
+)
+
+/** What is already recorded for each name, keyed lowercased. Names never asked are absent. */
+internal fun knownIgns(names: Collection<String>): Map<String, IgnAnswer> {
     val keys = names.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct()
     if (keys.isEmpty()) return emptyMap()
     return IgnSprite
         .selectAll()
         .where { IgnSprite.nameKey inList keys }
-        .associate { it[IgnSprite.nameKey] to it[IgnSprite.spriteImgUrl] }
+        .associate { it[IgnSprite.nameKey] to IgnAnswer(it[IgnSprite.spriteImgUrl], it[IgnSprite.jobName]) }
 }
 
 /**
- * Each name's Nexon sprite URL, keyed by the name lowercased, null for a name Nexon does not have.
+ * Each name's answer, keyed by the name lowercased.
  *
- * Asks Nexon only about names never asked, or asked longer ago than IGN_LOOKUP_RETRY_AFTER, and
- * records every answer, a miss included, so the next caller does not ask again. Outside any
- * transaction: an outbound call per name would hold a pooled connection for as long as Nexon takes.
- * Never throws.
+ * Asks Nexon only about names never asked, asked longer ago than IGN_LOOKUP_RETRY_AFTER, or found
+ * before the job was kept (V96), and records every answer, a miss included, so the next caller does
+ * not ask again. Outside any transaction: an outbound call per name would hold a pooled connection
+ * for as long as Nexon takes. Never throws.
  */
 internal suspend fun lookUpIgns(
     names: Collection<String>,
     nexonLookupService: NexonLookupService,
     spriteCache: SpriteCache,
     now: Instant = Clock.System.now(),
-): Map<String, String?> {
+): Map<String, IgnAnswer> {
     val wanted =
         names
             .map { it.trim() }
@@ -71,11 +78,15 @@ internal suspend fun lookUpIgns(
             IgnSprite
                 .selectAll()
                 .where { IgnSprite.nameKey inList wanted.map { it.lowercase() } }
-                .associate { it[IgnSprite.nameKey] to (it[IgnSprite.spriteImgUrl] to it[IgnSprite.lookedUpAt]) }
+                .associate {
+                    it[IgnSprite.nameKey] to
+                        Pair(IgnAnswer(it[IgnSprite.spriteImgUrl], it[IgnSprite.jobName]), it[IgnSprite.lookedUpAt])
+                }
         }
     val due =
         wanted.filter { name ->
-            asked[name.lowercase()]?.let { now - it.second > IGN_LOOKUP_RETRY_AFTER } ?: true
+            val (answer, at) = asked[name.lowercase()] ?: return@filter true
+            now - at > IGN_LOOKUP_RETRY_AFTER || (answer.spriteImgUrl != null && answer.jobName == null)
         }
 
     val found =
@@ -83,30 +94,32 @@ internal suspend fun lookUpIgns(
             due
                 .map { name ->
                     async {
-                        val url = nexonLookupService.lookup(name)?.spriteImgUrl
+                        val result = nexonLookupService.lookup(name)
+                        val url = result?.spriteImgUrl
                         // Warmed alongside the lookup, so the first draw is from our own bytes.
-                        Triple(name, url, url?.let { spriteCache.fetch(it) })
+                        Triple(name, IgnAnswer(url, result?.jobName), url?.let { spriteCache.fetch(it) })
                     }
                 }.awaitAll()
         }
     if (found.isNotEmpty()) {
         dbQuery {
-            for ((name, url, bytes) in found) {
-                url?.let { spriteCache.store(it, bytes) }
+            for ((name, answer, bytes) in found) {
+                answer.spriteImgUrl?.let { spriteCache.store(it, bytes) }
                 IgnSprite.upsert(IgnSprite.nameKey) {
                     it[nameKey] = name.lowercase()
                     it[IgnSprite.name] = name
-                    it[spriteImgUrl] = url
+                    it[spriteImgUrl] = answer.spriteImgUrl
+                    it[jobName] = answer.jobName
                     it[lookedUpAt] = now
                 }
             }
         }
     }
 
-    val fresh = found.associate { (name, url) -> name.lowercase() to url }
+    val fresh = found.associate { (name, answer) -> name.lowercase() to answer }
     return wanted.associate { name ->
         val key = name.lowercase()
-        key to if (key in fresh) fresh[key] else asked[key]?.first
+        key to (fresh[key] ?: asked[key]?.first ?: IgnAnswer(null, null))
     }
 }
 
@@ -115,10 +128,14 @@ data class SpriteLookupRequest(
     val names: List<String>,
 )
 
-/** Each name as sent, to its sprite's proxy path, or null where Nexon has no such character. */
+/**
+ * Each name as sent, to its sprite's proxy path and its job, either null where Nexon has no such
+ * character.
+ */
 @Serializable
 data class SpriteLookupResponse(
     val sprites: Map<String, String?>,
+    val jobs: Map<String, String?> = emptyMap(),
 )
 
 fun Route.spriteLookupRoutes(
@@ -139,10 +156,12 @@ private suspend fun RoutingContext.lookUpRoute(
         return
     }
     dbQuery { ensureUser(userId, email) }
-    val urls = lookUpIgns(request.names, nexonLookupService, spriteCache)
+    val answers = lookUpIgns(request.names, nexonLookupService, spriteCache)
+    val answerOf = { name: String -> answers[name.trim().lowercase()] }
     call.respond(
         SpriteLookupResponse(
-            request.names.associateWith { name -> urls[name.trim().lowercase()]?.let(::spriteProxyPath) },
+            sprites = request.names.associateWith { answerOf(it)?.spriteImgUrl?.let(::spriteProxyPath) },
+            jobs = request.names.associateWith { answerOf(it)?.jobName },
         ),
     )
 }
