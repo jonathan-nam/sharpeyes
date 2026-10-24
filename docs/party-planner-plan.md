@@ -157,7 +157,7 @@ hold, and nobody's want was dropped.
 
 ## Open questions
 
-Raised by comparing the planner with Jonathan's real parties (2026-10-23):
+Raised by comparing the planner with a real account's parties (2026-10-23):
 
 - Two soloers pair up for a faster run in real parties (15 minutes instead of 30), which rule 1
   forbids, and Strength stops at Solo, so "solos in 20 minutes" cannot be said.

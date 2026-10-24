@@ -27,6 +27,9 @@ import { DEFAULT_MINUTES } from "@/lib/boss-minutes";
 /** A solo clear inside the thirty minutes, in strength units. */
 export const SOLO = 60;
 
+/** Jobs a party never has two of: two Lynns never share a party. */
+export const ONE_PER_PARTY = ["Lynn"];
+
 /** The bosses a plan may ask for, with the modes it may ask for them at. Null is every mode. */
 export const PLANNER_BOSSES: Record<string, string[] | null> = {
   "chosen-seren": null,
@@ -80,6 +83,8 @@ export type Want = {
   strength: number;
   /** The biggest party this character will join, or null for any the boss admits. */
   maxParty: number | null;
+  /** The character's job, where known. See ONE_PER_PARTY. */
+  job?: string | null;
 };
 
 export type PlanSettings = {
@@ -140,17 +145,15 @@ export function planParties(wants: Want[], settings: PlanSettings): Plan {
     const found = rest.length <= EXACT_LIMIT ? searchExact(rest, rules) : searchGreedy(rest, rules);
     if (rest.length > EXACT_LIMIT) plan.exact = false;
     const placed = new Set(found.flat().map((w) => w.id));
+    // Nobody else could take them, so soloers who will carry do. Party size is the soloer's say:
+    // "Solo" (1) never carries. Not timed, since a carry is no slower than the solo.
+    const carried = carry(
+      rest.filter((w) => !placed.has(w.id)),
+      solos,
+      rules,
+    );
     for (const w of rest) {
-      if (placed.has(w.id)) continue;
-      // Nobody else could take them, so a soloer who will carry does, the emptiest first. Party
-      // size is the soloer's say: "Solo" (1) never carries. Not timed, since a carry is no slower.
-      const host = solos
-        .filter((members) => rules.mayJoin([...members, w]))
-        .sort((a, b) => a.length - b.length)[0];
-      if (host) {
-        host.push(w);
-        continue;
-      }
+      if (placed.has(w.id) || carried.has(w.id)) continue;
       plan.unplaced.push({
         wantId: w.id,
         reason: canJoinAny(w, rest, rules) ? "crowded" : "alone",
@@ -159,6 +162,68 @@ export function planParties(wants: Want[], settings: PlanSettings): Plan {
     for (const members of [...solos, ...found]) plan.parties.push(party(members));
   }
   return plan;
+}
+
+/** Above this many passengers, carries are handed out greedily. 9 passengers over 6 soloers is ~40M. */
+const CARRY_EXACT_LIMIT = 8;
+
+/**
+ * Seats passengers with soloers, as many as can be, and returns their ids. Hosts are added to.
+ *
+ * Every assignment is tried, not first come first served: a passenger who could ride with anyone
+ * must not take the one soloer another passenger can use, such as a passenger whose only other
+ * soloer is the same player.
+ * Ties go to the plan whose biggest party is smallest. Above the limit, the passengers with the
+ * fewest hosts choose first.
+ */
+function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
+  const hostsOf = (w: Want) => hosts.filter((h) => rules.mayJoin([...h, w])).length;
+  const order = [...passengers].sort((a, b) => hostsOf(a) - hostsOf(b));
+  if (order.length > CARRY_EXACT_LIMIT) {
+    const seated = new Set<string>();
+    for (const w of order) {
+      const host = hosts
+        .filter((h) => rules.mayJoin([...h, w]))
+        .sort((a, b) => a.length - b.length)[0];
+      if (host) {
+        host.push(w);
+        seated.add(w.id);
+      }
+    }
+    return seated;
+  }
+
+  let best: { count: number; largest: number; seats: [Want, Want[]][] } | null = null;
+  const seats: [Want, Want[]][] = [];
+  const search = (i: number) => {
+    if (best !== null && seats.length + (order.length - i) < best.count) return;
+    if (i === order.length) {
+      const largest = Math.max(0, ...hosts.map((h) => h.length));
+      if (
+        best === null ||
+        seats.length > best.count ||
+        (seats.length === best.count && largest < best.largest)
+      ) {
+        best = { count: seats.length, largest, seats: [...seats] };
+      }
+      return;
+    }
+    const w = order[i]!;
+    for (const host of hosts) {
+      if (!rules.mayJoin([...host, w])) continue;
+      host.push(w);
+      seats.push([w, host]);
+      search(i + 1);
+      seats.pop();
+      host.pop();
+    }
+    search(i + 1);
+  };
+  search(0);
+
+  const chosen = (best as { seats: [Want, Want[]][] } | null)?.seats ?? [];
+  for (const [w, host] of chosen) host.push(w);
+  return new Set(chosen.map(([w]) => w.id));
 }
 
 type Rules = {
@@ -176,6 +241,9 @@ function groupRules(bossKey: string, settings: PlanSettings): Rules {
     if (members.length > cap) return false;
     const people = members.map((m) => m.personId);
     if (new Set(people).size !== people.length) return false;
+    for (const job of ONE_PER_PARTY) {
+      if (members.filter((m) => m.job === job).length > 1) return false;
+    }
     for (const a of people) for (const b of people) if (apart.has(`${a}\n${b}`)) return false;
     return true;
   };

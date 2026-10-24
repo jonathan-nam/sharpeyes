@@ -5,6 +5,8 @@ import {
   draftKey,
   draftWants,
   EMPTY_DRAFT,
+  jobOf,
+  markLynn,
   MAX_IGN,
   MAX_MINUTES,
   pickDraft,
@@ -176,5 +178,25 @@ describe("saving and coming back", () => {
       draftKey({ ...saved, hidden: ["a", "b"] }),
     );
     expect(draftKey(saved)).not.toBe(draftKey(edited));
+  });
+});
+
+describe("Lynns", () => {
+  const known = new Map([
+    ["rune", "Lynn"],
+    ["tide", "Adele"],
+  ]);
+
+  it("takes a known job over a hand mark, and a hand mark only where the job is unknown", () => {
+    const d = markLynn(draft(), "Stranger", true);
+    expect(jobOf("Rune", known, d)).toBe("Lynn");
+    expect(jobOf("Tide", known, markLynn(d, "Tide", true))).toBe("Adele");
+    expect(jobOf("stranger", known, d)).toBe("Lynn");
+    expect(jobOf("Stranger", known, markLynn(d, "Stranger", false))).toBeNull();
+  });
+
+  it("hands the planner each character's job", () => {
+    const d = draft({ wants: [want("Rune")] });
+    expect(draftWants(d, shownCharacters(d, roster), known)[0]?.job).toBe("Lynn");
   });
 });

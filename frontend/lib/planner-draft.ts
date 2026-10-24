@@ -31,6 +31,8 @@ export type Draft = {
   characters: DraftCharacter[];
   /** Known characters taken off the page, lowercased. */
   hidden: string[];
+  /** Characters marked as Lynns by hand, lowercased: the ones whose job the app does not know. */
+  lynns: string[];
   wants: DraftWant[];
 };
 
@@ -112,6 +114,7 @@ export const EMPTY_DRAFT: Draft = {
   maxMinutes: MAX_MINUTES,
   characters: [],
   hidden: [],
+  lynns: [],
   wants: [],
 };
 
@@ -160,7 +163,11 @@ export function pickDraft(local: LocalDraft | null, saved: SavedPlanner): Draft 
 
 /** Two drafts as one comparable string, for telling edited from saved. */
 export function draftKey(draft: Draft): string {
-  return JSON.stringify({ ...draft, hidden: [...draft.hidden].sort() });
+  return JSON.stringify({
+    ...draft,
+    hidden: [...draft.hidden].sort(),
+    lynns: [...draft.lynns].sort(),
+  });
 }
 
 export function parseDraft(raw: unknown): Draft {
@@ -171,6 +178,9 @@ export function parseDraft(raw: unknown): Draft {
     (c): c is DraftCharacter => typeof c?.name === "string" && typeof c?.personId === "string",
   );
   const hidden = (Array.isArray(r.hidden) ? r.hidden : []).filter(
+    (h): h is string => typeof h === "string",
+  );
+  const lynns = (Array.isArray(r.lynns) ? r.lynns : []).filter(
     (h): h is string => typeof h === "string",
   );
   // Not checked against `characters`: a known character's bosses belong to a card the roster draws.
@@ -191,12 +201,33 @@ export function parseDraft(raw: unknown): Draft {
         : MAX_MINUTES,
     characters,
     hidden: hidden.map((h) => h.toLowerCase()),
+    lynns: lynns.map((h) => h.toLowerCase()),
     wants,
   };
 }
 
+/** Every known job, by lowercased character name: yours, and your linked People's. */
+export type KnownJobs = Map<string, string>;
+
+/** A character's job: what its account says, else Lynn if marked by hand, else unknown. */
+export function jobOf(name: string, known: KnownJobs, draft: Draft): string | null {
+  const key = name.toLowerCase();
+  return known.get(key) ?? (draft.lynns.includes(key) ? "Lynn" : null);
+}
+
+/** The draft with a character marked as a Lynn, or not. Only for a job the app does not know. */
+export function markLynn(draft: Draft, name: string, on: boolean): Draft {
+  const key = name.toLowerCase();
+  const rest = draft.lynns.filter((n) => n !== key);
+  return { ...draft, lynns: on ? [...rest, key] : rest };
+}
+
 /** The filled-in rows of the characters on the page, as the planner takes them. */
-export function draftWants(draft: Draft, shown: DraftCharacter[]): Want[] {
+export function draftWants(
+  draft: Draft,
+  shown: DraftCharacter[],
+  known: KnownJobs = new Map(),
+): Want[] {
   const owner = new Map(shown.map((c) => [c.name, c.personId]));
   return draft.wants.flatMap((w) => {
     const personId = owner.get(w.character);
@@ -211,6 +242,7 @@ export function draftWants(draft: Draft, shown: DraftCharacter[]): Want[] {
         difficulty: w.difficulty,
         strength: w.strength,
         maxParty: w.maxParty,
+        job: jobOf(w.character, known, draft),
       },
     ];
   });

@@ -25,10 +25,12 @@ import {
   draftKey,
   draftWants,
   EMPTY_DRAFT,
+  jobOf,
   MAX_IGN,
   MAX_MINUTES,
   MIN_MINUTES,
   type LocalDraft,
+  markLynn,
   parseDraft,
   pickDraft,
   readLocal,
@@ -216,7 +218,16 @@ export default function PartyPlannerPage() {
   const [typed, setTyped] = useState("");
   const adding = resolveCharacter(typed, roster, shown);
 
-  const wants = useMemo(() => draftWants(draft, shown), [draft, shown]);
+  const knownJobs = useMemo(() => {
+    const jobs = new Map<string, string>();
+    for (const c of characters) if (c.jobName) jobs.set(c.name.toLowerCase(), c.jobName);
+    for (const p of people) {
+      for (const [name, job] of Object.entries(p.ownedJobs ?? {}))
+        jobs.set(name.toLowerCase(), job);
+    }
+    return jobs;
+  }, [characters, people]);
+  const wants = useMemo(() => draftWants(draft, shown, knownJobs), [draft, shown, knownJobs]);
   const plan = useMemo(() => planParties(wants, { maxMinutes: draft.maxMinutes }), [wants, draft]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
   // The buff note once, under the first slider on the page.
@@ -314,7 +325,25 @@ export default function PartyPlannerPage() {
                     )}
                     <div className="planner-character-name">
                       <h2 className="party-card-name">{c.name}</h2>
-                      {owner && <span className="party-card-size">{owner}</span>}
+                      {(owner || knownJobs.has(c.name.toLowerCase())) && (
+                        <span className="party-card-size">
+                          {[owner, knownJobs.get(c.name.toLowerCase())].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                      {!knownJobs.has(c.name.toLowerCase()) && (
+                        <button
+                          type="button"
+                          className={`run-chip planner-lynn${jobOf(c.name, knownJobs, draft) === "Lynn" ? " is-on" : ""}`}
+                          aria-pressed={jobOf(c.name, knownJobs, draft) === "Lynn"}
+                          onClick={() =>
+                            setDraft(
+                              markLynn(draft, c.name, jobOf(c.name, knownJobs, draft) !== "Lynn"),
+                            )
+                          }
+                        >
+                          Lynn
+                        </button>
+                      )}
                     </div>
                     <button
                       type="button"

@@ -8520,3 +8520,8 @@ a.notification-sentence:hover {
   font-size: var(--text-sm);
   color: var(--warn);
 }
+
+/* Only on a character whose job the app does not know. Sits under the name, so it does not stretch. */
+.planner-lynn {
+  align-self: flex-start;
+}

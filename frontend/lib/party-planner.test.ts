@@ -88,6 +88,19 @@ describe("planParties", () => {
     expect(shape(plan, [soloA, soloB, ...pair])).toEqual([[SOLO], [SOLO], [30, 30]]);
   });
 
+  it("leaves a soloer's room for the passenger who can ride with nobody else", () => {
+    // The stuck passenger shares a player with the other soloer, so only one soloer can take it.
+    // First come first served let three passengers who could ride with anyone fill that one first.
+    const onlyHost = want("thornwick", SOLO);
+    const otherHost = want("pellmoor", SOLO);
+    const anyone = [want("quillsby", 0), want("ravensoot", 0), want("ambergast", 0)];
+    const stuck = want("pellmoor", 0);
+    const plan = planParties([onlyHost, otherHost, ...anyone, stuck], MIN_CUT);
+    expect(plan.unplaced).toEqual([]);
+    const withOnlyHost = plan.parties.find((p) => p.seats[0]?.wantId === onlyHost.id);
+    expect(withOnlyHost?.seats.map((s) => s.wantId)).toContain(stuck.id);
+  });
+
   it("spreads passengers over the soloers before doubling any up", () => {
     const solos = [want("a", SOLO), want("b", SOLO)];
     const riders = [want("c", 0), want("d", 0)];
@@ -130,6 +143,21 @@ describe("planParties", () => {
 
     const capped = [want("a", 30, { maxParty: 2 }), want("b", 15), want("c", 15)];
     expect(planParties(capped, MIN_CUT).parties).toEqual([]);
+  });
+
+  it("never seats two Lynns together", () => {
+    const lynns = [want("a", 30, { job: "Lynn" }), want("b", 30, { job: "Lynn" })];
+    expect(planParties(lynns, MIN_CUT).parties).toEqual([]);
+    const mixed = [want("a", 30, { job: "Lynn" }), want("b", 30, { job: "Adele" })];
+    expect(planParties(mixed, MIN_CUT).parties).toHaveLength(1);
+  });
+
+  it("never has a soloing Lynn carry another Lynn", () => {
+    const plan = planParties(
+      [want("a", SOLO, { job: "Lynn" }), want("b", 0, { job: "Lynn" })],
+      MIN_CUT,
+    );
+    expect(plan.unplaced.map((u) => u.reason)).toEqual(["alone"]);
   });
 
   it("keeps apart the people asked to be kept apart", () => {

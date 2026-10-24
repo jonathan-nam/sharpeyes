@@ -230,6 +230,7 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
             name = it[Person.name],
             characters = characters.attributed[it[Person.id]].orEmpty(),
             ownedCharacters = characters.owned[it[Person.id]].orEmpty(),
+            ownedJobs = characters.ownedJobs[it[Person.id]].orEmpty(),
             linked = it[Person.linkedUserId] != null,
             image = account?.let(images::get),
             notOnAccount = roster.notOnAccount(account, attributed),
