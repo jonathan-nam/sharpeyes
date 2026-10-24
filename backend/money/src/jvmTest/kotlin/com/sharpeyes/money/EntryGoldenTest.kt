@@ -1,37 +1,35 @@
 package com.sharpeyes.money
 
-import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
+import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Whole Drop Log figures, page in and figures out, against the TypeScript's own answers. The invented
- * accounts in the repo; an audit's real pages through MONEY_GOLDEN_DIR, one entry-*.json per page.
+ * Whole Drop Log figures, page in and figures out, against the TypeScript's own answers: the invented
+ * accounts in the repo, or an audit's real pages through MONEY_GOLDEN_DIR. One file at a time, since an
+ * audit's do not fit in memory together.
  */
 class EntryGoldenTest {
-    private fun cases(): List<Pair<JsonElement, JsonElement>> =
-        goldenFiles("entry-").map { it.readText() }.flatMap { text ->
-            moneyJson.parseToJsonElement(text).jsonObject["cases"]!!.jsonArray.map {
-                it.jsonObject["input"]!! to it.jsonObject["output"]!!
-            }
+    /** Each disagreement in one file, named by the file and the case. */
+    private fun disagreements(file: File): List<String> =
+        moneyJson.parseToJsonElement(file.readText()).jsonObject["cases"]!!.jsonArray.mapIndexedNotNull { i, case ->
+            val input = case.jsonObject["input"]!!.jsonObject
+            val page: DropLogPage = moneyJson.decodeFromJsonElement(input["page"]!!)
+            val books: List<SharedBook> = moneyJson.decodeFromJsonElement(input["books"]!!)
+            val actual = out(dropLogFigures(page, books))
+            firstDifference(case.jsonObject["output"], actual)?.let { "${file.name} #$i: $it" }
         }
 
     @Test
     fun `agrees with the TypeScript on every recorded page`() {
-        val cases = cases()
-        assertTrue(cases.isNotEmpty(), "no entry fixtures")
-        val wrong =
-            cases.mapIndexedNotNull { i, (input, expected) ->
-                val page: DropLogPage = moneyJson.decodeFromJsonElement(input.jsonObject["page"]!!)
-                val books: List<SharedBook> = moneyJson.decodeFromJsonElement(input.jsonObject["books"]!!)
-                val actual = out(dropLogFigures(page, books))
-                firstDifference(expected, actual)?.let { "page #$i: $it" }
-            }
-        assertEquals(emptyList(), wrong.take(SHOWN), "${wrong.size} of ${cases.size} pages disagree")
+        val files = goldenFiles("entry-")
+        assertTrue(files.isNotEmpty(), "no entry fixtures")
+        val wrong = files.flatMap(::disagreements)
+        assertEquals(emptyList(), wrong.take(SHOWN), "${wrong.size} disagreements over ${files.size} files")
     }
 
     private companion object {

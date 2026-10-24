@@ -37,7 +37,22 @@ class NotReplayable extends Error {}
  */
 const limits = { kept: 60, bytes: 20_000 };
 
-type Store = { seen: Set<string>; kept: { key: string; call: RecordedCall }[]; count: number };
+/** Every distinct call seen, by a hash of it: the calls themselves would not fit in memory on an audit. */
+type Store = { seen: Set<number>; kept: { key: string; call: RecordedCall }[]; count: number };
+
+/** cyrb53, a 53-bit string hash. A collision would only drop one candidate from the sample. */
+function hashOf(text: string): number {
+  let h1 = 0xdeadbeef;
+  let h2 = 0x41c6ce57;
+  for (let i = 0; i < text.length; i += 1) {
+    const c = text.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
 
 const store = new Map<string, Store>();
 let random = seeded(7);
@@ -76,10 +91,11 @@ export function recorded(): Map<string, RecordedCall[]> {
 function keep(fn: string, call: RecordedCall) {
   const key = JSON.stringify(call);
   if (key.length > limits.bytes) return;
-  const s = store.get(fn) ?? { seen: new Set<string>(), kept: [], count: 0 };
+  const s = store.get(fn) ?? { seen: new Set<number>(), kept: [], count: 0 };
   store.set(fn, s);
-  if (s.seen.has(key)) return;
-  s.seen.add(key);
+  const hash = hashOf(key);
+  if (s.seen.has(hash)) return;
+  s.seen.add(hash);
   s.count += 1;
   if (s.kept.length < limits.kept) s.kept.push({ key, call });
   else {

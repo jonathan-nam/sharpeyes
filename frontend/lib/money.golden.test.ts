@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { committedGolden, seeded } from "@/lib/golden";
 import { goldenAccount } from "@/lib/golden-pages";
@@ -337,51 +337,42 @@ function mutate<T>(doc: T, random: () => number): T {
 const MUTATIONS = AUDIT ? Number(process.env.MONEY_MUTATIONS ?? 200) : 25;
 
 describe("money golden fixtures", () => {
-  it("are what the Drop Log's figures and their modules answer today", () => {
-    if (AUDIT) resetRecording(300, Infinity);
-    else resetRecording(50, 12_000);
-    const out = AUDIT ? process.env.MONEY_GOLDEN_OUT! : REPO;
-    if (AUDIT) mkdirSync(out, { recursive: true });
+  it(
+    "are what the Drop Log's figures and their modules answer today",
+    () => {
+      // An audit's real pages are large, so it keeps fewer and bigger calls, and writes each variant to
+      // its own file as it goes: nothing waits in memory for the next.
+      if (AUDIT) resetRecording(60, 300_000);
+      else resetRecording(50, 12_000);
+      const out = AUDIT ? process.env.MONEY_GOLDEN_OUT! : REPO;
+      if (AUDIT) mkdirSync(out, { recursive: true });
 
-    const texts = new Map<string, string>();
-    for (const c of corpus()) {
-      const random = seeded(c.name.length * 7919 + 1);
-      const variants = [
-        { page: c.page, books: c.books },
-        ...Array.from({ length: MUTATIONS }, () => ({
-          page: mutate(c.page, random),
-          books: c.books.map((b) => mutate(b, random)),
-        })),
-      ];
-      const entry = (v: (typeof variants)[number]) =>
-        JSON.stringify({
-          input: { page: v.page, books: v.books },
-          output: goldenJson(figures(v.page, v.books)),
-        });
-      const file = `entry-${c.name}.json`;
-      if (AUDIT) {
-        // Written as it goes: a real page's variants do not fit in memory at once.
-        writeFileSync(`${out}/${file}`, `{"cases":[\n`);
-        variants.forEach((v, i) =>
-          appendFileSync(`${out}/${file}`, `${i ? ",\n" : ""}${entry(v)}`),
-        );
-        appendFileSync(`${out}/${file}`, `\n]}\n`);
-      } else {
-        texts.set(file, `{"cases":[\n${entry(variants[0]!)}\n]}\n`);
+      const texts = new Map<string, string>();
+      for (const c of corpus()) {
+        const random = seeded(c.name.length * 7919 + 1);
+        for (let i = 0; i <= MUTATIONS; i += 1) {
+          const page = i === 0 ? c.page : mutate(c.page, random);
+          const books = i === 0 ? c.books : c.books.map((b) => mutate(b, random));
+          const output = recording(() => goldenJson(figures(page, books)));
+          const entry = `{"cases":[\n${JSON.stringify({ input: { page, books }, output })}\n]}\n`;
+          if (AUDIT) writeFileSync(`${out}/entry-${c.name}-${i}.json`, entry);
+          else if (i === 0) texts.set(`entry-${c.name}.json`, entry);
+        }
       }
-      recording(() => variants.forEach((v) => figures(v.page, v.books)));
-    }
-    // One file per function, so no module's fixture outgrows the repo's file size limit.
-    for (const [fn, calls] of recorded()) {
-      texts.set(`module-${fn}.json`, `{${JSON.stringify(fn)}:${JSON.stringify(calls)}}\n`);
-    }
+      // One file per function, so no module's fixture outgrows the repo's file size limit.
+      for (const [fn, calls] of recorded()) {
+        texts.set(`module-${fn}.json`, `{${JSON.stringify(fn)}:${JSON.stringify(calls)}}\n`);
+      }
 
-    for (const [name, text] of texts) {
-      if (AUDIT) writeFileSync(`${out}/${name}`, text);
-      else
-        expect(committedGolden(name, text) === text, `${name}: run with UPDATE_GOLDEN=1`).toBe(
-          true,
-        );
-    }
-  });
+      for (const [name, text] of texts) {
+        if (AUDIT) writeFileSync(`${out}/${name}`, text);
+        else
+          expect(committedGolden(name, text) === text, `${name}: run with UPDATE_GOLDEN=1`).toBe(
+            true,
+          );
+      }
+      // An audit runs for minutes over real pages, and must not be retried half written.
+    },
+    { timeout: AUDIT ? 3_600_000 : undefined, retry: AUDIT ? 0 : undefined },
+  );
 });
