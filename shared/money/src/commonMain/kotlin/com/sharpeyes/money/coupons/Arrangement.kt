@@ -1,5 +1,8 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.coupons
 
+import com.sharpeyes.money.PartyMember
+import com.sharpeyes.money.compareNumbers
+import com.sharpeyes.money.pieces.balances
 import kotlin.math.floor
 
 // What to suggest before anybody says how a night was looted, and how far behind each holder is. The

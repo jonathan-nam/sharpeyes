@@ -1,5 +1,6 @@
 package com.sharpeyes.money
 
+import com.sharpeyes.money.droplog.dropLogFigures
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject

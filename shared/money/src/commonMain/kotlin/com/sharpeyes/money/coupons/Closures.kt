@@ -1,5 +1,9 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.coupons
 
+import com.sharpeyes.money.Holder
+import com.sharpeyes.money.VestigePayment
+import com.sharpeyes.money.VestigeSettlement
+import com.sharpeyes.money.localeCompare
 import kotlinx.serialization.Serializable
 import kotlin.math.max
 

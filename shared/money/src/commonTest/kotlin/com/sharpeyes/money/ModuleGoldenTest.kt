@@ -1,5 +1,10 @@
 package com.sharpeyes.money
 
+import com.sharpeyes.money.droplog.statusLabel
+import com.sharpeyes.money.split.buildWallet
+import com.sharpeyes.money.split.saleMoney
+import com.sharpeyes.money.split.splitDrop
+import com.sharpeyes.money.split.splitOf
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

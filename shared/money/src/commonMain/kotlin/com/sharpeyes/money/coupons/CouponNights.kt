@@ -1,5 +1,15 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.coupons
 
+import com.sharpeyes.money.Loot
+import com.sharpeyes.money.LootBundle
+import com.sharpeyes.money.Party
+import com.sharpeyes.money.PartyLootPool
+import com.sharpeyes.money.PartyMember
+import com.sharpeyes.money.compareNumbers
+import com.sharpeyes.money.jsRound
+import com.sharpeyes.money.pieces.LedgerSeat
+import com.sharpeyes.money.pieces.entitlements
+import com.sharpeyes.money.pieces.pieces
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 

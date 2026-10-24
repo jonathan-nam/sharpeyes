@@ -1,5 +1,8 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.coupons
 
+import com.sharpeyes.money.VestigeTranche
+import com.sharpeyes.money.pieces.AnsweredSale
+import com.sharpeyes.money.pieces.BoughtPieces
 import kotlin.math.min
 
 // What the tranches say about each pile: pieces sold, kept, bought, and answered with money. The port

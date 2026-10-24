@@ -1,5 +1,6 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.pieces
 
+import com.sharpeyes.money.localeCompare
 import kotlin.math.max
 import kotlin.math.min
 

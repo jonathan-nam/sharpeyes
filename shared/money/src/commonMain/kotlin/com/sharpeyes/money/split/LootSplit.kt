@@ -1,5 +1,7 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.split
 
+import com.sharpeyes.money.Loot
+import com.sharpeyes.money.PartyMember
 import kotlinx.serialization.Serializable
 import kotlin.math.floor
 

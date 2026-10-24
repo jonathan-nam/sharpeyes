@@ -1,4 +1,16 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.shared
+
+import com.sharpeyes.money.Holder
+import com.sharpeyes.money.Party
+import com.sharpeyes.money.PartyLootPool
+import com.sharpeyes.money.PartyMember
+import com.sharpeyes.money.SettlementDebt
+import com.sharpeyes.money.SharedBook
+import com.sharpeyes.money.VestigeSettlement
+import com.sharpeyes.money.coupons.PERSON
+import com.sharpeyes.money.coupons.SELF
+import com.sharpeyes.money.coupons.SELF_HOLDER
+import com.sharpeyes.money.coupons.holderKey
 
 // Other owners' books read from your side, and the runs both books recorded. The port of
 // frontend/lib/shared-history.ts and duplicate-runs.ts. Seats and holders are swapped; every figure

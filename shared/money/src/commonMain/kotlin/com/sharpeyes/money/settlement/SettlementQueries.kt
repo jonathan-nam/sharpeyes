@@ -1,5 +1,9 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.settlement
 
+import com.sharpeyes.money.SettlementDebt
+import com.sharpeyes.money.coupons.HolderLedger
+import com.sharpeyes.money.coupons.SELF
+import com.sharpeyes.money.split.Owings
 import kotlinx.serialization.Serializable
 import kotlin.math.max
 

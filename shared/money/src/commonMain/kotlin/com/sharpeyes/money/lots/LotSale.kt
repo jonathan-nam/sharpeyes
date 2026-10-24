@@ -1,5 +1,7 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.lots
 
+import com.sharpeyes.money.PartyMember
+import com.sharpeyes.money.pieces.largestRemainder
 import kotlinx.serialization.Serializable
 
 // Selling a pile of one interchangeable drop in one go: which rows a count covers, and what each row's

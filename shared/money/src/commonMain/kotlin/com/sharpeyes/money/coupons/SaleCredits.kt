@@ -1,5 +1,8 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.coupons
 
+import com.sharpeyes.money.TrancheShare
+import com.sharpeyes.money.VestigeTranche
+import com.sharpeyes.money.jsRound
 import kotlinx.serialization.Serializable
 import kotlin.math.max
 

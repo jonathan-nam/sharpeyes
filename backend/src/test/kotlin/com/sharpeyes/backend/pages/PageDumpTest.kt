@@ -2,7 +2,7 @@ package com.sharpeyes.backend.pages
 
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Users
-import com.sharpeyes.money.DropLogFigures
+import com.sharpeyes.money.droplog.DropLogFigures
 import com.sharpeyes.money.moneyJson
 import kotlinx.serialization.json.Json
 import org.flywaydb.core.Flyway

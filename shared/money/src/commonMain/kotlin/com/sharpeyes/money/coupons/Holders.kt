@@ -1,5 +1,13 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.coupons
 
+import com.sharpeyes.money.Holder
+import com.sharpeyes.money.Loot
+import com.sharpeyes.money.Party
+import com.sharpeyes.money.PartyMember
+import com.sharpeyes.money.compareNumbers
+import com.sharpeyes.money.localeCompare
+import com.sharpeyes.money.pieces.LedgerSeat
+import com.sharpeyes.money.pieces.entitlements
 import kotlinx.serialization.Serializable
 
 // Whose pile a coupon is in. A HOLDER is a person, not a character: seats fold to their holder before

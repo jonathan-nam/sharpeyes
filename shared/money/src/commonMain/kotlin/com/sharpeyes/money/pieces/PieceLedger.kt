@@ -1,5 +1,7 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.pieces
 
+import com.sharpeyes.money.compareNumbers
+import com.sharpeyes.money.jsRound
 import kotlinx.serialization.Serializable
 import kotlin.math.floor
 import kotlin.math.min

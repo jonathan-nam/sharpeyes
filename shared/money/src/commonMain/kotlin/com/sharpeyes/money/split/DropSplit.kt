@@ -1,4 +1,4 @@
-package com.sharpeyes.money
+package com.sharpeyes.money.split
 
 import kotlinx.serialization.Serializable
 import kotlin.math.ceil
