@@ -5,12 +5,22 @@ import { type ReactNode, useEffect, useId, useState } from "react";
 import { TipPanel } from "@/components/tooltip";
 
 /**
- * A small "i" that opens a note on press, for a caveat too long for the screen itself.
+ * A small "i" that opens a note on press, for a caveat too long for the screen itself. Given
+ * `text`, the trigger is that text as a small link instead of the "i".
  *
  * A button rather than a Tooltip: hover never happens on a touch screen. The note is drawn by the
  * Tooltip's own panel, so the two look alike. Closes on Escape and on a press outside both.
  */
-export function InfoBubble({ label, children }: { label: string; children: ReactNode }) {
+export function InfoBubble({
+  label,
+  text,
+  noteClassName,
+  children,
+}: {
+  noteClassName?: string;
+  children: ReactNode;
+  // The "i" needs a name; a text trigger is its own.
+} & ({ label: string; text?: undefined } | { text: string; label?: undefined })) {
   // The button it is open on, or null when closed.
   const [at, setAt] = useState<HTMLButtonElement | null>(null);
   const open = at !== null;
@@ -37,8 +47,8 @@ export function InfoBubble({ label, children }: { label: string; children: React
     <span className="info-bubble">
       <button
         type="button"
-        className="info-bubble-button"
-        aria-label={label}
+        className={text ? "info-bubble-link" : "info-bubble-button"}
+        aria-label={text ? undefined : label}
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={(e) => {
@@ -46,10 +56,16 @@ export function InfoBubble({ label, children }: { label: string; children: React
           setAt((current) => (current ? null : button));
         }}
       >
-        i
+        {text ?? "i"}
       </button>
       {at && (
-        <TipPanel id={id} anchor={at} role="note" className="tooltip is-note" prefer="below">
+        <TipPanel
+          id={id}
+          anchor={at}
+          role="note"
+          className={noteClassName ? `tooltip is-note ${noteClassName}` : "tooltip is-note"}
+          prefer="below"
+        >
           {children}
         </TipPanel>
       )}

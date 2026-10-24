@@ -3805,6 +3805,28 @@ button.link:disabled {
   overflow-wrap: anywhere;
 }
 
+/* Run Order's explanation: a text InfoBubble under the plan, its note wider for two lists. */
+.night-how-row {
+  margin-top: 14px;
+}
+.tooltip.is-note.night-how {
+  width: min(400px, calc(100% - 16px));
+  line-height: 1.55;
+}
+.night-how p {
+  margin: 8px 0 4px;
+}
+.night-how p:first-child {
+  margin-top: 0;
+}
+.night-how ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.night-how b {
+  color: var(--ink-strong);
+}
+
 .split-caveat {
   margin: 22px 0 0;
   max-width: 60ch;
@@ -6706,6 +6728,21 @@ button.link:disabled {
 .info-bubble-button[aria-expanded="true"] {
   color: var(--ink-strong);
   border-color: var(--muted);
+}
+
+/* The same note behind small text instead of an "i". */
+.info-bubble-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.info-bubble-link:hover,
+.info-bubble-link[aria-expanded="true"] {
+  text-decoration: underline;
 }
 
 /* Tooltip and InfoBubble's note, floated in <body>. See components/tooltip.tsx. The panel edge is
