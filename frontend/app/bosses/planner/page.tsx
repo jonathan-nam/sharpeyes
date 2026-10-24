@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { DifficultySelect } from "@/components/difficulty-select";
+import { FilterOptions, GroupingTabs } from "@/components/grouping-tabs";
 import { IconSelect, type IconOption } from "@/components/icon-select";
 import { PageSwap } from "@/components/page-swap";
 import { apiAssetUrl, apiFetch, failureText, spriteUrl } from "@/lib/api";
@@ -39,6 +40,7 @@ import {
   YOU,
 } from "@/lib/planner-draft";
 import { MAX_IGN_LENGTH } from "@/lib/ign";
+import { byBoss, byCharacter, type PlanGrouping } from "@/lib/planner-view";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { useCharacterSprites } from "@/lib/ign-sprites";
 import { knownSprite, spriteByName } from "@/lib/sprite-by-name";
@@ -135,6 +137,7 @@ export default function PartyPlannerPage() {
   const [saved, setSaved] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [grouping, setGrouping] = useState<PlanGrouping>("character");
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -234,6 +237,15 @@ export default function PartyPlannerPage() {
   );
   const plan = useMemo(() => planParties(wants), [wants]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
+  const card = (p: PlannedParty) => (
+    <PlannedCard
+      key={p.seats.map((s) => s.wantId).join("|")}
+      party={p}
+      boss={bossByKey.get(p.bossKey)}
+      sprite={(name) => spriteOf(name) ?? undefined}
+      personName={personName}
+    />
+  );
   // The buff note once, under the first slider on the page.
   const firstShown =
     shown.map((c) => draft.wants.findIndex((w) => w.character === c.name)).find((i) => i >= 0) ??
@@ -297,7 +309,7 @@ export default function PartyPlannerPage() {
         placeholder={<p className="party-hint">Loading...</p>}
       >
         <div className="planner">
-          <section className="planner-characters">
+          <section className="planner-grid">
             {shown.map((c) => {
               const sprite = spriteOf(c.name);
               const owner = personName(c.personId);
@@ -507,15 +519,62 @@ export default function PartyPlannerPage() {
             <section className="planner-plan">
               <h2 className="planner-heading">Parties</h2>
               {!plan.exact && <p className="party-hint">Large groups are approximate.</p>}
-              {plan.parties.map((p) => (
-                <PlannedCard
-                  key={p.seats.map((s) => s.wantId).join("|")}
-                  party={p}
-                  boss={bossByKey.get(p.bossKey)}
-                  sprite={(name) => spriteOf(name) ?? undefined}
-                  personName={personName}
-                />
-              ))}
+              {plan.parties.length > 0 && (
+                <FilterOptions>
+                  <GroupingTabs
+                    value={grouping}
+                    options={[
+                      { value: "character", label: "By Character" },
+                      { value: "boss", label: "By Boss" },
+                    ]}
+                    onChange={setGrouping}
+                  />
+                </FilterOptions>
+              )}
+              {grouping === "character" &&
+                byCharacter(
+                  plan.parties,
+                  shown.map((c) => c.name),
+                ).map((group) => {
+                  const sprite = spriteOf(group.key);
+                  const owner = personName(
+                    shown.find((c) => c.name === group.key)?.personId ?? YOU,
+                  );
+                  return (
+                    <section className="party-group" key={group.key}>
+                      <header className="party-banner">
+                        {sprite ? (
+                          <img className="party-banner-sprite" src={spriteUrl(sprite)} alt="" />
+                        ) : (
+                          <span className="party-banner-sprite is-empty" aria-hidden="true" />
+                        )}
+                        <h2 className="party-group-name">{group.key}</h2>
+                        {owner && <span className="party-card-size">{owner}</span>}
+                        <span className="party-banner-count">
+                          {group.parties.length} {group.parties.length === 1 ? "boss" : "bosses"}
+                        </span>
+                      </header>
+                      <div className="planner-grid">{group.parties.map(card)}</div>
+                    </section>
+                  );
+                })}
+              {grouping === "boss" &&
+                byBoss(plan.parties, bosses).map((group) => {
+                  const [bossKey = "", difficulty = ""] = group.key.split("|");
+                  const boss = bossByKey.get(bossKey);
+                  const art = bossArt(boss, bossKey);
+                  return (
+                    <section className="party-group" key={group.key}>
+                      <header className="party-group-head">
+                        {art && <img className="boss-portrait" src={art} alt="" />}
+                        <h2 className="party-group-name">
+                          {bossLabel(boss?.name ?? bossKey, difficulty)}
+                        </h2>
+                      </header>
+                      <div className="planner-grid">{group.parties.map(card)}</div>
+                    </section>
+                  );
+                })}
               {plan.unplaced.length > 0 && (
                 <div className="party-card">
                   <h3 className="party-card-name">No Party</h3>

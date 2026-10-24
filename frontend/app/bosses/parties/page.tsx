@@ -10,6 +10,7 @@ import { KnownCharacters } from "@/components/known-characters";
 import { PartyCard } from "@/components/party-card";
 import { ResetTimer } from "@/components/reset-timer";
 import { RosterStrip } from "@/components/roster-strip";
+import { FilterOptions, GroupingTabs } from "@/components/grouping-tabs";
 import { WeekStepper } from "@/components/week-stepper";
 import {
   apiAssetUrl,
@@ -1042,71 +1043,54 @@ export default function PartiesPage() {
               />
             )}
 
-            <section className="party-filters">
-              <h2 className="party-filters-title">Filter Options</h2>
-              <div className="party-toolbar-tabs">
-                <div className="basis-row" role="group" aria-label="Group parties by">
-                  <button
-                    type="button"
-                    className={grouping === "character" ? "basis-tab active" : "basis-tab"}
-                    onClick={() => setGrouping("character")}
-                  >
-                    By Character
-                  </button>
-                  <button
-                    type="button"
-                    className={grouping === "boss" ? "basis-tab active" : "basis-tab"}
-                    onClick={() => setGrouping("boss")}
-                  >
-                    By Boss
-                  </button>
-                  <button
-                    type="button"
-                    className={grouping === "party" ? "basis-tab active" : "basis-tab"}
-                    onClick={() => setGrouping("party")}
-                  >
-                    By Party
-                  </button>
-                </div>
+            <FilterOptions>
+              <GroupingTabs
+                value={grouping}
+                options={[
+                  { value: "character", label: "By Character" },
+                  { value: "boss", label: "By Boss" },
+                  { value: "party", label: "By Party" },
+                ]}
+                onChange={setGrouping}
+              />
 
-                {/* What is left this week, without reading past what is done. "Not Cleared" holds the
+              {/* What is left this week, without reading past what is done. "Not Cleared" holds the
                   unreported ones too. The counts do not move when you switch tabs: they are of every
                   config being RUN in the week, which on the live view is all of them bar the ones
                   taken off and on a past week is the weekly ones. Counting past that would offer a tab
                   that lists less than it promises. */}
-                <div
-                  className="basis-row basis-row-end"
-                  role="group"
-                  aria-label="Filter by clear state"
-                >
-                  {filterTabs.map((tab) => (
-                    <button
-                      key={tab.value}
-                      type="button"
-                      className={clearFilter === tab.value ? "basis-tab active" : "basis-tab"}
-                      aria-pressed={clearFilter === tab.value}
-                      title={tab.title}
-                      onClick={() => setClearFilter(tab.value)}
-                    >
-                      {tab.label}
-                      <span className="tab-count">{tab.count}</span>
-                    </button>
-                  ))}
-                  {/* Narrows to parties somebody else owns. Only where there are some. */}
-                  {sharedRows.length > 0 && (
-                    <button
-                      type="button"
-                      className={sharedOnly ? "basis-tab active" : "basis-tab"}
-                      aria-pressed={sharedOnly}
-                      onClick={() => setSharedOnly(!sharedOnly)}
-                    >
-                      Shared
-                      <span className="tab-count">{sharedRows.length}</span>
-                    </button>
-                  )}
-                </div>
+              <div
+                className="basis-row basis-row-end"
+                role="group"
+                aria-label="Filter by clear state"
+              >
+                {filterTabs.map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    className={clearFilter === tab.value ? "basis-tab active" : "basis-tab"}
+                    aria-pressed={clearFilter === tab.value}
+                    title={tab.title}
+                    onClick={() => setClearFilter(tab.value)}
+                  >
+                    {tab.label}
+                    <span className="tab-count">{tab.count}</span>
+                  </button>
+                ))}
+                {/* Narrows to parties somebody else owns. Only where there are some. */}
+                {sharedRows.length > 0 && (
+                  <button
+                    type="button"
+                    className={sharedOnly ? "basis-tab active" : "basis-tab"}
+                    aria-pressed={sharedOnly}
+                    onClick={() => setSharedOnly(!sharedOnly)}
+                  >
+                    Shared
+                    <span className="tab-count">{sharedRows.length}</span>
+                  </button>
+                )}
               </div>
-            </section>
+            </FilterOptions>
 
             {/* "No parties YET" is said only when there are none of anybody's, since parties shared
                 with you are listed beside your own. */}
