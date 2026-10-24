@@ -6715,7 +6715,9 @@ button.link:disabled {
   top: 0;
   left: 0;
   z-index: 1000;
-  max-width: min(280px, calc(100vw - 16px));
+  box-sizing: border-box;
+  /* 100%, not 100vw: fixed, a percentage is the viewport inside its scrollbar. */
+  max-width: min(280px, calc(100% - 16px));
   padding: 5px 9px;
   border: 1px solid var(--chrome-edge-dark);
   border-radius: var(--radius-md);
@@ -6733,7 +6735,7 @@ button.link:disabled {
 
 /* A note is read, and its text can be selected, so it takes the pointer and room. */
 .tooltip.is-note {
-  width: min(320px, calc(100vw - 16px));
+  width: min(320px, calc(100% - 16px));
   max-width: none;
   padding: 10px 12px;
   white-space: normal;

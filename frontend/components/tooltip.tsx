@@ -178,7 +178,12 @@ export function TipPanel({
       const spot = placeTip(
         anchor.getBoundingClientRect(),
         { width: box.offsetWidth, height: box.offsetHeight },
-        { width: window.innerWidth, height: window.innerHeight },
+        // Inside the scrollbar. <html>'s own box, because clientWidth counts the gutter that
+        // `scrollbar-gutter: stable` keeps even with no scrollbar in it.
+        {
+          width: document.documentElement.getBoundingClientRect().width,
+          height: document.documentElement.clientHeight,
+        },
         prefer,
       );
       box.style.top = `${spot.top}px`;
