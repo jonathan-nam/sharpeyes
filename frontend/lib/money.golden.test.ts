@@ -1,24 +1,66 @@
-import { readdirSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { appendFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { committedGolden, seeded } from "@/lib/golden";
 import { goldenAccount } from "@/lib/golden-pages";
 import { goldenJson, recorded, recording, resetRecording } from "@/lib/golden-record";
+import { buildDropLog } from "@/lib/drop-log";
 import { loggedTwice, withoutLoot } from "@/lib/duplicate-runs";
-import { settlementView } from "@/lib/settlement-view";
+import {
+  FATES,
+  heldOfYoursBy,
+  outstandingOf,
+  owedByCreditor,
+  queueOf,
+  roomFor,
+  stillAsking,
+  worthDrawing,
+} from "@/lib/ledger-fates";
+import { saleQueues } from "@/lib/lot-sale";
+import { splitByLogger } from "@/lib/sale-logger";
+import {
+  bossesOfSales,
+  decidedSales,
+  moneyRows,
+  nightsOfSales,
+  offsetOf,
+  type OffsetShare,
+  owedByYouShares,
+  type Settlement,
+  settleThePair,
+  shareKey,
+  sliceActToWeek,
+  splittableDebts,
+  undecidedSales,
+  weekSplit,
+  yourPiles,
+} from "@/lib/settlement";
+import { buildSettledLog, orphansOf, settledTotals } from "@/lib/settled-log";
+import { settlementView, VESTIGE } from "@/lib/settlement-view";
 import { sharedCard } from "@/lib/shared-book";
 import { sharedHistory } from "@/lib/shared-history";
 import { sharedPile } from "@/lib/shared-pile";
+import {
+  closedByHolder,
+  couponMoney,
+  holderKey,
+  type HolderLedger,
+  paymentsSinceClosing,
+  runningBalance,
+  SELF_KEY,
+  stillOpen,
+  unanswered,
+} from "@/lib/vestige-ledger";
 import type { DropLogPage, SharedBook } from "@/types/page";
+import type { VestigePayment, VestigeTranche } from "@/types/vestige";
 
 // The Drop Log's figures, recorded for the backend port. See docs/backend-arithmetic-plan.md.
 //
-// Runs the Settlement chain the way app/bosses/drops/page.tsx does, over every page in the corpus
+// Runs the money the way app/bosses/drops/page.tsx and its cards do, over every page in the corpus
 // and seeded mutations of each. Writes one entry fixture per page (the whole answer) and one fixture
 // per module (what the others asked it, recorded at the module boundary by the mocks below).
 //
-// The committed corpus is real structure with every identifying value replaced (see
-// scripts/scramble-pages.mjs). MONEY_PAGES_DIR runs an audit over unscrambled pages instead, writing
-// to MONEY_GOLDEN_OUT and never to the repo.
+// The corpus in the repo is invented (lib/golden-pages.ts). MONEY_PAGES_DIR runs an audit over real
+// pages instead, writing to MONEY_GOLDEN_OUT and never to the repo.
 
 const { record } = vi.hoisted(() => ({
   record: (name: string) => async (load: () => Promise<Record<string, unknown>>) =>
@@ -34,11 +76,75 @@ vi.mock("@/lib/ledger-fates", (load) => record("ledger-fates")(load));
 vi.mock("@/lib/settlement", (load) => record("settlement")(load));
 vi.mock("@/lib/boss-difficulty", (load) => record("boss-difficulty")(load));
 
-const REPO = new URL("../../backend/src/test/resources/money-golden/", import.meta.url).pathname;
+const REPO = new URL("../../backend/money/src/jvmTest/resources/money-golden/", import.meta.url)
+  .pathname;
 const AUDIT = process.env.MONEY_PAGES_DIR;
 const PAGES = AUDIT ?? "";
 
-/** The figures the Drop Log's Settlement stage draws, off one account's payload. */
+/** A share an offset named whose drop has since been deleted, as SettlementCard draws it. */
+const deletedShare = (lootId: string, memberId: string): OffsetShare => ({
+  key: shareKey(lootId, memberId),
+  lootId: "",
+  memberId,
+  item: "A drop that has been deleted",
+  iconUrl: null,
+  boss: "",
+  members: [],
+  on: "",
+  weekStart: "",
+  share: 0,
+  sale: null,
+  currency: "MESO",
+  partyId: "",
+});
+
+/** What one SettlementCard asks of the library for its row. */
+function card(
+  row: Settlement,
+  receipts: { counted: VestigePayment[] },
+  offsetShares: Map<string, OffsetShare>,
+) {
+  const money = moneyRows(row, receipts.counted);
+  const acts = money.discharges.map((act) => {
+    const nights = act.payouts.map(
+      (p) => offsetShares.get(shareKey(p.lootId, p.memberId)) ?? deletedShare(p.lootId, p.memberId),
+    );
+    return { act, nights, split: weekSplit(row, act, nights) };
+  });
+  const weeks = [...new Set(acts.flatMap(({ split }) => (split ? [...split.keys()] : [])))]
+    .sort()
+    .reverse();
+  return {
+    money,
+    offset: offsetOf(row),
+    undecided: undecidedSales(row),
+    theirUndecided: undecidedSales({ sales: row.salesHeldByThem, holding: row.heldByThem }),
+    owedByYou: owedByYouShares(row),
+    pair: settleThePair(row),
+    bosses: bossesOfSales(row),
+    nights: nightsOfSales(row),
+    acts,
+    slices: weeks.map((week) => acts.map((a) => sliceActToWeek(row, a.act, a.nights, week))),
+  };
+}
+
+/** What one PieceLedger card asks of the library for its pile. */
+function pileCard(
+  ledger: HolderLedger,
+  held: Map<string, number>,
+  tranches: VestigeTranche[],
+  decided: Map<string, Set<string>>,
+) {
+  return {
+    asking: stillAsking(tranches, decided).map((t) => t.id),
+    room: FATES.map((fate) => roomFor(ledger, fate)),
+    outstanding: outstandingOf(ledger, held),
+    owed: owedByCreditor(ledger, held),
+    queue: queueOf(ledger, held),
+  };
+}
+
+/** The money the Drop Log page and its cards draw, off one account's two payloads. */
 function figures(page: DropLogPage, books: SharedBook[]) {
   const shared = sharedHistory(books);
   const twice = loggedTwice(
@@ -48,12 +154,90 @@ function figures(page: DropLogPage, books: SharedBook[]) {
       ownerOf: new Map(books.flatMap((b) => b.parties.map((p) => [p.id, b.ownerName]))),
     },
   );
-  const view = settlementView({ ...page, pools: withoutLoot(page.pools, twice) });
+  const counted = withoutLoot(page.pools, twice);
+  const view = settlementView({ ...page, pools: counted });
+  const { closures, settled, ledgers, holderNames, offsetShares, credits } = view;
+  const logParties = [...page.parties, ...shared.parties];
+  const logPools = [...counted, ...shared.pools];
+  const closedInLog = new Set([...closures.closed, ...closedByHolder(shared.settlements).closed]);
+  const log = buildDropLog(logParties, logPools, page.drops, closedInLog);
+  const allSettlements = [...page.settlements, ...shared.settlements];
+  const settledRows = buildSettledLog(
+    log.entries,
+    allSettlements,
+    new Map([...holderNames, ...shared.names]),
+  );
+  const paymentsByHolder = paymentsSinceClosing(page.payments, page.settlements);
+  const decided = decidedSales(credits, page.disposals);
+  const tranchesByHolder = new Map<string, VestigeTranche[]>();
+  for (const t of page.tranches)
+    tranchesByHolder.set(holderKey(t.holder), [
+      ...(tranchesByHolder.get(holderKey(t.holder)) ?? []),
+      t,
+    ]);
+  const recorded = (key: string) => {
+    const receipts = paymentsByHolder.get(key);
+    return (
+      stillAsking(tranchesByHolder.get(key) ?? [], decided).length > 0 ||
+      (receipts?.counted.length ?? 0) > 0 ||
+      (receipts?.spent.length ?? 0) > 0
+    );
+  };
+  const yours = yourPiles(ledgers);
+  const heldOfYours = heldOfYoursBy(ledgers);
+  const { drawn } = worthDrawing(yours, recorded, heldOfYours);
+  const linkedKeys = new Set(page.people.flatMap((p) => (p.linked ? [`person:${p.id}`] : [])));
+  const ownPile = yours[0];
+  const theirPiles = ledgers
+    .filter((ledger) => !ledger.closed && linkedKeys.has(holderKey(ledger.holder)))
+    .map((ledger) => {
+      const owedThem = ownPile
+        ? (owedByCreditor(ownPile).find((c) => c.key === holderKey(ledger.holder))?.pieces ?? 0)
+        : 0;
+      return { ledger, heldOfYours: new Map(owedThem > 0 ? [[SELF_KEY, owedThem]] : []) };
+    })
+    .filter((pile) => outstandingOf(pile.ledger, pile.heldOfYours) > 0);
+  const sharedPiles = books.map((book) => sharedPile(book, page.bosses));
+  const byLogger = splitByLogger(logPools);
+  const pileOf = (ledger: HolderLedger) => tranchesByHolder.get(holderKey(ledger.holder)) ?? [];
   return {
     twice,
     view,
     sharedCards: books.map((book) => sharedCard(book, page.bosses)),
-    sharedPiles: books.map((book) => sharedPile(book, page.bosses)),
+    sharedPiles,
+    log,
+    settledRows,
+    settledTotals: settledTotals(settledRows, couponMoney(page.tranches)),
+    orphans: orphansOf(log.entries, allSettlements),
+    unanswered: unanswered(page.parties, counted, VESTIGE),
+    behind: runningBalance(stillOpen(settled, closures.closed)),
+    paymentsByHolder,
+    decided,
+    drawn,
+    heldOfYours,
+    theirPiles,
+    pendingSplits: splittableDebts(page.debts, offsetShares),
+    sales: {
+      yours: saleQueues(logParties, byLogger.yours, page.drops, SELF_KEY),
+      theirs: saleQueues(logParties, byLogger.theirs, page.drops, SELF_KEY),
+    },
+    cards: view.settlement.map((row) =>
+      card(row, paymentsByHolder.get(row.key) ?? { counted: [] }, offsetShares),
+    ),
+    piles: [
+      ...drawn.map((ledger) => pileCard(ledger, heldOfYours, pileOf(ledger), decided)),
+      ...theirPiles.map((p) => pileCard(p.ledger, p.heldOfYours, pileOf(p.ledger), decided)),
+      ...sharedPiles.map((p) =>
+        p
+          ? pileCard(
+              p.ledger,
+              p.heldOfYours,
+              p.tranches.get(holderKey(p.ledger.holder)) ?? [],
+              p.decided,
+            )
+          : null,
+      ),
+    ],
   };
 }
 
@@ -136,26 +320,27 @@ describe("money golden fixtures", () => {
           books: c.books.map((b) => mutate(b, random)),
         })),
       ];
-      const entries = variants.slice(0, AUDIT ? variants.length : 1).map((v) => ({
-        input: { page: v.page, books: v.books },
-        output: goldenJson(figures(v.page, v.books)),
-      }));
-      // One file per page in an audit, whose pages are big; the invented ones share a file.
-      const file = AUDIT ? `entry-${c.name}.json` : "entry-settlement.json";
-      const prior = texts.get(file);
-      const lines = entries.map((e) => JSON.stringify(e)).join(",\n");
-      texts.set(
-        file,
-        prior ? `${prior.slice(0, -4)},\n${lines}\n]}\n` : `{"cases":[\n${lines}\n]}\n`,
-      );
+      const entry = (v: (typeof variants)[number]) =>
+        JSON.stringify({
+          input: { page: v.page, books: v.books },
+          output: goldenJson(figures(v.page, v.books)),
+        });
+      const file = `entry-${c.name}.json`;
+      if (AUDIT) {
+        // Written as it goes: a real page's variants do not fit in memory at once.
+        writeFileSync(`${out}/${file}`, `{"cases":[\n`);
+        variants.forEach((v, i) =>
+          appendFileSync(`${out}/${file}`, `${i ? ",\n" : ""}${entry(v)}`),
+        );
+        appendFileSync(`${out}/${file}`, `\n]}\n`);
+      } else {
+        texts.set(file, `{"cases":[\n${entry(variants[0]!)}\n]}\n`);
+      }
       recording(() => variants.forEach((v) => figures(v.page, v.books)));
     }
+    // One file per function, so no module's fixture outgrows the repo's file size limit.
     for (const [fn, calls] of recorded()) {
-      const [module] = fn.split(".");
-      const name = `module-${module}.json`;
-      const prior = texts.get(name);
-      const line = `${JSON.stringify(fn)}:${JSON.stringify(calls)}`;
-      texts.set(name, prior ? `${prior.slice(0, -2)},\n${line}}\n` : `{${line}}\n`);
+      texts.set(`module-${fn}.json`, `{${JSON.stringify(fn)}:${JSON.stringify(calls)}}\n`);
     }
 
     for (const [name, text] of texts) {

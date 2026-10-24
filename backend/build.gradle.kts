@@ -10,6 +10,7 @@ val hikariVersion = "6.2.1"
 
 plugins {
     kotlin("jvm") version "2.4.0"
+    kotlin("multiplatform") version "2.4.0" apply false
     kotlin("plugin.serialization") version "2.4.0"
     id("io.ktor.plugin") version "3.5.0"
     id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
@@ -45,9 +46,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
-    // The money port orders strings the way the browser's localeCompare does, which is ICU's
-    // collation and not Java's. See money/Js.kt.
-    implementation("com.ibm.icu:icu4j:77.1")
+    implementation(project(":money"))
 
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
@@ -83,7 +82,7 @@ ktlint {
 
 tasks.test {
     useJUnitPlatform()
-    // An audit of the money port replays fixtures recorded from real pages, hundreds of megabytes of
-    // them (MONEY_GOLDEN_DIR, docs/backend-arithmetic-plan.md). -PtestHeap=6g; the default is Gradle's.
-    maxHeapSize = providers.gradleProperty("testHeap").getOrElse("512m")
+    // A multiplatform module has no `test` task, only `jvmTest`, so CI's `./gradlew test` reaches the
+    // money module's golden tests through this.
+    dependsOn(":money:jvmTest")
 }
