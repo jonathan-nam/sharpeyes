@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
 import { bossLabel } from "@/lib/boss-difficulty";
-import { sectionHref } from "@/lib/drop-sections";
+import { Button } from "@/components/button";
+import { sectionHref, settlementCardHref } from "@/lib/drop-sections";
 import { shortMesos } from "@/lib/drop-split";
 import { formatDollars } from "@/lib/money";
 import { friendsChanged } from "@/lib/friends-changed";
@@ -21,7 +22,8 @@ export type KindActions = {
 
 /**
  * How each kind is drawn. A new kind is one entry here and one `notify` on the backend. One that
- * needs an answer brings its buttons and is cleared by answering; one without gets a dismiss.
+ * needs an answer brings its buttons, and is cleared by answering; one without gets a `go` button
+ * where there is somewhere to look. Every entry can also be dismissed (NotificationBell).
  *
  * A change somebody made to something shared is a sentence instead of a title, beside the art of
  * what changed (the drop) where it has some. See backend PartyNotices.kt.
@@ -33,7 +35,7 @@ type Kind = {
   text?: (payload: Payload, who: string) => string;
   /** Backend-relative art for what changed. */
   icon?: (payload: Payload) => string | null;
-  href?: (payload: Payload) => string;
+  go?: { label: (payload: Payload) => string; href: (payload: Payload) => string };
 };
 
 type Payload = AppNotification["payload"];
@@ -61,9 +63,22 @@ function partiesCount(p: Payload): string {
   return `${n} ${n === 1 ? "party" : "parties"}`;
 }
 
+/**
+ * The Settlement card the payload names (backend PartyNotices.kt and SettlementListings.kt), or the
+ * Settlement stage for an entry written before it named one.
+ */
+const viewSettlement = {
+  label: () => "View Settlement",
+  href: (p: Payload) =>
+    p.personId ? settlementCardHref(str(p.personId)) : sectionHref("settlement"),
+};
+
 const KINDS: Record<string, Kind> = {
   FRIEND_REQUEST: { title: "Friend Request", actions: FriendRequestActions },
-  FRIEND_ACCEPTED: { title: "Friend Request Accepted" },
+  FRIEND_ACCEPTED: {
+    title: "Friend Request Accepted",
+    go: { label: () => "View Friends", href: () => "/social" },
+  },
   PARTY_INVITE: {
     text: (p, who) => `${who} invited ${str(p.character)} to ${partyOf(p)}`,
     actions: PartyInviteActions,
@@ -73,29 +88,31 @@ const KINDS: Record<string, Kind> = {
       p.accepted
         ? `${who} joined ${partyOf(p)} as ${str(p.character)}`
         : `${who} declined ${partyOf(p)}`,
-    href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
+    go: {
+      label: (p) => (p.accepted ? "View Party" : "View Parties"),
+      href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
+    },
   },
   PARTY_COMBINE: {
     text: (_, who) => `${who} has requested to combine parties.`,
-    href: () => "/social",
+    go: { label: () => "Review", href: () => "/social" },
   },
   PARTY_COMBINED: {
     text: (p, who) => `${who} combined ${partiesCount(p)}`,
-    href: () => "/bosses/parties",
+    go: { label: () => "View Parties", href: () => "/bosses/parties" },
   },
   SALE_RECORDED: {
     text: (p, who) => `${who} sold ${str(p.item)} for ${priceOf(p)}`,
     icon: artOf,
-    href: partyPage,
+    go: viewSettlement,
   },
-  // Backend SettlementListings.kt. Both open the Settlement stage, where the card is.
   SPLIT_UPDATED: {
     text: (p, who) => `${who} owes you ${priceOf(p)}`,
-    href: () => sectionHref("settlement"),
+    go: viewSettlement,
   },
   LISTING_POSTED: {
     text: (p, who) => `${who} posted a listing for ${priceOf(p)}`,
-    href: () => sectionHref("settlement"),
+    go: viewSettlement,
   },
 };
 
@@ -121,12 +138,12 @@ function PartyInviteActions({ notification, busy, run }: KindActions) {
     );
   return (
     <>
-      <button type="button" className="party-save" disabled={busy} onClick={() => answer(true)}>
+      <Button variant="primary" disabled={busy} onClick={() => answer(true)}>
         Accept
-      </button>
-      <button type="button" className="party-cancel" disabled={busy} onClick={() => answer(false)}>
+      </Button>
+      <Button variant="secondary" disabled={busy} onClick={() => answer(false)}>
         Decline
-      </button>
+      </Button>
     </>
   );
 }
@@ -146,16 +163,16 @@ function FriendRequestActions({ notification, busy, run }: KindActions) {
         invalidate("/api/parties");
         friendsChanged();
       },
-      accept ? "Couldn't accept." : "Couldn't decline.",
+      accept ? "Couldn't accept." : "Couldn't reject.",
     );
   return (
     <>
-      <button type="button" className="party-save" disabled={busy} onClick={() => answer(true)}>
+      <Button variant="primary" disabled={busy} onClick={() => answer(true)}>
         Accept
-      </button>
-      <button type="button" className="party-cancel" disabled={busy} onClick={() => answer(false)}>
-        Decline
-      </button>
+      </Button>
+      <Button variant="secondary" disabled={busy} onClick={() => answer(false)}>
+        Reject
+      </Button>
     </>
   );
 }

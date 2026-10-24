@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Button } from "@/components/button";
 import { INVITED_STEPS, WelcomeHeader } from "@/components/welcome-header";
 import { PageSwap } from "@/components/page-swap";
 import { SignInButton } from "@/components/sign-in-button";
@@ -115,14 +116,13 @@ export default function JoinPage() {
               <div className="join-act">
                 {isLoaded && !isSignedIn && <SignInButton callbackPath={joinCallbackPath(token)} />}
                 {isLoaded && isSignedIn && (
-                  <button
-                    type="button"
-                    className="party-save"
+                  <Button
+                    variant="primary"
                     disabled={busy || !preview || preview.characters.length === 0}
                     onClick={accept}
                   >
                     {busy ? "Setting Up..." : "Set Up My Account"}
-                  </button>
+                  </Button>
                 )}
               </div>
               {problem && <p className="split-error">{problem}</p>}

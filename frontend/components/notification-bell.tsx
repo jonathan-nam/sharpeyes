@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ButtonLink } from "@/components/button";
 import { kindOf, type KindActions } from "@/components/notification-kinds";
 import { apiAssetUrl, apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { onFriendsChanged } from "@/lib/friends-changed";
@@ -125,7 +125,6 @@ function NotificationItem({
   const kind = kindOf(notification.kind)!;
   const { actor, payload } = notification;
   const icon = kind.icon?.(payload);
-  const href = kind.href?.(payload);
   const sentence = kind.text?.(payload, actor?.name ?? actor?.username ?? "Somebody");
   return (
     <div className={fresh ? "notification-item is-fresh" : "notification-item"}>
@@ -147,40 +146,43 @@ function NotificationItem({
       ) : (
         <span className="notification-face" aria-hidden="true" />
       )}
-      {sentence ? (
-        <span className="notification-text">
-          {href ? (
-            <Link className="notification-sentence" href={href} onClick={onFollow}>
-              {sentence}
-            </Link>
-          ) : (
+      {/* The buttons sit under the words, so both start at the same edge. */}
+      <span className="notification-body">
+        {sentence ? (
+          <span className="notification-text">
             <span className="notification-sentence">{sentence}</span>
-          )}
-        </span>
-      ) : (
-        <span className="notification-text">
-          <span className="notification-title">{kind.title}</span>
-          {actor && <span className="notification-who">{actor.name ?? actor.username}</span>}
-          {actor?.username && actor.name && (
-            <span className="notification-handle">@{actor.username}</span>
-          )}
-        </span>
-      )}
-      <span className="notification-actions">
-        {kind.actions ? (
-          kind.actions({ notification, busy, run })
+          </span>
         ) : (
-          <button
-            type="button"
-            className="notification-dismiss"
-            aria-label="Dismiss"
-            disabled={busy}
-            onClick={onDismiss}
-          >
-            &times;
-          </button>
+          <span className="notification-text">
+            <span className="notification-title">{kind.title}</span>
+            {actor && <span className="notification-who">{actor.name ?? actor.username}</span>}
+            {actor?.username && actor.name && (
+              <span className="notification-handle">@{actor.username}</span>
+            )}
+          </span>
+        )}
+        {(kind.actions || kind.go) && (
+          <span className="notification-actions">
+            {kind.actions
+              ? kind.actions({ notification, busy, run })
+              : kind.go && (
+                  <ButtonLink variant="primary" href={kind.go.href(payload)} onClick={onFollow}>
+                    {kind.go.label(payload)}
+                  </ButtonLink>
+                )}
+          </span>
         )}
       </span>
+      {/* Every entry clears. A request or invite cleared here is still answered on Social. */}
+      <button
+        type="button"
+        className="notification-dismiss"
+        aria-label="Dismiss"
+        disabled={busy}
+        onClick={onDismiss}
+      >
+        &times;
+      </button>
     </div>
   );
 }

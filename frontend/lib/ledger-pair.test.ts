@@ -252,7 +252,9 @@ describe("every act in one step", () => {
     // buttons wearing the word Offset. The entry forms are submits and stay where they are typed.
     const at = ledger.indexOf('<span className="ledger-heading">Closing Actions</span>');
     expect(at, "the step is gone").toBeGreaterThan(-1);
-    for (const m of ledger.matchAll(/type="button"\s+className="party-save"/g)) {
+    for (const m of ledger.matchAll(
+      /<Button\s+variant="primary"(?!\s+(?:type="submit"|className=))/g,
+    )) {
       expect(m.index, "an act is drawn outside Closing Actions").toBeGreaterThan(at);
     }
   });

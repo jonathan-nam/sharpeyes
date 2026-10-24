@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  cardFromQuery,
   dropSections,
   homeSections,
   saleCards,
   sectionFromQuery,
   sectionHref,
+  settlementCardHref,
   shownSection,
 } from "./drop-sections";
 
@@ -106,5 +108,17 @@ describe("linking straight to a stage", () => {
 
   it("offers a Heroic home screen the drops alone", () => {
     expect(homeSections(false).map((s) => s.key)).toEqual(["drops"]);
+  });
+});
+
+describe("linking straight to one Settlement card", () => {
+  it("opens the Settlement stage and names the card the page scrolls to", () => {
+    const url = new URL(settlementCardHref("3f2504e0-4f89-11d3-9a0c-0305e82c3301"), "http://x");
+    expect(sectionFromQuery(url.search)).toBe("settlement");
+    expect(cardFromQuery(url.search)).toBe("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
+  });
+
+  it("names no card on a plain stage link", () => {
+    expect(cardFromQuery(new URL(sectionHref("settlement"), "http://x").search)).toBeUndefined();
   });
 });

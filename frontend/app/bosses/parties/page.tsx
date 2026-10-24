@@ -1,5 +1,6 @@
 "use client";
 
+import { ButtonLink } from "@/components/button";
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
@@ -991,9 +992,9 @@ export default function PartiesPage() {
         <h1 className="page-title">Party View</h1>
         {state === "loaded" && (
           <span className="page-head-links">
-            <Link className="party-cancel" href="/bosses/parties/edit">
+            <ButtonLink variant="secondary" href="/bosses/parties/edit">
               Edit Parties
-            </Link>
+            </ButtonLink>
           </span>
         )}
       </div>

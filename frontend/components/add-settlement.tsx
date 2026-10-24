@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/button";
 import { IconSelect } from "@/components/icon-select";
 import { failureText } from "@/lib/api";
 import { useState } from "react";
@@ -266,14 +267,15 @@ export function AddSettlement({
             </label>
             {/* A + rather than the word: two forms in one card would both read "Add", and what each
                 one adds is what its step says. The label is the act, the mark not being text. */}
-            <button
+            <Button
+              variant="primary"
               type="submit"
-              className="party-save ledger-add"
+              className="ledger-add"
               disabled={busy || amount === null}
               aria-label={debtor.addLabel}
             >
               +
-            </button>
+            </Button>
           </form>
         </div>
       )}
@@ -327,14 +329,15 @@ export function AddSettlement({
                 aria-label="Description, optional"
               />
             </label>
-            <button
+            <Button
+              variant="primary"
               type="submit"
-              className="party-save ledger-add"
+              className="ledger-add"
               disabled={busy || paid === null}
               aria-label={payer.addLabel}
             >
               +
-            </button>
+            </Button>
           </form>
         </div>
       )}

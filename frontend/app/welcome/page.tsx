@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
 import { AddForWeek } from "@/components/add-for-week";
+import { Button } from "@/components/button";
 import { RosterStrip } from "@/components/roster-strip";
 import { CharacterCard } from "@/components/character-card";
 import { INVITED_STEPS, SETUP_STEPS, WelcomeHeader } from "@/components/welcome-header";
@@ -260,30 +261,25 @@ function Welcome() {
       <div className="welcome-nav">
         <span>
           {step > 0 && (
-            <button type="button" className="party-cancel" onClick={() => setStep(step - 1)}>
+            <Button variant="secondary" onClick={() => setStep(step - 1)}>
               {"\u2190 Back"}
-            </button>
+            </Button>
           )}
         </span>
         <span className="welcome-nav-end">
           {step < 2 ? (
-            <button
-              type="button"
-              className="party-save"
+            <Button
+              variant="primary"
               disabled={step === 0 ? chosenWorld === null || savingWorld : mainCharacter === null}
               onClick={() => setStep(step + 1)}
             >
               {"Next \u2192"}
-            </button>
+            </Button>
           ) : (
             <>
-              <button
-                type="button"
-                className="party-save"
-                onClick={() => router.push("/bosses/parties")}
-              >
+              <Button variant="primary" onClick={() => router.push("/bosses/parties")}>
                 {"Finish \u2192"}
-              </button>
+              </Button>
             </>
           )}
         </span>

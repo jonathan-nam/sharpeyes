@@ -80,6 +80,24 @@ export function sectionHref(key: DropSectionKey): string {
   return key === "drops" ? "/bosses/drops" : `/bosses/drops?section=${key}`;
 }
 
+/**
+ * A link straight to one Settlement card, named by the person it is with. That person is the same
+ * row whichever side reads the card: the owner's own card and the member's shared one.
+ */
+export function settlementCardHref(personId: string): string {
+  return `${sectionHref("settlement")}&card=${encodeURIComponent(personId)}`;
+}
+
+/** The card a `?card=` asks for. */
+export function cardFromQuery(search: string): string | undefined {
+  return new URLSearchParams(search).get("card") ?? undefined;
+}
+
+/** The element id a Settlement card carries, which settlementCardHref scrolls to. */
+export function cardAnchor(personId: string): string {
+  return `settlement-card-${personId}`;
+}
+
 /** The stage a `?section=` asks for, or undefined for none or one that is not a stage. */
 export function sectionFromQuery(search: string): DropSectionKey | undefined {
   const asked = new URLSearchParams(search).get("section");

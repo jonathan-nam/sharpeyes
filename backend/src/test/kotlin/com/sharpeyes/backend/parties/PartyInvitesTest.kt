@@ -164,4 +164,25 @@ class PartyInvitesTest {
             assertTrue(PartyMember.selectAll().where { PartyMember.linkedCharacterId eq pine }.empty())
         }
     }
+
+    // Social lists them, so an invite cleared from the bell can still be answered.
+    @Test
+    fun `an invite waits on the invitee, named the way the bell names it, and on nobody else`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            link(owner, "Chris", member)
+            val partyId = party(owner, tide, listOf("Baldrix"))
+            sendInvites(owner, partyId, listOf(Invitee("Pinewick", pine)), now)
+
+            val waiting = invitesWaitingOn(member).single()
+            assertEquals(invitesTo(partyId).single().id, waiting.id)
+            assertEquals("Pinewick", waiting.character)
+            assertEquals("tidelark", waiting.leader)
+            assertTrue(invitesWaitingOn(owner).isEmpty())
+
+            dropInviteAs(member, Uuid.parse(waiting.id), now)
+            assertTrue(invitesWaitingOn(member).isEmpty())
+        }
+    }
 }

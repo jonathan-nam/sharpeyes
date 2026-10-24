@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Field } from "@/components/add-field";
+import { Button } from "@/components/button";
 import { formatMoney, parseAmount } from "@/lib/money";
 import { divides } from "@/lib/loot";
 import { parseShares, sharePercents } from "@/lib/shares";
@@ -199,17 +200,17 @@ export function LootSaleForm({
       <div className="loot-actions">
         {/* Without a seller there is nobody to measure the shares against, and the submit
             would return without saying so. */}
-        <button
+        <Button
+          variant="primary"
           type="submit"
-          className="party-save"
           disabled={busy || money === null || !sellerMemberId || !sharesReadable}
         >
           Save Sale
-        </button>
+        </Button>
         {onCancel && (
-          <button type="button" className="party-cancel" onClick={onCancel} disabled={busy}>
+          <Button variant="secondary" onClick={onCancel} disabled={busy}>
             Cancel
-          </button>
+          </Button>
         )}
         {/* Shown before saving, so a typed "9.5b" is confirmed as 9,500,000,000 rather than
             discovered afterwards. It is also what makes the unit visible: "$1000" echoes back as

@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/use-auth";
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { CharacterCard, type CardReorder } from "@/components/character-card";
 import { apiFetch } from "@/lib/api";
 import { saveMainCharacter, useAccountSettings } from "@/lib/use-account-settings";
@@ -63,14 +64,9 @@ export function CharacterRow({
           <button type="button" className="party-delete" onClick={remove} disabled={disabled}>
             Delete {character.name}?
           </button>
-          <button
-            type="button"
-            className="party-cancel"
-            onClick={() => setConfirming(false)}
-            disabled={disabled}
-          >
+          <Button variant="secondary" onClick={() => setConfirming(false)} disabled={disabled}>
             Keep
-          </button>
+          </Button>
         </>
       ) : (
         <button

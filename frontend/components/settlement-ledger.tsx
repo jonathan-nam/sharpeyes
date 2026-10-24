@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/components/button";
+import { cardAnchor } from "@/lib/drop-sections";
 import { ChangedBy } from "@/components/changed-by";
 import { Tooltip } from "@/components/tooltip";
 import { formatPieces } from "@/lib/piece-ledger";
@@ -653,9 +655,9 @@ function SettlementCard({
       meta: `${boss ? bossLabel(boss.name, party?.difficulty ?? null) : "–"} · ${line.theirs}`,
       money: formatMoney(line.pay, line.currency, true),
       act: line.direction === "owed" && (
-        <button
-          type="button"
-          className="party-save ledger-line-act"
+        <Button
+          variant="primary"
+          className="ledger-line-act"
           disabled={busy}
           onClick={() =>
             void write(onSettleShares([{ lootId: line.lootId, memberId: line.payeeId }]), null)
@@ -663,7 +665,7 @@ function SettlementCard({
           aria-label={`Mark the ${line.name} share received from ${line.theirs}`}
         >
           Mark Received
-        </button>
+        </Button>
       ),
     };
   };
@@ -807,7 +809,10 @@ function SettlementCard({
     : discharged;
 
   return (
-    <section className="changed-by-anchor ledger-card">
+    <section
+      className="changed-by-anchor ledger-card"
+      id={personId ? cardAnchor(personId) : undefined}
+    >
       <ChangedBy topics={["settlement"]} matches={(t) => `person:${t.person}` === row.key} />
       <LedgerHead
         // Kept whatever it says. Only a PERSON can be pinned: a character nobody has claimed is
@@ -1341,9 +1346,9 @@ function SettlementCard({
                       aria-label={`What ${row.name} pays to keep the ${formatPieces(row.pieces)} coupons of yours`}
                     />
                   </label>
-                  <button type="submit" className="party-save" disabled={busy || keeps === null}>
+                  <Button variant="primary" type="submit" disabled={busy || keeps === null}>
                     Add
-                  </button>
+                  </Button>
                 </form>
               )}
             </>

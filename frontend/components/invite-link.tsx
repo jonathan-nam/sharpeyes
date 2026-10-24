@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/button";
 import { inviteUrl, timeLeft } from "@/lib/invite-link";
 import type { Invite } from "@/types/invite";
 
@@ -101,13 +102,13 @@ export function InviteLink({
           {/* Nothing to copy once it is spent: handing somebody a dead address is worse than
               telling them there is none. */}
           {url !== null && left !== null && (
-            <button type="button" className="party-save" onClick={copy}>
+            <Button variant="primary" onClick={copy}>
               {copied ? "Copied" : "Copy Link"}
-            </button>
+            </Button>
           )}
-          <button type="button" className="party-cancel" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
       </div>
     </div>

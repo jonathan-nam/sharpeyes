@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/use-auth";
 import { useEffect, useState } from "react";
 import { AddCharacter } from "@/components/add-character";
+import { Button } from "@/components/button";
 import { CharacterRow } from "@/components/character-row";
 import { movedTo, useCardReorder } from "@/lib/use-card-reorder";
 import { PageSwap } from "@/components/page-swap";
@@ -180,9 +181,9 @@ export default function CharactersPage() {
         {/* Only while there is something to look up, so it takes itself off the page. Every
             character added from here on arrives with a world already. */}
         {unplaced.length > 0 && (
-          <button type="button" className="party-cancel" onClick={findWorlds} disabled={finding}>
+          <Button variant="secondary" onClick={findWorlds} disabled={finding}>
             {finding ? "Looking Up..." : `Look Up ${unplaced.length} World${plural}`}
-          </button>
+          </Button>
         )}
       </div>
 
