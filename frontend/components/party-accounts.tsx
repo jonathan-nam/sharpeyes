@@ -1,3 +1,4 @@
+import { Tooltip } from "@/components/tooltip";
 import type { PartyAccount } from "@/types/party";
 
 /** The accounts a shared party reaches, as their Discord avatars, the leader's starred. */
@@ -15,24 +16,25 @@ export function PartyAccounts({ accounts }: { accounts: PartyAccount[] }) {
         .join(", ")}${leader ? `. ${nameOf(leader)} leads.` : ""}`}
     >
       {accounts.map((one, i) => (
-        <span
+        <Tooltip
           // Names can repeat (two people you call the same) and an account appears once, so its
           // position is what is unique in the list.
           key={i}
-          className={one.leader ? "party-account is-leader" : "party-account"}
-          title={one.leader ? `${nameOf(one)} · Leader` : nameOf(one)}
+          text={one.leader ? `${nameOf(one)} · Leader` : nameOf(one)}
         >
-          {one.image ? (
-            <img className="party-account-img" src={one.image} alt="" />
-          ) : (
-            <span className="party-account-img is-empty">{nameOf(one).slice(0, 1)}</span>
-          )}
-          {one.leader && (
-            <span className="party-account-star" aria-hidden="true">
-              ★
-            </span>
-          )}
-        </span>
+          <span className={one.leader ? "party-account is-leader" : "party-account"}>
+            {one.image ? (
+              <img className="party-account-img" src={one.image} alt="" />
+            ) : (
+              <span className="party-account-img is-empty">{nameOf(one).slice(0, 1)}</span>
+            )}
+            {one.leader && (
+              <span className="party-account-star" aria-hidden="true">
+                ★
+              </span>
+            )}
+          </span>
+        </Tooltip>
       ))}
     </span>
   );

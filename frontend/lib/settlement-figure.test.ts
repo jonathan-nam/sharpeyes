@@ -87,7 +87,7 @@ describe("what the card says a person owes", () => {
     // The same list sits under its own step further down, with two forms between the two, so the
     // figure and the nights it came off did not read as the same thing.
     expect(source).toContain('const behindShares = behind("owed");');
-    expect(source).toContain("title={part.detail || undefined}");
+    expect(source).toMatch(/<Tooltip text=\{part\.detail\}>\s*<div className="ledger-drop-head">/);
     expect(source).toContain('part.detail ? "loot-name has-detail" : "loot-name"');
     expect(css).toContain(".loot-name.has-detail");
   });
@@ -285,12 +285,12 @@ describe("what the card says a person owes", () => {
   it("draws an offset as a name over its figure, whatever is behind it", () => {
     // Two folds in there is no width for an icon, a name, a boss, three member names, a date and two
     // mesos figures: they came out three lines tall and the list stopped being scannable. The figure,
-    // the art and what fell stay; the rest is the title, which is what the shares row above already
+    // the art and what fell stay; the rest is the tooltip, which is what the shares row above already
     // does. The name is the only part allowed to give, being the one a reader recognises from half.
     // An offset is two lines: the name over the figure. The name wraps rather than being cut, because
     // which drop an offset was for is what it is read for.
-    expect(source).toContain(
-      '<div className="ledger-drop-head is-stacked" title={behind || undefined}>',
+    expect(source).toMatch(
+      /<Tooltip text=\{behind\}>\s*<div className="ledger-drop-head is-stacked">/,
     );
     expect(css).toContain(".ledger-drop-head.is-stacked");
     expect(css).toContain("overflow-wrap: anywhere");

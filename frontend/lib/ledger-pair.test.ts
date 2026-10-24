@@ -386,9 +386,9 @@ describe("what a column draws and how wide it lets itself get", () => {
     // with no space in it sized the whole half and pushed its row's × out over the half beside it.
     expect(rule(".ledger-pair > .ledger-entry")).toMatch(/min-width:\s*0/);
     // Breaking the note mid-word kept the × inside the card but took the row to four lines. It
-    // truncates instead, and the whole note is the row's title.
-    expect(ledger).toContain(
-      '<div className="ledger-drop-head is-oneline is-typed" title={entry.note ?? undefined}>',
+    // truncates instead, and the whole note is the row's tooltip.
+    expect(ledger).toMatch(
+      /<Tooltip text=\{entry\.note\}>\s*<div className="ledger-drop-head is-oneline is-typed">/,
     );
     const name = rule(".ledger-drop-head.is-oneline .loot-name");
     expect(name).toMatch(/text-overflow:\s*ellipsis/);

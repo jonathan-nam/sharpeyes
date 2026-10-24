@@ -6,6 +6,7 @@ import { failureText, isDuplicateDrop } from "@/lib/api";
 import { DropSelect } from "@/components/drop-select";
 import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
 import { StackAssign } from "@/components/stack-assign";
+import { Tooltip } from "@/components/tooltip";
 import { StackPickupDraft } from "@/components/stack-pickup";
 import {
   OTHER,
@@ -287,15 +288,16 @@ export function DropPicker({
       {blocks}
 
       {pickedPiece ? null : card ? (
-        <button
-          type="submit"
-          className="party-save add-plus"
-          title="Add Drop"
-          aria-label="Add Drop"
-          disabled={busy || !ready}
-        >
-          <span aria-hidden="true">+</span>
-        </button>
+        <Tooltip text="Add Drop">
+          <button
+            type="submit"
+            className="party-save add-plus"
+            aria-label="Add Drop"
+            disabled={busy || !ready}
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+        </Tooltip>
       ) : (
         <button type="submit" className="party-save" disabled={busy || !ready}>
           Add Drop

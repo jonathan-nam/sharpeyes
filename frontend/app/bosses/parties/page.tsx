@@ -51,6 +51,7 @@ import { type CrossedReset, WEEKLY_CADENCE } from "@/lib/reset-countdown";
 import { useDropIcons } from "@/lib/drop-icons";
 import { useSeatSprites } from "@/lib/seat-sprites";
 import { OtherWorld } from "@/components/other-world";
+import { Tooltip } from "@/components/tooltip";
 import { useRowWrites } from "@/lib/use-row-writes";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
@@ -1065,17 +1066,17 @@ export default function PartiesPage() {
                 aria-label="Filter by clear state"
               >
                 {filterTabs.map((tab) => (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    className={clearFilter === tab.value ? "basis-tab active" : "basis-tab"}
-                    aria-pressed={clearFilter === tab.value}
-                    title={tab.title}
-                    onClick={() => setClearFilter(tab.value)}
-                  >
-                    {tab.label}
-                    <span className="tab-count">{tab.count}</span>
-                  </button>
+                  <Tooltip key={tab.value} text={tab.title}>
+                    <button
+                      type="button"
+                      className={clearFilter === tab.value ? "basis-tab active" : "basis-tab"}
+                      aria-pressed={clearFilter === tab.value}
+                      onClick={() => setClearFilter(tab.value)}
+                    >
+                      {tab.label}
+                      <span className="tab-count">{tab.count}</span>
+                    </button>
+                  </Tooltip>
                 ))}
                 {/* Narrows to parties somebody else owns. Only where there are some. */}
                 {sharedRows.length > 0 && (
