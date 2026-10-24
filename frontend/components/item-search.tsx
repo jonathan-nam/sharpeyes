@@ -479,7 +479,11 @@ export function SearchResults({ query, matches }: { query: string; matches: Matc
                 </header>
                 <ul>
                   {items.map((item) => (
-                    <Tooltip key={item.tokenCatalogId} text={item.name}>
+                    <Tooltip
+                      key={item.tokenCatalogId}
+                      text={item.name}
+                      onlyIfCut=".finder-item-name"
+                    >
                       <li>
                         {item.iconUrl && (
                           <img src={apiAssetUrl(item.iconUrl)} alt="" aria-hidden="true" />

@@ -302,7 +302,7 @@ export function BossMatrix({
               <thead>
                 <tr>
                   {columns.map((character) => (
-                    <Tooltip key={character.id} text={character.name}>
+                    <Tooltip key={character.id} text={character.name} onlyIfCut>
                       <th
                         className={`boss-char-head${doneClass(character.id)}${colClass(character.id)}`}
                         scope="col"
