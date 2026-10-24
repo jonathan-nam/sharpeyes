@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { CombineParties } from "@/components/combine-parties";
 import { ConfirmAct } from "@/components/confirm-act";
-import { DiscordLookup, reachesSomebody, useDiscordLookup } from "@/components/discord-lookup";
+import { DiscordLookup, mayAsk, useDiscordLookup } from "@/components/discord-lookup";
 import { PageSwap } from "@/components/page-swap";
 import { apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
@@ -105,7 +105,7 @@ export default function SocialPage() {
               <button
                 type="submit"
                 className="party-save"
-                disabled={busy || !reachesSomebody(lookup)}
+                disabled={busy || !mayAsk(username, lookup)}
               >
                 Send Request
               </button>

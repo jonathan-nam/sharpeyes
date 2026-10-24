@@ -56,9 +56,14 @@ export function useDiscordLookup(value: string): DiscordLookupState {
   return wanted && answer?.asked === wanted ? answer.state : "idle";
 }
 
-/** True when [state] is somebody other than you, which is all a request can go to. */
-export function reachesSomebody(state: DiscordLookupState): state is DiscordFound {
-  return typeof state !== "string" && !state.you;
+/**
+ * Whether a request for [value] may be sent: refused only once the lookup has said nobody, or you.
+ * A lookup still pending or one that failed blocks nothing, because the request is checked by the
+ * server anyway, and gating on the preview took sending down whenever the lookup could not answer.
+ */
+export function mayAsk(value: string, state: DiscordLookupState): boolean {
+  if (value.trim() === "" || state === "none") return false;
+  return typeof state === "string" || !state.you;
 }
 
 /** The username box, and under it whose account the name reaches. */
