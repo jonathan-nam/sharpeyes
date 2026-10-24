@@ -196,7 +196,7 @@ export function PostListingDialog({
       >
         <h2 className="invite-title">
           {"Post Listing for "}
-          <CopyAmount value={amount} display={formatMesos(amount)} />
+          <CopyAmount value={amount} display={formatMesos(amount, true)} />
         </h2>
         <label
           className="listing-drop"
