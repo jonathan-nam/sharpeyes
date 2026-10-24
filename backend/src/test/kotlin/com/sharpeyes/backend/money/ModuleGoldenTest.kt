@@ -39,6 +39,12 @@ class ModuleGoldenTest {
     @Test
     fun wallet() = check("wallet", mapOf("wallet.buildWallet" to { a -> out(buildWallet(a.arg(0), a.arg(1))) }))
 
+    @Test
+    fun `vestige-ledger`() = check("vestige-ledger", vestigeAdapters)
+
+    @Test
+    fun `ledger-fates`() = check("ledger-fates", ledgerFatesAdapters)
+
     private companion object {
         const val SHOWN = 5
     }
