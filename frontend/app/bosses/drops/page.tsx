@@ -18,6 +18,7 @@ import {
   SAVED_BUT_STALE,
   StaleAfterWrite,
   apiAssetUrl,
+  apiBlob,
   apiFetch,
   readBack,
   failureText,
@@ -96,6 +97,9 @@ import { sharedCard } from "@/lib/shared-book";
 import { loggedTwice, withoutLoot } from "@/lib/duplicate-runs";
 import { sharedHistory } from "@/lib/shared-history";
 import { sharedPile } from "@/lib/shared-pile";
+import type { ListingKit } from "@/components/settlement-listing";
+import { figuresToReport, LISTINGS_KEY } from "@/lib/settlement-listings";
+import type { SettlementListing } from "@/types/settlement-listing";
 import type { Party, Person } from "@/types/party";
 import type {
   ProceedsDisposal,
@@ -116,6 +120,8 @@ type LoadState = "loading" | "loaded" | "error";
 const PAGE_KEY = "/api/pages/drop-log";
 // Other owners' books, cut to what they say about you. See lib/shared-book.ts.
 const SHARED_KEY = "/api/pages/shared-books";
+// How long the figures must sit still before they are reported. A sale's read-back lands in parts.
+const FIGURES_SETTLE_MS = 1500;
 
 /** The query is read once per render and never changes under the page, so nothing to listen to. */
 const noSubscription = () => () => {};
@@ -158,6 +164,7 @@ export default function DropLogPage() {
   const [debts, setDebts] = useState<SettlementDebt[]>([]);
   const [disposals, setDisposals] = useState<ProceedsDisposal[]>([]);
   const [sharedBooks, setSharedBooks] = useState<SharedBook[]>([]);
+  const [listings, setListings] = useState<SettlementListing[]>([]);
   const [people, setPeople] = useState<Person[]>(peek<Person[]>(PEOPLE_KEY) ?? []);
 
   // A drop names the party it fell in and links to it, which draws its seats. See
@@ -251,12 +258,15 @@ export default function DropLogPage() {
    */
   async function load(token?: string | null) {
     const withToken = token !== undefined ? () => Promise.resolve(token) : getToken;
-    const [page, books] = await Promise.all([
+    const [page, books, posted] = await Promise.all([
       apiFetch<DropLogPage>(PAGE_KEY, { method: "GET" }, withToken),
       // Additive: a failure leaves out the other owners' cards and nothing of your own.
       apiFetch<SharedBook[]>(SHARED_KEY, { method: "GET" }, withToken).catch(() => []),
+      // Additive too: a failure draws no listings, never a stale one.
+      apiFetch<SettlementListing[]>(LISTINGS_KEY, { method: "GET" }, withToken).catch(() => []),
     ]);
     setSharedBooks(books);
+    setListings(posted);
 
     setParties(page.parties);
     setPools(page.pools);
@@ -607,6 +617,59 @@ export default function DropLogPage() {
   const sharedPiles = sharedBooks
     .flatMap((book) => sharedPile(book, bosses) ?? [])
     .filter((pile) => outstandingOf(pile.ledger, pile.heldOfYours) > 0);
+
+  // What every linked card holds, reported as it is drawn: the backend deletes a listing posted for
+  // any other amount, and tells the payee when the payer's figure moves. Only once loaded and
+  // between writes, so a figure from a write that has half landed is never reported.
+  const figures =
+    state === "loaded"
+      ? figuresToReport(
+          view.settlement,
+          people.flatMap((person) => (person.linked ? [person.id] : [])),
+          sharedCards,
+        )
+      : [];
+  const figuresKey = JSON.stringify(figures);
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (busy || figures.length === 0) return;
+    const timer = setTimeout(() => {
+      apiFetch<SettlementListing[]>(
+        `${LISTINGS_KEY}/figures`,
+        { method: "POST", body: JSON.stringify({ figures }) },
+        getToken,
+      )
+        .then(setListings)
+        .catch(() => {});
+    }, FIGURES_SETTLE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [figuresKey, busy, isLoaded]);
+  const listingKit: ListingKit = {
+    listings,
+    busy,
+    post: (personId, amount, image) =>
+      writes.track(async () => {
+        setListings(
+          await apiFetch<SettlementListing[]>(
+            `${LISTINGS_KEY}/cards/${encodeURIComponent(personId)}?amount=${amount}`,
+            { method: "POST", body: image, headers: { "Content-Type": image.type } },
+            getToken,
+          ),
+        );
+      }),
+    remove: (id) =>
+      writes.track(async () => {
+        setListings(
+          await apiFetch<SettlementListing[]>(
+            `${LISTINGS_KEY}/${encodeURIComponent(id)}`,
+            { method: "DELETE" },
+            getToken,
+          ),
+        );
+      }),
+    image: (id) => apiBlob(`${LISTINGS_KEY}/${encodeURIComponent(id)}/image`, getToken),
+  };
   const intoBook = (personId: string, path: string, init: RequestInit) =>
     writes.track(async () => {
       await apiFetch<unknown>(
@@ -886,11 +949,17 @@ export default function DropLogPage() {
                 sharedOwners={sharedBooks.flatMap((book) => book.ownerPersonId ?? [])}
                 sharedCards={sharedCards}
                 onShared={sharedWrites.add}
+                listings={listingKit}
               />
             )}
 
             {shown === "settlement" && (
-              <SharedCards cards={sharedCards} writes={sharedWrites} coupon={coupon} />
+              <SharedCards
+                cards={sharedCards}
+                writes={sharedWrites}
+                coupon={coupon}
+                listings={listingKit}
+              />
             )}
 
             {/* The end of the pipeline, and it only runs one way: nothing here is waiting on

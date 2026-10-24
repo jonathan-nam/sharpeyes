@@ -15,7 +15,9 @@ import {
   ShareRows,
   UnsettledAmounts,
 } from "@/components/ledger-card";
+import { type ListingKit, ListingThumb, PostListingDialog } from "@/components/settlement-listing";
 import { WeekFilter } from "@/components/week-stepper";
+import { liveListing } from "@/lib/settlement-listings";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import {
@@ -34,6 +36,7 @@ import {
   owedByYouShares,
   undecidedSales,
   heldByThem,
+  heldMesos,
   shareKey,
 } from "@/lib/settlement";
 import { apiAssetUrl, failureText } from "@/lib/api";
@@ -112,7 +115,10 @@ export function SettlementLedger({
   onDecideHeld,
   images = new Map(),
   linked = new Set(),
+  listings,
 }: {
+  /** Auction house listings on the linked cards. None drawn without it. */
+  listings?: ListingKit;
   /** What became of money of yours they hold: off what you owe them, or sent to you. See V91. */
   onDecideHeld: (holder: Holder, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
   rows: Settlement[];
@@ -193,6 +199,7 @@ export function SettlementLedger({
           row={row}
           image={images.get(row.key) ?? null}
           linked={linked.has(row.key)}
+          listings={listings}
           bossByKey={bossByKey}
           partyById={partyById}
           offsetShares={offsetShares}
@@ -239,7 +246,9 @@ function SettlementCard({
   onDecideHeld,
   image,
   linked,
+  listings,
 }: {
+  listings?: ListingKit;
   onDecideHeld: (holder: Holder, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
   row: Settlement;
   /** Their Discord avatar, when they are linked. */
@@ -318,6 +327,7 @@ function SettlementCard({
   // this section is read for; WHICH nights it came off is the follow-up question.
   const [showNights, setShowNights] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [posting, setPosting] = useState(false);
   // The week the offsets are narrowed to, by the week the drop FELL in, never the week it sold or
   // was offset. "" is every week.
   const [week, setWeek] = useState("");
@@ -615,6 +625,16 @@ function SettlementCard({
     .filter((line) => line.currency === "MESO")
     .reduce((sum, line) => sum + line.pay, 0);
   const theyHold = row.heldByThem + theyHoldShares;
+
+  // Listings, between linked accounts only. Yours is for what they hold (their half's figure); theirs
+  // is for what you hold, and sits beside the act that pays it.
+  const personId = row.holder.personId;
+  const kit = linked && personId !== null ? listings : undefined;
+  const holds = heldMesos(row);
+  const yourListing =
+    kit && personId ? liveListing(kit.listings, personId, "MEMBER", holds.byThem) : null;
+  const theirListing =
+    kit && personId ? liveListing(kit.listings, personId, "OWNER", holds.byYou) : null;
 
   /**
    * One share, as every drop row on this account reads: its art, its name, the boss, whose share,
@@ -1385,12 +1405,39 @@ function SettlementCard({
                         ? `Mark ${movedBoth(owes - row.heldByThem, row.usd.owe)} Sent`
                         : `Mark ${formatMesos(-sendNet, true)} Received`,
                   detail: sentFor,
+                  after: kit && theirListing && <ListingThumb listing={theirListing} kit={kit} />,
                   onClick: () => void write(sendNetted(), null),
+                },
+              ]
+            : []),
+          ...(kit && holds.byThem > 0
+            ? [
+                {
+                  key: "listing",
+                  label: yourListing
+                    ? "Replace Listing"
+                    : `Post Listing for ${formatMesos(holds.byThem, true)}`,
+                  after: yourListing && (
+                    <ListingThumb
+                      listing={yourListing}
+                      kit={kit}
+                      onRemove={() => void write(kit.remove(yourListing.id), null)}
+                    />
+                  ),
+                  onClick: () => setPosting(true),
                 },
               ]
             : []),
         ]}
       />
+
+      {posting && kit && personId && (
+        <PostListingDialog
+          amount={holds.byThem}
+          onPost={(image) => kit.post(personId, holds.byThem, image)}
+          onClose={() => setPosting(false)}
+        />
+      )}
 
       {refusal && <span className="split-error">{refusal}</span>}
     </section>

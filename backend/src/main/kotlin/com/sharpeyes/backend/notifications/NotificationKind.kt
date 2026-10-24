@@ -23,4 +23,10 @@ object NotificationKind {
 
     /** A drop of a party you are in sold. Subject: the drop. */
     const val SALE_RECORDED = "SALE_RECORDED"
+
+    /** What a linked account holds for you moved (payload `amount`). Subject: the settlement_figure. */
+    const val SPLIT_UPDATED = "SPLIT_UPDATED"
+
+    /** Your payee posted a listing for what you hold. Subject: the settlement_listing. */
+    const val LISTING_POSTED = "LISTING_POSTED"
 }

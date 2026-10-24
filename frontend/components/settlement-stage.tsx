@@ -3,6 +3,7 @@
 import { AddSettlement } from "@/components/add-settlement";
 import type { SharedWrites } from "@/components/shared-cards";
 import { SettlementLedger } from "@/components/settlement-ledger";
+import type { ListingKit } from "@/components/settlement-listing";
 import { SettlementSummary } from "@/components/settlement-summary";
 import { keptOfYours } from "@/lib/settlement";
 import { type SharedCard, withSharedCards } from "@/lib/shared-book";
@@ -30,7 +31,10 @@ export function SettlementStage({
   sharedOwners = [],
   sharedCards = [],
   onShared,
+  listings,
 }: {
+  /** Auction house listings on the linked cards. See components/settlement-listing.tsx. */
+  listings?: ListingKit;
   page: Pick<
     DropLogPage,
     "parties" | "bosses" | "people" | "tranches" | "payments" | "settlements" | "drops"
@@ -106,6 +110,7 @@ export function SettlementStage({
         linked={
           new Set(page.people.flatMap((person) => (person.linked ? [`person:${person.id}`] : [])))
         }
+        listings={listings}
         bossByKey={bossByKey}
         partyById={partyById}
         offsetShares={offsetShares}

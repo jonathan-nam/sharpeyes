@@ -7198,6 +7198,65 @@ button.link:disabled {
   overflow-y: auto;
 }
 
+/* An auction house listing on a Settlement card: the screenshot is what is read, so the page behind
+   it is blurred rather than only dimmed. */
+.listing-backdrop {
+  backdrop-filter: blur(6px);
+}
+
+.invite-dialog.listing-dialog {
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.listing-full {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto 16px;
+  border-radius: var(--radius-sm);
+}
+
+.listing-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.listing-drop .listing-full {
+  margin-bottom: 0;
+}
+
+.ledger-listing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ledger-listing-open {
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: zoom-in;
+}
+
+.ledger-listing-thumb {
+  display: block;
+  width: 56px;
+  height: 36px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
 .ledger-tally {
   margin-left: auto;
   color: var(--muted);
