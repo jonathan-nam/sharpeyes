@@ -1,4 +1,6 @@
 .gradle/
 build/
+*/build/
+*/.kotlin/
 .git/
 *.md

@@ -7,6 +7,8 @@ COPY gradle ./gradle
 RUN chmod +x gradlew && ./gradlew --version
 
 COPY src ./src
+# Every project settings.gradle.kts includes, or :installDist cannot resolve it.
+COPY money ./money
 
 # installDist, not buildFatJar. The fat jar shades every dependency into one
 # archive, and duplicate META-INF/services files get overwritten rather than
