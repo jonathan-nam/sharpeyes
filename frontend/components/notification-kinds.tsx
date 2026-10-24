@@ -22,8 +22,8 @@ export type KindActions = {
 
 /**
  * How each kind is drawn. A new kind is one entry here and one `notify` on the backend. One that
- * needs an answer brings its buttons and is cleared by answering; one without gets a dismiss, and
- * a `go` button where there is somewhere to look.
+ * needs an answer brings its buttons, and is cleared by answering; one without gets a `go` button
+ * where there is somewhere to look. Every entry can also be dismissed (NotificationBell).
  *
  * A change somebody made to something shared is a sentence instead of a title, beside the art of
  * what changed (the drop) where it has some. See backend PartyNotices.kt.

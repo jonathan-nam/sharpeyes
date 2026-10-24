@@ -53,9 +53,11 @@ internal fun lookupFor(
 internal fun socialFor(userId: String): SocialResponse {
     val names = Person.selectAll().where { Person.userId eq userId }.associate { it[Person.id] to it[Person.name] }
     val sent = requests(FriendRequest.fromUserId, userId)
+    val received = requests(FriendRequest.toUserId, userId)
     return SocialResponse(
         username = discordUsernameOf(userId),
         friends = friendsOf(userId).map { (person, account) -> view(person, account, names[person]) },
         outgoing = sent.map { view(it[FriendRequest.id], it[FriendRequest.toUserId]) },
+        incoming = received.map { view(it[FriendRequest.id], it[FriendRequest.fromUserId]) },
     )
 }

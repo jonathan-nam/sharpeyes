@@ -59,6 +59,8 @@ data class SocialResponse(
     val username: String?,
     val friends: List<FriendView>,
     val outgoing: List<FriendView>,
+    /** Requests to you, so one cleared from the bell can still be answered. */
+    val incoming: List<FriendView>,
 )
 
 /** What sending a request did. */

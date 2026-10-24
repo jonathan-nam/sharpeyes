@@ -12,17 +12,21 @@ import { friendsChanged, onFriendsChanged } from "@/lib/friends-changed";
 import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
-import type { FriendView, Social } from "@/types/social";
+import { bossLabel } from "@/lib/boss-difficulty";
+import type { FriendView, IncomingInvite, Social } from "@/types/social";
 import { DiscordAvatar } from "@/components/discord-avatar";
 
 const SOCIAL_KEY = "/api/friends";
+const INVITES_KEY = "/api/party-invites";
 
-// Friends: other accounts, found by Discord username. Requests TO you are answered from the bell
-// (NotificationBell). Accepting links the two accounts the way an
-// invite does, so a friend is also a linked person on People and shares the parties that seat them.
+// Friends: other accounts, found by Discord username. Requests to you and party invites are answered
+// here or from the bell, so clearing one from the bell does not lose it. Accepting links the two
+// accounts the way an invite does, so a friend is also a linked person on People and shares the
+// parties that seat them.
 export default function SocialPage() {
   const { getToken, isLoaded } = useAuth();
   const [social, setSocial] = useState<Social | null>(null);
+  const [invites, setInvites] = useState<IncomingInvite[]>([]);
   const [failed, setFailed] = useState(false);
   const [username, setUsername] = useState("");
   const lookup = useDiscordLookup(username);
@@ -30,7 +34,31 @@ export default function SocialPage() {
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    return apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken).then(setSocial);
+    return Promise.all([
+      apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken).then(setSocial),
+      apiFetch<IncomingInvite[]>(INVITES_KEY, { method: "GET" }, getToken).then(setInvites),
+    ]);
+  }
+
+  /** Accepts or declines a party invite, then reads the invites back. */
+  async function answerInvite(id: string, accept: boolean) {
+    setBusy(true);
+    setError(null);
+    try {
+      const path = `${INVITES_KEY}/${encodeURIComponent(id)}`;
+      await apiFetch<unknown>(
+        accept ? `${path}/accept` : path,
+        { method: accept ? "POST" : "DELETE" },
+        getToken,
+      );
+      // A seat gained shows on Party View, Run Order and Sales.
+      if (accept) invalidate("/api/parties");
+      setInvites(await apiFetch<IncomingInvite[]>(INVITES_KEY, { method: "GET" }, getToken));
+    } catch (e) {
+      setError(failureText(e, accept ? "Couldn't join." : "Couldn't decline."));
+    } finally {
+      setBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -110,6 +138,64 @@ export default function SocialPage() {
             {error && <p className="routine-error">{error}</p>}
 
             <CombineParties />
+
+            {(social.incoming ?? []).length > 0 && (
+              <FriendGroup title="Requests">
+                {(social.incoming ?? []).map((f) => (
+                  <FriendCard key={f.id} friend={f}>
+                    <Button
+                      variant="primary"
+                      disabled={busy}
+                      onClick={() =>
+                        void act(`${request(f.id)}/accept`, { method: "POST" }, "Couldn't accept.")
+                      }
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        void act(request(f.id), { method: "DELETE" }, "Couldn't reject.")
+                      }
+                    >
+                      Reject
+                    </Button>
+                  </FriendCard>
+                ))}
+              </FriendGroup>
+            )}
+
+            {invites.length > 0 && (
+              <FriendGroup title="Party Invites">
+                {invites.map((invite) => (
+                  <li key={invite.id} className="character-card">
+                    <span className="tile-plate">
+                      <span className="tile-name">
+                        {`${invite.leader}'s ${bossLabel(invite.boss, invite.difficulty)}`}
+                      </span>
+                      <span className="tile-meta">{`as ${invite.character}`}</span>
+                    </span>
+                    <span className="character-card-actions">
+                      <Button
+                        variant="primary"
+                        disabled={busy}
+                        onClick={() => void answerInvite(invite.id, true)}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => void answerInvite(invite.id, false)}
+                      >
+                        Decline
+                      </Button>
+                    </span>
+                  </li>
+                ))}
+              </FriendGroup>
+            )}
 
             {social.outgoing.length > 0 && (
               <FriendGroup title="Sent">
