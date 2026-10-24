@@ -75,7 +75,7 @@ const KINDS: Record<string, Kind> = {
     href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
   },
   PARTY_COMBINE: {
-    text: (p, who) => `${who} asked to combine ${partiesCount(p)}`,
+    text: (_, who) => `${who} has requested to combine parties.`,
     href: () => "/social",
   },
   PARTY_COMBINED: {
