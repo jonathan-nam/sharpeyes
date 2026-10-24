@@ -433,8 +433,8 @@ export default function RunOrderPage() {
     [running, openOnly, answered],
   );
 
-  // Somebody with one character never switches, so they get no chip and are always on. Counted over
-  // the whole period so a filter cannot hide a chip whose away tick still applies.
+  // Only people with a chip are planned for. Somebody with one character gets none, and their seats
+  // are left out of every run. Counted over the whole period so a filter cannot move who is in.
   const switchers = useMemo(
     () => new Set(rosterOfSwitchers(running).map((person) => person.id)),
     [running],
@@ -445,7 +445,10 @@ export default function RunOrderPage() {
     [usable, switchers],
   );
 
-  const runs = useMemo(() => runsFromParties(usable, bosses), [usable, bosses]);
+  const runs = useMemo(
+    () => runsFromParties(usable, bosses, switchers),
+    [usable, bosses, switchers],
+  );
 
   const openedPerson = roster.find((person) => person.id === opened) ?? null;
 
@@ -518,8 +521,8 @@ export default function RunOrderPage() {
   );
 
   const plannedRuns = useMemo(
-    () => runsFromParties(plannedParties, bosses),
-    [plannedParties, bosses],
+    () => runsFromParties(plannedParties, bosses, switchers),
+    [plannedParties, bosses, switchers],
   );
 
   // The search plans every config on the period, cleared or not, and the cleared ones are hidden
@@ -528,14 +531,16 @@ export default function RunOrderPage() {
     const shownIds = new Set(plannedParties.map((party) => party.id));
     return new Set(running.filter((party) => !shownIds.has(party.id)).map((party) => party.id));
   }, [running, plannedParties]);
-  const allRuns = useMemo(() => runsFromParties(running, bosses), [running, bosses]);
+  const allRuns = useMemo(
+    () => runsFromParties(running, bosses, switchers),
+    [running, bosses, switchers],
+  );
 
   // Who is on, as people and as ids. The grid puts a column per person, so it needs the names and
   // the order, not just the set the screening asks for.
-  // Only a chip can be away. A tick left over from when somebody had a second character is not one.
   const onTonight = useMemo(() => {
     return rosterFrom(plannedParties).filter(
-      (person) => !(switchers.has(person.id) && shown.away.includes(person.id)),
+      (person) => switchers.has(person.id) && !shown.away.includes(person.id),
     );
   }, [plannedParties, shown.away, switchers]);
   const here = useMemo(() => onTonight.map((person) => person.id), [onTonight]);
@@ -543,13 +548,13 @@ export default function RunOrderPage() {
   const hereAll = useMemo(
     () =>
       rosterFrom(running)
-        .filter((person) => !(switchers.has(person.id) && shown.away.includes(person.id)))
+        .filter((person) => switchers.has(person.id) && !shown.away.includes(person.id))
         .map((person) => person.id),
     [running, shown.away, switchers],
   );
 
-  // The eligible half is the plan. Nothing until the night has been asked for, which is what keeps the search, the plan and
-  // "Left Out" all empty rather than each needing its own gate.
+  // The eligible half is the plan. Nothing until the night has been asked for, which is what keeps
+  // the search, the plan and "Left Out" all empty rather than each needing its own gate.
   const screening = useMemo(
     () =>
       planning
@@ -759,9 +764,11 @@ export default function RunOrderPage() {
         <p className="finder-empty">
           {running.length === 0
             ? "Every boss is off this period."
-            : running.length === 1
-              ? "Your party is cleared this period."
-              : `All ${running.length} parties are cleared this period.`}
+            : usable.length > 0
+              ? "Nobody in these parties plays a second character."
+              : running.length === 1
+                ? "Your party is cleared this period."
+                : `All ${running.length} parties are cleared this period.`}
         </p>
       )}
 

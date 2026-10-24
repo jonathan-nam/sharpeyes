@@ -201,6 +201,17 @@ describe("runsFromParties", () => {
     expect(runs.map((run) => run.seats)).toEqual([[{ character: "Tide", personId: YOU }]]);
   });
 
+  it("leaves out the seats of anybody not in the people given", () => {
+    const runs = runsFromParties(
+      [party("1", "lotus", [mine, chris]), party("2", "will", [chris])],
+      bosses,
+      new Set([YOU]),
+    );
+    expect(runs.map((run) => [run.id, run.seats])).toEqual([
+      ["1", [{ character: "Tide", personId: YOU }]],
+    ]);
+  });
+
   it("drops a config nobody plays any seat of", () => {
     expect(runsFromParties([party("1", "lotus", [member({ name: "Stranger" })])], bosses)).toEqual(
       [],
