@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { ButtonLink } from "@/components/button";
 import { kindOf, type KindActions } from "@/components/notification-kinds";
 import { apiAssetUrl, apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { onFriendsChanged } from "@/lib/friends-changed";
@@ -125,7 +125,6 @@ function NotificationItem({
   const kind = kindOf(notification.kind)!;
   const { actor, payload } = notification;
   const icon = kind.icon?.(payload);
-  const href = kind.href?.(payload);
   const sentence = kind.text?.(payload, actor?.name ?? actor?.username ?? "Somebody");
   return (
     <div className={fresh ? "notification-item is-fresh" : "notification-item"}>
@@ -149,13 +148,7 @@ function NotificationItem({
       )}
       {sentence ? (
         <span className="notification-text">
-          {href ? (
-            <Link className="notification-sentence" href={href} onClick={onFollow}>
-              {sentence}
-            </Link>
-          ) : (
-            <span className="notification-sentence">{sentence}</span>
-          )}
+          <span className="notification-sentence">{sentence}</span>
         </span>
       ) : (
         <span className="notification-text">
@@ -170,15 +163,22 @@ function NotificationItem({
         {kind.actions ? (
           kind.actions({ notification, busy, run })
         ) : (
-          <button
-            type="button"
-            className="notification-dismiss"
-            aria-label="Dismiss"
-            disabled={busy}
-            onClick={onDismiss}
-          >
-            &times;
-          </button>
+          <>
+            {kind.go && (
+              <ButtonLink variant="primary" href={kind.go.href(payload)} onClick={onFollow}>
+                {kind.go.label(payload)}
+              </ButtonLink>
+            )}
+            <button
+              type="button"
+              className="notification-dismiss"
+              aria-label="Dismiss"
+              disabled={busy}
+              onClick={onDismiss}
+            >
+              &times;
+            </button>
+          </>
         )}
       </span>
     </div>

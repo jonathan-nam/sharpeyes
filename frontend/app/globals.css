@@ -8416,7 +8416,8 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   top: calc(100% + 6px);
   right: 0;
   z-index: 40;
-  width: 340px;
+  /* Room for a sentence beside its action button, which wrapped one to four lines at 340px. */
+  width: 420px;
   max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;
@@ -8484,14 +8485,6 @@ img.notification-face {
 .notification-sentence {
   color: var(--ink-strong);
   overflow-wrap: anywhere;
-}
-
-a.notification-sentence {
-  text-decoration: none;
-}
-
-a.notification-sentence:hover {
-  text-decoration: underline;
 }
 
 .notification-text {

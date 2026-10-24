@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/button";
+import { cardAnchor } from "@/lib/drop-sections";
 import { ChangedBy } from "@/components/changed-by";
 import { Tooltip } from "@/components/tooltip";
 import { formatPieces } from "@/lib/piece-ledger";
@@ -808,7 +809,10 @@ function SettlementCard({
     : discharged;
 
   return (
-    <section className="changed-by-anchor ledger-card">
+    <section
+      className="changed-by-anchor ledger-card"
+      id={personId ? cardAnchor(personId) : undefined}
+    >
       <ChangedBy topics={["settlement"]} matches={(t) => `person:${t.person}` === row.key} />
       <LedgerHead
         // Kept whatever it says. Only a PERSON can be pinned: a character nobody has claimed is

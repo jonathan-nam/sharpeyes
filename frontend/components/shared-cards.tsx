@@ -6,6 +6,7 @@ import { useCallback, useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
 import { type ListingKit, ListingThumb, PostListingDialog } from "@/components/settlement-listing";
 import { liveListing } from "@/lib/settlement-listings";
+import { cardAnchor } from "@/lib/drop-sections";
 import type { SettlementListing } from "@/types/settlement-listing";
 import {
   type ClosingAct,
@@ -143,7 +144,7 @@ function SharedCardView({
   const open = youHold > 0 || theyHold > 0 || detail.theyOwe.length > 0;
 
   return (
-    <section className="changed-by-anchor ledger-card">
+    <section className="changed-by-anchor ledger-card" id={cardAnchor(card.personId)}>
       <ChangedBy topics={["settlement"]} matches={(t) => t.person === card.personId} />
       <LedgerHead
         image={card.image}
