@@ -8353,11 +8353,31 @@ a.notification-sentence:hover {
   gap: 20px;
 }
 
-.planner-characters,
 .planner-plan {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Character cards three to a row, two on a narrower window, one on a phone. Each keeps its own
+   height, so a card with no bosses does not stretch to match its neighbour. */
+.planner-characters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .planner-characters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .planner-characters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .planner-heading {
@@ -8464,8 +8484,10 @@ a.notification-sentence:hover {
   align-self: flex-start;
 }
 
-/* The IGN box and its Add on one line, the button level with the box rather than its label. */
+/* The IGN box and its Add on one line, the button level with the box rather than its label. Its own
+   row under the cards. */
 .planner-add-character {
+  grid-column: 1 / -1;
   display: flex;
   align-items: flex-end;
   gap: 8px;
