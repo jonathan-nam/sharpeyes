@@ -1015,12 +1015,13 @@ export default function RunOrderPage() {
             </p>
           )}
 
-          {/* Mirrors the ranking in betterState (lib/boss-run-plan.ts). Reorder it there, reword it here. */}
+          {/* Mirrors the ranking in betterState (lib/boss-run-plan.ts), less its last tie-break
+              (finishing earlier). Reorder it there, reword it here. */}
           <div className="night-how-row">
             <InfoBubble text="How Is This Calculated?" noteClassName="night-how">
               <p>
-                Many orders are tried, and the best one wins. Orders are compared on these, top
-                first. A lower one only matters when everything above it is tied.
+                The following factors are considered in generating the run order, listed in order of
+                priority:
               </p>
               <ul>
                 <li>
@@ -1038,13 +1039,9 @@ export default function RunOrderPage() {
                   <b>Fewest switches.</b> Everyone stays on the same character as long as possible.
                   Logging in for your first boss doesn&apos;t count.
                 </li>
-                <li>
-                  <b>Earliest finish.</b>
-                </li>
               </ul>
               <p>Which bosses can be in the plan at all:</p>
               <ul>
-                <li>Every member of the party has to be on.</li>
                 <li>
                   With Exclude Party Member Subsets ticked, the party has to include everyone who is
                   on.
