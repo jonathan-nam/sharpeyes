@@ -15,6 +15,7 @@ import com.sharpeyes.backend.parties.combineRoutes
 import com.sharpeyes.backend.parties.partyInviteRoutes
 import com.sharpeyes.backend.parties.partyRoutes
 import com.sharpeyes.backend.parties.peopleRoutes
+import com.sharpeyes.backend.parties.settlementListingRoutes
 import com.sharpeyes.backend.parties.sharedBookRoutes
 import com.sharpeyes.backend.parties.vestigeLedgerRoutes
 import com.sharpeyes.backend.planner.plannerRoutes
@@ -205,4 +206,6 @@ private fun Route.socialRoutes() {
     route("/api/events") { eventRoutes() }
     // A member's writes into the owner's book. See SharedBookWrites.kt.
     route("/api/shared-books") { sharedBookRoutes() }
+    // A payee's auction house listing on a card. See SettlementListings.kt.
+    route("/api/settlement-listings") { settlementListingRoutes() }
 }

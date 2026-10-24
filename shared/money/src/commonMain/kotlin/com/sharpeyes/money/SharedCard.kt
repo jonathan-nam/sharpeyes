@@ -60,7 +60,15 @@ data class SharedCard(
     val piecesOwed: Double,
     val piecesOwe: Double,
     val usd: Owings,
+    /** Mesos each side holds for the other, as the owner's card works it out. See heldMesos. */
+    val held: SharedHeld,
     val detail: SharedDetail,
+)
+
+@Serializable
+data class SharedHeld(
+    val byOwner: Double,
+    val byYou: Double,
 )
 
 @Serializable
@@ -227,6 +235,7 @@ fun sharedCard(
         piecesOwe = row.pieces,
         // Their dollars turned round: what they owe is what you are owed.
         usd = Owings(owe = row.usd.owed, owed = row.usd.owe, net = -row.usd.net),
+        held = heldMesos(row).let { SharedHeld(byOwner = it.byYou, byYou = it.byThem) },
         detail = detail,
     )
 }
