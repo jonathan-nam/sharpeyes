@@ -5,8 +5,8 @@ import {
   draftKey,
   draftWants,
   EMPTY_DRAFT,
-  MAX_IGN,
-  MAX_MINUTES,
+  jobOf,
+  markLynn,
   pickDraft,
   readDraft,
   readLocal,
@@ -16,6 +16,7 @@ import {
   standaloneId,
   YOU,
 } from "@/lib/planner-draft";
+import { MAX_IGN_LENGTH } from "@/lib/ign";
 
 const roster = [
   { personId: YOU, label: "You", names: ["Rune", "Tide"] },
@@ -41,19 +42,14 @@ describe("reading a stored draft", () => {
 
   it("drops a row it cannot trust rather than clamping it", () => {
     const read = readDraft(
-      JSON.stringify({
-        maxMinutes: 99,
-        wants: [want("Rune"), { ...want("Rune", "limbo"), strength: 75 }],
-      }),
+      JSON.stringify({ wants: [want("Rune"), { ...want("Rune", "limbo"), strength: 75 }] }),
     );
-    expect(read.maxMinutes).toBe(MAX_MINUTES);
     expect(read.wants.map((w) => w.bossKey)).toEqual(["kaling"]);
   });
 
-  it("reads a draft from before hidden characters existed as hiding none", () => {
-    expect(readDraft(JSON.stringify({ maxMinutes: 30, characters: [], wants: [] })).hidden).toEqual(
-      [],
-    );
+  it("reads an older draft, Run Length and all, without what it no longer has", () => {
+    const read = readDraft(JSON.stringify({ maxMinutes: 30, characters: [], wants: [] }));
+    expect(read).toEqual(EMPTY_DRAFT);
   });
 });
 
@@ -118,7 +114,7 @@ describe("adding a character by name", () => {
   });
 
   it("refuses a blank, a name the game would not take, and one already on the page", () => {
-    for (const bad of ["", "   ", "two words", "a".repeat(MAX_IGN + 1), "RUNE"]) {
+    for (const bad of ["", "   ", "two words", "a".repeat(MAX_IGN_LENGTH + 1), "RUNE"]) {
       expect(resolveCharacter(bad, roster, shown)).toBeNull();
     }
   });
@@ -136,8 +132,8 @@ describe("what the planner is given", () => {
 });
 
 describe("saving and coming back", () => {
-  const saved = { ...EMPTY_DRAFT, maxMinutes: 20 };
-  const edited = { ...EMPTY_DRAFT, maxMinutes: 15 };
+  const saved = { ...EMPTY_DRAFT, hidden: ["thornwick"] };
+  const edited = { ...EMPTY_DRAFT, hidden: ["pellmoor"] };
   const at = "2026-10-23T12:00:00Z";
   const ms = Date.parse(at);
 
@@ -176,5 +172,25 @@ describe("saving and coming back", () => {
       draftKey({ ...saved, hidden: ["a", "b"] }),
     );
     expect(draftKey(saved)).not.toBe(draftKey(edited));
+  });
+});
+
+describe("Lynns", () => {
+  const known = new Map([
+    ["rune", "Lynn"],
+    ["tide", "Adele"],
+  ]);
+
+  it("takes a known job over a hand mark, and a hand mark only where the job is unknown", () => {
+    const d = markLynn(draft(), "Stranger", true);
+    expect(jobOf("Rune", known, d)).toBe("Lynn");
+    expect(jobOf("Tide", known, markLynn(d, "Tide", true))).toBe("Adele");
+    expect(jobOf("stranger", known, d)).toBe("Lynn");
+    expect(jobOf("Stranger", known, markLynn(d, "Stranger", false))).toBeNull();
+  });
+
+  it("hands the planner each character's job", () => {
+    const d = draft({ wants: [want("Rune")] });
+    expect(draftWants(d, shownCharacters(d, roster), known)[0]?.job).toBe("Lynn");
   });
 });

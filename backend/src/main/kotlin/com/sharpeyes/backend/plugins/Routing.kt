@@ -21,6 +21,7 @@ import com.sharpeyes.backend.screenshots.screenshotRoutes
 import com.sharpeyes.backend.services.NexonLookupService
 import com.sharpeyes.backend.services.ScreenshotParser
 import com.sharpeyes.backend.sprites.SpriteCache
+import com.sharpeyes.backend.sprites.spriteLookupRoutes
 import com.sharpeyes.backend.sprites.spriteRoutes
 import com.sharpeyes.backend.tokens.tokenRoutes
 import com.sharpeyes.backend.users.settingsRoutes
@@ -161,7 +162,7 @@ fun Application.configureRouting(
             // Three paths, one feature, mounted together. See vestigeLedgerRoutes.
             vestigeLedgerRoutes()
 
-            accountRoutes()
+            accountRoutes(nexonLookupService, spriteCache)
 
             socialRoutes()
 
@@ -173,9 +174,14 @@ fun Application.configureRouting(
 }
 
 /** What an account keeps for itself alone. */
-private fun Route.accountRoutes() {
+private fun Route.accountRoutes(
+    nexonLookupService: NexonLookupService,
+    spriteCache: SpriteCache,
+) {
     route("/api/settings") { settingsRoutes() }
     route("/api/planner") { plannerRoutes() }
+    // Any typed IGN's sprite. See IgnSprites.kt.
+    route("/api/sprites") { spriteLookupRoutes(nexonLookupService, spriteCache) }
 }
 
 /** Other accounts, and what they do that reaches yours. */
