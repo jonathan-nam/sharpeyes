@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { authClient } from "@/lib/auth-client";
+import { useAuth } from "@/lib/use-auth";
 
 // Discord, because that is where the players are: the game links a Discord account to a Nexon one,
 // and a party is organised in a Discord server before it is organised in game.
@@ -16,9 +17,12 @@ export function SignInButton({
   callbackPath?: string;
 } = {}) {
   const [busy, setBusy] = useState(false);
+  const { isSignedIn, isLoaded } = useAuth();
   // A sign-in that came back with ?error= (Discord refused, or the round trip was lost). The
-  // service sends it to the page the attempt started on, or to /sign-in when it cannot tell.
-  const failed = useSyncExternalStore(noChanges, cameBackFailed, () => false);
+  // service sends it to the page the attempt started on, or to /sign-in when it cannot tell. Said
+  // only once there is no session: a replayed callback errors after the first one signed in.
+  const cameBack = useSyncExternalStore(noChanges, cameBackFailed, () => false);
+  const failed = cameBack && isLoaded && !isSignedIn;
 
   async function signIn() {
     if (busy) return;
