@@ -66,8 +66,8 @@ export function rosterFrom(parties: Party[]): NightPerson[] {
 }
 
 /**
- * The roster minus anybody with only one character on these configs. They never switch, so there is
- * nothing to ask of them, and their runs count them as on.
+ * The roster minus anybody with only one character on these configs. Run Order plans for these
+ * people alone.
  */
 export function rosterOfSwitchers(parties: Party[]): NightPerson[] {
   const characters = new Map<string, Set<string>>();
@@ -86,17 +86,25 @@ export function rosterOfSwitchers(parties: Party[]): NightPerson[] {
 /**
  * Your configs as candidate runs.
  *
- * A seat nobody is set as playing is left out of its run, and a config with no claimed seat at all
- * is not a run.
+ * A seat nobody is set as playing is left out of its run, as is one played by somebody outside
+ * `people` when it is given. A config with no seat left is not a run.
  *
  * The run time comes off the config rather than the boss: two of your characters can run the same
  * Hard Lucid at different speeds, so there is no per-boss answer to take.
  */
-export function runsFromParties(parties: Party[], bosses: Boss[]): CandidateRun[] {
+export function runsFromParties(
+  parties: Party[],
+  bosses: Boss[],
+  people?: ReadonlySet<string>,
+): CandidateRun[] {
   const nameFor = new Map(bosses.map((boss) => [boss.bossKey, boss.name]));
+  const counts = (member: PartyMember) => {
+    const owner = ownerOf(member);
+    return owner !== null && (people === undefined || people.has(owner));
+  };
 
   return parties.flatMap((party) => {
-    const claimed = party.members.filter((member) => ownerOf(member) !== null);
+    const claimed = party.members.filter(counts);
     if (claimed.length === 0) return [];
     return [
       {
