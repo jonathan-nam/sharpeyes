@@ -21,7 +21,7 @@ const kotlin = readFileSync(
     __dirname,
     "..",
     "..",
-    "backend/src/main/kotlin/com/sharpeyes/backend/pages/DropLogPageResponse.kt",
+    "shared/api/src/commonMain/kotlin/com/sharpeyes/api/pages/DropLogPageResponse.kt",
   ),
   "utf8",
 );

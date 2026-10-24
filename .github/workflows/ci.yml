@@ -95,9 +95,10 @@ jobs:
               # The reusable workflow that holds this job's actual commands.
               - '.github/workflows/backend-verify.yml'
               - 'backend/**'
-              # The backend's build includes the shared money module, and reads the version catalog and
-              # the detekt config from beside it.
+              # The backend's build includes the shared modules, and reads the version catalog and the
+              # detekt config from beside it.
               - 'shared/money/**'
+              - 'shared/api/**'
               - 'gradle/libs.versions.toml'
               - 'config/detekt/**'
             frontend:
@@ -109,6 +110,8 @@ jobs:
               - 'catalog/drops.yaml'
               # The money golden tests read and write the fixtures the shared module replays.
               - 'shared/money/src/commonTest/resources/money-golden/**'
+              # The composite tests read the page responses they must agree with.
+              - 'shared/api/src/commonMain/kotlin/com/sharpeyes/api/pages/**'
             auth:
               - *workflow
               - 'auth/**'

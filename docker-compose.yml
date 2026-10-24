@@ -109,7 +109,7 @@ services:
       start_period: 5s
 
   backend:
-    # From the repo root: the build reads shared/money, the version catalog and config beside backend/.
+    # From the repo root: the build reads shared/, the version catalog and config beside backend/.
     build:
       context: .
       dockerfile: backend/Dockerfile
