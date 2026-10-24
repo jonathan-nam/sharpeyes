@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EXACT_LIMIT,
+  MAX_STRENGTH,
   planParties,
   plannerDifficulties,
   runMinutes,
@@ -109,6 +110,31 @@ describe("planParties", () => {
     const carried = plan.parties.find((p) => p.seats[0]?.wantId === host.id);
     expect(carried?.seats.map((s) => s.wantId)).toEqual([host.id, idle.id]);
     expect(plan.unplaced).toEqual([{ wantId: weak.id, reason: "crowded" }]);
+  });
+
+  it("seats a passenger with the slowest soloer, where its damage saves the most time", () => {
+    const fast = want("thornwick", MAX_STRENGTH);
+    const slow = want("pellmoor", SOLO);
+    const rider = want("quillsby", 20);
+    const plan = planParties([fast, slow, rider]);
+    const withRider = plan.parties.find((p) => p.seats.some((s) => s.wantId === rider.id));
+    expect(withRider?.seats[0]?.wantId).toBe(slow.id);
+    expect(plan.parties.find((p) => p.seats[0]?.wantId === fast.id)?.minutes).toBe(15);
+  });
+
+  it("keeps a fast soloer's share counts within what a seat holds", () => {
+    const [party] = planParties([
+      want("thornwick", MAX_STRENGTH - 1),
+      want("pellmoor", 1),
+      want("quillsby", 0),
+    ]).parties;
+    const shares = party?.seats.map((s) => s.shares) ?? [];
+    expect(Math.max(...shares)).toBeLessThanOrEqual(99);
+    expect([...shares].sort((a, b) => b - a)).toEqual([99, 1, 0]);
+  });
+
+  it("refuses a strength past twice a solo", () => {
+    expect(() => planParties([want("thornwick", MAX_STRENGTH + 1)])).toThrow();
   });
 
   it("spreads passengers over the soloers before doubling any up", () => {

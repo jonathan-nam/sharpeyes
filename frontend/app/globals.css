@@ -8462,10 +8462,16 @@ a.notification-sentence:hover {
   accent-color: var(--accent);
 }
 
+/* The labels under a slider. Three columns, so the middle one sits over the middle of the track
+   whatever the outer two say: Strength's "Solo" is exactly half its range. */
 .planner-ends {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   font-size: var(--text-sm);
+}
+
+.planner-ends > :last-child {
+  justify-self: end;
 }
 
 .planner-sub {

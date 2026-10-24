@@ -42,7 +42,7 @@ describe("reading a stored draft", () => {
 
   it("drops a row it cannot trust rather than clamping it", () => {
     const read = readDraft(
-      JSON.stringify({ wants: [want("Rune"), { ...want("Rune", "limbo"), strength: 75 }] }),
+      JSON.stringify({ wants: [want("Rune"), { ...want("Rune", "limbo"), strength: 130 }] }),
     );
     expect(read.wants.map((w) => w.bossKey)).toEqual(["kaling"]);
   });
