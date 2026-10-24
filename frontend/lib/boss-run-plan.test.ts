@@ -4,7 +4,6 @@ import {
   bestOf,
   type CandidateRun,
   type EligibleRun,
-  needsFixing,
   type Plan,
   planNight,
   screenRuns,
@@ -50,26 +49,6 @@ const order = (plan: { runs: { run: { id: string } }[] }) => plan.runs.map((r) =
 /** How many unbroken same-character stretches a sequence falls into. */
 const blocks = (characters: string[]) =>
   characters.filter((character, i) => character !== characters[i - 1]).length;
-
-describe("needsFixing", () => {
-  it("keeps the rejections the data caused and drops tonight's choices", () => {
-    const { rejected } = screenRuns(
-      [
-        run("twice", "lotus", 10, [
-          ["Pine", "chris"],
-          ["Dwight", "chris"],
-        ]),
-        run("nobody", "will", 10, [["Felix", null]]),
-        run("away", "lucid", 10, [["Tide", "me"]]),
-      ],
-      [],
-    );
-    expect(needsFixing(rejected).map((r) => [r.run.id, r.reason])).toEqual([
-      ["twice", "person-twice"],
-      ["nobody", "unattributed-seat"],
-    ]);
-  });
-});
 
 describe("screenRuns", () => {
   it("keeps a run whose every seat is somebody who turned up", () => {

@@ -123,15 +123,6 @@ export type ScreenOptions = {
 };
 
 /**
- * The rejections that are the DATA's fault, which the page has to say rather than drop: a party one
- * person is in twice, or a seat nobody is set as playing. The other two are tonight's choices (who
- * is away, Exclude Party Member Subsets), and listing those would only repeat what was just clicked.
- */
-export function needsFixing(rejected: Rejection[]): Rejection[] {
-  return rejected.filter((r) => r.reason === "person-twice" || r.reason === "unattributed-seat");
-}
-
-/**
  * The candidates that can run tonight, and why the others cannot.
  *
  * Order of checks matters for the message, not the outcome: a party that double-books somebody is
