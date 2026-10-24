@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Tooltip } from "@/components/tooltip";
 import { nextOption, panelPlacement, type Placement } from "@/lib/drop-select";
 
 // A select whose rows carry a picture, which an <option> cannot. A listbox: the same rows, labels
@@ -172,25 +173,25 @@ export function IconSelect({
             style={{ position: "fixed", ...at }}
           >
             {options.map((option, i) => (
-              <li
-                key={option.value}
-                id={rowId(i)}
-                role="option"
-                aria-selected={i === chosenIndex}
-                className={`drop-select-row${i === active ? " active" : ""}`}
-                // The full name for the ones the row is too narrow for. A tooltip, not a wider
-                // panel: the panel is as wide as the field.
-                title={option.label}
-                // mousedown, not click: the trigger's blur closes the list before a click lands.
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  choose(option);
-                }}
-                onMouseEnter={() => setActive(i)}
-              >
-                <RowIcon option={option} />
-                <span className="drop-select-label">{option.label}</span>
-              </li>
+              // The full name for the ones the row is too narrow for. A tooltip, not a wider panel:
+              // the panel is as wide as the field.
+              <Tooltip key={option.value} text={option.label}>
+                <li
+                  id={rowId(i)}
+                  role="option"
+                  aria-selected={i === chosenIndex}
+                  className={`drop-select-row${i === active ? " active" : ""}`}
+                  // mousedown, not click: the trigger's blur closes the list before a click lands.
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    choose(option);
+                  }}
+                  onMouseEnter={() => setActive(i)}
+                >
+                  <RowIcon option={option} />
+                  <span className="drop-select-label">{option.label}</span>
+                </li>
+              </Tooltip>
             ))}
           </ul>,
           document.body,

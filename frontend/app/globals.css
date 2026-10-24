@@ -3805,6 +3805,28 @@ button.link:disabled {
   overflow-wrap: anywhere;
 }
 
+/* Run Order's explanation: a text InfoBubble under the plan, its note wider for two lists. */
+.night-how-row {
+  margin-top: 14px;
+}
+.tooltip.is-note.night-how {
+  width: min(400px, calc(100% - 16px));
+  line-height: 1.55;
+}
+.night-how p {
+  margin: 8px 0 4px;
+}
+.night-how p:first-child {
+  margin-top: 0;
+}
+.night-how ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.night-how b {
+  color: var(--ink-strong);
+}
+
 .split-caveat {
   margin: 22px 0 0;
   max-width: 60ch;
@@ -6685,7 +6707,6 @@ button.link:disabled {
 
 /* An "i" that opens a note. See components/info-bubble.tsx. */
 .info-bubble {
-  position: relative;
   display: inline-flex;
 }
 
@@ -6709,19 +6730,53 @@ button.link:disabled {
   border-color: var(--muted);
 }
 
-.info-bubble-panel {
-  position: absolute;
-  top: calc(100% + 6px);
+/* The same note behind small text instead of an "i". */
+.info-bubble-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.info-bubble-link:hover,
+.info-bubble-link[aria-expanded="true"] {
+  text-decoration: underline;
+}
+
+/* Tooltip and InfoBubble's note, floated in <body>. See components/tooltip.tsx. The panel edge is
+   the cards' (see .party-card), the game's tooltip chrome as a rule rather than a field. */
+.tooltip {
+  position: fixed;
+  top: 0;
   left: 0;
-  z-index: 20;
-  width: min(320px, 80vw);
-  padding: 10px 12px;
-  border: 1px solid var(--line);
+  z-index: 1000;
+  box-sizing: border-box;
+  /* 100%, not 100vw: fixed, a percentage is the viewport inside its scrollbar. */
+  max-width: min(280px, calc(100% - 16px));
+  padding: 5px 9px;
+  border: 1px solid var(--chrome-edge-dark);
   border-radius: var(--radius-md);
   background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px var(--chrome-edge-light),
+    0 6px 18px rgb(0 0 0 / 0.4);
   color: var(--ink);
   font-size: var(--text-sm);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.4);
+  line-height: 1.45;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+/* A note is read, and its text can be selected, so it takes the pointer and room. */
+.tooltip.is-note {
+  width: min(320px, calc(100% - 16px));
+  max-width: none;
+  padding: 10px 12px;
+  white-space: normal;
+  pointer-events: auto;
 }
 
 .info-bubble-list {

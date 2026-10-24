@@ -2,6 +2,7 @@
 
 import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CountPopup } from "@/components/count-popup";
+import { Tooltip } from "@/components/tooltip";
 import { apiAssetUrl } from "@/lib/api";
 import type { TokenCatalogItem } from "@/types/token-catalog";
 
@@ -132,26 +133,28 @@ export function SlotGrid({
      invisibly, so the + underneath is what you see and the browser's own dropdown is what you get. */
   function addSlot(key: number) {
     return (
-      <div key={key} className="ms-slot ms-add" title="Add Item">
-        <select
-          className="ms-add-select"
-          aria-label="Add an item"
-          value=""
-          onChange={(e) => e.target.value && onAdd!(e.target.value)}
-        >
-          {/* Selected and empty, so the box reads as unanswered and picking the same item twice in
+      <Tooltip key={key} text="Add Item">
+        <div className="ms-slot ms-add">
+          <select
+            className="ms-add-select"
+            aria-label="Add an item"
+            value=""
+            onChange={(e) => e.target.value && onAdd!(e.target.value)}
+          >
+            {/* Selected and empty, so the box reads as unanswered and picking the same item twice in
               a row still fires a change. */}
-          <option value="">Add Item</option>
-          {addable!.map((option) => (
-            <option key={option.tokenCatalogId} value={option.tokenCatalogId}>
-              {option.name}
-            </option>
-          ))}
-        </select>
-        <span className="ms-add-mark" aria-hidden="true">
-          +
-        </span>
-      </div>
+            <option value="">Add Item</option>
+            {addable!.map((option) => (
+              <option key={option.tokenCatalogId} value={option.tokenCatalogId}>
+                {option.name}
+              </option>
+            ))}
+          </select>
+          <span className="ms-add-mark" aria-hidden="true">
+            +
+          </span>
+        </div>
+      </Tooltip>
     );
   }
 
@@ -182,30 +185,31 @@ export function SlotGrid({
         const editable = Boolean(onAdjust && onCommit);
         if (!editable) {
           return (
-            <div key={i} className="ms-slot filled" title={item.name}>
-              {contents}
-            </div>
+            <Tooltip key={i} text={item.name}>
+              <div className="ms-slot filled">{contents}</div>
+            </Tooltip>
           );
         }
 
         return (
           <div key={i} className="ms-slot-hold">
-            <button
-              type="button"
-              className="ms-slot filled clickable"
-              title={item.name}
-              aria-haspopup="dialog"
-              aria-expanded={editing?.id === item.id}
-              onClick={(e) => {
-                // Measured HERE, not inside the updater below. React nulls currentTarget once the
-                // handler returns, and a functional updater runs later, so reading the rect in
-                // there threw on the very first click of any item.
-                const anchor = e.currentTarget.getBoundingClientRect();
-                setEditing((open) => (open?.id === item.id ? null : { id: item.id, anchor }));
-              }}
-            >
-              {contents}
-            </button>
+            <Tooltip text={item.name}>
+              <button
+                type="button"
+                className="ms-slot filled clickable"
+                aria-haspopup="dialog"
+                aria-expanded={editing?.id === item.id}
+                onClick={(e) => {
+                  // Measured HERE, not inside the updater below. React nulls currentTarget once the
+                  // handler returns, and a functional updater runs later, so reading the rect in
+                  // there threw on the very first click of any item.
+                  const anchor = e.currentTarget.getBoundingClientRect();
+                  setEditing((open) => (open?.id === item.id ? null : { id: item.id, anchor }));
+                }}
+              >
+                {contents}
+              </button>
+            </Tooltip>
             {editing?.id === item.id && (
               <CountPopup
                 name={item.name}
