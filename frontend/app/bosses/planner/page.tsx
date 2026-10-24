@@ -14,6 +14,7 @@ import {
   planParties,
   plannerDifficulties,
   snapStrength,
+  MAX_STRENGTH,
   SOLO,
   strengthTicks,
   type PlannedParty,
@@ -467,7 +468,7 @@ export default function PartyPlannerPage() {
                           <input
                             type="range"
                             min={0}
-                            max={SOLO}
+                            max={MAX_STRENGTH}
                             step={1}
                             list={`ticks-${cap}`}
                             value={w.strength}
@@ -481,6 +482,7 @@ export default function PartyPlannerPage() {
                           <span className="planner-ends">
                             <span>No Damage</span>
                             <span>Solo</span>
+                            <span>Solo in 15 Min</span>
                           </span>
                           {i === firstShown && (
                             <small className="planner-sub">
@@ -541,7 +543,7 @@ export default function PartyPlannerPage() {
 
           {[3, 6].map((n) => (
             <datalist key={n} id={`ticks-${n}`}>
-              {[0, ...strengthTicks(n), SOLO].map((t) => (
+              {[0, ...strengthTicks(n), SOLO, (SOLO * 3) / 2, MAX_STRENGTH].map((t) => (
                 <option key={t} value={t} />
               ))}
             </datalist>

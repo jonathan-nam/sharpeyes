@@ -8,7 +8,7 @@
 // stores only the exceptions: the known ones taken off the page, and the typed IGNs nobody holds.
 
 import { isIgn } from "@/lib/ign";
-import { SOLO, type Want } from "@/lib/party-planner";
+import { MAX_STRENGTH, type Want } from "@/lib/party-planner";
 
 export const DRAFT_KEY = "party-planner-draft";
 
@@ -184,7 +184,7 @@ export function parseDraft(raw: unknown): Draft {
       typeof w.difficulty === "string" &&
       Number.isInteger(w.strength) &&
       w.strength >= 0 &&
-      w.strength <= SOLO &&
+      w.strength <= MAX_STRENGTH &&
       (w.maxParty === null || (Number.isInteger(w.maxParty) && w.maxParty >= 1)),
   );
   return {

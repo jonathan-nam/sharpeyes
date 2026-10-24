@@ -1,15 +1,17 @@
 // Proposing permanent parties for a list of characters who each want a boss.
 //
 // Strength is one rough number per (character, boss, difficulty): how much of the boss the
-// character takes off alone in a thirty-minute run, in sixtieths. 60 is a solo clear. Sixtieths
-// because 60 divides by every party size up to six, so the slider ticks at 1/3 and 1/6 of the boss
-// are whole numbers, and a share count built from them stays under MAX_SHARES. Strengths add: a
-// party at 120 is assumed to take fifteen minutes. That is the whole model, and it is only as good
-// as the sliders, which is why the plan goes to every member for review before anything is made.
+// character takes off alone in a thirty-minute run, in sixtieths. 60 is a solo clear, and up to 120
+// is a character that solos faster (120 in fifteen minutes). Sixtieths because 60 divides by every
+// party size up to six, so the slider ticks at 1/3 and 1/6 of the boss are whole numbers. Strengths
+// add: a party at 120 is assumed to take fifteen minutes. That is the whole model, and it is only
+// as good as the sliders, which is why the plan goes to every member for review before anything is
+// made.
 //
 // A character who can solo runs its own party, never one with another soloer, and keeps its whole
 // loot over seating a weaker character. It carries only somebody no other party could take, and
-// only when its party size allows: "Solo" (1) never carries, any other size will.
+// only when its party size allows: "Solo" (1) never carries, any other size will. A passenger who
+// could ride with several soloers rides with the slowest, where its damage saves the most time.
 //
 // Everyone else is grouped per (world, boss, difficulty), ranked in order by:
 //
@@ -26,6 +28,12 @@ import { DEFAULT_MINUTES } from "@/lib/boss-minutes";
 
 /** A solo clear inside the thirty minutes, in strength units. */
 export const SOLO = 60;
+
+/** The top of the slider: a solo in fifteen minutes. */
+export const MAX_STRENGTH = 2 * SOLO;
+
+/** The most a seat may take, matching lib/shares.ts. */
+const MAX_SHARES = 99;
 
 /** Jobs a party never has two of: two Lynns never share a party. */
 export const ONE_PER_PARTY = ["Lynn"];
@@ -59,7 +67,7 @@ export function strengthTicks(maxParty: number): number[] {
 
 /** A slider value pulled onto the nearest tick within `reach` units, or left where it was put. */
 export function snapStrength(value: number, maxParty: number, reach = 2): number {
-  const marks = [0, ...strengthTicks(maxParty), SOLO];
+  const marks = [0, ...strengthTicks(maxParty), SOLO, (SOLO * 3) / 2, MAX_STRENGTH];
   const nearest = marks.reduce((a, b) => (Math.abs(b - value) < Math.abs(a - value) ? b : a));
   return Math.abs(nearest - value) <= reach ? nearest : value;
 }
@@ -79,7 +87,7 @@ export type Want = {
   world: string | null;
   bossKey: string;
   difficulty: string;
-  /** 0 to SOLO. */
+  /** 0 to MAX_STRENGTH. SOLO and up clears alone. */
   strength: number;
   /** The biggest party this character will join, or null for any the boss admits. */
   maxParty: number | null;
@@ -124,7 +132,9 @@ export function planParties(wants: Want[], settings: PlanSettings = {}): Plan {
     const key = `${w.character}\n${w.world}\n${w.bossKey}`;
     if (seen.has(key)) throw new Error(`${w.character} wants ${w.bossKey} twice`);
     seen.add(key);
-    if (!(w.strength >= 0 && w.strength <= SOLO)) throw new Error(`strength out of range: ${w.id}`);
+    if (!(w.strength >= 0 && w.strength <= MAX_STRENGTH)) {
+      throw new Error(`strength out of range: ${w.id}`);
+    }
   }
 
   const groups = new Map<string, { bossKey: string; group: Want[] }>();
@@ -164,6 +174,28 @@ export function planParties(wants: Want[], settings: PlanSettings = {}): Plan {
   return plan;
 }
 
+/** A run's length in minutes, unrounded, so two close runs still compare. */
+function runTime(members: Want[]): number {
+  return (
+    (SOLO * DEFAULT_MINUTES) /
+    Math.max(
+      1,
+      members.reduce((sum, m) => sum + m.strength, 0),
+    )
+  );
+}
+
+/** Most seated, then least strength carried (the soloers' loot), then the least time, then spread. */
+function betterCarry(
+  a: { count: number; carried: number; minutes: number; largest: number },
+  b: { count: number; carried: number; minutes: number; largest: number },
+): boolean {
+  if (a.count !== b.count) return a.count > b.count;
+  if (a.carried !== b.carried) return a.carried < b.carried;
+  if (Math.abs(a.minutes - b.minutes) > 1e-9) return a.minutes < b.minutes;
+  return a.largest < b.largest;
+}
+
 /** Above this many passengers, carries are handed out greedily. 9 passengers over 6 soloers is ~40M. */
 const CARRY_EXACT_LIMIT = 8;
 
@@ -174,8 +206,9 @@ const CARRY_EXACT_LIMIT = 8;
  * must not take the one soloer another passenger can use, such as a passenger whose only other
  * soloer is the same player.
  * Ties go to the plan carrying the least strength, so a soloer keeps the most loot (a passenger
- * doing nothing costs it none), then to the one whose biggest party is smallest. Above the limit,
- * the passengers with the fewest hosts choose first, the weakest of them first.
+ * doing nothing costs it none), then to the fastest runs overall, which puts a passenger with the
+ * slowest soloer, then to the one whose biggest party is smallest. Above the limit, the passengers
+ * with the fewest hosts choose first, the weakest of them first, each to the slowest soloer.
  */
 function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
   const hostsOf = (w: Want) => hosts.filter((h) => rules.mayJoin([...h, w])).length;
@@ -185,7 +218,7 @@ function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
     for (const w of order) {
       const host = hosts
         .filter((h) => rules.mayJoin([...h, w]))
-        .sort((a, b) => a.length - b.length)[0];
+        .sort((a, b) => runTime(b) - runTime(a) || a.length - b.length)[0];
       if (host) {
         host.push(w);
         seated.add(w.id);
@@ -194,20 +227,25 @@ function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
     return seated;
   }
 
-  type Best = { count: number; carried: number; largest: number; seats: [Want, Want[]][] };
+  type Best = {
+    count: number;
+    carried: number;
+    minutes: number;
+    largest: number;
+    seats: [Want, Want[]][];
+  };
   let best: Best | null = null;
   const seats: [Want, Want[]][] = [];
   const search = (i: number) => {
     if (best !== null && seats.length + (order.length - i) < best.count) return;
     if (i === order.length) {
-      const largest = Math.max(0, ...hosts.map((h) => h.length));
-      const carried = seats.reduce((sum, [w]) => sum + w.strength, 0);
-      const better =
-        best === null ||
-        seats.length > best.count ||
-        (seats.length === best.count &&
-          (carried < best.carried || (carried === best.carried && largest < best.largest)));
-      if (better) best = { count: seats.length, carried, largest, seats: [...seats] };
+      const score: Omit<Best, "seats"> = {
+        count: seats.length,
+        carried: seats.reduce((sum, [w]) => sum + w.strength, 0),
+        minutes: hosts.reduce((sum, h) => sum + runTime(h), 0),
+        largest: Math.max(0, ...hosts.map((h) => h.length)),
+      };
+      if (best === null || betterCarry(score, best)) best = { ...score, seats: [...seats] };
       return;
     }
     const w = order[i]!;
@@ -263,15 +301,22 @@ function party(members: Want[]): PlannedParty {
   if (!first) throw new Error("a party with nobody in it");
   const strength = members.reduce((sum, m) => sum + m.strength, 0);
   const common = members.reduce((g, m) => gcd(g, m.strength), 0);
+  const counts = members.map((m) => m.strength / common);
+  // A soloer above SOLO can leave a count past what a seat holds: scaled down, nobody to nothing.
+  const top = Math.max(...counts);
+  const shares =
+    top <= MAX_SHARES
+      ? counts
+      : counts.map((c) => (c === 0 ? 0 : Math.max(1, Math.round((c * MAX_SHARES) / top))));
   return {
     world: first.world,
     bossKey: first.bossKey,
     difficulty: first.difficulty,
-    seats: members.map((m) => ({
+    seats: members.map((m, i) => ({
       wantId: m.id,
       character: m.character,
       personId: m.personId,
-      shares: m.strength / common,
+      shares: shares[i] ?? 0,
     })),
     minutes: runMinutes(strength),
   };
