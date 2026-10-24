@@ -130,6 +130,8 @@ export type LogDropBody = {
   dropKey?: string | null;
   customName?: string | null;
   quantity?: number;
+  // ISO date. The server defaults it to today.
+  droppedOn?: string | null;
 };
 
 export type SellLootBody = {
