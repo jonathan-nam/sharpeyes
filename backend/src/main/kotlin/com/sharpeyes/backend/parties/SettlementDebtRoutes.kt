@@ -3,7 +3,6 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
 import com.sharpeyes.backend.events.eventPerson
-import com.sharpeyes.backend.notifications.noticeLedger
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -195,8 +194,6 @@ private suspend fun RoutingContext.writeDebt(request: AddSettlementDebtRequest) 
             }
             val shares = payouts.map { it.first!! to it.second!! }
             if (anyDischarged(shares)) return@dbQuery DebtWrite.AlreadyDischarged
-            // A typed debt, not an offset's entry: the other side's bell. See PartyNotices.kt.
-            noticeLedger(person.takeIf { shares.isEmpty() }, "debt", request.amount, note)
 
             // Whatever the offset discharged. Not checked against the payout rows themselves: the
             // settle that marked them paid ran first and is the one that had to prove they exist, and
