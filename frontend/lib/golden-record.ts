@@ -1,4 +1,5 @@
 import { seeded } from "@/lib/golden";
+import { goldenJson } from "@/lib/golden-json";
 
 // Records what one money module is asked by another while the Drop Log's figures are worked out, so
 // each module's backend port has cases with real inputs. See lib/money.golden.test.ts, which mocks
@@ -6,30 +7,6 @@ import { seeded } from "@/lib/golden";
 
 /** A call as recorded: its arguments and result, both in goldenJson form. */
 export type RecordedCall = { args: unknown; result: unknown } | { args: unknown; throws: true };
-
-/**
- * Tagged JSON, the one shape both sides compare in. A Map is its entries in order, a Set its values;
- * undefined is dropped from an object and null in an array, which the Kotlin side reads as absent.
- * Null for a value that holds a function, which cannot be replayed.
- */
-export function goldenJson(value: unknown): unknown {
-  if (value === undefined || value === null) return null;
-  if (typeof value === "function") throw new NotReplayable();
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) return { $num: String(value) };
-    return value;
-  }
-  if (typeof value !== "object") return value;
-  if (value instanceof Map)
-    return { $map: [...value.entries()].map(([k, v]) => [goldenJson(k), goldenJson(v)]) };
-  if (value instanceof Set) return { $set: [...value].map(goldenJson) };
-  if (Array.isArray(value)) return value.map(goldenJson);
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(value)) if (v !== undefined) out[k] = goldenJson(v);
-  return out;
-}
-
-class NotReplayable extends Error {}
 
 /**
  * The most calls kept per function, reservoir-sampled so a long run is not just its first page, and

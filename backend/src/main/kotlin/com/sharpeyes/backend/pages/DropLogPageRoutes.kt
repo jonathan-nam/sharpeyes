@@ -33,6 +33,8 @@ import kotlin.time.measureTimedValue
  */
 fun Route.pageRoutes() {
     get("/drop-log") { dropLogPage() }
+    // The same page's money, worked out here. See DropLogFiguresRoute.kt.
+    get("/drop-log/figures") { dropLogFiguresPage() }
     // Other owners' books, cut to what they say about you. See SharedBooks.kt.
     get("/shared-books") { sharedBooksPage() }
 
