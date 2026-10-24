@@ -661,6 +661,16 @@ export default function DropLogPage() {
           ),
         );
       }),
+    remove: (id) =>
+      writes.track(async () => {
+        setListings(
+          await apiFetch<SettlementListing[]>(
+            `${LISTINGS_KEY}/${encodeURIComponent(id)}`,
+            { method: "DELETE" },
+            getToken,
+          ),
+        );
+      }),
     image: (id) => apiBlob(`${LISTINGS_KEY}/${encodeURIComponent(id)}/image`, getToken),
   };
   const intoBook = (personId: string, path: string, init: RequestInit) =>

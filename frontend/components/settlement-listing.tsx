@@ -14,8 +14,12 @@ export type ListingKit = {
   listings: SettlementListing[];
   busy: boolean;
   post: (personId: string, amount: number, image: Blob) => Promise<void>;
+  remove: (id: string) => Promise<void>;
   image: (id: string) => Promise<Blob>;
 };
+
+/** What a posted listing is called, on the card and in its pop-up. */
+const LABEL = "Auction House Screenshot";
 
 /** The backend's own bar. See SettlementListingRoutes.kt. */
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -43,15 +47,20 @@ function useListingUrl(listing: SettlementListing, kit: ListingKit): string | nu
   return url;
 }
 
-/** The listing's thumbnail, opening it whole. With `onReplace`, the poster can post another from there. */
+/**
+ * The listing's thumbnail, opening it whole. With `onReplace` and `onRemove`, the poster can post
+ * another or take it back from there.
+ */
 export function ListingThumb({
   listing,
   kit,
   onReplace,
+  onRemove,
 }: {
   listing: SettlementListing;
   kit: ListingKit;
   onReplace?: (image: Blob) => Promise<void>;
+  onRemove?: () => void;
 }) {
   const url = useListingUrl(listing, kit);
   const [open, setOpen] = useState<"view" | "replace" | null>(null);
@@ -68,11 +77,14 @@ export function ListingThumb({
         ) : (
           <span className="ledger-listing-thumb" aria-hidden="true" />
         )}
+        <span className="ledger-listing-label">{LABEL}</span>
       </button>
       {open === "view" && url && (
         <ListingView
           url={url}
           onReplace={onReplace && (() => setOpen("replace"))}
+          onRemove={onRemove}
+          busy={kit.busy}
           onClose={() => setOpen(null)}
         />
       )}
@@ -100,10 +112,14 @@ function useEscape(onClose: () => void) {
 function ListingView({
   url,
   onReplace,
+  onRemove,
+  busy,
   onClose,
 }: {
   url: string;
   onReplace?: () => void;
+  onRemove?: () => void;
+  busy: boolean;
   onClose: () => void;
 }) {
   useEscape(onClose);
@@ -113,14 +129,28 @@ function ListingView({
         className="invite-dialog listing-dialog is-view"
         role="dialog"
         aria-modal="true"
-        aria-label="Listing"
+        aria-label={LABEL}
         onClick={(e) => e.stopPropagation()}
       >
-        <img className="listing-full" src={url} alt="Auction house listing" />
+        <h2 className="invite-title">{LABEL}</h2>
+        <img className="listing-full" src={url} alt={LABEL} />
         <div className="invite-actions">
           {onReplace && (
             <button type="button" className="party-save" onClick={onReplace}>
               Replace Screenshot
+            </button>
+          )}
+          {onRemove && (
+            <button
+              type="button"
+              className="party-cancel"
+              disabled={busy}
+              onClick={() => {
+                onRemove();
+                onClose();
+              }}
+            >
+              Remove Screenshot
             </button>
           )}
           <button type="button" className="party-cancel" onClick={onClose}>

@@ -259,24 +259,25 @@ function SharedCardView({
             : []),
           ...(listings && card.held.byOwner > 0
             ? [
-                yourListing
-                  ? {
-                      key: "listing",
-                      after: (
-                        <ListingThumb
-                          listing={yourListing}
-                          kit={listings}
-                          onReplace={(image) =>
-                            listings.post(card.personId, card.held.byOwner, image)
-                          }
-                        />
-                      ),
-                    }
-                  : {
-                      key: "listing",
-                      label: `Post Listing for ${formatMesos(card.held.byOwner, true)}`,
-                      onClick: () => setPosting(true),
-                    },
+                {
+                  key: "listing",
+                  label: `Post Listing for ${formatMesos(card.held.byOwner, true)}`,
+                  disabled: yourListing !== null,
+                  after: yourListing && (
+                    <>
+                      <ListingThumb
+                        listing={yourListing}
+                        kit={listings}
+                        onReplace={(image) =>
+                          listings.post(card.personId, card.held.byOwner, image)
+                        }
+                        onRemove={() => act(listings.remove(yourListing.id))}
+                      />
+                      <span className="ledger-progress">{`Awaiting action from ${card.name}`}</span>
+                    </>
+                  ),
+                  onClick: () => setPosting(true),
+                },
               ]
             : []),
         ])}

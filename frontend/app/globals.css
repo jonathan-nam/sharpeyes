@@ -7402,11 +7402,20 @@ button.link:disabled {
 }
 
 .ledger-listing-open {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: none;
   cursor: zoom-in;
+}
+
+.ledger-listing-label {
+  font-size: var(--text-base);
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .ledger-listing-thumb {

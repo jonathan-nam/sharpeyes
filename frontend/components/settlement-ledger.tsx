@@ -1412,22 +1412,23 @@ function SettlementCard({
             : []),
           ...(kit && personId && holds.byThem > 0
             ? [
-                yourListing
-                  ? {
-                      key: "listing",
-                      after: (
-                        <ListingThumb
-                          listing={yourListing}
-                          kit={kit}
-                          onReplace={(image) => kit.post(personId, holds.byThem, image)}
-                        />
-                      ),
-                    }
-                  : {
-                      key: "listing",
-                      label: `Post Listing for ${formatMesos(holds.byThem, true)}`,
-                      onClick: () => setPosting(true),
-                    },
+                {
+                  key: "listing",
+                  label: `Post Listing for ${formatMesos(holds.byThem, true)}`,
+                  disabled: yourListing !== null,
+                  after: yourListing && (
+                    <>
+                      <ListingThumb
+                        listing={yourListing}
+                        kit={kit}
+                        onReplace={(image) => kit.post(personId, holds.byThem, image)}
+                        onRemove={() => void write(kit.remove(yourListing.id), null)}
+                      />
+                      <span className="ledger-progress">{`Awaiting action from ${row.name}`}</span>
+                    </>
+                  ),
+                  onClick: () => setPosting(true),
+                },
               ]
             : []),
         ]}
