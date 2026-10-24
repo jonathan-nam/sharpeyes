@@ -138,6 +138,8 @@ export type Person = {
   ownedJobs?: Record<string, string>;
   // The sprite path of each of `characters` that Nexon has, by name. Absent on a cached payload.
   sprites?: Record<string, string>;
+  // The job of each of `characters` that Nexon has, by name. Absent on a cached payload.
+  jobs?: Record<string, string>;
   // They sign in as an account of their own, having accepted a link. Not inferred from
   // ownedCharacters: that list only holds characters this account already seats, so somebody linked
   // who shares no party yet has an empty one.

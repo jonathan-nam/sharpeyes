@@ -99,6 +99,18 @@ describe("planParties", () => {
     expect(withOnlyHost?.seats.map((s) => s.wantId)).toContain(stuck.id);
   });
 
+  it("carries the passenger costing the soloer least, and says the other lost the room", () => {
+    // Both passengers are one player's, so the one soloer can take only one of them. The one doing
+    // no damage leaves the soloer its whole loot; the other is out for want of room, not strength.
+    const host = want("thornwick", SOLO);
+    const weak = want("pellmoor", 20);
+    const idle = want("pellmoor", 0);
+    const plan = planParties([host, weak, idle]);
+    const carried = plan.parties.find((p) => p.seats[0]?.wantId === host.id);
+    expect(carried?.seats.map((s) => s.wantId)).toEqual([host.id, idle.id]);
+    expect(plan.unplaced).toEqual([{ wantId: weak.id, reason: "crowded" }]);
+  });
+
   it("spreads passengers over the soloers before doubling any up", () => {
     const solos = [want("a", SOLO), want("b", SOLO)];
     const riders = [want("c", 0), want("d", 0)];

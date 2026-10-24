@@ -152,9 +152,11 @@ export function planParties(wants: Want[], settings: PlanSettings = {}): Plan {
     );
     for (const w of rest) {
       if (placed.has(w.id) || carried.has(w.id)) continue;
+      // A soloer who could have carried them counts too: they lost the room, not the strength.
+      const couldRide = solos.some(([host]) => host !== undefined && rules.mayJoin([host, w]));
       plan.unplaced.push({
         wantId: w.id,
-        reason: canJoinAny(w, rest, rules) ? "crowded" : "alone",
+        reason: couldRide || canJoinAny(w, rest, rules) ? "crowded" : "alone",
       });
     }
     for (const members of [...solos, ...found]) plan.parties.push(party(members));
@@ -171,12 +173,13 @@ const CARRY_EXACT_LIMIT = 8;
  * Every assignment is tried, not first come first served: a passenger who could ride with anyone
  * must not take the one soloer another passenger can use, such as a passenger whose only other
  * soloer is the same player.
- * Ties go to the plan whose biggest party is smallest. Above the limit, the passengers with the
- * fewest hosts choose first.
+ * Ties go to the plan carrying the least strength, so a soloer keeps the most loot (a passenger
+ * doing nothing costs it none), then to the one whose biggest party is smallest. Above the limit,
+ * the passengers with the fewest hosts choose first, the weakest of them first.
  */
 function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
   const hostsOf = (w: Want) => hosts.filter((h) => rules.mayJoin([...h, w])).length;
-  const order = [...passengers].sort((a, b) => hostsOf(a) - hostsOf(b));
+  const order = [...passengers].sort((a, b) => hostsOf(a) - hostsOf(b) || a.strength - b.strength);
   if (order.length > CARRY_EXACT_LIMIT) {
     const seated = new Set<string>();
     for (const w of order) {
@@ -191,19 +194,20 @@ function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
     return seated;
   }
 
-  let best: { count: number; largest: number; seats: [Want, Want[]][] } | null = null;
+  type Best = { count: number; carried: number; largest: number; seats: [Want, Want[]][] };
+  let best: Best | null = null;
   const seats: [Want, Want[]][] = [];
   const search = (i: number) => {
     if (best !== null && seats.length + (order.length - i) < best.count) return;
     if (i === order.length) {
       const largest = Math.max(0, ...hosts.map((h) => h.length));
-      if (
+      const carried = seats.reduce((sum, [w]) => sum + w.strength, 0);
+      const better =
         best === null ||
         seats.length > best.count ||
-        (seats.length === best.count && largest < best.largest)
-      ) {
-        best = { count: seats.length, largest, seats: [...seats] };
-      }
+        (seats.length === best.count &&
+          (carried < best.carried || (carried === best.carried && largest < best.largest)));
+      if (better) best = { count: seats.length, carried, largest, seats: [...seats] };
       return;
     }
     const w = order[i]!;
@@ -219,7 +223,7 @@ function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
   };
   search(0);
 
-  const chosen = (best as { seats: [Want, Want[]][] } | null)?.seats ?? [];
+  const chosen = (best as Best | null)?.seats ?? [];
   for (const [w, host] of chosen) host.push(w);
   return new Set(chosen.map(([w]) => w.id));
 }

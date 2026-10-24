@@ -43,7 +43,7 @@ import { MAX_IGN_LENGTH } from "@/lib/ign";
 import { partySizeLabel } from "@/lib/parties";
 import { byBoss, byCharacter, type PlanGrouping } from "@/lib/planner-view";
 import { preloadBossArt } from "@/lib/preload-boss-art";
-import { useCharacterSprites } from "@/lib/ign-sprites";
+import { useCharacterLookup } from "@/lib/ign-sprites";
 import { knownSprite, spriteByName } from "@/lib/sprite-by-name";
 import { useAuth } from "@/lib/use-auth";
 import type { Boss } from "@/types/boss";
@@ -221,20 +221,37 @@ export default function PartyPlannerPage() {
   const [typed, setTyped] = useState("");
   const adding = resolveCharacter(typed, roster, shown);
 
-  const knownJobs = useMemo(() => {
+  // What the page knows of each job: your characters', a linked person's own, and what Nexon said
+  // for a character filed under somebody (People `jobs`). Lowercased names.
+  const accountJobs = useMemo(() => {
     const jobs = new Map<string, string>();
-    for (const c of characters) if (c.jobName) jobs.set(c.name.toLowerCase(), c.jobName);
     for (const p of people) {
-      for (const [name, job] of Object.entries(p.ownedJobs ?? {}))
+      for (const [name, job] of Object.entries(p.jobs ?? {})) jobs.set(name.toLowerCase(), job);
+      for (const [name, job] of Object.entries(p.ownedJobs ?? {})) {
         jobs.set(name.toLowerCase(), job);
+      }
     }
+    for (const c of characters) if (c.jobName) jobs.set(c.name.toLowerCase(), c.jobName);
     return jobs;
   }, [characters, people]);
-  const wants = useMemo(() => draftWants(draft, shown, knownJobs), [draft, shown, knownJobs]);
-  // Every card's sprite, a typed IGN's included: looked up when the page has none. See ign-sprites.
-  const spriteOf = useCharacterSprites(
+  // Every card's sprite and job, a typed IGN's included: looked up where the page has none.
+  const lookup = useCharacterLookup(
     shown.map((c) => c.name),
     knownSprite(sprites, people),
+    (name) => accountJobs.get(name.toLowerCase()) ?? null,
+  );
+  const spriteOf = lookup.sprite;
+  const knownJobs = new Map(accountJobs);
+  for (const c of shown) {
+    const job = lookup.job(c.name);
+    if (job) knownJobs.set(c.name.toLowerCase(), job);
+  }
+  const jobsKey = [...knownJobs].join("\n");
+  const wants = useMemo(
+    () => draftWants(draft, shown, knownJobs),
+    // jobsKey stands for knownJobs, which is rebuilt each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [draft, shown, jobsKey],
   );
   const plan = useMemo(() => planParties(wants), [wants]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
