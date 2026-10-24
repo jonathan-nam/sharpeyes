@@ -232,15 +232,18 @@ export function CouponTotal({
   );
 }
 
-/** One closing act: its button, naming what pressing it records, and what it is about beside it. */
+/**
+ * One closing act: its button, naming what pressing it records, and what it is about beside it. With
+ * no `label`, a row of `after` alone, for something already done that has nothing left to press.
+ */
 export type ClosingAct = {
   key: string;
-  label: string;
+  label?: string;
   /** The drops and coupons it covers. One line. */
   detail?: string | null;
   /** Anything else beside it, like what an offset leaves owing. */
   after?: ReactNode;
-  onClick: () => void;
+  onClick?: () => void;
 };
 
 /**
@@ -254,9 +257,11 @@ export function ClosingActions({ acts, busy }: { acts: ClosingAct[]; busy: boole
       <span className="ledger-heading">Closing Actions</span>
       {acts.map((act) => (
         <span key={act.key} className="ledger-settle">
-          <button type="button" className="party-save" disabled={busy} onClick={act.onClick}>
-            {act.label}
-          </button>
+          {act.label && act.onClick && (
+            <button type="button" className="party-save" disabled={busy} onClick={act.onClick}>
+              {act.label}
+            </button>
+          )}
           {act.detail && <span className="ledger-progress">{act.detail}</span>}
           {act.after}
         </span>

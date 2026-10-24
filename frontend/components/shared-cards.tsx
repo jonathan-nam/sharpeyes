@@ -259,20 +259,24 @@ function SharedCardView({
             : []),
           ...(listings && card.held.byOwner > 0
             ? [
-                {
-                  key: "listing",
-                  label: yourListing
-                    ? "Replace Listing"
-                    : `Post Listing for ${formatMesos(card.held.byOwner, true)}`,
-                  after: yourListing && (
-                    <ListingThumb
-                      listing={yourListing}
-                      kit={listings}
-                      onRemove={() => act(listings.remove(yourListing.id))}
-                    />
-                  ),
-                  onClick: () => setPosting(true),
-                },
+                yourListing
+                  ? {
+                      key: "listing",
+                      after: (
+                        <ListingThumb
+                          listing={yourListing}
+                          kit={listings}
+                          onReplace={(image) =>
+                            listings.post(card.personId, card.held.byOwner, image)
+                          }
+                        />
+                      ),
+                    }
+                  : {
+                      key: "listing",
+                      label: `Post Listing for ${formatMesos(card.held.byOwner, true)}`,
+                      onClick: () => setPosting(true),
+                    },
               ]
             : []),
         ])}

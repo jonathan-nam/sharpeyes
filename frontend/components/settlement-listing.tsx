@@ -14,7 +14,6 @@ export type ListingKit = {
   listings: SettlementListing[];
   busy: boolean;
   post: (personId: string, amount: number, image: Blob) => Promise<void>;
-  remove: (id: string) => Promise<void>;
   image: (id: string) => Promise<Blob>;
 };
 
@@ -44,24 +43,24 @@ function useListingUrl(listing: SettlementListing, kit: ListingKit): string | nu
   return url;
 }
 
-/** The listing's thumbnail, opening it whole. With `onRemove`, the poster's way to take it back. */
+/** The listing's thumbnail, opening it whole. With `onReplace`, the poster can post another from there. */
 export function ListingThumb({
   listing,
   kit,
-  onRemove,
+  onReplace,
 }: {
   listing: SettlementListing;
   kit: ListingKit;
-  onRemove?: () => void;
+  onReplace?: (image: Blob) => Promise<void>;
 }) {
   const url = useListingUrl(listing, kit);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<"view" | "replace" | null>(null);
   return (
     <span className="ledger-listing">
       <button
         type="button"
         className="ledger-listing-open"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen("view")}
         aria-label={`View listing for ${formatMesos(listing.amount, true)}`}
       >
         {url ? (
@@ -70,18 +69,20 @@ export function ListingThumb({
           <span className="ledger-listing-thumb" aria-hidden="true" />
         )}
       </button>
-      {onRemove && (
-        <button
-          type="button"
-          className="link ledger-drop-sale"
-          disabled={kit.busy}
-          onClick={onRemove}
-          aria-label="Remove listing"
-        >
-          ×
-        </button>
+      {open === "view" && url && (
+        <ListingView
+          url={url}
+          onReplace={onReplace && (() => setOpen("replace"))}
+          onClose={() => setOpen(null)}
+        />
       )}
-      {open && url && <ListingView url={url} onClose={() => setOpen(false)} />}
+      {open === "replace" && onReplace && (
+        <PostListingDialog
+          amount={listing.amount}
+          onPost={onReplace}
+          onClose={() => setOpen(null)}
+        />
+      )}
     </span>
   );
 }
@@ -96,7 +97,15 @@ function useEscape(onClose: () => void) {
   }, [onClose]);
 }
 
-function ListingView({ url, onClose }: { url: string; onClose: () => void }) {
+function ListingView({
+  url,
+  onReplace,
+  onClose,
+}: {
+  url: string;
+  onReplace?: () => void;
+  onClose: () => void;
+}) {
   useEscape(onClose);
   return (
     <div className="invite-backdrop listing-backdrop" role="presentation" onClick={onClose}>
@@ -109,6 +118,11 @@ function ListingView({ url, onClose }: { url: string; onClose: () => void }) {
       >
         <img className="listing-full" src={url} alt="Auction house listing" />
         <div className="invite-actions">
+          {onReplace && (
+            <button type="button" className="party-save" onClick={onReplace}>
+              Replace Screenshot
+            </button>
+          )}
           <button type="button" className="party-cancel" onClick={onClose}>
             Done
           </button>

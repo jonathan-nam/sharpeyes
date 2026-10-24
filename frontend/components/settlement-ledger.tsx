@@ -1410,22 +1410,24 @@ function SettlementCard({
                 },
               ]
             : []),
-          ...(kit && holds.byThem > 0
+          ...(kit && personId && holds.byThem > 0
             ? [
-                {
-                  key: "listing",
-                  label: yourListing
-                    ? "Replace Listing"
-                    : `Post Listing for ${formatMesos(holds.byThem, true)}`,
-                  after: yourListing && (
-                    <ListingThumb
-                      listing={yourListing}
-                      kit={kit}
-                      onRemove={() => void write(kit.remove(yourListing.id), null)}
-                    />
-                  ),
-                  onClick: () => setPosting(true),
-                },
+                yourListing
+                  ? {
+                      key: "listing",
+                      after: (
+                        <ListingThumb
+                          listing={yourListing}
+                          kit={kit}
+                          onReplace={(image) => kit.post(personId, holds.byThem, image)}
+                        />
+                      ),
+                    }
+                  : {
+                      key: "listing",
+                      label: `Post Listing for ${formatMesos(holds.byThem, true)}`,
+                      onClick: () => setPosting(true),
+                    },
               ]
             : []),
         ]}
