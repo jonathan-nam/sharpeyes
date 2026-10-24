@@ -818,6 +818,33 @@ object PartyPlannerDraft : Table("party_planner_draft") {
     override val primaryKey = PrimaryKey(userId)
 }
 
+// What a payer's screen last said they hold on a card. See V97 and parties/SettlementListings.kt.
+object SettlementFigure : Table("settlement_figure") {
+    val id = uuid("id")
+    val personId = reference("person_id", Person.id)
+
+    // OWNER or MEMBER: the side holding the money.
+    val payer = text("payer")
+    val amount = long("amount")
+    val updatedAt = timestamp("updated_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+// An auction house listing the payee posted for the figure in `amount`. See V97.
+object SettlementListing : Table("settlement_listing") {
+    val id = uuid("id")
+    val personId = reference("person_id", Person.id)
+    val payer = text("payer")
+    val amount = long("amount")
+    val postedBy = reference("posted_by", Users.id)
+    val contentType = text("content_type")
+    val image = binary("image")
+    val createdAt = timestamp("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
 // Nexon's answer per typed IGN, shared by every account. See V95 and sprites/IgnSprites.kt.
 object IgnSprite : Table("ign_sprite") {
     // The name lowercased: the game's names are case-blind.
