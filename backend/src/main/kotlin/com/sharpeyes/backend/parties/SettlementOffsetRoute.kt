@@ -4,7 +4,6 @@ import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
 import com.sharpeyes.backend.events.eventPerson
-import com.sharpeyes.backend.notifications.noticeSharesClosed
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -156,7 +155,7 @@ private suspend fun RoutingContext.closeRoute(kind: String) {
                 holder,
                 CloseAct(kind, note, parts, request.holding),
                 Clock.System.now(),
-            ).also { if (it is OffsetWrite.Wrote) noticeSharesClosed(holder.personId, parts.size, kind) }
+            )
         }
     when (result) {
         is OffsetWrite.AlreadyDischarged ->

@@ -44,8 +44,7 @@ export function ownerOf(member: PartyMember): string | null {
  *
  * Drawn from the configs rather than from /api/people, so it lists the people you actually run
  * with instead of everyone you have ever named. Seats nobody has been attributed to contribute
- * nobody, which is why their runs cannot be scheduled and now simply do not appear. See
- * RejectionReason.
+ * nobody.
  */
 export function rosterFrom(parties: Party[]): NightPerson[] {
   const others = new Map<string, string>();
@@ -67,33 +66,64 @@ export function rosterFrom(parties: Party[]): NightPerson[] {
 }
 
 /**
+ * The roster minus anybody with only one character on these configs. Run Order plans for these
+ * people alone.
+ */
+export function rosterOfSwitchers(parties: Party[]): NightPerson[] {
+  const characters = new Map<string, Set<string>>();
+  for (const party of parties) {
+    for (const member of party.members) {
+      const owner = ownerOf(member);
+      if (owner === null) continue;
+      const seen = characters.get(owner) ?? new Set<string>();
+      seen.add(member.name);
+      characters.set(owner, seen);
+    }
+  }
+  return rosterFrom(parties).filter((person) => (characters.get(person.id)?.size ?? 0) > 1);
+}
+
+/**
  * Your configs as candidate runs.
  *
- * Every config becomes one, including the ones that turn out to be unschedulable. Screening is
- * what decides that, and a config that never reached screening could not be refused for a reason
- * at all. The reason is no longer shown, see RejectionReason.
+ * A seat nobody is set as playing is left out of its run, as is one played by somebody outside
+ * `people` when it is given. A config with no seat left is not a run.
  *
  * The run time comes off the config rather than the boss: two of your characters can run the same
  * Hard Lucid at different speeds, so there is no per-boss answer to take.
  */
-export function runsFromParties(parties: Party[], bosses: Boss[]): CandidateRun[] {
+export function runsFromParties(
+  parties: Party[],
+  bosses: Boss[],
+  people?: ReadonlySet<string>,
+): CandidateRun[] {
   const nameFor = new Map(bosses.map((boss) => [boss.bossKey, boss.name]));
+  const counts = (member: PartyMember) => {
+    const owner = ownerOf(member);
+    return owner !== null && (people === undefined || people.has(owner));
+  };
 
-  return parties.map((party) => ({
-    id: party.id,
-    bossKey: party.bossKey,
-    bossName: nameFor.get(party.bossKey) ?? party.bossKey,
-    difficulty: modeThisWeek(party),
-    // The config's own time, or the flat fallback said out loud. A party that has been timed and
-    // one that happens to fall on thirty minutes are not the same claim, so the night marks which
-    // is which rather than presenting both as measured.
-    minutes: runMinutes(party.minutes),
-    assumed: party.minutes === null,
-    seats: party.members.map((member) => ({
-      character: member.name,
-      personId: ownerOf(member),
-    })),
-  }));
+  return parties.flatMap((party) => {
+    const claimed = party.members.filter(counts);
+    if (claimed.length === 0) return [];
+    return [
+      {
+        id: party.id,
+        bossKey: party.bossKey,
+        bossName: nameFor.get(party.bossKey) ?? party.bossKey,
+        difficulty: modeThisWeek(party),
+        // The config's own time, or the flat fallback said out loud. A party that has been timed and
+        // one that happens to fall on thirty minutes are not the same claim, so the night marks which
+        // is which rather than presenting both as measured.
+        minutes: runMinutes(party.minutes),
+        assumed: party.minutes === null,
+        seats: claimed.map((member) => ({
+          character: member.name,
+          personId: ownerOf(member),
+        })),
+      },
+    ];
+  });
 }
 
 /**

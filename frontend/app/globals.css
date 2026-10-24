@@ -8187,14 +8187,6 @@ img.notification-face {
   height: 46px;
 }
 
-/* The 80px portrait (BOSS_ART_2X) at a drop icon's size, smoothed: 0.575x has no whole ratio. */
-.notification-icon.is-boss {
-  width: 46px;
-  height: 46px;
-  border-radius: var(--radius-sm);
-  image-rendering: auto;
-}
-
 .notification-badge {
   position: absolute;
   right: -4px;

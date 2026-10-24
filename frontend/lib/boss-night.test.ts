@@ -15,6 +15,7 @@ import {
   personKey,
   rosterFrom,
   rosterFromDrafts,
+  rosterOfSwitchers,
   runsFromDrafts,
   planAsText,
   planGrid,
@@ -124,6 +125,26 @@ describe("rosterFrom", () => {
   });
 });
 
+describe("rosterOfSwitchers", () => {
+  it("leaves out anybody with one character across the configs", () => {
+    const dwight = member({ name: "Dwight", personId: "p-chris", personName: "Chris" });
+    const parties = [
+      party("1", "lotus", [mine, chris]),
+      party("2", "damien", [member({ name: "Bow", characterId: "c2" }), dwight]),
+    ];
+    expect(rosterOfSwitchers(parties)).toEqual([
+      { id: YOU, name: "You" },
+      { id: "p-chris", name: "Chris" },
+    ]);
+    expect(rosterOfSwitchers([party("1", "lotus", [mine, chris])])).toEqual([]);
+  });
+
+  it("counts a character once however many configs it is in", () => {
+    const parties = [party("1", "lotus", [mine, chris]), party("2", "damien", [mine, chris])];
+    expect(rosterOfSwitchers(parties)).toEqual([]);
+  });
+});
+
 describe("stillToRun", () => {
   const done = (id: string) => ({ ...party(id, "lotus", [mine]), cleared: true });
   const open = (id: string) => party(id, "lotus", [mine]);
@@ -172,12 +193,29 @@ describe("runsFromParties", () => {
     ]);
   });
 
-  it("keeps a config the planner will refuse, so it can say why", () => {
+  it("leaves a seat nobody plays out of the run", () => {
     const runs = runsFromParties(
       [party("1", "lotus", [mine, member({ name: "Stranger" })])],
       bosses,
     );
-    expect(runs).toHaveLength(1);
+    expect(runs.map((run) => run.seats)).toEqual([[{ character: "Tide", personId: YOU }]]);
+  });
+
+  it("leaves out the seats of anybody not in the people given", () => {
+    const runs = runsFromParties(
+      [party("1", "lotus", [mine, chris]), party("2", "will", [chris])],
+      bosses,
+      new Set([YOU]),
+    );
+    expect(runs.map((run) => [run.id, run.seats])).toEqual([
+      ["1", [{ character: "Tide", personId: YOU }]],
+    ]);
+  });
+
+  it("drops a config nobody plays any seat of", () => {
+    expect(runsFromParties([party("1", "lotus", [member({ name: "Stranger" })])], bosses)).toEqual(
+      [],
+    );
   });
 
   it("carries the mode the config says it runs", () => {

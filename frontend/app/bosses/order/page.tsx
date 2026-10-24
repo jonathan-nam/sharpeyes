@@ -18,6 +18,7 @@ import {
   offsetNow,
   parseOffset,
   rosterFrom,
+  rosterOfSwitchers,
   nextHalfHour,
   runsFromParties,
   spanBetween,
@@ -28,7 +29,6 @@ import {
   type CandidateRun,
   EMPTY_PLAN,
   type EligibleRun,
-  needsFixing,
   planNight,
   screenRuns,
   tradeOffs,
@@ -433,9 +433,22 @@ export default function RunOrderPage() {
     [running, openOnly, answered],
   );
 
-  const roster: NightPerson[] = useMemo(() => rosterFrom(usable), [usable]);
+  // Only people with a chip are planned for. Somebody with one character gets none, and their seats
+  // are left out of every run. Counted over the whole period so a filter cannot move who is in.
+  const switchers = useMemo(
+    () => new Set(rosterOfSwitchers(running).map((person) => person.id)),
+    [running],
+  );
 
-  const runs = useMemo(() => runsFromParties(usable, bosses), [usable, bosses]);
+  const roster: NightPerson[] = useMemo(
+    () => rosterFrom(usable).filter((person) => switchers.has(person.id)),
+    [usable, switchers],
+  );
+
+  const runs = useMemo(
+    () => runsFromParties(usable, bosses, switchers),
+    [usable, bosses, switchers],
+  );
 
   const openedPerson = roster.find((person) => person.id === opened) ?? null;
 
@@ -508,8 +521,8 @@ export default function RunOrderPage() {
   );
 
   const plannedRuns = useMemo(
-    () => runsFromParties(plannedParties, bosses),
-    [plannedParties, bosses],
+    () => runsFromParties(plannedParties, bosses, switchers),
+    [plannedParties, bosses, switchers],
   );
 
   // The search plans every config on the period, cleared or not, and the cleared ones are hidden
@@ -518,28 +531,30 @@ export default function RunOrderPage() {
     const shownIds = new Set(plannedParties.map((party) => party.id));
     return new Set(running.filter((party) => !shownIds.has(party.id)).map((party) => party.id));
   }, [running, plannedParties]);
-  const allRuns = useMemo(() => runsFromParties(running, bosses), [running, bosses]);
+  const allRuns = useMemo(
+    () => runsFromParties(running, bosses, switchers),
+    [running, bosses, switchers],
+  );
 
   // Who is on, as people and as ids. The grid puts a column per person, so it needs the names and
   // the order, not just the set the screening asks for.
   const onTonight = useMemo(() => {
-    return rosterFrom(plannedParties).filter((person) => !shown.away.includes(person.id));
-  }, [plannedParties, shown.away]);
+    return rosterFrom(plannedParties).filter(
+      (person) => switchers.has(person.id) && !shown.away.includes(person.id),
+    );
+  }, [plannedParties, shown.away, switchers]);
   const here = useMemo(() => onTonight.map((person) => person.id), [onTonight]);
   // Everyone in a hidden run too, or their runs would be refused and drop out of the search.
   const hereAll = useMemo(
     () =>
       rosterFrom(running)
-        .filter((person) => !shown.away.includes(person.id))
+        .filter((person) => switchers.has(person.id) && !shown.away.includes(person.id))
         .map((person) => person.id),
-    [running, shown.away],
+    [running, shown.away, switchers],
   );
 
-  // The eligible half is the plan. Of the rejected half only what the data got wrong is said (see
-  // needsFixing): those parties used to vanish with nothing on the page to say they existed.
-  //
-  // Nothing until the night has been asked for, which is what keeps the search, the plan and
-  // "Left Out" all empty rather than each needing its own gate.
+  // The eligible half is the plan. Nothing until the night has been asked for, which is what keeps
+  // the search, the plan and "Left Out" all empty rather than each needing its own gate.
   const screening = useMemo(
     () =>
       planning
@@ -548,7 +563,6 @@ export default function RunOrderPage() {
     [planning, allRuns, hereAll, here, shown.everyoneOn],
   );
   const searched = screening.eligible;
-  const unplannable = needsFixing(screening.rejected);
   const eligible = useMemo(() => searched.filter((run) => !hidden.has(run.id)), [searched, hidden]);
 
   // Nothing on screen marks the wait. Fading the old plan through it was tried and removed: at the
@@ -567,6 +581,7 @@ export default function RunOrderPage() {
     // still hold what was typed for when the clock comes back.
     if (!shown.timed) return byPerson;
     for (const [id, window] of Object.entries(shown.windows)) {
+      if (!switchers.has(id)) continue;
       const from = parseOffset(window.from);
       const until = parseOffset(window.until);
       const said: Availability = {};
@@ -575,7 +590,7 @@ export default function RunOrderPage() {
       if (said.from !== undefined || said.until !== undefined) byPerson[id] = said;
     }
     return byPerson;
-  }, [shown.windows, shown.startAt, shown.timed]);
+  }, [shown.windows, shown.startAt, shown.timed, switchers]);
 
   // What the night is allowed to take. Nothing, when it is not being run to the clock: the point of
   // that mode is that the length is not the question, so every boss that can be run is in the plan
@@ -749,9 +764,11 @@ export default function RunOrderPage() {
         <p className="finder-empty">
           {running.length === 0
             ? "Every boss is off this period."
-            : running.length === 1
-              ? "Your party is cleared this period."
-              : `All ${running.length} parties are cleared this period.`}
+            : usable.length > 0
+              ? "Nobody in these parties plays a second character."
+              : running.length === 1
+                ? "Your party is cleared this period."
+                : `All ${running.length} parties are cleared this period.`}
         </p>
       )}
 
@@ -761,8 +778,7 @@ export default function RunOrderPage() {
               standing in that row would read as one more person to toggle.
 
               The link sits with the roster rather than the page title because these are the names it
-              is about. A seat nobody has claimed is chipped under its character's name instead of
-              whose it is (see rosterFrom), and Edit People is the page that says whose it is. */}
+              is about, and Edit People is the page that says whose each character is. */}
           <div className="night-heading-row">
             <h2 className="night-heading">Party Members</h2>
             <Link className="party-cancel" href="/bosses/people">
@@ -1024,31 +1040,6 @@ export default function RunOrderPage() {
                 {bossLabel(run.bossName, run.difficulty)}
                 <span className="night-leftover-seats">
                   {run.seats.map((seat) => seat.character).join(", ")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Parties the plan cannot place because of how they are set up, said so they can be fixed.
-          See needsFixing for why only these two reasons. */}
-      {unplannable.length > 0 && (
-        <section className="night-section" aria-busy={stale}>
-          <h2 className="night-heading">Can&apos;t Plan</h2>
-          <ul className="night-leftovers">
-            {unplannable.map(({ run, reason, detail }) => (
-              <li key={run.id}>
-                {bossLabel(run.bossName, run.difficulty)}
-                <span className="night-leftover-seats">
-                  {reason === "person-twice" ? (
-                    `One person plays ${detail.join(" and ")}.`
-                  ) : (
-                    <>
-                      Nobody plays {detail.join(", ")}.{" "}
-                      <Link href="/bosses/people">Set them on People.</Link>
-                    </>
-                  )}
                 </span>
               </li>
             ))}

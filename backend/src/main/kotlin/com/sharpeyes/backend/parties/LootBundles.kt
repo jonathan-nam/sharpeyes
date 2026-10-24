@@ -2,7 +2,6 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.PartyLootBundle
 import com.sharpeyes.backend.db.VestigeSettlementLoot
-import com.sharpeyes.backend.notifications.noticeStacks
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -116,7 +115,7 @@ internal suspend fun RoutingContext.setBundlesRoute() {
                     setLootBundles(lootId, request.bundles.mapKeys { Uuid.parse(it.key) })
                     // The other side's screen too, now that either of them can make this change.
                     poolChanged(partyId, lootId)
-                    findLoot(lootId, partyId, userId)!!.also { noticeStacks(partyId, it) }
+                    findLoot(lootId, partyId, userId)!!
                 }
             }
         }
