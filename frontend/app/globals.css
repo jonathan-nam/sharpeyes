@@ -8525,12 +8525,6 @@ a.notification-sentence:hover {
   opacity: 0.5;
 }
 
-.planner-share {
-  font-size: var(--text-base);
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-strong);
-}
-
 .planner-tile-boss {
   display: inline-flex;
   align-items: center;

@@ -659,7 +659,7 @@ function SeatTile({
 
 /**
  * A proposed party as Party View draws one: a row with the boss (or its members) and its size, that
- * opens to the roster. Here the roster carries each seat's split instead of a pool.
+ * opens to the roster.
  */
 function PlannedRow({
   party,
@@ -674,7 +674,6 @@ function PlannedRow({
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const total = party.seats.reduce((sum, s) => sum + s.shares, 0);
   return (
     <article className={`party-row${open ? " is-open" : ""}`}>
       <header className="party-row-head">
@@ -702,11 +701,7 @@ function PlannedRow({
                   want={s}
                   sprite={sprite(s.character)}
                   owner={personName(s.personId)}
-                >
-                  <span className="planner-share">
-                    {party.seats.length === 1 ? "Solo" : `${Math.round((s.shares / total) * 100)}%`}
-                  </span>
-                </SeatTile>
+                />
               ))}
             </ul>
           </div>
