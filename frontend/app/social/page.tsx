@@ -3,6 +3,7 @@
 import { type ReactNode, useEffect, useState } from "react";
 import { CombineParties } from "@/components/combine-parties";
 import { ConfirmAct } from "@/components/confirm-act";
+import { DiscordLookup, reachesSomebody, useDiscordLookup } from "@/components/discord-lookup";
 import { PageSwap } from "@/components/page-swap";
 import { apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
@@ -23,6 +24,7 @@ export default function SocialPage() {
   const [social, setSocial] = useState<Social | null>(null);
   const [failed, setFailed] = useState(false);
   const [username, setUsername] = useState("");
+  const lookup = useDiscordLookup(username);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,16 +96,17 @@ export default function SocialPage() {
                 void send();
               }}
             >
-              <input
-                type="text"
-                className="split-input"
+              <DiscordLookup
                 value={username}
-                placeholder="Discord username"
-                aria-label="Discord username"
+                state={lookup}
+                onChange={setUsername}
                 disabled={busy}
-                onChange={(e) => setUsername(e.target.value)}
               />
-              <button type="submit" className="party-save" disabled={busy || !username.trim()}>
+              <button
+                type="submit"
+                className="party-save"
+                disabled={busy || !reachesSomebody(lookup)}
+              >
                 Send Request
               </button>
             </form>

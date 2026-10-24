@@ -35,6 +35,24 @@ data class FriendView(
     val image: String? = null,
 )
 
+/** Who a typed Discord username is, for the preview beside the box. */
+@Serializable
+data class DiscordLookupResponse(
+    val username: String,
+    val image: String?,
+    /** Their main character, which is how the bell will name them. */
+    val name: String?,
+    val spriteImgUrl: String?,
+    /** The name is your own. */
+    val you: Boolean,
+)
+
+/** Null when nobody here has the name. */
+@Serializable
+data class DiscordLookupAnswer(
+    val found: DiscordLookupResponse?,
+)
+
 @Serializable
 data class SocialResponse(
     /** Yours, so you can tell a friend what to type. Null until you sign in with Discord. */
@@ -78,6 +96,7 @@ internal fun SendOutcome.refusal(): Pair<HttpStatusCode, Refusal>? =
 
 fun Route.friendRoutes() {
     get { respondSocial() }
+    get("/lookup") { lookupRoute() }
     post("/requests") { sendRoute() }
     post("/requests/{id}/accept") { acceptRoute() }
     delete("/requests/{id}") { dropRoute() }
@@ -93,6 +112,21 @@ private suspend fun RoutingContext.respondSocial() {
             socialFor(userId)
         },
     )
+}
+
+/**
+ * GET /api/friends/lookup?username=. Nobody by that name is an answer, not an error: it is asked
+ * as the name is typed, and a 404 per keystroke would be logged as a failure each time.
+ */
+private suspend fun RoutingContext.lookupRoute() {
+    val (userId, email) = call.principalIdAndEmail()
+    val username = call.request.queryParameters["username"].orEmpty()
+    val found =
+        dbQuery {
+            ensureUser(userId, email)
+            lookupFor(userId, username)
+        }
+    call.respond(DiscordLookupAnswer(found))
 }
 
 /** POST /api/friends/requests. Answers with the whole page, a request back being an acceptance. */

@@ -68,8 +68,8 @@ export function PeopleBoard({
   onRename: (index: number, name: string) => void;
   onRemove: (index: number) => void;
   onInvite: (personId: string) => void;
-  /** Asks an existing account to be this person. Resolves true when sent. */
-  onLink: (personId: string, username: string) => Promise<boolean>;
+  /** Asks an existing account to be this person. Resolves to why it was refused, or null once sent. */
+  onLink: (personId: string, username: string) => Promise<string | null>;
   onCancelLink: (requestId: string) => void;
   /** Takes the account off a person, and their seats in your parties with it. */
   onUnlink: (personId: string) => void;
@@ -172,6 +172,7 @@ export function PeopleBoard({
                     )}
                     {!row.linked && row.id != null && (
                       <LinkAccount
+                        person={row.name}
                         request={row.request ?? null}
                         busy={busy}
                         unsaved={unsaved}
