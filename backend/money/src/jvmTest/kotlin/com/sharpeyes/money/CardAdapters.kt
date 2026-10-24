@@ -29,6 +29,7 @@ private fun JsonArray.closedSet(i: Int): Set<String> =
 internal val settlementCardAdapters: Map<String, Adapter> =
     mapOf(
         "settlement.offsetOf" to { a -> out(offsetOf(a.arg(0))) },
+        "settlement.heldMesos" to { a -> out(heldMesos(a.arg(0))) },
         "settlement.owedByYouShares" to { a -> out(owedByYouShares(a.arg(0))) },
         "settlement.settleThePair" to { a -> out(settleThePair(a.arg(0))) },
         "settlement.yourPiles" to { a -> out(yourPiles(a.arg(0))) },

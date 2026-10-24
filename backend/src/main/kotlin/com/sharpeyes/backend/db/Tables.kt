@@ -863,7 +863,7 @@ object PartyPlannerDraft : Table("party_planner_draft") {
     override val primaryKey = PrimaryKey(userId)
 }
 
-// What a payer's screen last said they hold on a card. See V97 and parties/SettlementListings.kt.
+// What a payer's screen last said they hold on a card. See V101 and parties/SettlementListings.kt.
 object SettlementFigure : Table("settlement_figure") {
     val id = uuid("id")
     val personId = reference("person_id", Person.id)
@@ -876,7 +876,7 @@ object SettlementFigure : Table("settlement_figure") {
     override val primaryKey = PrimaryKey(id)
 }
 
-// An auction house listing the payee posted for the figure in `amount`. See V97.
+// An auction house listing the payee posted for the figure in `amount`. See V101.
 object SettlementListing : Table("settlement_listing") {
     val id = uuid("id")
     val personId = reference("person_id", Person.id)

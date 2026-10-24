@@ -166,6 +166,21 @@ fun offsetOf(row: Settlement): Offset {
     return Offset(parts, amount, toComeOff, max(0.0, amount - toComeOff), amount > 0 && toComeOff > 0)
 }
 
+@Serializable
+data class Held(
+    val byYou: Double,
+    val byThem: Double,
+)
+
+/** Mesos each side of a card holds for the other, the two Held By figures. A listing is good only for these. */
+fun heldMesos(row: Settlement): Held {
+    val theirShares =
+        row.lines
+            .filter { it.direction == "owed" && it.currency == "MESO" }
+            .fold(0.0) { sum, line -> sum + line.pay }
+    return Held(byYou = offsetOf(row).amount + row.holding, byThem = row.heldByThem + theirShares)
+}
+
 /** Nothing stands between you either way. */
 fun isEmpty(row: Settlement): Boolean =
     listOf(row.pieces, row.piecesYouOwe, row.mesos, row.owedByYou, row.sharesYouOwe, row.usd.owed, row.usd.owe).all {

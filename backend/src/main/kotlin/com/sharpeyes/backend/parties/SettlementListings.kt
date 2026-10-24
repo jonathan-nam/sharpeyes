@@ -25,7 +25,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-// Auction house listings a payee posts on a Settlement card, so the payer can pay into them. See V97.
+// Auction house listings a payee posts on a Settlement card, so the payer can pay into them. See V101.
 //
 // A listing is only good for the figure it was posted for. The backend cannot work that figure out
 // (lib/settlement.ts does), so both sides' browsers report it as they draw the card, and a listing
