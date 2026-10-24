@@ -8,6 +8,8 @@ import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.PersonCharacter
 import com.sharpeyes.backend.db.Users
+import com.sharpeyes.backend.friends.linkCutoff
+import com.sharpeyes.backend.friends.markLinked
 import com.sharpeyes.backend.users.activeWorldFor
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -69,6 +71,9 @@ internal fun acceptInvite(
         Users.update({ Users.id eq userId }) { it[worldType] = payload.worldType }
     }
 
+    // Before the people below, which would read as a book of the recipient's own. See LinkCutoff.kt.
+    val cutoff = linkCutoff(payload.senderUserId, userId, now)
+
     // `taken` for the characters and the seats they bind, `payload` for everything else: the people
     // list and the account link are not narrowed by which characters somebody ticked.
     val characterIds = ensureCharacters(taken, userId, now)
@@ -76,6 +81,7 @@ internal fun acceptInvite(
     val seated = takeSeats(taken, characterIds)
 
     linkAccounts(payload, userId, invitePersonId, now)
+    markLinked(payload.senderUserId, userId, cutoff)
 
     return AcceptedInvite(
         charactersCreated = characterIds.size,

@@ -338,11 +338,13 @@ class PiecePileTest {
             // Every Heroic mode that drops a piece (18 of 20; Easy Kalos and Adversary drop none),
             // plus Limbo, Baldrix and Jupiter in Interactive.
             assertEquals(24, rows.size)
-            for ((key, count) in rows) {
+            for ((index, row) in rows.withIndex()) {
+                val (key, count) = row
                 val (bossKey, difficulty, world) = key
                 val item = key[3]
                 val me = character(world = world)
-                val partyId = party(me, bossKey, difficulty)
+                // A party of its own each: one boss under two modes is still one clear per character.
+                val partyId = party(me, bossKey, difficulty, members = listOf("Steve$index", "Bob$index"))
                 tick(me, bossKey)
                 assertEquals(count, held(me, item), "$bossKey $difficulty $world")
                 assertNull(pile(partyId))

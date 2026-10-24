@@ -242,6 +242,9 @@ object Party : Table("party") {
     // When the standing roster started standing for weeks nobody wrote down. See V80__party_since.sql.
     val partySince = timestamp("party_since").defaultExpression(CurrentTimestamp)
 
+    // Retired by combining it into this party. See V98 and CombineParties.kt.
+    val combinedInto = uuid("combined_into").nullable()
+
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 
@@ -289,10 +292,12 @@ object Person : Table("person") {
     // nothing. See V59__person_pinned.sql.
     val pinned = bool("pinned")
 
-    // The account this person signs in as, once they have accepted an invite (V70). Null for
-    // everybody who does not use the app, which is most of them. Nothing reads it yet: it is
-    // written at the one moment it can be known, so a shared party later has a key to join on.
+    // The account this person signs in as, once linked by an invite or a friend request (V70). Null
+    // for everybody who does not use the app, which is most of them.
     val linkedUserId = text("linked_user_id").nullable()
+
+    // From which date that account reads this person's half of the book. See V99.
+    val sharedFrom = date("shared_from").nullable()
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 
@@ -796,6 +801,43 @@ object FriendRequest : Table("friend_request") {
     val personId = uuid("person_id").nullable()
 
     override val primaryKey = PrimaryKey(id)
+}
+
+// How much of a party's pool another account reads: from sharedFrom on, none when null. See V98.
+object PartyReadCutoff : Table("party_read_cutoff") {
+    val partyId = reference("party_id", Party.id)
+    val userId = reference("user_id", Users.id)
+    val sharedFrom = date("shared_from").nullable()
+
+    override val primaryKey = PrimaryKey(partyId, userId)
+}
+
+// A request to combine every matching party with one friend, waiting on them. See V98.
+object PartyCombineRequest : Table("party_combine_request") {
+    val id = uuid("id")
+    val fromUserId = reference("from_user_id", Users.id)
+    val toUserId = reference("to_user_id", Users.id)
+    val createdAt = timestamp("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+// One pair of a combine request: the party kept and the one retired into it. See V98.
+object PartyCombineItem : Table("party_combine_item") {
+    val requestId = reference("request_id", PartyCombineRequest.id)
+    val keepPartyId = reference("keep_party_id", Party.id)
+    val retirePartyId = reference("retire_party_id", Party.id)
+
+    override val primaryKey = PrimaryKey(requestId, retirePartyId)
+}
+
+// A seat a combine request takes out, so a character holds one party per boss. See V98.
+object PartyCombineSeat : Table("party_combine_seat") {
+    val requestId = reference("request_id", PartyCombineRequest.id)
+    val partyId = reference("party_id", Party.id)
+    val name = text("name")
+
+    override val primaryKey = PrimaryKey(requestId, partyId, name)
 }
 
 // One notification, of any kind. See V86 and notifications/.

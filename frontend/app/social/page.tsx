@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { CombineParties } from "@/components/combine-parties";
 import { ConfirmAct } from "@/components/confirm-act";
 import { PageSwap } from "@/components/page-swap";
 import { apiFetch, failureText, spriteUrl } from "@/lib/api";
@@ -107,6 +108,8 @@ export default function SocialPage() {
               </button>
             </form>
             {error && <p className="routine-error">{error}</p>}
+
+            <CombineParties />
 
             {social.outgoing.length > 0 && (
               <FriendGroup title="Sent">

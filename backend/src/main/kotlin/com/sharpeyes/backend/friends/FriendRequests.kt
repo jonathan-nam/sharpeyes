@@ -128,6 +128,8 @@ internal fun acceptFriendRequest(
     val from = request[FriendRequest.fromUserId]
     // Both directions: a request each way is one friendship, and neither is still waiting. Each
     // keeps the person its sender named.
+    // Before either side gains a person for the other, which would read as a book of its own.
+    val cutoff = linkCutoff(from, userId, now)
     val both = FriendRequest.selectAll().where { between(from, userId) }.toList()
     val pins = both.associate { it[FriendRequest.fromUserId] to it[FriendRequest.personId] }
     FriendRequest.deleteWhere { between(from, userId) }
@@ -135,6 +137,7 @@ internal fun acceptFriendRequest(
     notify(from, NotificationKind.FRIEND_ACCEPTED, now, actorId = userId)
     linkSide(from, userId, now, pins[from])
     linkSide(userId, from, now, person ?: pins[userId])
+    markLinked(from, userId, cutoff)
     seatCharacters(from)
     seatCharacters(userId)
     return true

@@ -54,6 +54,12 @@ function partyOf(p: Payload): string {
   return p.leader ? `${str(p.leader)}'s ${boss}` : boss;
 }
 
+/** "18 parties", from a combine's payload. */
+function partiesCount(p: Payload): string {
+  const n = typeof p.count === "number" ? p.count : 0;
+  return `${n} ${n === 1 ? "party" : "parties"}`;
+}
+
 const KINDS: Record<string, Kind> = {
   FRIEND_REQUEST: { title: "Friend Request", actions: FriendRequestActions },
   FRIEND_ACCEPTED: { title: "Friend Request Accepted" },
@@ -67,6 +73,14 @@ const KINDS: Record<string, Kind> = {
         ? `${who} joined ${partyOf(p)} as ${str(p.character)}`
         : `${who} declined ${partyOf(p)}`,
     href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
+  },
+  PARTY_COMBINE: {
+    text: (_, who) => `${who} has requested to combine parties.`,
+    href: () => "/social",
+  },
+  PARTY_COMBINED: {
+    text: (p, who) => `${who} combined ${partiesCount(p)}`,
+    href: () => "/bosses/parties",
   },
   SALE_RECORDED: {
     text: (p, who) => `${who} sold ${str(p.item)} for ${priceOf(p)}`,

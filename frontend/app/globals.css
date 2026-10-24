@@ -5501,6 +5501,128 @@ button.link:disabled {
   padding-inline: 8px;
 }
 
+/* Combine Parties, on Social: a row per friend or request; the sender's merge opens under its row,
+   one block per conflict with the two parties side by side, stacked on a phone. */
+.combine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.combine-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.combine-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.combine-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.combine-merge {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.combine {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.combine-title {
+  padding: 0;
+  margin: 0 0 8px;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.combine-faces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.combine-faces > li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* A seat or a difficulty the other party does not have: the difference the sender is choosing between. */
+.combine-faces > li.is-only-here .tile-name,
+.combine-side .is-only-here {
+  color: var(--accent);
+}
+
+/* A character left in two parties: their face beside where they could stay. */
+.combine-clash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+/* A seat a waiting request takes out of yours, a line of its own under the summary. */
+.combine-takes {
+  flex-basis: 100%;
+}
+
+.combine-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 4px;
+}
+
+.combine-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.combine-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.combine-side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
 /* The Discord username box, stacked like the buttons it replaces. */
 .link-account {
   display: flex;
