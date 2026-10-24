@@ -1,6 +1,7 @@
 # Money arithmetic on the backend
 
-Status: proposed 2026-10-24. Nothing built.
+Status (2026-10-24): Phases 0 to 4 built for the Drop Log (#829, #831). The Settlement chain is
+ported and served, and the browser shadow-compares it. Phase 5 waits on the parity gate.
 
 ## The problem
 
@@ -49,20 +50,22 @@ Split calculator (`/bosses/split`), and the loot row, sale form, lot sale, settl
 settlement cards.
 
 **Not in scope:** the Party Planner, Run Order and boss clear logic. They are not money and nothing
-counts on them, but the same argument applies to them later (see Phase 0).
+counts on them, but the apps need them too (see "Other logic the apps need").
 
-## Approach: a Kotlin port, proven against the TypeScript
+## Approach: a Kotlin Multiplatform port, proven against the TypeScript
 
-Port the modules to a `backend/.../money/` package. The backend reads the database and computes
-inside the same transaction as the write: no extra hop, no second runtime.
+Port the modules to `backend/money`, a Kotlin Multiplatform module (Gradle `:money`). The backend
+runs it on the JVM, inside the same transaction as the write. The Android and iOS apps link the same
+code, so a figure an app draws before a round trip (a preview while typing) is the server's figure.
+
+- `commonMain` is common code only: no `java.*`, no JVM-only library. A platform need goes through
+  `expect`/`actual`, as `localeCompare` does (ICU4J on the JVM).
+- Numbers are `Double`, as in JavaScript, so every intermediate rounds as the TypeScript's does.
+- Only a `jvm()` target exists. Android and iOS targets are added with the apps.
 
 **Rejected: run the TypeScript on a Node service.** Least work today, and it keeps one copy. But it
 bakes in a service whose only job is hosting the frontend's code, every page read becomes two
 network hops, and the computation cannot share the writer's transaction.
-
-**Deferred: Kotlin Multiplatform.** A shared module could run on the server and inside the Android
-and iOS apps. Worth it only if the apps need to compute offline, which they cannot usefully do
-without the data anyway. Revisit once the app's stack is chosen.
 
 A rewrite of money arithmetic is exactly where a confident wrong number gets in, so the port is not
 trusted until it has matched the TypeScript on real data.
@@ -76,14 +79,16 @@ it binds every session. Work already open (#827's `heldMesos`) is ported with th
 
 ### Phase 1: golden fixtures
 
-A script runs the TypeScript over a set of inputs and writes inputs and outputs as JSON into
-`backend/src/test/resources/money-golden/`. The inputs are the existing vitest cases plus a
-generated spread (odd party sizes, MVP mixes, shares that do not divide, dollar sales, negative
-debts, coupon piles that wash).
+The `*.golden.test.ts` files run the TypeScript and write inputs and outputs as JSON into
+`backend/money/src/jvmTest/resources/money-golden/`. The inputs are invented accounts
+(`lib/golden-pages.ts`) and seeded mutations of each. There is one entry fixture per page (the whole
+answer) and one fixture per module function, recorded at each module boundary.
 
-A CI job regenerates them and fails on a diff, the way `catalog is in sync` guards the catalog, so
-a change to the TypeScript during the port cannot leave the fixtures behind. Add the job to the
-`required-checks` gate's `needs`, or it fails where nobody sees it.
+In CI, vitest compares against the committed fixtures and fails on a diff, so a change to the
+TypeScript cannot leave them behind. `UPDATE_GOLDEN=1` rewrites them.
+
+Real pages never enter the repo. `MONEY_PAGES_DIR` runs the same test over a local dump and writes
+fixtures outside the tree, and `MONEY_GOLDEN_DIR` points the Kotlin replay at them.
 
 ### Phase 2: port, leaf first
 
@@ -105,22 +110,20 @@ Parity traps to check deliberately, not discover:
 
 ### Phase 3: serve the figures
 
-The page endpoints (`/api/pages/drop-log`, `/api/pages/shared-books`, the parties page) gain the
-computed views as **additive** fields: each card's figures, each drop's split, the queues. Nothing
-reads them yet. The member's card is computed on the server from the owner's book with the viewer
-passed in, which is what makes both sides one answer.
-
-A tab's cached payload will lack the new fields after the deploy (see the client-cache note in the
-project memory), so every read of them falls back until Phase 5 removes the fallback.
+`GET /api/pages/drop-log/figures` serves `dropLogFigures`: everything the Drop Log and its cards
+draw, worked out from the same two payloads the page reads. It is a separate endpoint, so the page's
+own payload and its cache are unchanged until Phase 5. The parties page follows the same way.
 
 ### Phase 4: shadow mode
 
-The web keeps computing as today and also reads the server's figures. Where they differ it reports
-the mismatch (card key, both figures, which field) through the existing client error beacon
-(`POST /api/errors`), and draws its own figure.
+The web keeps computing as today (`lib/money-figures.ts`). On one page load in five, once the
+browser is idle, it also fetches the server's figures and compares them. A mismatch is beaconed as
+`kind: "parity"` through `POST /api/errors`. The beacon carries only the first differing path and
+how many paths differ, never a figure, because the endpoint is anonymous. The page draws its own
+figure regardless.
 
-It also runs offline: dump prod rows as DTO-shaped JSON (the audit recipe in the project memory)
-and diff both implementations over every card.
+It also runs offline over a local dump of real pages (see Phase 1), which reports every
+disagreement with its values.
 
 **Gate:** zero mismatches over at least two weeks of prod traffic, covering at least one coupon
 settlement and one offset. Any mismatch is a port bug until shown otherwise.
@@ -147,13 +150,24 @@ figure inside the write that moves it, and `SPLIT_UPDATED` fires at the moment o
 
 ### Phase 7: native apps
 
-The apps render what the API returns and compute nothing.
+The apps render what the API returns. Where one needs a figure before the round trip, it calls
+`:money` directly, which is the server's code.
+
+## Other logic the apps need
+
+Modules the apps would otherwise rewrite, by where they go:
+
+- **The rest of `:money`:** money parse and format, shares, stacks, vestige-stacks, vestige-pickup,
+  pool-nights, piece-stacks, piece-pile, redemption, sale-logger, drop-picker.
+- **A `:planning` module:** boss-run-plan, boss-night, boss-clears, party-planner, parties,
+  reset-countdown, boss-minutes, hardest-first, week-steps, planner-capture, world, world-names,
+  character-groups, boss-difficulty, ign.
+- **A generated Kotlin catalog:** `catalog/build.py` writes it beside the SQL seed (boss HP, boss
+  art), so no app carries its own copy of `items.yaml`.
+- **Stays in the web:** fetching, caching, live events, telemetry, and presentation (CSS, sprites).
 
 ## Open questions
 
-- **Which stack are the apps?** React Native could run the TypeScript, but that does not change the
-  answer: notifications and cross-account agreement still need the server to know the figure.
-- **The Split calculator:** a debounced endpoint, or the one deliberate duplicate?
+- **The Split calculator:** a debounced endpoint, or `:money` linked into the web through Kotlin/JS?
 - **#827 now or later:** merge it as a stopgap (its storage, notifications and UI survive; only the
   figure reporting is replaced in Phase 6), or hold it for the port?
-- **Planner and clears:** the same rule after money, or only when the apps need them?
