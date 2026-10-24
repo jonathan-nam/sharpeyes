@@ -1,8 +1,8 @@
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import { committedGolden, seeded } from "@/lib/golden";
 import { goldenAccount } from "@/lib/golden-pages";
-import { goldenJson } from "@/lib/golden-json";
+import { differences, goldenJson } from "@/lib/golden-json";
 import { recorded, recording, resetRecording } from "@/lib/golden-record";
 import { dropLogFigures } from "@/lib/money-figures";
 import type { DropLogPage, SharedBook } from "@/types/page";
@@ -109,12 +109,19 @@ describe("money golden fixtures", () => {
       if (AUDIT) mkdirSync(out, { recursive: true });
 
       const texts = new Map<string, string>();
+      const unserved: string[] = [];
       for (const c of corpus()) {
         const random = seeded(c.name.length * 7919 + 1);
         for (let i = 0; i <= MUTATIONS; i += 1) {
           const page = i === 0 ? c.page : mutate(c.page, random);
           const books = i === 0 ? c.books : c.books.map((b) => mutate(b, random));
           const output = recording(() => goldenJson(dropLogFigures(page, books)));
+          // What /api/pages/drop-log/figures served for this account, when PageDumpTest wrote it.
+          const served = i === 0 && AUDIT && `${PAGES}/${c.name}.figures.json`;
+          if (served && existsSync(served)) {
+            const wrong = differences(output, JSON.parse(readFileSync(served, "utf8")));
+            if (wrong.length > 0) unserved.push(`${c.name}: ${wrong.length} at ${wrong[0]}`);
+          }
           const entry = `{"cases":[\n${JSON.stringify({ input: { page, books }, output })}\n]}\n`;
           if (AUDIT) writeFileSync(`${out}/entry-${c.name}-${i}.json`, entry);
           else if (i === 0) texts.set(`entry-${c.name}.json`, entry);
@@ -132,6 +139,7 @@ describe("money golden fixtures", () => {
             true,
           );
       }
+      expect(unserved).toEqual([]);
       // An audit runs for minutes over real pages, and must not be retried half written.
     },
     { timeout: AUDIT ? 3_600_000 : undefined, retry: AUDIT ? 0 : undefined },

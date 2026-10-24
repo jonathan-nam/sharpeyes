@@ -2,6 +2,8 @@ package com.sharpeyes.backend.pages
 
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Users
+import com.sharpeyes.money.DropLogFigures
+import com.sharpeyes.money.moneyJson
 import kotlinx.serialization.json.Json
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
@@ -11,8 +13,8 @@ import java.io.File
 import kotlin.test.Test
 
 /**
- * Writes every account's Drop Log page and shared books, exactly as the routes serve them, for an
- * audit of the money port against real data (docs/backend-arithmetic-plan.md, Phase 4).
+ * Writes every account's Drop Log page, shared books and figures, exactly as the routes serve them, for
+ * an audit of the money port against real data (docs/backend-arithmetic-plan.md, Phase 4).
  *
  * Does nothing unless MONEY_PAGES_OUT names a directory. Point DB_NAME at a throwaway restore, never
  * the dev database: this migrates it. The pages hold real names and amounts and never belong in the
@@ -40,6 +42,8 @@ class PageDumpTest {
             for (user in Users.selectAll().map { it[Users.id] }) {
                 File(out, "$user.page.json").writeText(json.encodeToString(dropLogPageFor(user)))
                 File(out, "$user.books.json").writeText(json.encodeToString(sharedBooksFor(user)))
+                File(out, "$user.figures.json")
+                    .writeText(moneyJson.encodeToString(DropLogFigures.serializer(), dropLogFiguresFor(user)))
             }
         }
     }
