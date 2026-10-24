@@ -37,7 +37,10 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: gradle
-          cache-dependency-path: backend/*.gradle*
+          cache-dependency-path: |
+            backend/*.gradle*
+            shared/money/*.gradle*
+            gradle/libs.versions.toml
 
       - name: ktlint + detekt + test
         working-directory: backend

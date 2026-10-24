@@ -54,7 +54,8 @@ counts on them, but the apps need them too (see "Other logic the apps need").
 
 ## Approach: a Kotlin Multiplatform port, proven against the TypeScript
 
-Port the modules to `backend/money`, a Kotlin Multiplatform module (Gradle `:money`). The backend
+Port the modules to `shared/money`, a Kotlin Multiplatform module in its own Gradle build, which the
+backend includes with `includeBuild` and the apps will include the same way. The backend
 runs it on the JVM, inside the same transaction as the write. The Android and iOS apps link the same
 code, so a figure an app draws before a round trip (a preview while typing) is the server's figure.
 
@@ -80,7 +81,7 @@ it binds every session. Work already open (#827's `heldMesos`) is ported with th
 ### Phase 1: golden fixtures
 
 The `*.golden.test.ts` files run the TypeScript and write inputs and outputs as JSON into
-`backend/money/src/jvmTest/resources/money-golden/`. The inputs are invented accounts
+`shared/money/src/commonTest/resources/money-golden/`. The inputs are invented accounts
 (`lib/golden-pages.ts`) and seeded mutations of each. There is one entry fixture per page (the whole
 answer) and one fixture per module function, recorded at each module boundary.
 

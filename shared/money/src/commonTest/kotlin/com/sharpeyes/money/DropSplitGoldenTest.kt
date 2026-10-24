@@ -28,15 +28,9 @@ data class GoldenFile<I, O>(
  */
 internal inline fun <reified I, reified O> golden(name: String): GoldenFile<I, O> {
     val text =
-        System.getenv("MONEY_GOLDEN_DIR")?.let {
-            java.io
-                .File(it, name)
-                .takeIf { f -> f.exists() }
-                ?.readText()
+        requireNotNull(goldenFixture(name)) {
+            "no fixture $name: run the frontend's golden tests with UPDATE_GOLDEN=1"
         }
-            ?: requireNotNull(GoldenCase::class.java.getResourceAsStream("/money-golden/$name")) {
-                "no fixture $name: run the frontend's golden tests with UPDATE_GOLDEN=1"
-            }.bufferedReader().readText()
     return Json.decodeFromString(text)
 }
 
