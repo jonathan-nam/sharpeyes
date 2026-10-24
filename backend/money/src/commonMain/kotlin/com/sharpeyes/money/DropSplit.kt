@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.money
+package com.sharpeyes.money
 
 import kotlinx.serialization.Serializable
 import kotlin.math.ceil

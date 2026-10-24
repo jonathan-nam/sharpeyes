@@ -8,16 +8,14 @@
 // order: a recorded arrangement splits it stack by stack (V41), or the stacks divide and everybody
 // took their share.
 //
-// A third case exists and is deliberately NOT answered: the drop did not divide and nobody has
-// said who took the odd stack. It used to be called rare and skipped, which was wrong twice over.
-// Seven of the eleven vestige rows fall in 3 stacks, so no duo can divide them and it is the
-// ordinary night; and skipping it recorded no debt at all rather than an unknown one. It is
-// `unanswered()` now, and it names the size of the hole without guessing its direction.
+// A third case is deliberately NOT answered: the drop did not divide and nobody has said who took
+// the odd stack. It is not rare (a duo can never divide 3 stacks) and skipping it would record no
+// debt rather than an unknown one, so `unanswered()` names the size of the hole without guessing
+// its direction.
 //
 // A HOLDER is a person, not a character. Seats are folded to their holder before anything is
-// counted, which is what makes a party of your own two characters owe nothing at all: you cannot
-// owe yourself. It is also why one person running three characters has one pile and one box, rather
-// than three of each saying the same human owes you three times.
+// counted, so a party of your own two characters owes nothing, and one person on three characters
+// has one pile rather than three.
 
 import {
   type LedgerDrop,
@@ -49,9 +47,8 @@ export type OutstandingDrop = {
   /**
    * The day it fell, which is the order a debt is answered in. See queueOf.
    *
-   * Beside `weekStart` rather than derived from it: the queue is drawn in the catalog's order so two
-   * bosses in one week never swap places, and that order is not the order the nights happened in. A
-   * sale cannot have come off a night that fell after it, and the week alone cannot tell them apart.
+   * Not derivable from `weekStart`: a sale cannot have come off a night that fell after it, and the
+   * week alone cannot tell two nights apart.
    */
   droppedOn: string;
   /** When it was LOGGED, which is what says a sale could have answered it. See spendSales. */
@@ -79,74 +76,52 @@ export type HolderLedger = {
   holderName: string;
   /** Pieces they are holding across every boss still open. */
   pieces: number;
-  /**
-   * Of those, how many are YOURS, and what the sold ones have made you.
-   *
-   * The figure to lead with on somebody else's card: what they are holding is their business, and
-   * what you are owed out of it is the reason the card exists. Zero on your own card, where the
-   * debts run the other way.
-   */
+  /** Of those, how many are YOURS. Zero on your own card, where the debts run the other way. */
   owedToYou: number;
   /**
    * Mesos that have arrived from them. See V51.
    *
-   * The fact nothing else can know, and now the ONLY money on this type. What a piece debt is worth
-   * is not derivable: coupons are single-trade, so only the holder can sell them, and the two sides
-   * come off different nights at different prices. So the pieces are stated as a count and this is
-   * whatever they have actually sent against it.
+   * The only money on this type: a piece debt has no derivable price (coupons are single-trade and
+   * the two sides come off different nights), so pieces stay a count.
    */
   received: number;
   /**
    * Pieces of the pile they are redeeming rather than selling, as entered.
    *
-   * More than `pieces` is a miscount, and the two are carried side by side so it can be said out loud
-   * rather than clamped away: every drop reads as fully kept and the surplus is nowhere.
+   * More than `pieces` is a miscount, carried raw so it can be said rather than clamped.
    */
   kept: number;
   /**
-   * Pieces of the pile that are their OWN, which is the most they can redeem.
-   *
-   * What the kept box is bounded by. Pieces of yours they take anyway are a purchase, priced, rather
-   * than a redemption priced off whatever their own sales happened to reach. See V50.
+   * Pieces of the pile that are their OWN, which bounds what they can redeem. Pieces of yours they
+   * take anyway are a purchase. See V50.
    */
   ownShare: number;
   /** Pieces of yours they bought outright, and what they agreed to pay. See V50. */
   bought: { pieces: number; paid: number };
   /** Pieces entered as sold, whatever the queue has managed to spend them on. */
   soldPieces: number;
-  /**
-   * Pieces of this pile that have been answered with money rather than with coupons. See V56.
-   *
-   * The creditor has a figure on their Settlement card instead of their coupons, so the pile is not
-   * still waiting to be told what became of them. See answeredByHolder for the two ways in.
-   */
+  /** Pieces of this pile answered with money rather than with coupons. See V56 and answeredByHolder. */
   answered: number;
   /**
    * The same pieces, split by WHO they answered. See answeredByPair.
    *
-   * `answered` is the pile's total and cannot retire a night: which nights are finished is a question
-   * per creditor, and spending one person's sold coupons on a night owed to another is the
-   * cross-person netting `owes` already refuses. See queueOf.
-   *
-   * One entry per SALE, not a total: the spend needs the day each was made, so a sale cannot answer
-   * a night that was not on the books yet. See spendSales.
+   * Only this can retire a night: spending one person's sold coupons on a night owed to another is
+   * the cross-person netting `owes` refuses. One entry per SALE, because the spend needs each sale's
+   * day. See spendSales.
    */
   answeredByCreditor: Map<string, AnsweredSale[]>;
   /**
-   * Every drop under this holder has had its books closed, so the card is done. See V52.
+   * Every drop under this holder has had its books closed. See V52.
    *
-   * Not derived from the money, and it cannot be: a drop is queued on `entitled - looted`, fixed when
-   * it was logged, so nothing about a sale or a payment can retire it. Somebody decides.
+   * Not derivable from the money: a drop is queued on `entitled - looted`, fixed when it was logged,
+   * so no sale or payment can retire it. Somebody decides.
    */
   closed: boolean;
-  /** Mesos written off across the acts that closed this pile. Said, because a write-off is a decision. */
+  /** Mesos written off across the acts that closed this pile. */
   writtenOff: number;
   /**
-   * Pieces of the pile whose fate has been entered: sold, kept, or taken.
-   *
-   * What the card counts towards `pieces`, and the nearest thing it has to an instruction: the gap
-   * between the two is exactly what it is still waiting to be told. Above `pieces` is a miscount, and
-   * carried raw so it can be said rather than clamped.
+   * Pieces of the pile whose fate has been entered: sold, kept, or taken. The gap to `pieces` is what
+   * is still unanswered; above `pieces` is a miscount, carried raw rather than clamped.
    */
   accounted: number;
   drops: {
@@ -154,7 +129,7 @@ export type HolderLedger = {
     partyId: string;
     bossKey: string | null;
     weekStart: string;
-    /** The day it fell. What a debt is answered in the order of, never what it is drawn in. */
+    /** The day it fell, which orders how a debt is answered. */
     droppedOn: string;
     /** When it was LOGGED, which is what says a sale could have answered it. See spendSales. */
     recordedAt?: string;
@@ -163,7 +138,7 @@ export type HolderLedger = {
     /** Every character who ran that night. */
     ran: string[];
     pieces: number;
-    /** Its books are closed, so it is history rather than something anybody is waiting on. See V52. */
+    /** Its books are closed. See V52. */
     closed: boolean;
     transfers: PieceTransfer[];
   }[];
@@ -172,9 +147,8 @@ export type HolderLedger = {
 /**
  * Who a seat belongs to.
  *
- * Your own characters are not on the people list at all, so they are not "unattributed": they are
- * you, which is what `characterId` says. Getting that wrong is the difference between a party of
- * your two characters owing nothing and it owing you half of what you already have.
+ * Your own characters are not on the people list, so a `characterId` seat is you (SELF), not an
+ * unattributed CHARACTER.
  */
 export function holderOf(seat: PartyMember): Holder {
   if (seat.personId !== null)
@@ -183,26 +157,20 @@ export function holderOf(seat: PartyMember): Holder {
   return { kind: "CHARACTER", personId: null, characterName: seat.name.trim().toLowerCase() };
 }
 
-/** You, as a holder key. The one seat on any drop whose side of a debt is your own. */
+/** You, as a holder key. */
 export const SELF_KEY = "self";
 
-/** You, as a holder. Written when an act is your own pile's decision, which closing a pair is. */
+/** You, as a holder. */
 export const SELF_HOLDER: Holder = { kind: "SELF", personId: null, characterName: null };
 
-/** How a holder is matched, on either side of the wire. One pile, one key, however it is spelled. */
+/** How a holder is matched, on either side of the wire. */
 export function holderKey(holder: Holder): string {
   if (holder.kind === "PERSON") return `person:${holder.personId}`;
   if (holder.kind === "SELF") return SELF_KEY;
   return `character:${holder.characterName}`;
 }
 
-/**
- * holderKey() read back.
- *
- * A piece transfer names its creditor by key alone, because that is what a debt is matched on. Writing
- * a sale's attribution needs the holder itself, and rebuilding it from the key beats threading a
- * second field through the ledger for the one caller that wants it.
- */
+/** holderKey() read back. A piece transfer names its creditor by key alone. */
 export function holderFromKey(key: string): Holder {
   if (key === SELF_KEY) return { kind: "SELF", personId: null, characterName: null };
   if (key.startsWith("person:")) {
@@ -217,10 +185,8 @@ export type PieceCreditor = { key: string; holder: Holder; name: string; pieces:
 /**
  * Who a pile owes pieces to, across the drops it still has open.
  *
- * Off the transfers the drops already carry, so this names nobody the boss rows do not. Only OPEN
- * drops: a closed one was settled, and offering to credit somebody out of it would pay a debt twice.
- *
- * Biggest debt first, so the box the ordinary sale wants is the one at the top.
+ * Only OPEN drops: a closed one was settled, and crediting out of it would pay a debt twice.
+ * Biggest debt first.
  */
 export function pieceCreditors(ledger: HolderLedger): PieceCreditor[] {
   const out = new Map<string, PieceCreditor>();
@@ -242,7 +208,7 @@ export function pieceCreditors(ledger: HolderLedger): PieceCreditor[] {
   return [...out.values()].sort((a, b) => b.pieces - a.pieces || a.name.localeCompare(b.name));
 }
 
-/** What to call a holder. Yours are "you", because that is who they are on your own screen. */
+/** What to call a holder. Your own seats are "you". */
 export function holderName(seat: PartyMember): string {
   if (seat.personId !== null) return seat.personName ?? seat.name;
   if (seat.characterId !== null) return "you";
@@ -255,9 +221,7 @@ export type FoldedSeat = { key: string; holder: Holder; name: string; shares: nu
 /**
  * A party's seats folded to the people behind them.
  *
- * The one place seats become people, so a debt, a share and a count are all measured against the
- * same list. Two characters of one person are one holder with two shares: they are owed twice as
- * much as somebody who brought one, and they are owed it once.
+ * The one place seats become people. Two characters of one person are one holder with two shares.
  */
 export function foldSeats(seats: PartyMember[]): FoldedSeat[] {
   const folded = new Map<string, FoldedSeat>();
@@ -274,11 +238,8 @@ export function foldSeats(seats: PartyMember[]): FoldedSeat[] {
 /**
  * How many of a piece drop are YOURS, out of what fell.
  *
- * Derived on every read and stored nowhere. The inputs (who ran, how the shares fall) are edited
- * long after a drop is filed, and a stored share does not follow them: that is what had one Limbo
- * row reading 60 for a character who got 20. See V40.
- *
- * Zero when none of the seats are yours, which is a party you keep the books for but did not run.
+ * Derived on every read and stored nowhere: who ran and how shares fall are edited long after a drop
+ * is filed, and a stored share would not follow them. See V40. Zero when none of the seats are yours.
  */
 export function yourShare(whole: number, seats: PartyMember[]): number {
   const folded = foldSeats(seats);
@@ -293,12 +254,10 @@ export function yourShare(whole: number, seats: PartyMember[]): number {
  * Whether stacks can be shared out so every holder ends on exactly their entitlement.
  *
  * A holder is entitled to `bundles * shares / weight` stacks, and a stack is whole, so a drop
- * divides by looting alone only when that is a whole number for every one of them. A duo on 3
- * stacks cannot: 1.5 each, and somebody walks off with the odd one.
+ * divides by looting alone only when that is a whole number for every one of them.
  *
- * Measured on FOLDED holders, never on seats. Three stacks between three characters where one
- * person brought two of them divides perfectly, and reading it per seat would report a debt that
- * does not exist.
+ * Measured on FOLDED holders, never on seats: three stacks between three characters, two of them one
+ * person's, divides perfectly.
  */
 export function dividesEvenly(bundles: number, holders: FoldedSeat[]): boolean {
   const weight = holders.reduce((sum, h) => sum + h.shares, 0);
@@ -309,21 +268,16 @@ export function dividesEvenly(bundles: number, holders: FoldedSeat[]): boolean {
 /**
  * The seats that ran the week THIS drop fell in.
  *
- * A pool spans months and `party.members` is one week's answer, whichever week the page happened to
- * ask for. So measuring an August drop against September's roster owes a share to somebody who was
- * not there, which is the wrong number this file exists to avoid. The loot row carries
- * `ranThatWeek` for exactly this, and loot-row.tsx and lot-sale.ts have read it all along.
+ * `party.members` is whichever week the page asked for, and a pool spans months: measuring a drop
+ * against another week's roster owes a share to somebody who was not there.
  *
- * Falls back to `party.members` when the week names nobody. That is a party whose every seat has
- * been retired, where the drop's week has no answer at all and the page's week is the only one
- * there is. Reading it as an empty roster instead would say none of the drop is yours.
+ * Falls back to `party.members` when the week names nobody (every seat retired). An empty roster
+ * would say none of the drop is yours.
  */
 export function ranSeats(loot: Loot, party: Party): PartyMember[] {
   const ran = party.seats.filter((seat) => loot.ranThatWeek.includes(seat.id));
-  // On the share that was in force THAT WEEK, not the one the party is on now. A deal agreed today
-  // must not re-divide a drop from a week somebody has already been shown a figure for, which is
-  // what pinWeeksAlreadyWritten froze and this is what reads it. Absent is the standing share,
-  // which is every week nobody has changed the deal behind, and every row written before V55.
+  // The share in force THAT WEEK (frozen by pinWeeksAlreadyWritten), so a deal agreed today does not
+  // re-divide a past drop. Absent means the standing share. See V55.
   const shares = loot.sharesThatWeek ?? {};
   return (ran.length > 0 ? ran : party.members).map((seat) =>
     seat.id in shares ? { ...seat, shares: shares[seat.id]! } : seat,
@@ -348,16 +302,13 @@ function holdersOf(loot: Loot, party: Party): FoldedSeat[] {
  * Otherwise null. The drop did not divide, nobody has said who took the odd stack, and there is no
  * honest default: a guess is right half the time and names the wrong person the rest.
  *
- * There was a third, a party's standing looter holding the lot. Its picker went in #393 and the
- * value lived on unseen, so it was retired (V78) rather than left to decide nights nobody could see.
+ * A party's standing looter is not a third way: it was retired in V78.
  */
 function heldByHolder(loot: Loot, party: Party, holders: FoldedSeat[]): Map<string, Pile> | null {
   const held = pilesFrom(loot, party, holders);
   if (held === null) return null;
-  // Everybody who ran, including whoever bent down for nothing. Reading the arrangement alone left
-  // the empty-handed out of the map entirely, and the night one person loots WHOLE is the ordinary
-  // one: it read as a night with nobody on the other side, so "60 to hand over" went unsaid. Only
-  // that direction was silent, because the reader was looking for a pile and yours was the only one.
+  // Everybody who ran, including the empty-handed. Without them the ordinary night (one person loots
+  // the whole drop) has nobody on the other side, and the debt goes unsaid.
   for (const holder of holders) {
     if (!held.has(holder.key)) held.set(holder.key, { pieces: 0, by: holder.name });
   }
@@ -382,8 +333,7 @@ function pilesFrom(loot: Loot, party: Party, holders: FoldedSeat[]): Map<string,
       const seen = held.get(key);
       if (seen) {
         seen.pieces += row.bundles * size;
-        // One person can bend down twice. Both characters are named, because which of them is
-        // holding the coupons is the thing the row exists to tell them.
+        // One person can loot on two characters. Both are named: which holds the coupons matters.
         if (!seen.by.includes(picked.name)) seen.by = `${seen.by}, ${picked.name}`;
       } else {
         held.set(key, { pieces: row.bundles * size, by: picked.name });
@@ -415,10 +365,8 @@ export type CouponGap = {
   /** The holder key of whoever is holding the surplus, which is whose books close it. See V52. */
   holder: string;
   /**
-   * `by` as a key, which is the CREDITOR when the coupons are yours to hand over.
-   *
-   * What matches the night against a tranche that already sold their share of it. The name cannot:
-   * a pile of two characters is named as both and a person is named however the seat spells them.
+   * `by` as a key, which is the CREDITOR when the coupons are yours to hand over. Matching is by key
+   * because a name can list two characters or be spelled however the seat spells it.
    */
   byKey: string;
 };
@@ -426,19 +374,12 @@ export type CouponGap = {
 /**
  * One night's coupon debt, in whichever direction it runs.
  *
- * The GAP, never a whole share. A night where you picked up four stacks of six and were entitled to
- * three owes you nothing and leaves you holding one stack of theirs, which is the same subtraction
- * read from the other end. The Drop Log used to take the named looter and report your full share, so
- * Extreme Kalos said "90 coupons owed" over a night whose own arrangement had you holding 120 of the
- * 180: the wrong figure, pointing the wrong way, when you owed 30 back. Same class as #289, one
- * screen along.
+ * The GAP, never a whole share: four stacks of six when entitled to three owes you nothing and leaves
+ * you holding one stack of theirs. Reporting your full share instead gives the wrong figure pointing
+ * the wrong way.
  *
- * Through heldByHolder, so the order of authority is that function's: the night's own arrangement,
- * then an even division. Null where it returns null, because nobody has said
- * who took the odd stack and a guess names the wrong person half the time. That night is not silent
- * on screen: it is what unanswered() lists and what the stack boxes ask for.
- *
- * Null on a pool with one seat too. There is nobody to owe when the only seat is yours.
+ * Null where heldByHolder is null (that night is listed by unanswered() instead), and on a pool with
+ * one seat.
  */
 export function couponGapOf(loot: Loot, party: Party): CouponGap | null {
   const ran = ranSeats(loot, party);
@@ -449,12 +390,8 @@ export function couponGapOf(loot: Loot, party: Party): CouponGap | null {
   const mine = held.get(SELF_KEY)?.pieces ?? 0;
   const short = roundPieces(yourShare(loot.quantity, ran) - mine);
   if (short === 0) return null;
-  // Whoever is furthest from their own share is the other side of it. Named, because which of them
-  // to ask is the whole use of the figure, and a pile of two characters names both (see Pile.by).
-  //
-  // "Furthest" runs opposite to yours: the one holding most of a surplus when you are short, the
-  // one shortest when you are the one holding. Ranking on the pile alone answered only the first,
-  // and on a trio it named the biggest pile even where a bigger entitlement had earned it.
+  // The other side is whoever is furthest from their own share, in the opposite direction to yours.
+  // Ranked against entitlement, not pile size: on a trio the biggest pile may have been earned.
   const entitled = entitlements(
     loot.quantity,
     holders.map((h) => ({ memberId: h.key, name: h.name, looted: 0, shares: h.shares })),
@@ -472,14 +409,10 @@ export function couponGapOf(loot: Loot, party: Party): CouponGap | null {
 }
 
 /**
- * How many stacks a drop fell in, with a row that predates the field reading as uncounted.
+ * How many stacks a drop fell in, with absent reading as null.
  *
- * The cache in lib/cache.ts holds whatever shape the API had when the page last fetched, typed as
- * whatever it is read back as. So a tab open across a deploy that adds a field hands this code a
- * row without it, and `undefined !== null` is TRUE: the checks would pass and the arithmetic would
- * run on nothing, which is a NaN on screen rather than an error anybody sees.
- *
- * Absent and null are the same answer here, so say so once rather than at four call sites.
+ * A tab cached across a deploy (lib/cache.ts) can hand over a row without the field, and
+ * `undefined !== null` would let the arithmetic run to NaN.
  */
 function bundlesOf(loot: Loot): number | null {
   return loot.bundles ?? null;
@@ -494,20 +427,11 @@ export type UnansweredDrop = {
   quantity: number;
   /** How many whole stacks it fell in. */
   bundles: number;
-  /**
-   * The seats that ran that week, which is who a stack may be handed to.
-   *
-   * Carried rather than read off the party by the card: the party's roster is the week the page
-   * asked for, so a guest who ran the night this drop fell would not be offered a stack they are
-   * holding.
-   */
+  /** The seats that ran that week (not the page's week), which is who a stack may be handed to. */
   seats: PartyMember[];
   /**
-   * Pieces that cannot be where they belong, whoever picked up what.
-   *
-   * Known exactly even though the direction is not: the arrangement closest to even is forced, so
-   * the SIZE of the imbalance follows from the stacks and the shares alone. It is the one useful
-   * thing that can be said about a night nobody has answered for.
+   * Pieces that cannot be where they belong, whoever picked up what. Known exactly even though the
+   * direction is not: it follows from the stacks and the shares alone.
    */
   imbalance: number;
 };
@@ -515,10 +439,8 @@ export type UnansweredDrop = {
 /**
  * Drops that did not divide and that nobody has answered for.
  *
- * These owe somebody, and until the arrangement is recorded there is no saying who. Listed rather
- * than dropped: outstanding() used to skip every party with no looter, so an uneven night filed a
- * row and recorded no debt at all, silently. A missing item beats a wrong count, but a missing item
- * still has to be visible.
+ * These owe somebody, and until the arrangement is recorded there is no saying who. Listed so the
+ * missing debt is visible rather than silently absent.
  */
 export function unanswered(
   parties: Party[],
@@ -535,8 +457,7 @@ export function unanswered(
     for (const loot of pool.loot) {
       const bundles = bundlesOf(loot);
       if (loot.dropKey !== dropKey || loot.quantity < 1 || bundles === null) continue;
-      // Per drop, not per pool: a party that ran as a trio in July and a duo in August divides its
-      // two nights differently, and one roster for the pool would answer for the wrong one.
+      // Per drop, not per pool: the roster can change between nights.
       const holders = holdersOf(loot, party);
       if (holders.length < 2) continue;
       const weight = holders.reduce((sum, h) => sum + h.shares, 0);
@@ -568,9 +489,8 @@ export function unanswered(
 /**
  * How far ahead or behind each holder is across every drop already answered for.
  *
- * Positive is owed pieces, negative is holding somebody else's. Only what has been recorded, so it
- * moves when an earlier week is edited. That is why it may only ever SUGGEST an arrangement and
- * never be stored as one: a stored figure derived from this would be rewritten by the next edit.
+ * Positive is owed pieces, negative is holding somebody else's. It moves when an earlier week is
+ * edited, so it may only SUGGEST an arrangement, never be stored as one.
  */
 export function runningBalance(drops: OutstandingDrop[]): Map<string, number> {
   const out = new Map<string, number>();
@@ -595,12 +515,8 @@ export function runningBalance(drops: OutstandingDrop[]): Map<string, number> {
  * more concentrated arrangement crosses more value, and every piece that crosses pays the fee
  * twice.
  *
- * The odd stack goes to whoever is furthest BEHIND, so it rotates on its own and the debts
- * alternate direction instead of piling up one way. A party that does not want it to rotate says so
- * with its SHARES: taking four of six stacks permanently is being entitled to four of six, and said
- * that way it divides exactly and there is no odd stack to hand anybody.
- *
- * A suggestion: nothing is written until somebody says this is what happened.
+ * The odd stack goes to whoever is furthest BEHIND, so debts alternate instead of piling up one way.
+ * A party that wants a fixed split says so with its SHARES. Nothing is written until confirmed.
  */
 export function suggestArrangement(
   bundles: number,
@@ -618,8 +534,7 @@ export function suggestArrangement(
     .map((s, i) => ({
       i,
       fraction: (exact[i] ?? 0) - (share[i] ?? 0),
-      // Their HOLDER's position, not the seat's: two characters of one person are one pile, and
-      // giving the odd stack to their second character would not move the debt at all.
+      // Their HOLDER's position, not the seat's: two characters of one person are one pile.
       owed: behind.get(holderKey(holderOf(s))) ?? 0,
     }))
     .sort((a, b) => b.fraction - a.fraction || b.owed - a.owed || a.i - b.i);
@@ -629,8 +544,7 @@ export function suggestArrangement(
     share[i] = (share[i] ?? 0) + 1;
     left -= 1;
   }
-  // A seat with no stacks is left out rather than given a zero: the server refuses a zero, because
-  // somebody who did not bend down is absent from the arrangement, not present with none.
+  // A seat with no stacks is left out rather than given a zero, which the server refuses.
   const out = new Map<string, number>();
   seats.forEach((s, i) => {
     if ((share[i] ?? 0) > 0) out.set(s.id, share[i]!);
@@ -641,14 +555,11 @@ export function suggestArrangement(
 /**
  * Every drop that still owes somebody, oldest first.
  *
- * One row per HOLDER holding pieces of a drop, not one per drop. A drop looted stack by stack sits
- * in several piles at once, each draining its own owner's tranches, and one row could only ever
- * describe one of them.
+ * One row per HOLDER holding pieces of a drop, not one per drop: a drop looted stack by stack sits in
+ * several piles at once, each draining its own owner's tranches.
  *
- * A drop owes nothing and is left out when every pile matches its owner's share: a party whose
- * stacks divide, or one whose seats are all ONE person however many characters they brought. What
- * is NOT left out any more is the night that did not divide with no arrangement recorded. That is
- * `unanswered()`, and it used to vanish from here without a word.
+ * A drop is left out when every pile matches its owner's share. An undivided night with no
+ * arrangement is `unanswered()`'s, not this.
  *
  * `bossOrder` breaks ties inside a week, and should be the catalog's own order so the queue never
  * depends on which row was read first. A boss missing from it sorts last rather than throwing.
@@ -668,9 +579,7 @@ export function outstanding(
 
     for (const loot of pool.loot) {
       if (loot.dropKey !== dropKey || loot.quantity < 1) continue;
-      // Who ran THAT WEEK is who the shares are measured against, the same list a payout uses. Seats
-      // folded to holders: two characters of one person are one share of the drop and one party to
-      // the debt, so a night that folds to a single holder is nobody owing anybody.
+      // Who ran THAT WEEK, folded to holders. A night that folds to one holder owes nobody.
       const holders = holdersOf(loot, party);
       if (holders.length < 2) continue;
       const byKey = new Map(holders.map((h) => [h.key, h]));
@@ -683,7 +592,6 @@ export function outstanding(
         looted: held.get(h.key)?.pieces ?? 0,
         shares: h.shares,
       }));
-      // Everybody is exactly on their share, so there is nothing to settle and no pile to queue.
       if (balances(loot.quantity, seats).every((b) => b.balance === 0)) continue;
 
       for (const [key, pile] of held) {
@@ -717,17 +625,12 @@ export function outstanding(
 /**
  * The coupons of yours that `outstanding()` leaves out, as pile rows of your own.
  *
- * That one queues DEBTS, so it drops two kinds of night on purpose: one everybody landed square on,
- * and a boss you ran alone. Nobody owes anything on either, so there is nothing to settle.
+ * That one queues DEBTS, so it drops nights everybody landed square on and bosses you ran alone.
+ * Those coupons still sell, and without these rows the Sale Ledger undercounts what you hold. Only
+ * YOUR piles, because a pile you cannot sell from needs no row.
  *
- * Those coupons are still in your inventory and still sell. A Sale Ledger that will not admit you
- * hold them cannot take the sale, and it does not say so: it counted 80 against the 200 really
- * held, because a Jupiter stack that divided three ways and a Malefic Star that divided two both
- * came out square. Only YOUR piles, because a pile you cannot sell from needs no row here.
- *
- * Kept apart from `outstanding` rather than folded into it: the wallet and the party list read that
- * one for what is OWED, and a balanced night owes nothing. Widening it would put a row with no debt
- * into both.
+ * Kept apart from `outstanding`: the wallet and the party list read that one for what is OWED, and
+ * widening it would put a row with no debt into both.
  */
 export function alsoHeldByYou(
   parties: Party[],
@@ -755,9 +658,8 @@ export function alsoHeldByYou(
       const mine = holders.find((h) => h.key === SELF_KEY);
       if (!mine) continue;
 
-      // Nobody else was there, so every piece that fell is yours and there is no arrangement to
-      // read. `heldByHolder` cannot answer this one: it divides by the holders' weight, and a lone
-      // holder never reaches that branch because `holdersOf` refuses a night of fewer than two.
+      // A solo night: every piece is yours. `heldByHolder` cannot answer it, since `holdersOf`
+      // refuses a night of fewer than two holders.
       const held =
         holders.length === 1
           ? new Map([[SELF_KEY, { pieces: loot.quantity, by: ran[0]?.name ?? mine.name }]])
@@ -798,18 +700,14 @@ export function alsoHeldByYou(
 /**
  * One card per holder: their pile, their queue, and what each boss owes.
  *
- * Sales are per holder because that is who sold them. One person's characters share a queue: the
- * coupons cannot move between their inventories, but mesos are fungible and what the ledger settles
- * is what that human owes. Which character looted a boss is carried on the row for that reason.
+ * One person's characters share a queue: coupons cannot move between their inventories, but mesos
+ * are fungible and the ledger settles what that person owes. The looting character stays on the row.
  */
 export function holderLedgers(
   drops: OutstandingDrop[],
-  /** Pieces each holder has sold. A count: no debt is priced off a sale any more. */
+  /** Pieces each holder has sold. A count: no debt is priced off a sale. */
   salesByHolder: Map<string, number>,
-  /**
-   * Pieces each holder is redeeming rather than selling. Absent is none, which is every pile before
-   * V46 and still most of them.
-   */
+  /** Pieces each holder is redeeming rather than selling. Absent is none. See V46. */
   keptByHolder: Map<string, number> = new Map(),
   /** Pieces of yours each holder bought outright, and what they agreed to pay. See V50. */
   boughtByHolder: Map<string, { pieces: number; paid: number }> = new Map(),
@@ -818,9 +716,8 @@ export function holderLedgers(
   /**
    * Which (holder, drop) pairs have had their books closed, and what was written off. See V52.
    *
-   * A closed drop keeps its row and its figures, and is priced against the other closed drops alone,
-   * so nothing entered later can move it. It counts towards none of the ledger's totals: those are
-   * what is still owed, and a closed drop is not.
+   * A closed drop keeps its row but counts towards none of the ledger's totals, which are what is
+   * still owed.
    */
   closures: { closed: Set<string>; writtenOff: Map<string, number> } = {
     closed: new Set(),
@@ -830,10 +727,7 @@ export function holderLedgers(
   answeredByHolder: Map<string, number> = new Map(),
   /**
    * The same pieces per (pile, creditor), a sale at a time, which is what retires a night. See
-   * answeredSalesByPair.
-   *
-   * Absent leaves every night on the queue while any of the pile is outstanding, which is what this
-   * did before a night could be retired at all.
+   * answeredSalesByPair. Absent retires nothing.
    */
   answeredByPair: Map<string, AnsweredSale[]> = new Map(),
 ): HolderLedger[] {
@@ -869,13 +763,11 @@ export function holderLedgers(
       // What is in THIS pile. The whole drop would count somebody else's stacks as theirs.
       pieces: heldOf(d.drop),
       closed: closures.closed.has(closureKey(d.holder, d.lootId)),
-      // Only what THIS holder owes. A split drop has a row in each pile it sits in, and every one of
-      // them would otherwise repeat the whole drop's debts, counting each once per pile.
+      // Only what THIS holder owes, or a split drop counts its debts once per pile.
       transfers: transfersOf(d.drop, key),
     }));
 
-    // Pieces of YOURS they are sitting on, from the drops still open. A closed one has been settled,
-    // so counting it again asks for a debt somebody has already paid.
+    // Pieces of YOURS they are sitting on, from open drops only: a closed one was settled.
     const owedToYou = drops
       .filter((d) => !d.closed)
       .flatMap((d) => d.transfers)
@@ -885,10 +777,8 @@ export function holderLedgers(
     ledgers.push({
       holder: mine[0]!.holder,
       holderName: mine[0]!.holderName,
-      // Every drop, closed ones included, and the same is true of `accounted`. This pair is the Sale
-      // Ledger's instruction to YOU and the two sides have to be drawn from the same set: a coupon
-      // already sold still dropped, and taking it off one side alone would reopen the gap every time
-      // a boss was closed. Closing is about a DEBT, and your own pile owes you nothing.
+      // Every drop, closed ones included, as `accounted` is: the two are compared, and dropping
+      // closed drops from one side alone would reopen the gap whenever a boss closed.
       pieces: drops.reduce((sum, d) => sum + d.pieces, 0),
       owedToYou,
       received: receivedByHolder.get(key) ?? 0,
@@ -896,8 +786,7 @@ export function holderLedgers(
       ownShare: mine.reduce((sum, d) => sum + ownShareOf(d.drop, key), 0),
       bought,
       soldPieces,
-      // Not in `accounted`, which counts what became of the PILE: these pieces were sold or taken and
-      // are already in one of those counts. This says which of them answered somebody's debt.
+      // Not in `accounted`: these pieces are already in its sold or taken counts.
       answered: answeredByHolder.get(key) ?? 0,
       // Only the creditors this pile's own nights name, so a tranche naming somebody no night owes
       // sits in the total above and retires nothing.
@@ -908,25 +797,19 @@ export function holderLedgers(
         ]),
       ),
       accounted: soldPieces + kept + bought.pieces,
-      // Every drop closed, so there is nothing here anybody is waiting on. A pile with no drops at all
-      // cannot be closed: there would be nothing to have decided about.
+      // A pile with no drops cannot be closed: nothing was decided.
       closed: drops.length > 0 && drops.every((d) => d.closed),
       writtenOff: closures.writtenOff.get(key) ?? 0,
       drops,
     });
   }
-  // Closed piles last, then by name. Still listed, because the rows recorded against one are
-  // corrected from its card and nowhere else. Out of the way is not the same as gone.
+  // Closed piles last, but still listed: their rows are corrected from their card and nowhere else.
   return ledgers.sort(
     (a, b) => Number(a.closed) - Number(b.closed) || a.holderName.localeCompare(b.holderName),
   );
 }
 
-/**
- * One tranche as these functions read it. `disposition` absent is a row cached from before V50.
- *
- * Named because three readers now have to agree on it, and on what an ABSENT disposition means.
- */
+/** One tranche as these functions read it. `disposition` absent is a row cached from before V50. */
 type TrancheRow = {
   holder: Holder;
   pieces: number;
@@ -941,11 +824,8 @@ type TrancheRow = {
 /**
  * Whether a row is a purchase of the creditor's pieces rather than a sale. See V50.
  *
- * The one place `disposition` is read, and it is read POSITIVELY: absent can only mean a row cached
- * from before BOUGHT existed, so it is never one. Testing for SOLD instead would be the cache trap
- * in `bundlesOf` below, and worse: lib/cache.ts hands back whatever shape the API had when the page
- * last fetched, and `undefined !== "SOLD"` is TRUE, so a tab open across the deploy would drop every
- * sale already entered.
+ * Read POSITIVELY: absent means a row cached from before BOUGHT existed (lib/cache.ts), so it is never
+ * one. Testing `!== "SOLD"` would drop every sale on such a row.
  */
 function isBought(row: TrancheRow): boolean {
   return row.disposition === "BOUGHT";
@@ -954,17 +834,10 @@ function isBought(row: TrancheRow): boolean {
 /**
  * How many pieces each holder has SOLD, keyed the way holderLedgers wants them.
  *
- * Rows with money in them, minus the purchases. A KEPT row is pieces redeemed rather than sold, and
- * a BOUGHT row is the creditor's pieces taken at an agreed price; each is counted by its own function
- * below, because the three are different fates and only their sum is what the pile has been told.
+ * Rows with money in them, minus the purchases. KEPT and BOUGHT rows are counted by their own
+ * functions below. A count, not prices: no per-piece figure is derived from a tranche's amount.
  *
- * A COUNT, not the prices. The tranche's amount is still stored and still shown on its own row, but
- * nothing derives a per-piece figure from it any more: that existed to apportion the money over the
- * bosses in the queue, and no debt is priced that way now.
- *
- * The AMOUNT is what separates a sale from a redemption, which V50 keeps equivalent by check
- * constraint. Only the purchase needs the disposition, and `isBought` says why that direction is the
- * safe one to test.
+ * The AMOUNT separates a sale from a redemption (V50 keeps this equivalent by check constraint).
  */
 export function salesByHolder(rows: TrancheRow[]): Map<string, number> {
   const out = new Map<string, number>();
@@ -979,12 +852,8 @@ export function salesByHolder(rows: TrancheRow[]): Map<string, number> {
 /**
  * How many pieces each holder is redeeming rather than selling.
  *
- * A total, because only the total matters: nothing asks which boss a redeemed piece came off any
- * more, and the rows exist separately so a redemption entered by mistake can be removed.
- *
- * Rows with no money, the same test `salesByHolder` uses and for the same reason: V46 makes the
- * amount and the disposition equivalent by check constraint, and reading `disposition` would read
- * `undefined` on a response cached from before the field existed.
+ * Rows with no money. V46 makes amount and disposition equivalent, and `disposition` can be absent
+ * on a cached response.
  */
 export function keptByHolder(rows: TrancheRow[]): Map<string, number> {
   const out = new Map<string, number>();
@@ -999,9 +868,7 @@ export function keptByHolder(rows: TrancheRow[]): Map<string, number> {
 /**
  * Pieces of the creditor's that each holder bought, and what they paid for them. See V50.
  *
- * One count and one total per holder, so several purchases at different prices blend. No boss is
- * named on one, for the same reason a sale names none: a coupon in an inventory carries no record of
- * the clear it fell on, and nothing needs to know now that no debt is priced boss by boss.
+ * One count and one total per holder, so several purchases at different prices blend.
  */
 export function boughtByHolder(rows: TrancheRow[]): Map<string, { pieces: number; paid: number }> {
   const out = new Map<string, { pieces: number; paid: number }>();
@@ -1020,13 +887,12 @@ export function boughtByHolder(rows: TrancheRow[]): Map<string, { pieces: number
 /**
  * Pieces of each pile that have been answered with money rather than with coupons. See V56.
  *
- * Pieces, not mesos: what the money came to is saleCredits' answer, and this is the count that stops
- * the pile asking about them. Two ways in, and the whole rule is here rather than split between here
- * and settledOf, because the two must not count the same pieces twice:
+ * Pieces, not mesos (see saleCredits for the money). The whole rule lives here, not split with
+ * settledOf, so no piece is counted twice. Two ways in:
  *
  *  - pieces a priced tranche NAMED as somebody else's, sale or purchase alike.
- *  - pieces on a purchase that named nobody, which is every purchase entered before this. A purchase
- *    is one creditor's in full by definition (V50), so its count stands on its own.
+ *  - pieces on a purchase that named nobody. A purchase is one creditor's in full by definition
+ *    (V50), so its count stands on its own.
  */
 export function answeredByHolder(rows: TrancheRow[]): Map<string, number> {
   const out = new Map<string, number>();
@@ -1036,15 +902,14 @@ export function answeredByHolder(rows: TrancheRow[]): Map<string, number> {
     const named = (row.shares ?? [])
       .filter((s) => holderKey(s.holder) !== key)
       .reduce((sum, s) => sum + s.pieces, 0);
-    // Capped at the tranche, which the server enforces too. A cached row from a build that did not
-    // would otherwise answer for more pieces than it held.
+    // Capped at the tranche (the server enforces it too) against an older cached row.
     const answered = named > 0 ? Math.min(named, row.pieces) : isBought(row) ? row.pieces : 0;
     if (answered > 0) out.set(key, (out.get(key) ?? 0) + answered);
   }
   return out;
 }
 
-/** How one pile's answer to one creditor is keyed. Both halves, because a pile owes each separately. */
+/** How one pile's answer to one creditor is keyed. */
 export function answeredKey(pile: string, creditor: string): string {
   return `${pile}|${creditor}`;
 }
@@ -1052,17 +917,13 @@ export function answeredKey(pile: string, creditor: string): string {
 /**
  * The same pieces, per (pile, creditor) instead of per pile. See V56.
  *
- * The Sale Ledger asks what a PILE still owes, so a pile total answers it. The Settlement Ledger owes
- * each person separately, and subtracting a pile total there would take one person's sold coupons off
- * whichever card was being drawn. That is the plausible wrong number this repo exists to prevent, so
- * the attribution the tranche already carries is kept rather than summed away.
+ * The Settlement Ledger owes each person separately, and subtracting a pile total there would take
+ * one person's sold coupons off whichever card was being drawn.
  *
- * Only the rows that NAMED a creditor. A purchase that named nobody is one creditor's in full by
- * definition (V50) and does not say which, so it stays in answeredByHolder's total and is attributed
- * to nobody here: naming one would discharge a debt against somebody who never agreed to it.
+ * Only rows that NAMED a creditor. A purchase naming nobody stays in answeredByHolder's total and is
+ * attributed to nobody here: guessing would discharge a debt against somebody who never agreed.
  *
- * Capped against the tranche in share order, the same cap answeredByHolder applies to the total, so a
- * row cached from a build that did not enforce it answers for what fell and no more.
+ * Capped against the tranche in share order, as answeredByHolder caps the total.
  */
 export function answeredByPair(rows: TrancheRow[]): Map<string, number> {
   const out = new Map<string, number>();
@@ -1078,12 +939,9 @@ export function answeredByPair(rows: TrancheRow[]): Map<string, number> {
 /**
  * The same attribution, one entry per SALE rather than summed, so each carries the day it was made.
  *
- * A sum cannot say when it was earned, and the spend needs to know: a sale only answers nights that
- * were already on the books when it was recorded. Summing first and spending after is what let a
- * sale from last week answer a night logged tonight. See spendSales.
- *
- * A row with no soldAt is one cached from before the field. It sorts first and reaches every night,
- * which is what it did when it was cached.
+ * A sale only answers nights already on the books when it was recorded, which a sum cannot tell.
+ * See spendSales. A row with no soldAt (cached from before the field) sorts first and reaches every
+ * night.
  */
 export function answeredSalesByPair(rows: TrancheRow[]): Map<string, AnsweredSale[]> {
   const out = new Map<string, AnsweredSale[]>();
@@ -1093,8 +951,7 @@ export function answeredSalesByPair(rows: TrancheRow[]): Map<string, AnsweredSal
     let left = row.pieces;
     for (const share of row.shares ?? []) {
       const creditor = holderKey(share.holder);
-      // A share naming the pile's own holder answers nothing and spends none of the budget: a pile
-      // owes itself nothing, which is the case answeredByHolder filters out before it counts.
+      // A share naming the pile's own holder answers nothing and spends none of the budget.
       if (creditor === pile) continue;
       if (left <= 0) break;
       const pieces = Math.min(share.pieces, left);
@@ -1111,15 +968,10 @@ export function answeredSalesByPair(rows: TrancheRow[]): Map<string, AnsweredSal
 /**
  * One priced tranche, as far as it concerns ONE counterparty. See saleCredits.
  *
- * Their pieces and their share of the price, never the whole lot: 70 of Owen's out of a lot of 70 and
- * 70 of his out of a lot of 200 put different money on his card.
+ * Their pieces and their share of the price, never the whole lot.
  */
 export type CouponSale = {
-  /**
-   * The tranche it came off, so a decision about the money can be told back to the pill that records
-   * the sale. The Sale Ledger folds a sale away once its money has been decided, and it can only know
-   * which sales those were from the one spend that matched them. See decidedSales.
-   */
+  /** The tranche it came off, so a decision about the money can be matched back. See decidedSales. */
   trancheId: string;
   pieces: number;
   /** Their share of what the lot fetched. saleCredits' own figure, so the two cannot disagree. */
@@ -1142,34 +994,27 @@ export type SaleCredit = {
    */
   keptByThem?: number;
   /**
-   * The tranches behind `toThem`, in the order the API returned them, which is oldest first.
-   *
-   * The money sits in your hands until somebody decides about it, and a decision names no tranche,
-   * so the card can only say which sales it was made of by matching them off in this order. See
-   * moneyRows.
+   * The tranches behind `toThem`, oldest first. A decision names no tranche, so they are matched off
+   * in this order. See moneyRows.
    */
   sales: CouponSale[];
-  /** The same for `toYou`, which waits on a decision too since V91. */
+  /** The same for `toYou`, which waits on a decision too. See V91. */
   salesToYou?: CouponSale[];
 };
 
 /**
  * What each counterparty is owed, or owes, out of priced tranches of somebody else's pieces. See V56.
  *
- * The one place a piece debt gets a price, and it only ever does so from a tranche WHOSE PRICE THE
- * ENTERER TYPED. That is what makes it different from the pro rata #354 deleted: this divides one
- * tranche, one lot at one price, between the people whose coupons were in it. It never spreads a
- * holder's proceeds over a queue of bosses, and it never asks what somebody else sold at.
+ * The one place a piece debt gets a price, and only from a tranche whose price the enterer TYPED: it
+ * divides one lot at one price between the people whose coupons were in it. Never spread a holder's
+ * proceeds over a queue of bosses (that pro rata was deleted in #354).
  *
- * A PURCHASE counts, at the price it names. "I took theirs, at a price" is the whole act of keeping
- * somebody's coupons instead of handing them back, so leaving it out meant the pieces left the pile
- * settled and the money for them was stated nowhere.
+ * A PURCHASE counts, at the price it names, or the pieces leave the pile with their money stated
+ * nowhere.
  *
- * Rounded to the meso, with the remainder left on the seller's side: the two must add up to the
- * tranche exactly, and the person who typed the figure is the one who can check it.
+ * Rounded to the meso, with the remainder on the seller's side, so the two add up to the tranche.
  *
- * A row where neither side is you is left out. That debt is real and it is between two other people,
- * the same case buildWallet counts as `betweenOthers` rather than putting in your totals.
+ * A row where neither side is you is left out (buildWallet's `betweenOthers`).
  */
 export function saleCredits(rows: (TrancheRow & { id: string })[]): Map<string, SaleCredit> {
   const out = new Map<string, SaleCredit>();
@@ -1181,17 +1026,14 @@ export function saleCredits(rows: (TrancheRow & { id: string })[]): Map<string, 
   };
 
   for (const row of rows) {
-    // A price to divide, and pieces to divide it over. A redemption has neither: it realized nothing,
-    // which is why the server still refuses shares on one. See V50.
+    // A redemption realized nothing, so there is no price to divide. See V50.
     if (row.amount === null || row.pieces < 1) continue;
     const pile = holderKey(row.holder);
     for (const share of row.shares ?? []) {
       const creditor = holderKey(share.holder);
       if (pile !== SELF_KEY && creditor !== SELF_KEY) continue;
       const mesos = Math.round((share.pieces * row.amount) / row.pieces);
-      // The row is listed off the same figure it is counted by, in one pass: a second walk to
-      // itemise what this one totalled is a second answer, and the rounding above is exactly the
-      // kind of step the two would come to disagree over.
+      // Itemised in the same pass it is totalled, so the rounding cannot make the two disagree.
       const sale = {
         trancheId: row.id,
         pieces: share.pieces,
@@ -1216,23 +1058,19 @@ export function saleCredits(rows: (TrancheRow & { id: string })[]): Map<string, 
 /** What coupon sales came to, in the two figures a sold drop reports. See couponMoney. */
 export type CouponMoney = { pooled: number; yourTake: number };
 
-/** Nothing sold, for a caller that has decided the coupon piles are not part of what it is showing. */
+/** Nothing sold, for a caller that leaves the coupon piles out. */
 export const NO_COUPON_MONEY: CouponMoney = { pooled: 0, yourTake: 0 };
 
 /**
  * What the coupon piles have fetched, said the way a sold drop says it.
  *
- * A coupon row settles through this ledger and never through a sale on its own row, so the Drop
- * Log's money was every sale the account had made EXCEPT the vestiges.
+ * A coupon row settles through this ledger, never through a sale on its own row. Left out:
  *
- * Left out, and why:
- *
- *  - a redemption, which realized nothing. Same test as elsewhere: no amount, no sale.
+ *  - a redemption, which realized nothing.
  *  - a purchase, which is pieces bought INTO the pile. That money goes the other way.
- *  - a tranche neither side of which is yours, the case buildWallet calls `betweenOthers`.
+ *  - a tranche neither side of which is yours (buildWallet's `betweenOthers`).
  *
- * A share is priced the way saleCredits prices one, rounding included, so the same coupons are the
- * same mesos here and on the card that asks for them.
+ * Priced exactly as saleCredits prices a share, rounding included.
  */
 export function couponMoney(rows: TrancheRow[]): CouponMoney {
   let pooled = 0;
@@ -1248,8 +1086,7 @@ export function couponMoney(rows: TrancheRow[]): CouponMoney {
 
     if (holderKey(row.holder) === SELF_KEY) {
       pooled += amount;
-      // The lot less the coupons in it that were somebody else's. A row naming nobody is all yours,
-      // which is every tranche entered before V56.
+      // The lot less the coupons in it that were somebody else's. A row naming nobody is all yours.
       yourTake += Math.max(0, amount - mesosOf((key) => key !== SELF_KEY));
     } else {
       // Their lot, with coupons of yours in it. Only your shares are yours to count.
@@ -1263,16 +1100,14 @@ export function couponMoney(rows: TrancheRow[]): CouponMoney {
 }
 
 /**
- * The key a closure is remembered by: one holder's decision about one drop.
- *
- * Both halves, because a drop split at the stack sits in several piles and closing one person's books
- * says nothing about anybody else's.
+ * The key a closure is remembered by: one holder's decision about one drop. A split drop sits in
+ * several piles, and closing one says nothing about the others.
  */
 export function closureKey(holder: Holder, lootId: string): string {
   return closureKeyOf(holderKey(holder), lootId);
 }
 
-/** The same key for a caller holding the holder's KEY already, so the format lives in one place. */
+/** The same key for a caller holding the holder's KEY already. */
 export function closureKeyOf(holder: string, lootId: string): string {
   return `${holder}|${lootId}`;
 }
@@ -1295,9 +1130,7 @@ export function closedByHolder(rows: { holder: Holder; lootIds: string[]; unpaid
 /**
  * The drops a holder still has open, which is what a rotation should be measured against.
  *
- * A closed debt was compensated, so it has no business tilting next week's suggested arrangement: a
- * holder who took the odd stack four weeks running and paid for it every time would otherwise keep
- * being suggested against forever.
+ * A closed debt was compensated, so it must not tilt next week's suggested arrangement.
  */
 export function stillOpen(drops: OutstandingDrop[], closed: Set<string>): OutstandingDrop[] {
   return drops.filter((d) => !closed.has(closureKey(d.holder, d.lootId)));
@@ -1306,9 +1139,7 @@ export function stillOpen(drops: OutstandingDrop[], closed: Set<string>): Outsta
 /**
  * Mesos each holder has actually handed over. See V51.
  *
- * A total, like the redemptions: what a holder still owes is one number, and which boss a meso
- * retires is already the queue's answer. The rows exist separately so a mistyped receipt can be
- * removed the way a mistyped tranche is.
+ * A total: what a holder still owes is one number.
  */
 export function receivedByHolder(rows: { holder: Holder; amount: number }[]): Map<string, number> {
   const out = new Map<string, number>();
@@ -1322,19 +1153,11 @@ export function receivedByHolder(rows: { holder: Holder; amount: number }[]): Ma
 /**
  * The payments no closure has already spoken for, per holder, and the ones it has.
  *
- * Mark settled says the books are closed, so the money that arrived before it is what closed them:
- * it is spent, and it cannot pay for anything entered afterwards. Owen sold 195 coupons for 4.856b,
- * sent 4.86b, and the pile was settled twenty minutes later. Counted raw, that finished 4.86b came
- * straight off the next debt entered against him, which is #350's rule ("a closed thing counts
- * towards no current total") being broken one ledger further along.
+ * Money that arrived before Mark Settled is what closed the books: it is spent, and cannot pay for
+ * anything entered afterwards (a closed thing counts towards no current total).
  *
- * By TIME rather than by amount, because a settlement records no figure to match against: it names
- * the drops it closes and what was written off, and a payment is against the holder's whole debt
- * rather than any drop. The last closure is the line, so a payment arriving after one counts.
- *
- * The receipts rather than their sum, because the card lists them one by one: a payment that counts
- * is a row in the arithmetic and a spent one is not, and a card that could only see the total had to
- * draw every receipt somewhere else. Oldest first, the order the money moved in.
+ * By TIME rather than amount, because a settlement records no figure to match against. The last
+ * closure is the line. Receipts rather than a sum, because the card lists them; oldest first.
  */
 export function paymentsSinceClosing<T extends { holder: Holder; receivedAt: string }>(
   payments: T[],
@@ -1376,13 +1199,7 @@ export function receivedSinceClosing(
   return out;
 }
 
-/**
- * Pieces of the pile nobody has said the fate of yet. Floored, so a miscount does not read negative.
- *
- * The card's one instruction while there are any: this many pieces are in somebody's inventory and
- * the ledger has not been told what became of them. Zero is every piece accounted for, which is when
- * the money becomes the only question left.
- */
+/** Pieces of the pile nobody has said the fate of yet. Floored, so a miscount does not read negative. */
 export function unaccounted(ledger: HolderLedger): number {
   return Math.max(0, ledger.pieces - ledger.accounted);
 }
@@ -1390,9 +1207,8 @@ export function unaccounted(ledger: HolderLedger): number {
 /**
  * Every pile this loot row sits in, for the row's own read-only display.
  *
- * A list, not one entry: a drop looted stack by stack is in as many piles as there were people
- * bending down, and answering with the first would name one holder and quietly drop the others.
- * One entry is the ordinary case, where a single looter holds the lot.
+ * A list, not one entry: a drop looted stack by stack is in several piles, and answering with the
+ * first would quietly drop the others.
  */
 export function ledgerForLoot(
   ledgers: HolderLedger[],

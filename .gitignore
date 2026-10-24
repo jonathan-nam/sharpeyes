@@ -28,8 +28,10 @@ frontend/tsconfig.tsbuildinfo
 # pre-installed Gradle required)
 backend/.gradle/
 backend/build/
+backend/*/build/
 # Kotlin's incremental build cache, written beside the source tree by `gradlew run`.
 backend/.kotlin/
+backend/*/.kotlin/
 
 # IDE
 .idea/

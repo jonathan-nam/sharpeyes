@@ -55,6 +55,20 @@ export function endpointShape(path: string): string {
     .join("/");
 }
 
+/** The browser's money and the server's disagreed: where first, and in how many places. No values. */
+export function reportParity(field: string, count: number): void {
+  if (typeof window === "undefined") return;
+  if (!withinReportCap()) return;
+
+  beacon("/api/errors", {
+    kind: "parity",
+    field: field.slice(0, 160),
+    count,
+    route: location.pathname,
+    ...reportContext(),
+  });
+}
+
 export function reportApiFailure(failure: ApiFailure): void {
   if (typeof window === "undefined") return;
   if (!withinReportCap()) return;

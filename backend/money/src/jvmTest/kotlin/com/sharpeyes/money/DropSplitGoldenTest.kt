@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.money
+package com.sharpeyes.money
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -21,14 +21,19 @@ data class GoldenFile<I, O>(
 )
 
 /**
- * Reads a fixture from src/test/resources/money-golden. Strict: a shape that drifted fails here.
+ * Reads a fixture from the money-golden resources. Strict: a shape that drifted fails here.
  *
- * MONEY_GOLDEN_DIR reads the same files from a directory instead: how an audit runs the port over
- * fixtures recorded from real data, which never belong in the repo.
+ * MONEY_GOLDEN_DIR reads the same file from a directory instead, where an audit wrote one: how the
+ * port runs over fixtures recorded from real data, which never belong in the repo.
  */
 internal inline fun <reified I, reified O> golden(name: String): GoldenFile<I, O> {
     val text =
-        System.getenv("MONEY_GOLDEN_DIR")?.let { java.io.File(it, name).readText() }
+        System.getenv("MONEY_GOLDEN_DIR")?.let {
+            java.io
+                .File(it, name)
+                .takeIf { f -> f.exists() }
+                ?.readText()
+        }
             ?: requireNotNull(GoldenCase::class.java.getResourceAsStream("/money-golden/$name")) {
                 "no fixture $name: run the frontend's golden tests with UPDATE_GOLDEN=1"
             }.bufferedReader().readText()
@@ -65,8 +70,6 @@ class DropSplitGoldenTest {
 
     @Test
     fun `the fixture covers refusals and both rounding directions`() {
-        // An audit's real data need not contain a refusal.
-        if (System.getenv("MONEY_GOLDEN_DIR") != null) return
         assertTrue(file.cases.any { it.throws })
         assertTrue(file.cases.any { it.input.rounding == Rounding.DOWN })
         assertTrue(file.cases.any { it.input.memberShares != null })

@@ -24,9 +24,7 @@ import type { DropLogPage } from "@/types/page";
 export const VESTIGE = "vestige-of-erion";
 
 /**
- * The coupon's own row, off whichever boss table carries it. Every table names the same drop, and
- * both its sprite and its name come off the one row so a card cannot draw one item and name
- * another.
+ * The coupon's own row, off whichever boss table carries it. Sprite and name both come off it.
  */
 export function vestigeOf(dropTables: DropTables) {
   return (
@@ -39,9 +37,8 @@ export function vestigeOf(dropTables: DropTables) {
 /**
  * The Settlement stage's figures off the Drop Log payload.
  *
- * The intermediates are returned because the Drop Log reads them for its other stages. Any other
- * screen that states these figures must call this rather than rebuild the chain, or the two will
- * disagree about what somebody owes.
+ * The intermediates are returned for the Drop Log's other stages. Any screen that states these
+ * figures must call this rather than rebuild the chain.
  */
 export function settlementView(
   page: Pick<
@@ -60,13 +57,11 @@ export function settlementView(
   const { parties, pools, bosses, people, tranches, payments, settlements, debts, disposals } =
     page;
 
-  // The catalog's own order, which is what /api/bosses returns, so two bosses cleared in one week
-  // never swap places in the queue and re-price each other.
+  // The catalog's order, so two bosses cleared in one week never swap and re-price each other.
   const bossOrder = new Map(bosses.map((b, i) => [b.bossKey, i]));
   const closures = closedByHolder(settlements);
   const settled = outstanding(parties, pools, VESTIGE, bossOrder);
-  // Your own coupons from the nights that owed nobody anything, which the queue above leaves out.
-  // They are yours to sell, so the card that takes a sale has to know you are holding them.
+  // Plus your own coupons from nights that owed nobody, which are still yours to sell.
   const ledgers = holderLedgers(
     [...settled, ...alsoHeldByYou(parties, pools, VESTIGE, bossOrder, settled)],
     salesByHolder(tranches),
@@ -75,24 +70,18 @@ export function settlementView(
     receivedByHolder(payments),
     closures,
     answeredByHolder(tranches),
-    // The same pieces per creditor, which is what lets a night the sales already answered stay off
-    // the queue when a later one is logged. See foldAnswered.
     answeredSalesByPair(tranches),
   );
-  // Somebody a debt can name but no open drop does. The people list first, so somebody who is owed
-  // something is named even after their seat has left every party. Seats then win, because a seat
-  // carries the name as this account spells it.
+  // People first, so a holder is named after their seat has left every party. Seats then win, as
+  // they carry the name as this account spells it.
   const holderNames = new Map<string, string>();
   for (const person of people) holderNames.set(`person:${person.id}`, person.name);
   for (const party of parties) {
     for (const seat of foldSeats(party.seats)) holderNames.set(seat.key, seat.name);
   }
   const wallet = buildWallet(parties, pools);
-  // The shares an offset discharged, resolved. Only the drops an offset actually names, because
-  // splitting every loot row in every pool to answer for a handful would be a pass over the whole
-  // account on every render.
-  //
-  // Off the pools, since an offset marks its shares PAID and they leave the wallet. See V58.
+  // The shares an offset discharged, splitting only the drops an offset names. Off the pools, since
+  // an offset marks its shares PAID and they leave the wallet. See V58.
   const partyById = new Map(parties.map((p) => [p.id, p]));
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
   const offsetShares = new Map<string, OffsetShare>();
@@ -105,8 +94,7 @@ export function settlementView(
         if (!wanted.has(loot.id)) continue;
         const split = splitOf(loot, party.seats);
         if (split === null) continue;
-        // The sale in its own unit, so the row's "sold for" and the share under it agree. Reading
-        // `saleAmount` alone would print nothing at all for a sale made in real money.
+        // In its own unit: `saleAmount` alone is null for a dollar sale.
         const sold = saleMoney(loot);
         const boss = bossByKey.get(loot.bossKey ?? "");
         for (const share of split.shares) {
@@ -117,8 +105,7 @@ export function settlementView(
             item: loot.name,
             iconUrl: loot.iconUrl,
             boss: boss ? bossLabel(boss.name, party.difficulty) : "–",
-            // Everybody the night paid out to, which is who was in it. Off the same split the share
-            // came from, so the row cannot name a roster the figure was not divided by.
+            // Off the same split as the share, so the roster matches the divisor.
             members: split.shares.map((s) => s.name),
             on: loot.droppedOn,
             weekStart: loot.weekStart,
@@ -131,25 +118,21 @@ export function settlementView(
       }
     }
   }
-  // What sales of somebody else's coupons came to. Held rather than passed inline: the Sale Ledger's
-  // fold reads the same figures, and two calls is two lists to fall out of step. See decidedSales.
+  // What sales of somebody else's coupons came to, returned for the Sale Ledger. See decidedSales.
   const credits = saleCredits(tranches);
   const settlement = buildSettlement(
     ledgers,
     wallet,
     debts,
     credits,
-    // Only what no closure has already spoken for. A payment that settled a pile is spent, and
-    // counting it again takes it off the next thing entered against that person. See #350.
+    // Only what no closure has already spoken for, or a spent payment counts twice.
     receivedSinceClosing(payments, settlements),
     holderNames,
     new Set(people.filter((p) => p.pinned).map((p) => `person:${p.id}`)),
-    // The pieces a priced tranche already spoke for, per pair. `saleCredits` above is the money the
-    // same rows came to, and passing one without the other is what had this card asking Owen for 130
-    // coupons while the Sale Ledger, subtracting the 70 he had been sold, asked for 60.
+    // The pieces a priced tranche already spoke for, per pair. Always pass it alongside
+    // `saleCredits` (the money the same rows came to), or this card and the Sale Ledger disagree.
     answeredSalesByPair(tranches),
-    // What has been decided about their money, and nothing more. An empty list means undecided,
-    // which is the honest state for a sale nobody has said anything about. See V61.
+    // An empty list means undecided. See V61.
     disposals,
   );
 
@@ -163,7 +146,6 @@ export function settlementView(
     offsetShares,
     credits,
     settlement,
-    // The three tiles above the cards, off the cards themselves. See settlementTotals.
     totals: settlementTotals(settlement),
   };
 }

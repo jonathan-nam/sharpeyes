@@ -112,6 +112,23 @@ class ClientErrorRoutesTest {
     }
 
     @Test
+    fun `a parity report names where the figures differ and how many`() {
+        post("""{"kind":"parity","field":"view.settlement.2.mesos","count":3,"route":"/bosses/drops"}""")
+
+        val line = logged().single()
+        assertTrue(line.contains("client parity"), line)
+        assertTrue(line.contains("field=view.settlement.2.mesos"), line)
+        assertTrue(line.contains("count=3"), line)
+    }
+
+    @Test
+    fun `a parity field that is not a json path is dropped`() {
+        post("""{"kind":"parity","field":"1320000000 owed to someone","count":1}""")
+
+        assertTrue(!logged().single().contains("field="), logged().single())
+    }
+
+    @Test
     fun `a status outside the http range is dropped`() {
         post("""{"kind":"http","path":"/api/parties","status":99999}""")
 
