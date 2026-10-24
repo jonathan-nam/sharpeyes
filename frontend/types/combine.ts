@@ -44,6 +44,16 @@ export type IncomingCombine = {
   total: number;
   keepsYours: number;
   keepsTheirs: number;
+  /** Seats of yours it takes out. Absent on a cached payload. */
+  takesOut?: { name: string; boss: string; leader: string }[];
+};
+
+/** A character two parties would hold for one boss, for the sender to place. */
+export type SeatClash = {
+  name: string;
+  boss: string;
+  sprite: string | null;
+  options: { partyId: string; yours: boolean; leader: string; difficulty: string | null }[];
 };
 
 export type CombinePage = {

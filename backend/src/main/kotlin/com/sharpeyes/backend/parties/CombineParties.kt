@@ -35,7 +35,10 @@ import kotlin.uuid.Uuid
 // none of the retired one (PartyReadCutoff, read by SharedBooks.kt), so a night both logged is never
 // counted in both books. Inside a transaction, like the rest.
 
-/** A standing party as combining reads it. [members] are standing seat names, own seat included. */
+/**
+ * A standing party as combining reads it. [members] are standing seat names, own seat included, and
+ * [own] the lowercased ones that are the owner's own characters: removeMember takes none of those out.
+ */
 internal data class StandingParty(
     val id: Uuid,
     val owner: String,
@@ -44,8 +47,11 @@ internal data class StandingParty(
     val world: String,
     val difficulty: String?,
     val members: List<String>,
+    val own: Set<String> = emptySet(),
 ) {
     fun seats(name: String) = members.any { it.equals(name, ignoreCase = true) }
+
+    fun canLose(name: String) = name.lowercase() !in own && !leader.equals(name, ignoreCase = true)
 }
 
 /** Two parties that could be combined, and which of them can be kept. */
@@ -61,7 +67,7 @@ internal data class CombinablePair(
 }
 
 /** Standing, shared-able parties of [owners]: not solo, not a one-off. */
-private fun standingParties(owners: Collection<String>): List<StandingParty> {
+internal fun standingParties(owners: Collection<String>): List<StandingParty> {
     if (owners.isEmpty()) return emptyList()
     val rows =
         Party
@@ -71,12 +77,17 @@ private fun standingParties(owners: Collection<String>): List<StandingParty> {
                 (Party.userId inList owners) and (Party.standing eq true) and
                     (Party.solo eq false) and (Party.oneOff eq false)
             }.toList()
-    val seats =
+    val seatRows =
         PartyMember
             .selectAll()
             .where { (PartyMember.partyId inList rows.map { it[Party.id] }) and (PartyMember.standing eq true) }
             .orderBy(PartyMember.position, SortOrder.ASC)
-            .groupBy({ it[PartyMember.partyId] }, { it[PartyMember.name] })
+            .toList()
+    val seats = seatRows.groupBy({ it[PartyMember.partyId] }, { it[PartyMember.name] })
+    val own =
+        seatRows
+            .filter { it[PartyMember.characterId] != null }
+            .groupBy({ it[PartyMember.partyId] }, { it[PartyMember.name].lowercase() })
     return rows.map {
         StandingParty(
             id = it[Party.id],
@@ -86,6 +97,7 @@ private fun standingParties(owners: Collection<String>): List<StandingParty> {
             world = it[Characters.worldType],
             difficulty = it[Party.difficulty],
             members = seats[it[Party.id]].orEmpty(),
+            own = own[it[Party.id]].orEmpty().toSet(),
         )
     }
 }

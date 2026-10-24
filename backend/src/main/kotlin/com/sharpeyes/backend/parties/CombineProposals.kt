@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.PartyCombineItem
 import com.sharpeyes.backend.db.PartyCombineRequest
+import com.sharpeyes.backend.db.PartyCombineSeat
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
@@ -72,90 +73,117 @@ internal fun planWith(
     other: String,
 ) = CombinePlan(combinablePairs(userId).filter { it.theirs.owner == other })
 
-/** A conflict's answer: which party is kept, or null to leave the two separate. */
+/** A conflict's answer: which of the pair is kept. Every pair combines; none is left as two. */
 internal data class CombineChoice(
     val mine: Uuid,
     val theirs: Uuid,
-    val keep: Uuid?,
+    val keep: Uuid,
 )
 
-/** Sends [personId]'s account one request covering every pair, replacing any earlier one. */
-internal fun sendCombine(
+/** A character left in two parties, and the party the sender keeps them in. */
+internal data class SeatChoice(
+    val name: String,
+    val keepPartyId: Uuid,
+)
+
+internal fun CombinablePair.otherThan(id: Uuid) = if (mine.id == id) theirs.id else mine.id
+
+/** What a request from [userId] to [other] would do, or why it cannot be sent as it stands. */
+internal class CombineDraft(
+    val other: String,
+    val items: List<Pair<CombinablePair, Uuid>>,
+    val seats: SeatPlan,
+    val refusal: CombineAnswer?,
+)
+
+/**
+ * Settles every pair and every character left in two parties, so that once it is accepted nobody
+ * holds two standing parties for one boss. Unanswered pairs or clashes refuse it.
+ */
+internal fun draftCombine(
     userId: String,
-    personId: Uuid,
+    other: String,
     choices: List<CombineChoice>,
-    now: Instant,
-): CombineAnswer {
-    val other = accountOf(userId, personId)
-    val plan = CombinePlan(other?.let { planWith(userId, it).pairs }.orEmpty())
+    seatChoices: List<SeatChoice>,
+): CombineDraft {
+    val plan = planWith(userId, other)
     val answered = choices.associateBy { it.mine to it.theirs }
     val items =
         plan.pairs.mapNotNull { pair ->
             val keep = plan.autoKeep(pair) ?: answered[pair.mine.id to pair.theirs.id]?.keep
             keep?.let { pair to it }
         }
+    val retired = items.mapTo(mutableSetOf()) { (pair, keep) -> pair.otherThan(keep) }
+    val kept = items.mapTo(mutableSetOf()) { it.second }
+    val standing = standingParties(listOf(userId, other))
+    val byId = standing.associateBy { it.id }
+    val keepIn =
+        seatChoices
+            .mapNotNull { choice -> byId[choice.keepPartyId]?.let { (it.bossId to choice.name.lowercase()) to it.id } }
+            .toMap()
+    val seats = planSeats(standing, retired, keepIn)
     val refusal =
         when {
             plan.pairs.isEmpty() -> CombineAnswer.NotFound
-            plan.conflicts.any { answered[it.mine.id to it.theirs.id] == null } ->
-                CombineAnswer.Refused(Refusal("Choose for every conflict."))
+            items.size < plan.pairs.size ->
+                CombineAnswer.Refused(
+                    Refusal("Choose which party to keep for every conflict."),
+                )
             items.any { (pair, keep) -> keep !in pair.keepable } ->
                 CombineAnswer.Refused(Refusal("Keep the party that already has both of you."))
-            items.isEmpty() -> CombineAnswer.Refused(Refusal("Nothing left to combine."))
+            retired.any { it in kept } ->
+                CombineAnswer.Refused(
+                    Refusal("A party can't be kept and retired. Choose again."),
+                )
+            seats.open.isNotEmpty() ->
+                CombineAnswer.Refused(
+                    Refusal("Choose which party keeps ${seats.open.first().name}."),
+                )
             else -> null
         }
-    if (refusal != null || other == null) return refusal ?: CombineAnswer.NotFound
-    dropRequests(userId, other, bothWays = false)
+    return CombineDraft(other, items, seats, refusal)
+}
+
+/** Sends [personId]'s account one request covering every pair, replacing any earlier one. */
+internal fun sendCombine(
+    userId: String,
+    personId: Uuid,
+    choices: List<CombineChoice>,
+    seatChoices: List<SeatChoice>,
+    now: Instant,
+): CombineAnswer {
+    val draft = accountOf(userId, personId)?.let { draftCombine(userId, it, choices, seatChoices) }
+    val refusal = draft?.refusal
+    if (draft == null || refusal != null) return refusal ?: CombineAnswer.NotFound
+    dropRequests(userId, draft.other, bothWays = false)
     val id = Uuid.random()
     PartyCombineRequest.insert {
         it[PartyCombineRequest.id] = id
         it[fromUserId] = userId
-        it[toUserId] = other
+        it[toUserId] = draft.other
         it[createdAt] = now
     }
-    PartyCombineItem.batchInsert(items) { (pair, keep) ->
+    PartyCombineItem.batchInsert(draft.items) { (pair, keep) ->
         this[PartyCombineItem.requestId] = id
         this[PartyCombineItem.keepPartyId] = keep
-        this[PartyCombineItem.retirePartyId] = if (keep == pair.mine.id) pair.theirs.id else pair.mine.id
+        this[PartyCombineItem.retirePartyId] = pair.otherThan(keep)
     }
-    notify(other, NotificationKind.PARTY_COMBINE, now, subjectId = id, actorId = userId, payload = count(items.size))
+    PartyCombineSeat.batchInsert(draft.seats.drops) { (party, name) ->
+        this[PartyCombineSeat.requestId] = id
+        this[PartyCombineSeat.partyId] = party
+        this[PartyCombineSeat.name] = name
+    }
+    val count = buildJsonObject { put("count", draft.items.size) }
+    notify(draft.other, NotificationKind.PARTY_COMBINE, now, subjectId = id, actorId = userId, payload = count)
     return CombineAnswer.Done
 }
 
-/**
- * Combines every pair of a request made TO [userId]. A pair that no longer matches (a party since
- * retired, a roster since changed so neither seats the other) is skipped rather than guessed at.
- */
-internal fun acceptCombine(
+/** The characters still to place once [choices] settle the pairs, for the sender to answer. */
+internal fun previewCombine(
     userId: String,
-    requestId: Uuid,
-    now: Instant,
-): CombineAnswer {
-    val request =
-        PartyCombineRequest
-            .selectAll()
-            .where { (PartyCombineRequest.id eq requestId) and (PartyCombineRequest.toUserId eq userId) }
-            .firstOrNull() ?: return CombineAnswer.NotFound
-    val from = request[PartyCombineRequest.fromUserId]
-    val pairs = planWith(userId, from).pairs
-    val retired = mutableSetOf<Uuid>()
-    PartyCombineItem
-        .selectAll()
-        .where { PartyCombineItem.requestId eq requestId }
-        .forEach { item ->
-            val keepId = item[PartyCombineItem.keepPartyId]
-            val retireId = item[PartyCombineItem.retirePartyId]
-            val pair = pairs.firstOrNull { it.isOf(keepId, retireId) && keepId in it.keepable }
-            if (pair != null && keepId !in retired && retireId !in retired) {
-                val (keep, retire) = if (pair.mine.id == keepId) pair.mine to pair.theirs else pair.theirs to pair.mine
-                combine(keep, retire, now)
-                retired += retireId
-            }
-        }
-    dropRequests(userId, from, bothWays = true)
-    notify(from, NotificationKind.PARTY_COMBINED, now, actorId = userId, payload = count(retired.size))
-    return CombineAnswer.Done
-}
+    personId: Uuid,
+    choices: List<CombineChoice>,
+): List<SeatClash>? = accountOf(userId, personId)?.let { draftCombine(userId, it, choices, emptyList()).seats.open }
 
 /** Declines a request made to [userId], or withdraws one of theirs. */
 internal fun dropCombine(
@@ -172,7 +200,7 @@ internal fun dropCombine(
 }
 
 /** [from]'s request to [to], and with [bothWays] [to]'s to [from] too, notifications included. */
-private fun dropRequests(
+internal fun dropRequests(
     from: String,
     to: String,
     bothWays: Boolean,
@@ -185,5 +213,3 @@ private fun dropRequests(
     PartyCombineRequest.deleteWhere { PartyCombineRequest.id inList ids }
     resolve(NotificationKind.PARTY_COMBINE, ids)
 }
-
-private fun count(n: Int) = buildJsonObject { put("count", n) }

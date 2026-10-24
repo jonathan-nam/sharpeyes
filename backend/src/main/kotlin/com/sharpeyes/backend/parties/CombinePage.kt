@@ -5,8 +5,10 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyCombineItem
 import com.sharpeyes.backend.db.PartyCombineRequest
+import com.sharpeyes.backend.db.PartyCombineSeat
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.sprites.spriteProxyPath
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -59,47 +61,83 @@ internal fun combinePage(
     return CombinePageResponse(friends, incomingFor(userId, people, images))
 }
 
-private fun sidesOf(
-    pairs: List<CombinablePair>,
+/** Every standing seat of [parties] as a face, by party, in seat order. */
+private fun facesOf(
+    parties: List<StandingParty>,
     userId: String,
-    now: Instant,
-): List<CombinePairResponse> {
-    val seats = seatsFor(pairs.flatMap { listOf(it.mine.id, it.theirs.id) }.distinct(), userId)
+): Map<Uuid, List<SeatFace>> {
+    val seats = seatsFor(parties.map { it.id }.distinct(), userId)
     // A seat naming the other owner's character is not bound until the two combine (see
     // bossesRunInOwnParty), so it carries no sprite of its own; both accounts' characters answer by name.
-    val owners = pairs.flatMap { listOf(it.mine.owner, it.theirs.owner) }.distinct()
-    val faces =
+    val sprites =
         Characters
             .selectAll()
-            .where { Characters.userId inList owners }
+            .where { Characters.userId inList parties.map { it.owner }.distinct() }
             .mapNotNull { row ->
                 row[Characters.spriteImgUrl]?.let {
                     row[Characters.name].lowercase() to
                         spriteProxyPath(it)
                 }
             }.toMap()
-    val bosses =
-        BossCatalog
-            .selectAll()
-            .associate { it[BossCatalog.id] to (it[BossCatalog.bossKey] to it[BossCatalog.name]) }
-
-    fun side(party: StandingParty): CombineSideResponse {
+    return parties.associate { party ->
         val standing = seats[party.id].orEmpty().filterNot { it.guest }
-        val members = standing.map { SeatFace(it.name, it.spriteImgUrl ?: faces[it.name.lowercase()]) }
-        return CombineSideResponse(party.id.toString(), party.leader, party.difficulty, members)
+        party.id to standing.map { SeatFace(it.name, it.spriteImgUrl ?: sprites[it.name.lowercase()]) }
     }
+}
+
+private fun bossNames() =
+    BossCatalog
+        .selectAll()
+        .associate { it[BossCatalog.id] to (it[BossCatalog.bossKey] to it[BossCatalog.name]) }
+
+/** The characters still to place, as the sender's merge draws them: the face, and where they could stay. */
+internal fun clashResponses(
+    clashes: List<SeatClash>,
+    userId: String,
+): List<SeatClashResponse> {
+    val faces = facesOf(clashes.flatMap { it.holders }, userId)
+    val bosses = bossNames()
+    return clashes.map { clash ->
+        val face =
+            clash.holders.firstNotNullOfOrNull {
+                faces[it.id].orEmpty().firstOrNull { f ->
+                    f.name.equals(clash.name, true)
+                }
+            }
+        val options =
+            clash.options.map {
+                SeatOptionResponse(
+                    it.id.toString(),
+                    it.owner == userId,
+                    it.leader,
+                    it.difficulty,
+                )
+            }
+        SeatClashResponse(clash.name, bosses[clash.bossId]?.second ?: "", face?.sprite, options)
+    }
+}
+
+private fun sidesOf(
+    pairs: List<CombinablePair>,
+    userId: String,
+    now: Instant,
+): List<CombinePairResponse> {
+    val faces = facesOf(pairs.flatMap { listOf(it.mine, it.theirs) }, userId)
+    val bosses = bossNames()
+
+    fun side(party: StandingParty) =
+        CombineSideResponse(party.id.toString(), party.leader, party.difficulty, faces[party.id].orEmpty())
     return pairs.map { pair ->
         val (bossKey, bossName) = bosses.getValue(pair.mine.bossId)
         // The cutoff does not depend on which side is kept, so either keepable one answers it.
         val keepNow = pair.keepable.first()
-        val other = if (pair.mine.id == keepNow) pair.theirs.id else pair.mine.id
         CombinePairResponse(
             bossKey = bossKey,
             boss = bossName,
             mine = side(pair.mine),
             theirs = side(pair.theirs),
             keepable = pair.keepable.map { it.toString() },
-            sharedFrom = cutoffFor(keepNow, other, pair.mine.bossId, now).toString(),
+            sharedFrom = cutoffFor(keepNow, pair.otherThan(keepNow), pair.mine.bossId, now).toString(),
         )
     }
 }
@@ -117,11 +155,25 @@ private fun incomingFor(
             .selectAll()
             .where { PartyCombineItem.requestId inList requests.map { it[PartyCombineRequest.id] } }
             .groupBy({ it[PartyCombineItem.requestId] }, { it[PartyCombineItem.keepPartyId] })
+    // Each of your parties by id: its boss and the character leading it, which is how a seat taken out
+    // of it is named.
     val mine =
         Party
+            .join(Characters, JoinType.INNER, Party.characterId, Characters.id)
             .selectAll()
             .where { Party.userId eq userId }
-            .mapTo(mutableSetOf()) { it[Party.id] }
+            .associate { it[Party.id] to (it[Party.bossCatalogId] to it[Characters.name]) }
+    val bosses = bossNames()
+    val takesOut =
+        PartyCombineSeat
+            .selectAll()
+            .where { PartyCombineSeat.requestId inList requests.map { it[PartyCombineRequest.id] } }
+            .mapNotNull { row ->
+                mine[row[PartyCombineSeat.partyId]]?.let { (boss, leader) ->
+                    row[PartyCombineSeat.requestId] to
+                        SeatOutResponse(row[PartyCombineSeat.name], bosses[boss]?.second ?: "", leader)
+                }
+            }.groupBy({ it.first }, { it.second })
     return requests.map { request ->
         val from = request[PartyCombineRequest.fromUserId]
         val kept = items[request[PartyCombineRequest.id]].orEmpty()
@@ -132,6 +184,7 @@ private fun incomingFor(
             total = kept.size,
             keepsYours = kept.count { it in mine },
             keepsTheirs = kept.count { it !in mine },
+            takesOut = takesOut[request[PartyCombineRequest.id]].orEmpty(),
         )
     }
 }

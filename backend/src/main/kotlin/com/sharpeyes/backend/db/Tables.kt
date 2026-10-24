@@ -829,6 +829,15 @@ object PartyCombineItem : Table("party_combine_item") {
     override val primaryKey = PrimaryKey(requestId, retirePartyId)
 }
 
+// A seat a combine request takes out, so a character holds one party per boss. See V98.
+object PartyCombineSeat : Table("party_combine_seat") {
+    val requestId = reference("request_id", PartyCombineRequest.id)
+    val partyId = reference("party_id", Party.id)
+    val name = text("name")
+
+    override val primaryKey = PrimaryKey(requestId, partyId, name)
+}
+
 // One notification, of any kind. See V86 and notifications/.
 object Notification : Table("notification") {
     val id = uuid("id")

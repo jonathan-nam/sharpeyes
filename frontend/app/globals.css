@@ -5578,6 +5578,19 @@ button.link:disabled {
   color: var(--accent);
 }
 
+/* A character left in two parties: their face beside where they could stay. */
+.combine-clash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+/* A seat a waiting request takes out of yours, a line of its own under the summary. */
+.combine-takes {
+  flex-basis: 100%;
+}
+
 .combine-choices {
   display: flex;
   flex-wrap: wrap;

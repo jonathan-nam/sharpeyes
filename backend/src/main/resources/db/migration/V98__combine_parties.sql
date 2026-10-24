@@ -41,3 +41,13 @@ CREATE TABLE party_combine_item
     PRIMARY KEY (request_id, retire_party_id),
     CHECK (keep_party_id <> retire_party_id)
 );
+
+-- A seat a request takes out, so a character left in two parties for one boss stays in only the one
+-- the sender chose: a character clears a boss once a period. By name, like party_member.
+CREATE TABLE party_combine_seat
+(
+    request_id UUID NOT NULL REFERENCES party_combine_request (id) ON DELETE CASCADE,
+    party_id   UUID NOT NULL REFERENCES party (id) ON DELETE CASCADE,
+    name       TEXT NOT NULL,
+    PRIMARY KEY (request_id, party_id, name)
+);

@@ -75,6 +75,39 @@ data class IncomingCombineResponse(
     val total: Int,
     val keepsYours: Int,
     val keepsTheirs: Int,
+    /** Seats of yours it takes out, so nobody holds two parties for one boss. */
+    val takesOut: List<SeatOutResponse> = emptyList(),
+)
+
+/** A seat taken out of one of your parties: who, and the boss and leader that name the party. */
+@Serializable
+data class SeatOutResponse(
+    val name: String,
+    val boss: String,
+    val leader: String,
+)
+
+/** A character two parties would hold for one boss, for the sender to place. */
+@Serializable
+data class SeatClashResponse(
+    val name: String,
+    val boss: String,
+    val sprite: String?,
+    val options: List<SeatOptionResponse>,
+)
+
+/** A party the character could stay in. */
+@Serializable
+data class SeatOptionResponse(
+    val partyId: String,
+    val yours: Boolean,
+    val leader: String,
+    val difficulty: String?,
+)
+
+@Serializable
+data class CombinePreviewResponse(
+    val clashes: List<SeatClashResponse>,
 )
 
 @Serializable
@@ -83,23 +116,33 @@ data class CombinePageResponse(
     val incoming: List<IncomingCombineResponse>,
 )
 
-/** A conflict's answer. A null keepPartyId leaves the two parties separate. */
+/** A conflict's answer: which of the two is kept. */
 @Serializable
 data class CombineChoiceRequest(
     val mine: String,
     val theirs: String,
-    val keepPartyId: String?,
+    val keepPartyId: String,
+)
+
+/** Which party a character left in two keeps them. */
+@Serializable
+data class SeatChoiceRequest(
+    val name: String,
+    val keepPartyId: String,
 )
 
 @Serializable
 data class SendCombineRequest(
     val personId: String,
     val choices: List<CombineChoiceRequest> = emptyList(),
+    val seats: List<SeatChoiceRequest> = emptyList(),
 )
 
 fun Route.combineRoutes() {
     get { respondPage() }
     post { sendRoute() }
+    // The characters left to place once the pairs are chosen. Writes nothing.
+    post("/preview") { previewRoute() }
     post("/{id}/accept") { write { userId, now -> idParam()?.let { acceptCombine(userId, it, now) } } }
     // Declined by the other owner, or withdrawn by the one who asked.
     delete("/{id}") {
@@ -121,22 +164,34 @@ private suspend fun RoutingContext.respondPage() {
     )
 }
 
+private fun SendCombineRequest.parsedChoices() =
+    choices.mapNotNull { choice ->
+        val mine = Uuid.parseOrNull(choice.mine)
+        val theirs = Uuid.parseOrNull(choice.theirs)
+        val keep = Uuid.parseOrNull(choice.keepPartyId)
+        if (mine == null || theirs == null || keep == null) null else CombineChoice(mine, theirs, keep)
+    }
+
 private suspend fun RoutingContext.sendRoute() {
     val body = call.receive<SendCombineRequest>()
     val person = Uuid.parseOrNull(body.personId)
-    val choices =
-        body.choices.mapNotNull { choice ->
-            val mine = Uuid.parseOrNull(choice.mine)
-            val theirs = Uuid.parseOrNull(choice.theirs)
-            if (mine == null ||
-                theirs == null
-            ) {
-                null
-            } else {
-                CombineChoice(mine, theirs, choice.keepPartyId?.let(Uuid::parseOrNull))
+    val seats = body.seats.mapNotNull { seat -> Uuid.parseOrNull(seat.keepPartyId)?.let { SeatChoice(seat.name, it) } }
+    write { userId, now -> person?.let { sendCombine(userId, it, body.parsedChoices(), seats, now) } }
+}
+
+/** POST /api/party-combines/preview: the body a send would take, minus the seats. */
+private suspend fun RoutingContext.previewRoute() {
+    val (userId, email) = call.principalIdAndEmail()
+    val body = call.receive<SendCombineRequest>()
+    val person = Uuid.parseOrNull(body.personId)
+    val clashes =
+        person?.let {
+            dbQuery {
+                ensureUser(userId, email)
+                previewCombine(userId, it, body.parsedChoices())?.let { open -> clashResponses(open, userId) }
             }
         }
-    write { userId, now -> person?.let { sendCombine(userId, it, choices, now) } }
+    if (clashes == null) call.respond(HttpStatusCode.NotFound) else call.respond(CombinePreviewResponse(clashes))
 }
 
 /** Runs [act], answering with the page, a refusal, or 404 when it found nothing. */

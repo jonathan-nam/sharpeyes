@@ -220,7 +220,7 @@ class CombinePartiesTest {
             assertEquals(setOf(theirOld), readAcross(xan, yew))
 
             // The same people on both sides: no conflict, and the sender's copy is kept.
-            assertIs<CombineAnswer.Done>(sendCombine(xan, friendOf(xan), emptyList(), Clock.System.now()))
+            assertIs<CombineAnswer.Done>(sendCombine(xan, friendOf(xan), emptyList(), emptyList(), Clock.System.now()))
             val (proposal, items) = requestFrom(xan)!!
             assertEquals(mapOf(mine to theirs), items)
             assertEquals(NotificationKind.PARTY_COMBINE, notificationsFor(yew).notifications.single().kind)
@@ -276,7 +276,9 @@ class CombinePartiesTest {
 
             assertEquals(listOf(mine), combinablePairs(xan).single().keepable)
             val wrong = CombineChoice(mine, theirs, keep = theirs)
-            assertIs<CombineAnswer.Done>(sendCombine(xan, friendOf(xan), listOf(wrong), Clock.System.now()))
+            assertIs<CombineAnswer.Done>(
+                sendCombine(xan, friendOf(xan), listOf(wrong), emptyList(), Clock.System.now()),
+            )
             assertEquals(mapOf(mine to theirs), requestFrom(xan)!!.second)
         }
     }
@@ -293,17 +295,81 @@ class CombinePartiesTest {
             val friend = friendOf(xan)
 
             assertEquals(1, planWith(xan, yew).conflicts.size)
-            assertIs<CombineAnswer.Refused>(sendCombine(xan, friend, emptyList(), Clock.System.now()))
-            // Leaving the only pair separate leaves nothing to send.
-            val separate = CombineChoice(mine, theirs, keep = null)
-            assertIs<CombineAnswer.Refused>(sendCombine(xan, friend, listOf(separate), Clock.System.now()))
+            assertIs<CombineAnswer.Refused>(sendCombine(xan, friend, emptyList(), emptyList(), Clock.System.now()))
             assertNull(requestFrom(xan))
 
             val keepTheirs = CombineChoice(mine, theirs, keep = theirs)
-            assertIs<CombineAnswer.Done>(sendCombine(xan, friend, listOf(keepTheirs), Clock.System.now()))
+            assertIs<CombineAnswer.Done>(sendCombine(xan, friend, listOf(keepTheirs), emptyList(), Clock.System.now()))
             assertEquals(mapOf(theirs to mine), requestFrom(xan)!!.second)
         }
     }
+
+    @Test
+    fun `a character left in two parties stays in the one the sender chose, and only that one`() {
+        transaction {
+            val thorn = character(xan, "Thornwick")
+            val quill = character(xan, "Quillon")
+            val pell = character(yew, "Pellmoor")
+            val mine = party(xan, thorn, "Pellmoor")
+            // Larkspur runs Kalos in another of Xan's parties, and Yew lists them too.
+            val other = party(xan, quill, "Larkspur")
+            val theirs = party(yew, pell, "Thornwick", "Larkspur")
+            link()
+            val friend = friendOf(xan)
+            val keepTheirs = listOf(CombineChoice(mine, theirs, keep = theirs))
+
+            // Keeping Xan's copy retires the only other party holding Larkspur, so nothing is left.
+            assertEquals(emptyList(), previewCombine(xan, friend, listOf(CombineChoice(mine, theirs, keep = mine))))
+            // Keeping Yew's leaves Larkspur in it and in Xan's other party, and either can keep them.
+            val clash = previewCombine(xan, friend, keepTheirs)!!.single()
+            assertEquals("Larkspur", clash.name)
+            assertEquals(setOf(other, theirs), clash.options.map { it.id }.toSet())
+            assertIs<CombineAnswer.Refused>(sendCombine(xan, friend, keepTheirs, emptyList(), Clock.System.now()))
+
+            val stayInMine = listOf(SeatChoice("Larkspur", other))
+            assertIs<CombineAnswer.Done>(sendCombine(xan, friend, keepTheirs, stayInMine, Clock.System.now()))
+            assertEquals(listOf("Larkspur"), incomingTakesOut(yew))
+
+            assertIs<CombineAnswer.Done>(acceptCombine(yew, requestFrom(xan)!!.first, Clock.System.now()))
+            assertEquals(emptyList(), clashesIn(standingParties(listOf(xan, yew))))
+            assertFalse(standingParties(listOf(yew)).single().seats("Larkspur"))
+            assertEquals(true, standingParties(listOf(xan)).single { it.id == other }.seats("Larkspur"))
+        }
+    }
+
+    @Test
+    fun `a request the parties have moved on from is refused whole, writing nothing`() {
+        transaction {
+            val thorn = character(xan, "Thornwick")
+            val quill = character(xan, "Quillon")
+            val pell = character(yew, "Pellmoor")
+            val mine = party(xan, thorn, "Pellmoor")
+            val other = party(xan, quill, "Larkspur")
+            val theirs = party(yew, pell, "Thornwick", "Larkspur")
+            link()
+            sendCombine(
+                xan,
+                friendOf(xan),
+                listOf(CombineChoice(mine, theirs, keep = theirs)),
+                listOf(SeatChoice("Larkspur", other)),
+                Clock.System.now(),
+            )
+            // Xan's party goes before Yew answers, so the pair the request names is gone.
+            Party.update({ Party.id eq mine }) { it[standing] = false }
+
+            assertIs<CombineAnswer.Refused>(acceptCombine(yew, requestFrom(xan)!!.first, Clock.System.now()))
+            assertEquals(true, standingParties(listOf(yew)).single().seats("Larkspur"))
+            assertEquals(true, Party.selectAll().where { Party.id eq theirs }.single()[Party.standing])
+        }
+    }
+
+    /** The names a request waiting on [userId] takes out of their parties. */
+    private fun incomingTakesOut(userId: String) =
+        combinePage(userId, Clock.System.now())
+            .incoming
+            .single()
+            .takesOut
+            .map { it.name }
 
     @Test
     fun `declining clears the request and its notification`() {
@@ -313,7 +379,7 @@ class CombinePartiesTest {
             party(xan, thorn, "Pellmoor")
             val theirs = party(yew, pell, "Thornwick")
             link()
-            sendCombine(xan, friendOf(xan), emptyList(), Clock.System.now())
+            sendCombine(xan, friendOf(xan), emptyList(), emptyList(), Clock.System.now())
             val (proposal, _) = requestFrom(xan)!!
 
             assertEquals(true, dropCombine(yew, proposal))

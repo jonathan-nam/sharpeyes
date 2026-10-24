@@ -9,11 +9,15 @@ import { onFriendsChanged } from "@/lib/friends-changed";
 import { formatDropped } from "@/lib/loot";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
-import type { CombineConflict, CombinePage, CombineSide, CombineWith } from "@/types/combine";
+import type {
+  CombineConflict,
+  CombinePage,
+  CombineSide,
+  CombineWith,
+  SeatClash,
+} from "@/types/combine";
 
 const COMBINE_KEY = "/api/party-combines";
-/** A conflict left as two parties. */
-const SEPARATE = "separate";
 
 // Social's Combine Parties. A combine is a merge: the sender settles the conflicts, matching pairs
 // settle themselves, and the friend accepts or declines the whole request. Drops before the shared
@@ -79,6 +83,11 @@ export function CombineParties() {
                 ["yours", r.keepsYours],
               ])}
             </span>
+            {(r.takesOut ?? []).map((s) => (
+              <span key={`${s.name}:${s.leader}`} className="party-hint combine-takes">
+                Takes {s.name} out of your {s.boss} ({s.leader})
+              </span>
+            ))}
             <span className="combine-actions">
               <button
                 type="button"
@@ -147,10 +156,20 @@ export function CombineParties() {
                 key={f.personId}
                 friend={f}
                 busy={busy}
-                onSend={async (choices) => {
+                preview={(choices) =>
+                  apiFetch<{ clashes: SeatClash[] }>(
+                    `${COMBINE_KEY}/preview`,
+                    { method: "POST", body: JSON.stringify({ personId: f.personId, choices }) },
+                    getToken,
+                  ).then((r) => r.clashes)
+                }
+                onSend={async (choices, seats) => {
                   const sent = await act(
                     COMBINE_KEY,
-                    { method: "POST", body: JSON.stringify({ personId: f.personId, choices }) },
+                    {
+                      method: "POST",
+                      body: JSON.stringify({ personId: f.personId, choices, seats }),
+                    },
                     "Couldn't send that. Try again.",
                   );
                   if (sent) setOpen(null);
@@ -172,23 +191,54 @@ function keeps(parts: [string, number][]): string {
     .join(", ")}`;
 }
 
-type Choice = { mine: string; theirs: string; keepPartyId: string | null };
+type Choice = { mine: string; theirs: string; keepPartyId: string };
+type Seat = { name: string; keepPartyId: string };
 
-/** The sender's side: what settles itself, and every conflict with a choice to make. */
+/**
+ * The sender's side: what settles itself, every conflict with a party to keep, then every character
+ * the chosen merges would still leave in two parties, since a character clears a boss once a week.
+ */
 function Merge({
   friend,
   busy,
+  preview,
   onSend,
 }: {
   friend: CombineWith;
   busy: boolean;
-  onSend: (choices: Choice[]) => void;
+  /** The characters left to place for these choices. Asked of the server, which owns the rule. */
+  preview: (choices: Choice[]) => Promise<SeatClash[]>;
+  onSend: (choices: Choice[], seats: Seat[]) => void;
 }) {
-  // Per conflict, by its two party ids: a party id to keep, or SEPARATE.
+  // Per conflict, by its two party ids: the party id to keep.
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  // Per character left in two parties, by lowercased name: the party id that keeps them.
+  const [seats, setSeats] = useState<Record<string, string>>({});
+  // The server's answer, with the choices it answered: a stale one is not shown.
+  const [previewed, setPreviewed] = useState<{ asked: string; open: SeatClash[] } | null>(null);
   const keyOf = (c: CombineConflict) => `${c.mine.partyId}:${c.theirs.partyId}`;
   const answered = friend.conflicts.every((c) => answers[keyOf(c)] !== undefined);
   const settled = friend.keepsYours + friend.keepsTheirs;
+  const choices: Choice[] = friend.conflicts.flatMap((c) => {
+    const keepPartyId = answers[keyOf(c)];
+    return keepPartyId ? [{ mine: c.mine.partyId, theirs: c.theirs.partyId, keepPartyId }] : [];
+  });
+  // Which characters are left depends on which side each pair keeps, so it is asked again per change.
+  const asked = JSON.stringify(choices);
+  const clashes = answered && previewed?.asked === asked ? previewed.open : null;
+  const placed = clashes?.every((s) => seats[s.name.toLowerCase()] !== undefined) ?? false;
+
+  useEffect(() => {
+    if (!answered) return;
+    let live = true;
+    preview(choices)
+      .then((open) => live && setPreviewed({ asked, open }))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asked, answered]);
 
   return (
     <div className="combine-merge">
@@ -215,7 +265,6 @@ function Merge({
               { id: c.theirs.partyId, label: `Keep ${friend.friend}'s` },
             ]
               .filter((o) => c.keepable.includes(o.id))
-              .concat({ id: SEPARATE, label: "Leave Separate" })
               .map((o) => (
                 <label key={o.id} className="combine-choice">
                   <input
@@ -231,20 +280,44 @@ function Merge({
           <p className="party-hint">Shared from {formatDropped(c.sharedFrom)}</p>
         </fieldset>
       ))}
+      {clashes?.map((s) => (
+        <fieldset key={s.name} className="combine">
+          <legend className="combine-title">
+            {s.name} · {s.boss}
+          </legend>
+          <div className="combine-clash">
+            {s.sprite ? (
+              <img className="seat-sprite" src={spriteUrl(s.sprite)} alt="" />
+            ) : (
+              <span className="seat-sprite is-empty" aria-hidden="true" />
+            )}
+            <div className="combine-choices" role="radiogroup">
+              {s.options.map((o) => (
+                <label key={o.partyId} className="combine-choice">
+                  <input
+                    type="radio"
+                    name={`seat:${s.name}`}
+                    checked={seats[s.name.toLowerCase()] === o.partyId}
+                    onChange={() => setSeats({ ...seats, [s.name.toLowerCase()]: o.partyId })}
+                  />
+                  Keep in {o.yours ? "Yours" : `${friend.friend}'s`} ({o.leader})
+                </label>
+              ))}
+            </div>
+          </div>
+        </fieldset>
+      ))}
       <div className="loot-actions">
         <button
           type="button"
           className="party-save"
-          disabled={busy || !answered}
+          disabled={busy || !answered || !placed}
           onClick={() =>
             onSend(
-              friend.conflicts.map((c) => {
-                const answer = answers[keyOf(c)];
-                return {
-                  mine: c.mine.partyId,
-                  theirs: c.theirs.partyId,
-                  keepPartyId: answer === SEPARATE ? null : (answer ?? null),
-                };
+              choices,
+              (clashes ?? []).flatMap((s) => {
+                const keepPartyId = seats[s.name.toLowerCase()];
+                return keepPartyId ? [{ name: s.name, keepPartyId }] : [];
               }),
             )
           }
