@@ -282,7 +282,7 @@ class PartyConfigTest {
             val fast = addCharacter(userOneId, "tidelark")
             val slow = addCharacter(userOneId, "runebae")
             assertEquals(5, config(userOneId, fast, "lucid", listOf("Lynn"), minutes = 5).minutes)
-            assertEquals(20, config(userOneId, slow, "lucid", listOf("Lynn"), minutes = 20).minutes)
+            assertEquals(20, config(userOneId, slow, "lucid", listOf("Mirelle"), minutes = 20).minutes)
         }
     }
 

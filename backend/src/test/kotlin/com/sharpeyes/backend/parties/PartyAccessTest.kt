@@ -167,7 +167,7 @@ class PartyAccessTest {
                    VALUES ('$member', 'x', '$member@example.com', true, 'https://cdn.discordapp.com/a.png')""",
             )
             val party = shared()
-            val alone = config(character(owner, "orchid88", position = 1), listOf("Baldrix"))
+            val alone = config(character(owner, "orchid88", position = 1), listOf("Thistlewick"))
 
             val asOwner = partiesFor(owner).associate { it.id to it.accounts }
             assertEquals(

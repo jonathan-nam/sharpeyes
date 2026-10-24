@@ -4,9 +4,11 @@ import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Characters
+import com.sharpeyes.backend.db.FriendRequest
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.friends.discordUsernameOf
 import com.sharpeyes.backend.sprites.knownIgns
 import com.sharpeyes.backend.sprites.spriteProxyPath
 import com.sharpeyes.backend.users.inActiveWorld
@@ -18,6 +20,7 @@ import org.jetbrains.exposed.v1.core.alias
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
@@ -223,6 +226,14 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
             .mapTo(mutableSetOf()) { it[PartyMember.name].lowercase() }
     val images = imagesOf(people.mapNotNull { it[Person.linkedUserId] })
     val looked = knownIgns(characters.attributed.values.flatten())
+    val requests =
+        FriendRequest
+            .selectAll()
+            .where { (FriendRequest.fromUserId eq userId) and FriendRequest.personId.isNotNull() }
+            .associate {
+                it[FriendRequest.personId] to
+                    PendingLink(it[FriendRequest.id].toString(), discordUsernameOf(it[FriendRequest.toUserId]))
+            }
 
     return people.map {
         val attributed = characters.attributed[it[Person.id]].orEmpty()
@@ -243,6 +254,7 @@ internal fun peopleFor(userId: String): List<PersonResponse> {
             notOnAccount = roster.notOnAccount(account, attributed),
             contested = roster.contestedFor(account, attributed, seated),
             pinned = it[Person.pinned],
+            request = requests[it[Person.id]],
         )
     }
 }

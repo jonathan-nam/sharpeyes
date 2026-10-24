@@ -3,6 +3,9 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.tellLinkedOnWrite
+import com.sharpeyes.backend.friends.SendFriendRequest
+import com.sharpeyes.backend.friends.refusal
+import com.sharpeyes.backend.friends.sendFriendRequest
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -17,6 +20,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
+import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -32,8 +36,25 @@ fun Route.peopleRoutes() {
     get { listPeople() }
     put { savePeopleRoute() }
     put("/{personId}/pinned") { pinPersonRoute() }
+    // Asking an existing account to be this person: a friend request naming them. See FriendRequests.kt.
+    post("/{personId}/link") { linkPersonRoute() }
     // Taking back the account behind a person, and their seats with it. See UnlinkPerson.kt.
     delete("/{personId}/link") { unlinkPersonRoute() }
+}
+
+/** POST /api/people/{personId}/link. Answers with the people list, which shows the request waiting. */
+private suspend fun RoutingContext.linkPersonRoute() {
+    val (userId, email) = call.principalIdAndEmail()
+    val personId = call.parseUuidParam("personId") ?: return
+    val body = call.receive<SendFriendRequest>()
+
+    val (outcome, people) =
+        dbQuery {
+            ensureUser(userId, email)
+            sendFriendRequest(userId, body.username, Clock.System.now(), personId) to peopleFor(userId)
+        }
+    val refusal = outcome.refusal()
+    if (refusal != null) call.refuse(refusal.first, refusal.second) else call.respond(people)
 }
 
 /** DELETE /api/people/{personId}/link. Idempotent: unlinking an unlinked person is a success. */

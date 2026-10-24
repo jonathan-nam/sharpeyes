@@ -1,4 +1,4 @@
-import type { Party, Person, SavePeopleBody } from "@/types/party";
+import type { Party, PendingLink, Person, SavePeopleBody } from "@/types/party";
 
 /**
  * One row of the People page while it is being edited.
@@ -19,6 +19,8 @@ export type PersonDraft = {
   notOnAccount?: string[];
   /** Theirs, and also on another account you are linked to. */
   contested?: string[];
+  /** A friend request sent from this row, while it waits. Read-only, from the server. */
+  request?: PendingLink | null;
 };
 
 // The backend claims a character case-insensitively (see validatePeople), so every comparison here
@@ -150,6 +152,7 @@ export function toDraft(rows: Person[]): PersonDraft[] {
     image: person.image ?? null,
     notOnAccount: [...(person.notOnAccount ?? [])],
     contested: [...(person.contested ?? [])],
+    request: person.request ?? null,
   }));
 }
 

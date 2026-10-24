@@ -80,7 +80,7 @@ private fun seats(
         .not()
 
 /** The accounts [userId] is linked to, from either side: their person rows, or yours for them. */
-private fun linkedAccountsOf(userId: String): List<String> {
+internal fun linkedAccountsOf(userId: String): List<String> {
     val mine =
         Person
             .selectAll()

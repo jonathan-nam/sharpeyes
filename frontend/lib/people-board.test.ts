@@ -222,6 +222,7 @@ describe("toDraft", () => {
         image: "https://cdn.discordapp.com/a.png",
         notOnAccount: [],
         contested: [],
+        request: null,
       },
     ]);
   });
@@ -242,6 +243,7 @@ describe("toDraft", () => {
         image: null,
         notOnAccount: [],
         contested: [],
+        request: null,
       },
     ]);
   });

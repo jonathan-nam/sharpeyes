@@ -36,8 +36,8 @@ import kotlin.uuid.Uuid
  *
  * The authorisation rule IS the roster: you reach a party by owning a character with a seat in it,
  * and the seat states that as a foreign key rather than by matching a name. Failing closed is the
- * point. A seat that merely names your character gets you nothing, because binding happens only
- * where an invite was accepted. See V75 and InviteAccept.takeSeats.
+ * point. A seat that merely names your character gets you nothing until your accounts are linked,
+ * and not then in a party duplicating one of your own. See V75 and seatInLinkedParties.
  *
  * Narrowed to the world being shown, like every account-wide read, and to standing seats: a seat
  * you have been retired out of is a party you have left.
