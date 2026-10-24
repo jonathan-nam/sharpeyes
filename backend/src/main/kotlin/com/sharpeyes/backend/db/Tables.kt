@@ -792,6 +792,9 @@ object FriendRequest : Table("friend_request") {
     val toUserId = reference("to_user_id", Users.id)
     val createdAt = timestamp("created_at")
 
+    /** The sender's person this links on accept, when sent from People (V97). */
+    val personId = uuid("person_id").nullable()
+
     override val primaryKey = PrimaryKey(id)
 }
 

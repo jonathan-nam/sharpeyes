@@ -180,6 +180,15 @@ data class PersonResponse(
     val contested: List<String> = emptyList(),
     /** Their Settlement Ledger card stays drawn with nothing outstanding. See V59. */
     val pinned: Boolean = false,
+    /** A friend request naming this person, while it waits (V97). */
+    val request: PendingLink? = null,
+)
+
+/** A friend request sent from a person's row: its id, to cancel it, and who it went to. */
+@Serializable
+data class PendingLink(
+    val id: String,
+    val username: String?,
 )
 
 /**

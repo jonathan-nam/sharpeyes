@@ -55,7 +55,26 @@ internal sealed interface SendOutcome {
 
     /** They had already asked you, so asking back is accepting. */
     data object Accepted : SendOutcome
+
+    /** The person named is not one of yours. */
+    data object NoSuchPerson : SendOutcome
+
+    /** The person named already has an account. */
+    data object PersonLinked : SendOutcome
 }
+
+/** The refusal for each outcome that sends nothing, null for the two that did. */
+internal fun SendOutcome.refusal(): Pair<HttpStatusCode, Refusal>? =
+    when (this) {
+        SendOutcome.Unknown ->
+            HttpStatusCode.NotFound to Refusal("No one here has that Discord name. Check the spelling.")
+        SendOutcome.Yourself ->
+            HttpStatusCode.Conflict to Refusal("That is your own Discord name. Enter a friend's.")
+        SendOutcome.AlreadyFriends -> HttpStatusCode.Conflict to Refusal("You're already friends.")
+        SendOutcome.NoSuchPerson -> HttpStatusCode.NotFound to Refusal("That person is gone. Reload.")
+        SendOutcome.PersonLinked -> HttpStatusCode.Conflict to Refusal("They're already linked.")
+        SendOutcome.Sent, SendOutcome.Accepted -> null
+    }
 
 fun Route.friendRoutes() {
     get { respondSocial() }
@@ -85,14 +104,8 @@ private suspend fun RoutingContext.sendRoute() {
             ensureUser(userId, email)
             sendFriendRequest(userId, body.username, Clock.System.now()) to socialFor(userId)
         }
-    when (outcome) {
-        SendOutcome.Unknown ->
-            call.refuse(HttpStatusCode.NotFound, Refusal("No one here has that Discord name. Check the spelling."))
-        SendOutcome.Yourself ->
-            call.refuse(HttpStatusCode.Conflict, Refusal("That is your own Discord name. Enter a friend's."))
-        SendOutcome.AlreadyFriends -> call.refuse(HttpStatusCode.Conflict, Refusal("You're already friends."))
-        SendOutcome.Sent, SendOutcome.Accepted -> call.respond(social)
-    }
+    val refusal = outcome.refusal()
+    if (refusal != null) call.refuse(refusal.first, refusal.second) else call.respond(social)
 }
 
 private suspend fun RoutingContext.acceptRoute() =
