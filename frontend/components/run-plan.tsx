@@ -223,7 +223,7 @@ export function RunPlan({
               Boss
             </th>
             {people.map((person) => (
-              <Tooltip key={person.id} text={person.name}>
+              <Tooltip key={person.id} text={person.name} onlyIfCut>
                 <th
                   className={
                     hovered === person.id ? "run-person-head is-col-hover" : "run-person-head"

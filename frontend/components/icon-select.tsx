@@ -175,7 +175,7 @@ export function IconSelect({
             {options.map((option, i) => (
               // The full name for the ones the row is too narrow for. A tooltip, not a wider panel:
               // the panel is as wide as the field.
-              <Tooltip key={option.value} text={option.label}>
+              <Tooltip key={option.value} text={option.label} onlyIfCut=".drop-select-label">
                 <li
                   id={rowId(i)}
                   role="option"

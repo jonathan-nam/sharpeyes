@@ -30,6 +30,11 @@ function handingOver(): boolean {
   return performance.now() - lastClosedAt < HANDOVER;
 }
 
+/** Whether an ellipsis is hiding part of the element's text. */
+function isCut(el: Element | null): boolean {
+  return el !== null && el.scrollWidth > el.clientWidth;
+}
+
 type TriggerProps = {
   onPointerEnter?: (e: PointerEvent<HTMLElement>) => void;
   onPointerLeave?: (e: PointerEvent<HTMLElement>) => void;
@@ -52,9 +57,15 @@ type TriggerProps = {
  */
 export function Tooltip({
   text,
+  onlyIfCut,
   children,
 }: {
   text: ReactNode | null | undefined;
+  /**
+   * For a tip that repeats text already on screen: open only when that text is cut off. `true`
+   * checks the trigger itself, a selector checks an element inside it.
+   */
+  onlyIfCut?: true | string;
   children: ReactElement<TriggerProps>;
 }) {
   // The element it is open on, or null when closed.
@@ -92,6 +103,7 @@ export function Tooltip({
   if (text === null || text === undefined || text === "") return children;
 
   function show(on: HTMLElement, now: boolean) {
+    if (onlyIfCut && !isCut(onlyIfCut === true ? on : on.querySelector(onlyIfCut))) return;
     if (now || handingOver()) {
       setPending(null);
       setAt(on);
