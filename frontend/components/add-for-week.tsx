@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { DuplicateParty } from "@/components/duplicate-party";
 import { RosterInputs } from "@/components/roster-inputs";
+import { Tooltip } from "@/components/tooltip";
 import { duplicatePartyIn } from "@/lib/api";
 import { difficultyLabel } from "@/lib/boss-difficulty";
 import { bossesWithoutConfig, heldDifficulty, namedSeats } from "@/lib/parties";
@@ -198,15 +199,16 @@ export function AddForWeek({
             <RosterInputs members={members} onChange={setMembers} disabled={busy} />
           </div>
 
-          <button
-            type="submit"
-            className="party-save add-plus"
-            title={standing ? "Add Party" : "Add for This Week"}
-            aria-label={standing ? "Add Party" : "Add for This Week"}
-            disabled={busy || !ready}
-          >
-            <span aria-hidden="true">+</span>
-          </button>
+          <Tooltip text={standing ? "Add Party" : "Add for This Week"}>
+            <button
+              type="submit"
+              className="party-save add-plus"
+              aria-label={standing ? "Add Party" : "Add for This Week"}
+              disabled={busy || !ready}
+            >
+              <span aria-hidden="true">+</span>
+            </button>
+          </Tooltip>
         </div>
 
         {error && <p className="split-error">{error}</p>}

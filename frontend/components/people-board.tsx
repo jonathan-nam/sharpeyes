@@ -7,6 +7,7 @@ import { spriteUrl } from "@/lib/api";
 import { useCarousel } from "@/lib/use-carousel";
 import { ConfirmAct } from "@/components/confirm-act";
 import { DiscordAvatar } from "@/components/discord-avatar";
+import { Tooltip } from "@/components/tooltip";
 import {
   type PersonDraft,
   characterNote,
@@ -149,18 +150,19 @@ export function PeopleBoard({
                     {/* Only a saved person can be sent one: the link is made from their row in the
                     database, and a row that is not there yet has no id to make it from. */}
                     {row.id != null && (
-                      <button
-                        type="button"
-                        className="person-invite"
-                        disabled={busy || unsaved || inviting !== null}
-                        title={unsaved ? "Save first" : undefined}
-                        onClick={() => onInvite(row.id as string)}
-                      >
-                        {/* The wait is here rather than in the dialog, which does not open until there
-                        is a link to put in it. The button carries no state beyond that: a link
-                        lasts five minutes, so the answer to pressing it again is another link. */}
-                        {inviting === row.id ? "Generating..." : "Generate Invite Link"}
-                      </button>
+                      <Tooltip text={unsaved ? "Save first" : undefined}>
+                        <button
+                          type="button"
+                          className="person-invite"
+                          disabled={busy || unsaved || inviting !== null}
+                          onClick={() => onInvite(row.id as string)}
+                        >
+                          {/* The wait is here rather than in the dialog, which does not open until there
+                          is a link to put in it. The button carries no state beyond that: a link
+                          lasts five minutes, so the answer to pressing it again is another link. */}
+                          {inviting === row.id ? "Generating..." : "Generate Invite Link"}
+                        </button>
+                      </Tooltip>
                     )}
                     {/* Only where there is an account to take off. A link is a bearer token, so one
                     that reached the wrong person is taken back here rather than being permanent. */}

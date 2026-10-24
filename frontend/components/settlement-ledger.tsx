@@ -1,6 +1,7 @@
 "use client";
 
 import { ChangedBy } from "@/components/changed-by";
+import { Tooltip } from "@/components/tooltip";
 import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { Fragment, useCallback, useState } from "react";
@@ -910,15 +911,17 @@ function SettlementCard({
                     <ul className="ledger-queue">
                       {parts.map((part) => (
                         <li key={part.key} className="ledger-drop">
-                          {/* The nights behind the figure, where there are any. A title, because this is the
+                          {/* The nights behind the figure, where there are any. A tooltip, because this is the
                     detail of one row rather than something the card owes everybody: the same list
                     is under its own step below, and both are the wallet's, not a third answer. */}
-                          <div className="ledger-drop-head" title={part.detail || undefined}>
-                            <span className={part.detail ? "loot-name has-detail" : "loot-name"}>
-                              {part.label}
-                            </span>
-                            <span className="ledger-amount">{signed(part.mesos)}</span>
-                          </div>
+                          <Tooltip text={part.detail}>
+                            <div className="ledger-drop-head">
+                              <span className={part.detail ? "loot-name has-detail" : "loot-name"}>
+                                {part.label}
+                              </span>
+                              <span className="ledger-amount">{signed(part.mesos)}</span>
+                            </div>
+                          </Tooltip>
                         </li>
                       ))}
                       {theirEntries.map((entry) => (
@@ -1497,76 +1500,78 @@ function DischargeRow({
       {/* Two lines: what fell, then what it took off. The name is allowed to wrap rather than be
           cut, since which drop an offset was for is the one thing the row is read for. The figure is
           the subheader, with the day it fell beside it. */}
-      <div className="ledger-drop-head is-stacked" title={behind || undefined}>
-        {art ? (
-          <img className="loot-icon" src={apiAssetUrl(art)} alt="" />
-        ) : (
-          <span className="loot-icon" aria-hidden="true">
-            {/* No drop and no coupons behind it (a payment, a typed credit), so the mark EnteredRow
-                wears. */}
-            {shares.length === 0 && pieces === 0 && <SharpEyesMark size={32} />}
-          </span>
-        )}
-
-        <div className="ledger-offset-text">
-          {one && one.lootId ? (
-            // The drop's own history, not its party's. What came off here is one night's share, and
-            // the party is every night that boss ever gave you.
-            <Link href={`/bosses/drops/${one.lootId}`} className="loot-name has-detail">
-              {one.item}
-            </Link>
+      <Tooltip text={behind}>
+        <div className="ledger-drop-head is-stacked">
+          {art ? (
+            <img className="loot-icon" src={apiAssetUrl(art)} alt="" />
           ) : (
-            <span className="loot-name has-detail">
-              {one ? one.item : pieces > 0 ? `${formatPieces(pieces)} coupons sold` : act.label}
-              {act.by != null && <span className="loot-meta"> · {act.by || name}</span>}
+            <span className="loot-icon" aria-hidden="true">
+              {/* No drop and no coupons behind it (a payment, a typed credit), so the mark EnteredRow
+                wears. */}
+              {shares.length === 0 && pieces === 0 && <SharpEyesMark size={32} />}
             </span>
           )}
 
-          <span className="ledger-offset-sub">
-            <span className="ledger-amount">{signed(-act.amount)}</span>
-          </span>
-        </div>
+          <div className="ledger-offset-text">
+            {one && one.lootId ? (
+              // The drop's own history, not its party's. What came off here is one night's share, and
+              // the party is every night that boss ever gave you.
+              <Link href={`/bosses/drops/${one.lootId}`} className="loot-name has-detail">
+                {one.item}
+              </Link>
+            ) : (
+              <span className="loot-name has-detail">
+                {one ? one.item : pieces > 0 ? `${formatPieces(pieces)} coupons sold` : act.label}
+                {act.by != null && <span className="loot-meta"> · {act.by || name}</span>}
+              </span>
+            )}
 
-        {/* Before the date, not after it: only some rows fold, and a chevron between the date and
-            the × put those rows' dates out of line with the rest. */}
-        {folds && (
-          <button
-            type="button"
-            className="party-row-toggle"
-            aria-expanded={open}
-            aria-controls={panelId}
-            onClick={() => setOpen((o) => !o)}
-          >
-            <span className="party-row-chevron" aria-hidden="true" />
-            {/* Named, because a screen reader gets no chevron and no count off the row: whichever
-                list is behind this one is what opening it reads out. */}
-            <span className="visually-hidden">
-              {`${open ? "Hide" : "Show"} the ${
-                shares.length > 1 ? `${shares.length} nights` : `${act.sales.length} sales`
-              }`}
+            <span className="ledger-offset-sub">
+              <span className="ledger-amount">{signed(-act.amount)}</span>
             </span>
-          </button>
-        )}
+          </div>
 
-        {/* When the DROP fell, because that is what the week filter and the week total answer to:
+          {/* Before the date, not after it: only some rows fold, and a chevron between the date and
+            the × put those rows' dates out of line with the rest. */}
+          {folds && (
+            <button
+              type="button"
+              className="party-row-toggle"
+              aria-expanded={open}
+              aria-controls={panelId}
+              onClick={() => setOpen((o) => !o)}
+            >
+              <span className="party-row-chevron" aria-hidden="true" />
+              {/* Named, because a screen reader gets no chevron and no count off the row: whichever
+                list is behind this one is what opening it reads out. */}
+              <span className="visually-hidden">
+                {`${open ? "Hide" : "Show"} the ${
+                  shares.length > 1 ? `${shares.length} nights` : `${act.sales.length} sales`
+                }`}
+              </span>
+            </button>
+          )}
+
+          {/* When the DROP fell, because that is what the week filter and the week total answer to:
             the day for one night, the first and last reset week for a sale spread over several.
             Only an act with no drop behind it (a typed credit, a payment) falls back to the day it
             was recorded. */}
-        <span className="ledger-when">{when}</span>
+          <span className="ledger-when">{when}</span>
 
-        {/* A row the other side of a shared book wrote is theirs to take back (V88). */}
-        {act.by == null && (
-          <ArmedRemove
-            busy={busy}
-            label={
-              act.amount < 0
-                ? `Undo the ${formatMesos(-act.amount, true)} you paid ${name}`
-                : `Undo ${formatMesos(act.amount, true)} off what ${name} owes you`
-            }
-            onRemove={onRemove}
-          />
-        )}
-      </div>
+          {/* A row the other side of a shared book wrote is theirs to take back (V88). */}
+          {act.by == null && (
+            <ArmedRemove
+              busy={busy}
+              label={
+                act.amount < 0
+                  ? `Undo the ${formatMesos(-act.amount, true)} you paid ${name}`
+                  : `Undo ${formatMesos(act.amount, true)} off what ${name} owes you`
+              }
+              onRemove={onRemove}
+            />
+          )}
+        </div>
+      </Tooltip>
 
       {open && folds && (
         <ul className="loot-shares" id={panelId}>
@@ -1797,31 +1802,33 @@ function EnteredRow({
     <li className="ledger-drop">
       {/* ONE LINE per entry. A note is up to 120 characters against half a card, and wrapped it
           carried the figure and the × down and out past the card's edge. Truncated, the note is the
-          only part of the row that gives, and the title carries the whole of it. */}
-      <div className="ledger-drop-head is-oneline is-typed" title={entry.note ?? undefined}>
-        {/* No empty toggle frame. It was kept to line this up with a folded row, but the folds are
+          only part of the row that gives, and the tooltip carries the whole of it. */}
+      <Tooltip text={entry.note}>
+        <div className="ledger-drop-head is-oneline is-typed">
+          {/* No empty toggle frame. It was kept to line this up with a folded row, but the folds are
             all under `offsets` and nothing in THIS list has one, so the frame indented the only row
             wearing it by 28px (18px of toggle and the head's 10px gap) past the parts above it. */}
-        {/* No drop behind a typed debt, so no drop art: the app's own mark holds the icon slot. */}
-        <span className="loot-icon" aria-hidden="true">
-          <SharpEyesMark size={32} />
-        </span>
-        <span className="loot-name">
-          {entry.note ?? "entered"}
-          {/* Written into your book by the other side of it, which is theirs to take back. V88. */}
-          {entry.recordedByYou === false && (
-            <span className="loot-meta"> · {entry.recordedByName ?? name}</span>
+          {/* No drop behind a typed debt, so no drop art: the app's own mark holds the icon slot. */}
+          <span className="loot-icon" aria-hidden="true">
+            <SharpEyesMark size={32} />
+          </span>
+          <span className="loot-name">
+            {entry.note ?? "entered"}
+            {/* Written into your book by the other side of it, which is theirs to take back. V88. */}
+            {entry.recordedByYou === false && (
+              <span className="loot-meta"> · {entry.recordedByName ?? name}</span>
+            )}
+          </span>
+          <span className="ledger-amount">{signed(entry.amount)}</span>
+          {entry.recordedByYou !== false && (
+            <ArmedRemove
+              busy={busy}
+              label={`Remove ${formatMesos(entry.amount, true)} against ${name}`}
+              onRemove={onRemove}
+            />
           )}
-        </span>
-        <span className="ledger-amount">{signed(entry.amount)}</span>
-        {entry.recordedByYou !== false && (
-          <ArmedRemove
-            busy={busy}
-            label={`Remove ${formatMesos(entry.amount, true)} against ${name}`}
-            onRemove={onRemove}
-          />
-        )}
-      </div>
+        </div>
+      </Tooltip>
     </li>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiAssetUrl } from "@/lib/api";
 import type { Character } from "@/types/character";
+import { Tooltip } from "@/components/tooltip";
 import { redeemableBySet, redemptionNote } from "@/lib/redemption";
 import type { CharacterToken } from "@/types/character-token";
 
@@ -478,26 +479,28 @@ export function SearchResults({ query, matches }: { query: string; matches: Matc
                 </header>
                 <ul>
                   {items.map((item) => (
-                    <li key={item.tokenCatalogId} title={item.name}>
-                      {item.iconUrl && (
-                        <img src={apiAssetUrl(item.iconUrl)} alt="" aria-hidden="true" />
-                      )}
-                      {/* The boss, but not the slots. The slots are still SEARCHED on. "robe"
+                    <Tooltip key={item.tokenCatalogId} text={item.name}>
+                      <li>
+                        {item.iconUrl && (
+                          <img src={apiAssetUrl(item.iconUrl)} alt="" aria-hidden="true" />
+                        )}
+                        {/* The boss, but not the slots. The slots are still SEARCHED on. "robe"
                           finds this. They just do not need restating on every row once the
                           header says what is redeemable. */}
-                      <span className="finder-item-name">
-                        {item.name}
-                        {item.sourceBoss && (
-                          <span className="finder-item-boss"> · {item.sourceBoss}</span>
-                        )}
-                      </span>
-                      <span className="finder-item-qty">{item.quantity}</span>
-                      {item.redeemThreshold && (
-                        <span className="finder-item-note">
-                          {redemptionNote(item.quantity, item.redeemThreshold)}
+                        <span className="finder-item-name">
+                          {item.name}
+                          {item.sourceBoss && (
+                            <span className="finder-item-boss"> · {item.sourceBoss}</span>
+                          )}
                         </span>
-                      )}
-                    </li>
+                        <span className="finder-item-qty">{item.quantity}</span>
+                        {item.redeemThreshold && (
+                          <span className="finder-item-note">
+                            {redemptionNote(item.quantity, item.redeemThreshold)}
+                          </span>
+                        )}
+                      </li>
+                    </Tooltip>
                   ))}
                 </ul>
               </article>

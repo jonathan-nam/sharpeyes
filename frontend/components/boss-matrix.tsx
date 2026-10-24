@@ -3,6 +3,7 @@
 import { type CSSProperties, useRef, useState } from "react";
 
 import { BossBands } from "@/components/boss-bands";
+import { Tooltip } from "@/components/tooltip";
 import { apiAssetUrl, spriteUrl } from "@/lib/api";
 import {
   VISIBLE_COLUMNS,
@@ -301,32 +302,32 @@ export function BossMatrix({
               <thead>
                 <tr>
                   {columns.map((character) => (
-                    <th
-                      key={character.id}
-                      className={`boss-char-head${doneClass(character.id)}${colClass(character.id)}`}
-                      scope="col"
-                      title={character.name}
-                      onMouseEnter={() => setHoveredColumn(character.id)}
-                    >
-                      {/* The slot is drawn whether or not there is a sprite, so a roster where only some
+                    <Tooltip key={character.id} text={character.name}>
+                      <th
+                        className={`boss-char-head${doneClass(character.id)}${colClass(character.id)}`}
+                        scope="col"
+                        onMouseEnter={() => setHoveredColumn(character.id)}
+                      >
+                        {/* The slot is drawn whether or not there is a sprite, so a roster where only some
                     characters have one does not end up with ragged column heads. */}
-                      {loading ? (
-                        <span className="skeleton sk-face" />
-                      ) : character.spriteImgUrl ? (
-                        <img
-                          className="boss-char-sprite"
-                          src={spriteUrl(character.spriteImgUrl)}
-                          alt=""
-                        />
-                      ) : (
-                        <span className="boss-char-sprite is-empty" aria-hidden="true" />
-                      )}
-                      {loading ? (
-                        <span className="skeleton sk-line" />
-                      ) : (
-                        <span className="boss-char-name">{character.name}</span>
-                      )}
-                    </th>
+                        {loading ? (
+                          <span className="skeleton sk-face" />
+                        ) : character.spriteImgUrl ? (
+                          <img
+                            className="boss-char-sprite"
+                            src={spriteUrl(character.spriteImgUrl)}
+                            alt=""
+                          />
+                        ) : (
+                          <span className="boss-char-sprite is-empty" aria-hidden="true" />
+                        )}
+                        {loading ? (
+                          <span className="skeleton sk-line" />
+                        ) : (
+                          <span className="boss-char-name">{character.name}</span>
+                        )}
+                      </th>
+                    </Tooltip>
                   ))}
                 </tr>
               </thead>
@@ -412,22 +413,23 @@ export function BossMatrix({
                                 // The cell IS the control, rather than a mark with a control beside it:
                                 // 16 bosses by a roster's worth of columns leaves no room for a second
                                 // thing per cell, and the mark is already what you are aiming at.
-                                <button
-                                  type="button"
-                                  className="boss-mark"
-                                  disabled={busy}
-                                  title={title}
-                                  onClick={() =>
-                                    onToggle!(
-                                      character.id,
-                                      boss.bossKey,
-                                      nextClear(clearOfCell(state)),
-                                    )
-                                  }
-                                >
-                                  <span aria-hidden="true">{mark}</span>
-                                  <span className="visually-hidden">{said}</span>
-                                </button>
+                                <Tooltip text={title}>
+                                  <button
+                                    type="button"
+                                    className="boss-mark"
+                                    disabled={busy}
+                                    onClick={() =>
+                                      onToggle!(
+                                        character.id,
+                                        boss.bossKey,
+                                        nextClear(clearOfCell(state)),
+                                      )
+                                    }
+                                  >
+                                    <span aria-hidden="true">{mark}</span>
+                                    <span className="visually-hidden">{said}</span>
+                                  </button>
+                                </Tooltip>
                               ) : (
                                 <>
                                   <span aria-hidden="true">{mark}</span>

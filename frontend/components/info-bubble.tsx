@@ -1,23 +1,29 @@
 "use client";
 
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
+
+import { TipPanel } from "@/components/tooltip";
 
 /**
  * A small "i" that opens a note on press, for a caveat too long for the screen itself.
  *
- * A button rather than a `title`: a title never opens on a touch screen or from the keyboard.
- * Closes on Escape and on a press anywhere outside it.
+ * A button rather than a Tooltip: hover never happens on a touch screen. The note is drawn by the
+ * Tooltip's own panel, so the two look alike. Closes on Escape and on a press outside both.
  */
 export function InfoBubble({ label, children }: { label: string; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
+  // The button it is open on, or null when closed.
+  const [at, setAt] = useState<HTMLButtonElement | null>(null);
+  const open = at !== null;
   const id = useId();
-  const box = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    if (!at) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAt(null);
     const onDown = (e: PointerEvent) => {
-      if (!box.current?.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      // The note is in <body>, not under the button, so it is checked on its own.
+      if (at.contains(target) || document.getElementById(id)?.contains(target)) return;
+      setAt(null);
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
@@ -25,24 +31,27 @@ export function InfoBubble({ label, children }: { label: string; children: React
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
     };
-  }, [open]);
+  }, [at, id]);
 
   return (
-    <span className="info-bubble" ref={box}>
+    <span className="info-bubble">
       <button
         type="button"
         className="info-bubble-button"
         aria-label={label}
         aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen((o) => !o)}
+        aria-controls={open ? id : undefined}
+        onClick={(e) => {
+          const button = e.currentTarget;
+          setAt((current) => (current ? null : button));
+        }}
       >
         i
       </button>
-      {open && (
-        <span id={id} role="note" className="info-bubble-panel">
+      {at && (
+        <TipPanel id={id} anchor={at} role="note" className="tooltip is-note" prefer="below">
           {children}
-        </span>
+        </TipPanel>
       )}
     </span>
   );

@@ -3,6 +3,7 @@
 import { Fragment, type RefObject, useEffect, useRef, useState } from "react";
 
 import { DropPicker, pieceDraft, type StackDraft } from "@/components/drop-picker";
+import { Tooltip } from "@/components/tooltip";
 import type { PiecePileSlot } from "@/lib/use-piece-piles";
 import {
   SAVED_BUT_STALE,
@@ -222,17 +223,17 @@ export function RunPlan({
               Boss
             </th>
             {people.map((person) => (
-              <th
-                key={person.id}
-                className={
-                  hovered === person.id ? "run-person-head is-col-hover" : "run-person-head"
-                }
-                scope="col"
-                title={person.name}
-                onMouseEnter={() => setHovered(person.id)}
-              >
-                {person.name}
-              </th>
+              <Tooltip key={person.id} text={person.name}>
+                <th
+                  className={
+                    hovered === person.id ? "run-person-head is-col-hover" : "run-person-head"
+                  }
+                  scope="col"
+                  onMouseEnter={() => setHovered(person.id)}
+                >
+                  {person.name}
+                </th>
+              </Tooltip>
             ))}
             {log && (
               <th className="run-clear-head" scope="col">
@@ -281,81 +282,81 @@ export function RunPlan({
                 {/* The id is on the row because a copy is built from the plan, not the DOM:
                     what a drag hands back is which runs it touched. See pickedRuns. */}
                 <tr className={rowClasses.join(" ") || undefined} data-run={planned.run.id}>
-                  <th
-                    className="run-boss"
-                    scope="row"
-                    title={
+                  <Tooltip
+                    text={
                       time === undefined ? undefined : `Starts ${time.approx ? "~" : ""}${time.at}`
                     }
                   >
-                    {/* Flexed on an inner span: display:flex on a table cell takes it out of the
+                    <th className="run-boss" scope="row">
+                      {/* Flexed on an inner span: display:flex on a table cell takes it out of the
                     table layout and the columns stop aligning. */}
-                    <span className="run-boss-inner">
-                      {BOSS_ART_2X[planned.run.bossKey] ? (
-                        <img
-                          className="run-art"
-                          src={apiAssetUrl(BOSS_ART_2X[planned.run.bossKey] as string)}
-                          alt=""
-                          width={40}
-                          height={40}
-                        />
-                      ) : (
-                        <span className="run-art is-empty" aria-hidden="true" />
-                      )}
-                      <span className="run-boss-text">
-                        <span className="run-boss-name">
-                          {bossLabel(planned.run.bossName, planned.run.difficulty)}
-                        </span>
-                        {/* A tilde where nobody has timed this party, so a guessed half hour and a
-                        measured one are not read as the same claim. */}
-                        {timed && (
-                          <span className="run-boss-minutes">
-                            {`${planned.run.assumed ? "~" : ""}${formatDuration(planned.run.minutes)}`}
-                          </span>
+                      <span className="run-boss-inner">
+                        {BOSS_ART_2X[planned.run.bossKey] ? (
+                          <img
+                            className="run-art"
+                            src={apiAssetUrl(BOSS_ART_2X[planned.run.bossKey] as string)}
+                            alt=""
+                            width={40}
+                            height={40}
+                          />
+                        ) : (
+                          <span className="run-art is-empty" aria-hidden="true" />
                         )}
-                        {/* What the pool holds, as a bare count. Party View's wording ("1 in the
+                        <span className="run-boss-text">
+                          <span className="run-boss-name">
+                            {bossLabel(planned.run.bossName, planned.run.difficulty)}
+                          </span>
+                          {/* A tilde where nobody has timed this party, so a guessed half hour and a
+                        measured one are not read as the same claim. */}
+                          {timed && (
+                            <span className="run-boss-minutes">
+                              {`${planned.run.assumed ? "~" : ""}${formatDuration(planned.run.minutes)}`}
+                            </span>
+                          )}
+                          {/* What the pool holds, as a bare count. Party View's wording ("1 in the
                             pool") is a line of its own there and wrapped the boss name onto a
                             second line here. It counts the
                             whole pool rather than tonight: a pool is not per night, and a badge
                             that emptied at reset would be a number about the week dressed as a
                             number about the run. */}
-                        {pool > 0 && (
-                          <span
-                            className={
-                              settled
-                                ? "run-pool party-loot-summary is-done"
-                                : "run-pool party-loot-summary"
-                            }
-                          >
-                            {pool}
-                          </span>
-                        )}
-                      </span>
+                          {pool > 0 && (
+                            <span
+                              className={
+                                settled
+                                  ? "run-pool party-loot-summary is-done"
+                                  : "run-pool party-loot-summary"
+                              }
+                            >
+                              {pool}
+                            </span>
+                          )}
+                        </span>
 
-                      {/* After the boss, not in front of its portrait, which is where the Drop Log
+                        {/* After the boss, not in front of its portrait, which is where the Drop Log
                           puts one now. In front it took 28px off the art on rows that have a config
                           and none on rows that do not, so one list started its portraits in two
                           different places. Still absent with no config behind the row: there is
                           nothing to add a drop to. */}
-                      {party && onAddDrop && (
-                        <button
-                          type="button"
-                          className="party-row-toggle"
-                          aria-expanded={open}
-                          aria-controls={`run-panel-${planned.run.id}`}
-                          onClick={() => {
-                            setOpened(open ? null : planned.run.id);
-                            setAddError(null);
-                          }}
-                        >
-                          <span className="party-row-chevron" aria-hidden="true" />
-                          <span className="visually-hidden">
-                            {open ? "Hide what dropped" : "Add a drop"}
-                          </span>
-                        </button>
-                      )}
-                    </span>
-                  </th>
+                        {party && onAddDrop && (
+                          <button
+                            type="button"
+                            className="party-row-toggle"
+                            aria-expanded={open}
+                            aria-controls={`run-panel-${planned.run.id}`}
+                            onClick={() => {
+                              setOpened(open ? null : planned.run.id);
+                              setAddError(null);
+                            }}
+                          >
+                            <span className="party-row-chevron" aria-hidden="true" />
+                            <span className="visually-hidden">
+                              {open ? "Hide what dropped" : "Add a drop"}
+                            </span>
+                          </button>
+                        )}
+                      </span>
+                    </th>
+                  </Tooltip>
 
                   {cells.map((cell, i) => {
                     const person = people[i] as NightPerson;
@@ -364,30 +365,33 @@ export function RunPlan({
                     if (cell.switched) classes.push("is-switch");
                     if (hovered === person.id) classes.push("is-col-hover");
                     return (
-                      <td
+                      <Tooltip
                         key={person.id}
-                        className={classes.join(" ")}
-                        title={
+                        text={
                           cell.switched ? `${person.name} switches to ${cell.character}` : undefined
                         }
-                        onMouseEnter={() => setHovered(person.id)}
                       >
-                        {cell.character === null ? (
-                          <>
-                            <span aria-hidden="true">&#10005;</span>
-                            <span className="visually-hidden">Not running</span>
-                          </>
-                        ) : (
-                          <>
-                            {cell.switched && (
-                              <span className="run-swap" aria-hidden="true">
-                                &#8644;{" "}
-                              </span>
-                            )}
-                            {cell.character}
-                          </>
-                        )}
-                      </td>
+                        <td
+                          className={classes.join(" ")}
+                          onMouseEnter={() => setHovered(person.id)}
+                        >
+                          {cell.character === null ? (
+                            <>
+                              <span aria-hidden="true">&#10005;</span>
+                              <span className="visually-hidden">Not running</span>
+                            </>
+                          ) : (
+                            <>
+                              {cell.switched && (
+                                <span className="run-swap" aria-hidden="true">
+                                  &#8644;{" "}
+                                </span>
+                              )}
+                              {cell.character}
+                            </>
+                          )}
+                        </td>
+                      </Tooltip>
                     );
                   })}
 
@@ -404,16 +408,21 @@ export function RunPlan({
                     <td className="run-clear-cell">
                       {/* A party you are only in too: its clear is the whole party's run. */}
                       {party && (
-                        <button
-                          type="button"
-                          className={party.cleared === true ? "run-mark is-cleared" : "run-mark"}
-                          disabled={log.busy(party.id)}
-                          onClick={() => log.onToggleClear(party, nextClear(party.cleared))}
-                          title={party.cleared === true ? "Mark not cleared" : "Mark cleared"}
+                        <Tooltip
+                          text={party.cleared === true ? "Mark not cleared" : "Mark cleared"}
                         >
-                          <span aria-hidden="true">&#10003;</span>
-                          <span className="visually-hidden">{clearStateLabel(party.cleared)}</span>
-                        </button>
+                          <button
+                            type="button"
+                            className={party.cleared === true ? "run-mark is-cleared" : "run-mark"}
+                            disabled={log.busy(party.id)}
+                            onClick={() => log.onToggleClear(party, nextClear(party.cleared))}
+                          >
+                            <span aria-hidden="true">&#10003;</span>
+                            <span className="visually-hidden">
+                              {clearStateLabel(party.cleared)}
+                            </span>
+                          </button>
+                        </Tooltip>
                       )}
                     </td>
                   )}
