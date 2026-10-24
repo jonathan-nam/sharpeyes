@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/button";
 import { alreadyPartiedText, onAlreadyPartied } from "@/lib/invite-notice";
 
 /** The pop-up for a friend a save could not invite. Mounted once, in the layout. See invite-notice. */
@@ -31,9 +32,9 @@ export function AlreadyPartied() {
         <h2 className="invite-title">Not Invited</h2>
         <p className="invite-standing">{alreadyPartiedText(names)}</p>
         <div className="invite-actions">
-          <button type="button" className="party-save" onClick={close} autoFocus>
+          <Button variant="primary" onClick={close} autoFocus>
             OK
-          </button>
+          </Button>
         </div>
       </div>
     </div>

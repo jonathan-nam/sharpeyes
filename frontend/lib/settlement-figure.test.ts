@@ -113,7 +113,7 @@ describe("what the card says a person owes", () => {
     expect(source).toContain('act: line.direction === "owed" && (');
     // The Closing Actions face, not the paid pill's. They are the same kind of thing, and a pill
     // beside a squared button read as a different one.
-    expect(source).toContain('className="party-save ledger-line-act"');
+    expect(source).toMatch(/variant="primary"\s+className="ledger-line-act"/);
     expect(css).toContain(".ledger-line-act");
   });
   it("names the nights an offset discharged, off the pools", () => {

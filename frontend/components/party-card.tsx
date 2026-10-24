@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type ReactNode, useState } from "react";
+import { Button } from "@/components/button";
 import { DropPicker, pieceDraft } from "@/components/drop-picker";
 import type { PiecePileSlot } from "@/lib/use-piece-piles";
 import { LootList, type StackAssignment } from "@/components/loot-list";
@@ -308,26 +309,20 @@ export function PartyCard({
                 {/* The label carries the scope, so nothing else has to explain it. Saving here
                     changes the week, not the party. Named among three Saves in one open panel,
                     which is why the other two say what they are for too. */}
-                <button
-                  type="button"
-                  className="party-save"
+                <Button
+                  variant="primary"
                   disabled={busy || !dirty || cleaned.length === 0}
                   onClick={() => save(cleaned)}
                 >
                   Save Roster for This Week
-                </button>
+                </Button>
                 {/* Only once the week has been spelled out: there is nothing to go back to
                     otherwise, and offering it would imply the week is currently unusual. A one-off
                     has nothing to go back to either, ever. See hasStandingRoster. */}
                 {!party.usualRoster && hasStandingRoster(party) && (
-                  <button
-                    type="button"
-                    className="party-cancel"
-                    disabled={busy}
-                    onClick={() => save(null)}
-                  >
+                  <Button variant="secondary" disabled={busy} onClick={() => save(null)}>
                     Use the Usual Party
-                  </button>
+                  </Button>
                 )}
               </div>
               {saveError && <p className="split-error">{saveError}</p>}
@@ -377,9 +372,8 @@ export function PartyCard({
                     />
                   )}
                   {onSaveRoster && (
-                    <button
-                      type="button"
-                      className="party-cancel"
+                    <Button
+                      variant="secondary"
                       onClick={() => {
                         setDraft(saved.length > 0 ? saved : [""]);
                         setEditing(true);
@@ -387,7 +381,7 @@ export function PartyCard({
                       }}
                     >
                       Edit
-                    </button>
+                    </Button>
                   )}
                   {onTakeOff && (
                     <button
@@ -505,9 +499,8 @@ export function PartyCard({
               nobody saved. */}
           {editing && (
             <div className="loot-actions">
-              <button
-                type="button"
-                className="party-cancel"
+              <Button
+                variant="secondary"
                 disabled={busy}
                 onClick={() => {
                   setEditing(false);
@@ -515,7 +508,7 @@ export function PartyCard({
                 }}
               >
                 Done
-              </button>
+              </Button>
             </div>
           )}
         </div>

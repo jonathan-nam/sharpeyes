@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Button } from "@/components/button";
 import { DifficultySelect } from "@/components/difficulty-select";
 import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-characters";
 import { RosterInputs } from "@/components/roster-inputs";
@@ -186,9 +187,8 @@ function AddParty({
         aria-label="First member of the new party"
         maxLength={40}
       />
-      <button
-        type="button"
-        className="party-save"
+      <Button
+        variant="primary"
         disabled={busy || member.trim() === ""}
         onClick={() => {
           onAdd(member.trim(), difficulty === "" ? null : difficulty);
@@ -197,7 +197,7 @@ function AddParty({
         }}
       >
         Add Party
-      </button>
+      </Button>
       <KnownCharacters names={knownCharacters} />
     </>
   );
@@ -557,9 +557,8 @@ function ConfigRow({
 
       {dirty && (
         <div className="loot-actions">
-          <button
-            type="button"
-            className="party-save"
+          <Button
+            variant="primary"
             disabled={busy || !parsed.ok || badStacks || !pieceOk}
             onClick={() =>
               parsed.ok &&
@@ -603,10 +602,9 @@ function ConfigRow({
             }
           >
             Save
-          </button>
-          <button
-            type="button"
-            className="party-cancel"
+          </Button>
+          <Button
+            variant="secondary"
             disabled={busy}
             onClick={() => {
               setMembers(saved.length > 0 ? saved : [""]);
@@ -617,7 +615,7 @@ function ConfigRow({
             }}
           >
             Revert
-          </button>
+          </Button>
         </div>
       )}
     </article>

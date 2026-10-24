@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { Button, ButtonLink } from "@/components/button";
 
 /** A party somebody you are linked to already keeps with you: open theirs, or add this one anyway. */
 export function DuplicateParty({
@@ -17,12 +17,12 @@ export function DuplicateParty({
   return (
     <p className="split-error duplicate-party">
       {refusal}{" "}
-      <Link className="party-cancel" href={`/bosses/parties/${partyId}`}>
+      <ButtonLink variant="secondary" href={`/bosses/parties/${partyId}`}>
         Open Theirs
-      </Link>{" "}
-      <button type="button" className="party-save" onClick={onAddAnyway} disabled={busy}>
+      </ButtonLink>{" "}
+      <Button variant="primary" onClick={onAddAnyway} disabled={busy}>
         Add Anyway
-      </button>
+      </Button>
     </p>
   );
 }

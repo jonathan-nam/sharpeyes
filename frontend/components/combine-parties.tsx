@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/button";
 import { DiscordAvatar } from "@/components/discord-avatar";
 import { apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { difficultyLabel } from "@/lib/boss-difficulty";
@@ -89,24 +90,22 @@ export function CombineParties() {
               </span>
             ))}
             <span className="combine-actions">
-              <button
-                type="button"
-                className="party-save"
+              <Button
+                variant="primary"
                 disabled={busy}
                 onClick={() =>
                   void act(`${request(r.id)}/accept`, { method: "POST" }, "Couldn't combine them.")
                 }
               >
                 Combine
-              </button>
-              <button
-                type="button"
-                className="party-cancel"
+              </Button>
+              <Button
+                variant="secondary"
                 disabled={busy}
                 onClick={() => void act(request(r.id), { method: "DELETE" }, "Couldn't decline.")}
               >
                 Decline
-              </button>
+              </Button>
             </span>
           </div>
         ))}
@@ -124,9 +123,8 @@ export function CombineParties() {
               {f.sentRequestId ? (
                 <>
                   <span className="party-hint">Waiting for {f.friend}</span>
-                  <button
-                    type="button"
-                    className="party-cancel"
+                  <Button
+                    variant="secondary"
                     disabled={busy}
                     onClick={() =>
                       void act(
@@ -137,18 +135,17 @@ export function CombineParties() {
                     }
                   >
                     Cancel Request
-                  </button>
+                  </Button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  className="party-save"
+                <Button
+                  variant="primary"
                   disabled={busy}
                   aria-expanded={open === f.personId}
                   onClick={() => setOpen(open === f.personId ? null : f.personId)}
                 >
                   Combine Parties
-                </button>
+                </Button>
               )}
             </span>
             {open === f.personId && !f.sentRequestId && (
@@ -308,9 +305,8 @@ function Merge({
         </fieldset>
       ))}
       <div className="loot-actions">
-        <button
-          type="button"
-          className="party-save"
+        <Button
+          variant="primary"
           disabled={busy || !answered || !placed}
           onClick={() =>
             onSend(
@@ -323,7 +319,7 @@ function Merge({
           }
         >
           Send Request
-        </button>
+        </Button>
       </div>
     </div>
   );

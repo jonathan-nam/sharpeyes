@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
+import { Button } from "@/components/button";
 import { DifficultySelect } from "@/components/difficulty-select";
 import { FilterOptions, GroupingTabs } from "@/components/grouping-tabs";
 import { IconSelect, type IconOption } from "@/components/icon-select";
@@ -321,14 +322,9 @@ export default function PartyPlannerPage() {
         <h1 className="page-title">Party Planner</h1>
         {state === "loaded" && (
           <span className="page-head-links">
-            <button
-              type="button"
-              className="party-save"
-              disabled={!changed || saving}
-              onClick={() => void save()}
-            >
+            <Button variant="primary" disabled={!changed || saving} onClick={() => void save()}>
               {saving ? "Saving..." : changed ? "Save" : "Saved"}
-            </button>
+            </Button>
           </span>
         )}
       </div>
@@ -493,13 +489,13 @@ export default function PartyPlannerPage() {
                       </div>
                     );
                   })}
-                  <button
-                    type="button"
-                    className="party-cancel planner-add"
+                  <Button
+                    variant="secondary"
+                    className="planner-add"
                     onClick={() => addWant(c.name)}
                   >
                     Add Boss
-                  </button>
+                  </Button>
                 </div>
               );
             })}
@@ -524,9 +520,9 @@ export default function PartyPlannerPage() {
                   onChange={(e) => setTyped(e.target.value)}
                 />
               </label>
-              <button type="submit" className="party-save" disabled={adding === null}>
+              <Button variant="primary" type="submit" disabled={adding === null}>
                 Add
-              </button>
+              </Button>
               <datalist id="planner-known">
                 {roster.flatMap((g) =>
                   g.names

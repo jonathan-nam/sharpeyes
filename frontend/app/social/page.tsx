@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useState } from "react";
+import { Button } from "@/components/button";
 import { CombineParties } from "@/components/combine-parties";
 import { ConfirmAct } from "@/components/confirm-act";
 import { DiscordLookup, mayAsk, useDiscordLookup } from "@/components/discord-lookup";
@@ -102,13 +103,9 @@ export default function SocialPage() {
                 onChange={setUsername}
                 disabled={busy}
               />
-              <button
-                type="submit"
-                className="party-save"
-                disabled={busy || !mayAsk(username, lookup)}
-              >
+              <Button variant="primary" type="submit" disabled={busy || !mayAsk(username, lookup)}>
                 Send Request
-              </button>
+              </Button>
             </form>
             {error && <p className="routine-error">{error}</p>}
 
@@ -118,16 +115,15 @@ export default function SocialPage() {
               <FriendGroup title="Sent">
                 {social.outgoing.map((f) => (
                   <FriendCard key={f.id} friend={f}>
-                    <button
-                      type="button"
-                      className="party-cancel"
+                    <Button
+                      variant="secondary"
                       disabled={busy}
                       onClick={() =>
                         void act(request(f.id), { method: "DELETE" }, "Couldn't cancel.")
                       }
                     >
                       Cancel
-                    </button>
+                    </Button>
                   </FriendCard>
                 ))}
               </FriendGroup>

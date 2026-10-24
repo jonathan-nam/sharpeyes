@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { DuplicateParty } from "@/components/duplicate-party";
 import { RosterInputs } from "@/components/roster-inputs";
 import { Tooltip } from "@/components/tooltip";
@@ -200,14 +201,15 @@ export function AddForWeek({
           </div>
 
           <Tooltip text={standing ? "Add Party" : "Add for This Week"}>
-            <button
+            <Button
+              variant="primary"
               type="submit"
-              className="party-save add-plus"
+              className="add-plus"
               aria-label={standing ? "Add Party" : "Add for This Week"}
               disabled={busy || !ready}
             >
               <span aria-hidden="true">+</span>
-            </button>
+            </Button>
           </Tooltip>
         </div>
 

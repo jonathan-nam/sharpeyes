@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/button";
 import { SectionMark } from "@/components/section-mark";
 import { dropSections } from "@/lib/drop-sections";
 import { useAccountSettings } from "@/lib/use-account-settings";
@@ -95,9 +96,9 @@ export function DropLogSkeleton() {
                 <span className="drop-select-arrow" aria-hidden="true" />
               </button>
             </label>
-            <button type="submit" className="party-save add-plus" disabled>
+            <Button variant="primary" type="submit" className="add-plus" disabled>
               <span aria-hidden="true">+</span>
-            </button>
+            </Button>
           </div>
         </form>
       </section>

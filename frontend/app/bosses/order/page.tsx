@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { StackDraft } from "@/components/drop-picker";
+import { Button, ButtonLink } from "@/components/button";
 import { InfoBubble } from "@/components/info-bubble";
 import { CopyPlan, type RunLog, RunPlan } from "@/components/run-plan";
 import type { PartyLootPool } from "@/types/loot";
@@ -782,9 +783,9 @@ export default function RunOrderPage() {
               is about, and Edit People is the page that says whose each character is. */}
           <div className="night-heading-row">
             <h2 className="night-heading">Party Members</h2>
-            <Link className="party-cancel" href="/bosses/people">
+            <ButtonLink variant="secondary" href="/bosses/people">
               Edit People
-            </Link>
+            </ButtonLink>
           </div>
           <ul className="night-roster">
             {roster.map((person) => {
@@ -951,14 +952,14 @@ export default function RunOrderPage() {
       {/* Nothing below this is drawn until it is asked for. The order is what the group is sent,
           and one built while somebody is still ticking names is a night they are not running. */}
       {runs.length > 0 && (
-        <button
-          type="button"
-          className="party-save night-go"
+        <Button
+          variant="primary"
+          className="night-go"
           disabled={asked !== null && !outdated}
           onClick={showOrder}
         >
           {outdated ? "Update Run Order" : "Show Run Order"}
-        </button>
+        </Button>
       )}
 
       {plan.runs.length > 0 && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/button";
 import { CopyAmount } from "@/components/copy-amount";
 import { failureText } from "@/lib/api";
 import { formatMesos } from "@/lib/drop-split";
@@ -136,14 +137,13 @@ function ListingView({
         <img className="listing-full" src={url} alt={LABEL} />
         <div className="invite-actions">
           {onReplace && (
-            <button type="button" className="party-save" onClick={onReplace}>
+            <Button variant="primary" onClick={onReplace}>
               Replace Screenshot
-            </button>
+            </Button>
           )}
           {onRemove && (
-            <button
-              type="button"
-              className="party-cancel"
+            <Button
+              variant="secondary"
               disabled={busy}
               onClick={() => {
                 onRemove();
@@ -151,11 +151,11 @@ function ListingView({
               }}
             >
               Remove Screenshot
-            </button>
+            </Button>
           )}
-          <button type="button" className="party-cancel" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -264,17 +264,12 @@ export function PostListingDialog({
         </label>
         {error && <span className="split-error">{error}</span>}
         <div className="invite-actions">
-          <button
-            type="button"
-            className="party-save"
-            disabled={!file || posting}
-            onClick={() => void post()}
-          >
+          <Button variant="primary" disabled={!file || posting} onClick={() => void post()}>
             Post
-          </button>
-          <button type="button" className="party-cancel" onClick={onClose}>
+          </Button>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>

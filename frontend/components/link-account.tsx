@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button } from "@/components/button";
 import { DiscordLookup, mayAsk, useDiscordLookup } from "@/components/discord-lookup";
 import { Tooltip } from "@/components/tooltip";
 import type { PendingLink } from "@/types/party";
@@ -34,14 +35,9 @@ export function LinkAccount({
     return (
       <>
         <span className="party-hint">Sent to @{request.username ?? "?"}</span>
-        <button
-          type="button"
-          className="party-cancel"
-          disabled={busy}
-          onClick={() => onCancel(request.id)}
-        >
+        <Button variant="secondary" disabled={busy} onClick={() => onCancel(request.id)}>
           Cancel Request
-        </button>
+        </Button>
       </>
     );
   }
@@ -127,16 +123,12 @@ function LinkAccountDialog({
           />
           {error && <p className="routine-error">{error}</p>}
           <div className="invite-actions">
-            <button
-              type="submit"
-              className="party-save"
-              disabled={busy || !mayAsk(username, state)}
-            >
+            <Button variant="primary" type="submit" disabled={busy || !mayAsk(username, state)}>
               Send Request
-            </button>
-            <button type="button" className="party-cancel" onClick={onClose}>
+            </Button>
+            <Button variant="secondary" onClick={onClose}>
               Cancel
-            </button>
+            </Button>
           </div>
         </form>
       </div>
