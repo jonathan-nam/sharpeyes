@@ -9,12 +9,8 @@
 //   fair  the seller sends each member more than they keep, sized so that AFTER the second tax
 //         every member nets exactly what the seller kept.
 //
-// Both are offered because "lazy" is what most parties actually do, and a tool that only showed
-// the fair number could not tell you what it was costing you.
-//
-// The fee on the PAYOUT hop is the RECEIVING member's, not the seller's: to move mesos through the
-// AH the member lists and the seller buys, so it is the member who is selling and the member whose
-// MVP status applies. Hence a rate per member rather than one rate for the room.
+// The fee on the PAYOUT hop is the RECEIVING member's: the member lists and the seller buys, so
+// the member's MVP status applies. Hence a rate per member.
 
 /** The two rates the Auction House charges. MVP pays the lower one. */
 export const FEE_MVP = 0.03;
@@ -25,10 +21,8 @@ export type SplitMethod = "lazy" | "fair";
 /**
  * Which end of the sale the entered figure is.
  *
- * `received` makes `sellerFee` irrelevant: the fee only ever existed to turn a listed price into
- * what landed in your inventory, and if you type the latter there is nothing left for it to do.
- * The gross is NOT inferred back from it, because that would put a figure on screen the tool was
- * told, not shown.
+ * `received` makes `sellerFee` irrelevant. The gross is NOT inferred back from it, since that
+ * would show a figure nobody entered.
  */
 export type AmountBasis = "listed" | "received";
 
@@ -48,14 +42,9 @@ export type SplitInput = {
   /**
    * Which way a payout that will not divide evenly is rounded. Absent is `up`, which is mesos.
    *
-   * The dust has to land on somebody, and the two units want it in different places. In MESOS it
-   * goes to the party: a meso or two is nothing, the distributor is the one who should eat it, and
-   * it matches the split bot people already cross-check against.
-   *
-   * In DOLLARS it goes to the holder, because the figure is read by a human who has already done
-   * the division. $1000 three ways is $333.33 to everybody, and paying $333.34 makes every number
-   * on the screen disagree with the one in their head over a cent nobody cares about. The holder
-   * keeps $333.34 instead, which is the one figure nobody is checking.
+   * MESOS round up, so the distributor eats the dust (matching the split bot people cross-check
+   * against). DOLLARS round down, so $1000 three ways pays $333.33 each, the figure people have
+   * already worked out, and the holder keeps the extra cent.
    */
   rounding?: "up" | "down";
 };
@@ -97,8 +86,7 @@ const SUFFIX: Record<string, number> = { k: 1e3, m: 1e6, b: 1e9 };
  * Reads a sale price the way a player would say it: `1b`, `9.5b`, `970m`, `1,000,000,000`.
  *
  * Returns null for anything it cannot read, INCLUDING partial input, so the caller shows nothing
- * rather than a number derived from half a figure. Boss drops are nine and ten digit numbers and
- * typing one out in full is where a zero goes missing.
+ * rather than a number derived from half a figure.
  */
 export function parseMesos(input: string): number | null {
   const cleaned = input
@@ -114,16 +102,10 @@ export function parseMesos(input: string): number | null {
 }
 
 /**
- * Throws on a rate outside [0, 1) or a negative price rather than returning a number nobody should
- * act on. A rate of 1 would mean the AH takes everything, and dividing by what is left is where an
- * Infinity would enter and be rendered as a payout.
- *
- * Shares are the same kind of refusal. A `memberShares` of the wrong length would silently pay some
- * members a share they never agreed to, so it is rejected rather than padded.
- *
- * Both units are integers, so a payout that will not divide evenly is rounded and somebody absorbs
- * the dust. Which way, and therefore who, is `rounding`: up and the distributor eats it, which is
- * the meso rule, or down and the holder keeps it, which is the dollar one.
+ * Throws on a rate outside [0, 1) (a rate of 1 would divide by zero into an Infinity payout) or a
+ * negative price. A `memberShares` of the wrong length is rejected rather than padded, since
+ * padding would pay members a share they never agreed to. Who absorbs the rounding dust is
+ * `rounding`.
  */
 export function splitDrop({
   amount,
@@ -170,11 +152,9 @@ export function splitDrop({
   // afterwards, so the seller keeps X times their own shares and must send member i enough that
   // X * shares_i survives THEIR fee. Those have to add up to what the seller is holding:
   //   X * shares_s + SUM X * shares_i / (1 - fee_i) = received
-  // so X = received / (shares_s + SUM shares_i / (1 - fee_i)). All shares at 1 collapses this to
-  // the even-split formula, which is what the equal-share tests pin.
+  // so X = received / (shares_s + SUM shares_i / (1 - fee_i)).
   //
-  // A party of one gets zero, not the whole purse: with nobody to send to there is no share to
-  // price, and a figure here would make the two methods differ on a pool that cannot split.
+  // A party of one gets zero: with nobody to send to there is no share to price.
   const netPerShare =
     method === "fair" && memberFees.length > 0
       ? sellerReceives /
@@ -187,12 +167,8 @@ export function splitDrop({
   const payouts = (round: (n: number) => number) =>
     memberFees.map((fee, i) => round(exact(fee, shares[i] ?? 1)));
 
-  // Which way the dust lands, per `rounding`. See its note for why the two units differ.
-  //
-  // Rounding UP can OVERSHOOT what the seller is holding, though only on amounts too small to
-  // divide: 1 meso across a party of 6 rounds to 1 each and pays out 5 from a purse of 1. Falling
-  // back to floor is the only branch where the invariant would otherwise break. Rounding DOWN
-  // cannot overshoot at all, so for dollars that branch is dead rather than merely unused.
+  // Rounding UP can overshoot the purse on amounts too small to divide (1 meso across a party of 6
+  // pays out 5), so it falls back to floor. Rounding down cannot overshoot.
   let pays = payouts(rounding === "up" ? Math.ceil : Math.floor);
   if (pays.reduce((sum, p) => sum + p, 0) > sellerReceives) pays = payouts(Math.floor);
 
@@ -228,9 +204,7 @@ export type MathStep = {
 /**
  * Mesos as digits, ungrouped by default.
  *
- * The figures here get typed or pasted into the game's own price box, which takes digits and
- * nothing else. Grouping them is a display choice the caller opts into, not the default, because
- * the default is the one people copy.
+ * The game's price box takes digits only, and the default is the one people copy.
  */
 export function formatMesos(value: number, grouped = false): string {
   return grouped ? value.toLocaleString("en-US") : String(value);
@@ -239,9 +213,8 @@ export function formatMesos(value: number, grouped = false): string {
 /**
  * Mesos the way they are said out loud: `1.45b`, `970m`, `25m`.
  *
- * The inverse of what parseMesos reads, and for the one job that figure cannot do: recapping what
- * was already entered. Never use it for a figure somebody is meant to send. It rounds, and a
- * rounded payout is the wrong payout.
+ * For recapping what was entered only. Never use it for a figure somebody is meant to send: it
+ * rounds.
  */
 export function shortMesos(value: number): string {
   const abs = Math.abs(value);
@@ -255,9 +228,8 @@ const keptOf = (fee: number) => (1 - fee).toFixed(2);
 /**
  * The arithmetic behind a split, in the order it was done.
  *
- * Reads every figure off the `Split` it is given rather than recomputing them. A hand-written
- * explanation beside a computed number is two sources of truth, and the one nobody runs is the
- * one that goes wrong. A test pins that every payout it computed appears in here.
+ * Reads every figure off the `Split` rather than recomputing them, so the working cannot disagree
+ * with the payout. A test pins that every payout appears in here.
  */
 export function explainSplit(
   input: SplitInput,
@@ -282,9 +254,8 @@ export function explainSplit(
     return steps;
   }
 
-  // Even shares are what makes the one-line form true. A seat on a double share pays out a
-  // different figure from its neighbours even at one rate, so it takes the line-per-member form
-  // below and the share count goes in the line: without it the numbers look arbitrary.
+  // The one-line form needs even shares as well as one rate. Uneven shares get a line per member
+  // with the share count in it.
   const evenShares = split.sellerShares === 1 && split.members.every((m) => m.shares === 1);
   const uniform = memberFees.every((fee) => fee === memberFees[0]) && evenShares;
   const fee = memberFees[0] ?? 0;
@@ -314,8 +285,6 @@ export function explainSplit(
     });
   }
 
-  // One line for the party when they all pay the same, which is the usual case. Only a mixed
-  // party needs a line each, and then the rate has to be in it or the numbers look arbitrary.
   if (uniform) {
     steps.push(
       {

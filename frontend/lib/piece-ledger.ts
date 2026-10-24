@@ -4,16 +4,12 @@
 // not divide by looting alone: somebody ends up holding pieces that are not theirs. This works out
 // who is short, who is over, and how many pieces move between them.
 //
-// It is NOT the money split in drop-split.ts, and it is not a second copy of it. That file divides
-// one pot among seats. This one divides a COUNT, which is exact, and it stops there.
+// It is NOT the money split in drop-split.ts, which divides one pot among seats. This one divides a
+// COUNT, which is exact, and it stops there.
 //
-// It used to go further, and no longer does. A debt was priced by apportioning the holder's own sale
-// proceeds pro rata over the part of their pile that was for sale, tranche by tranche, so the ledger
-// had to be told what somebody else sold at. That is not knowable and it was not the reader's job:
-// coupons are single-trade, so only the holder can sell them, and the two sides of a debt come off
-// different nights at different prices. A debt is now a count of pieces, and what it is worth is
-// whatever the two of them agree. The apportioning machinery (allocate, spreadKept, spreadBought,
-// the coverage queue and everything #281 and #316 were about) is deleted rather than left unused.
+// Do not price a debt here. Coupons are single-trade, so only the holder can sell them, and the two
+// sides of a debt come off different nights at different prices: apportioning the holder's sale
+// proceeds over the pile would need to know what somebody else sold at.
 
 /** One seat on a stacking drop: what they took, and what fraction of it is theirs. */
 export type LedgerSeat = {
@@ -48,10 +44,8 @@ export type PieceTransfer = {
  * A whole divided by weights, in whole units that add up to exactly the whole.
  *
  * Everyone gets the floor of their exact share, then the odd units go to the biggest fractions, ties
- * by position. Deterministic, so the same input always divides the same way and a figure somebody
- * has already been paid does not move to a different row on the next read.
- *
- * Zeroes when there is nothing to divide, or no weight to divide it by.
+ * by position. Deterministic, so a figure somebody has already been paid does not move to a different
+ * row on the next read. Zeroes when there is nothing to divide, or no weight to divide it by.
  */
 export function largestRemainder(total: number, weights: number[]): number[] {
   const weight = weights.reduce((sum, w) => sum + w, 0);
@@ -76,8 +70,8 @@ export function largestRemainder(total: number, weights: number[]): number[] {
 /**
  * A count of coupons, held to the millionth of one.
  *
- * Not a rounding anybody sees: it is exact for every share a party can have to two decimals, and it
- * is what stops a third (61 across three) leaving 7e-15 of a coupon owed after the transfers clear.
+ * Exact for every share a party can have to two decimals, and it stops a third (61 across three)
+ * leaving 7e-15 of a coupon owed after the transfers clear.
  */
 export function pieces(n: number): number {
   return Math.round(n * 1e6) / 1e6;
@@ -91,9 +85,8 @@ export function formatPieces(n: number): string {
 /**
  * What each seat was entitled to, EXACTLY: 45 across two is 22.5 each.
  *
- * It was the largest remainder, which gave one of them 23 and called the other's half a coupon
- * theirs. Coupons trade whole, so a .5 is the two of them to settle, and the ledger says so rather
- * than deciding (decided 2026-10-21). The entitlements still add up to what dropped.
+ * Not the largest remainder: coupons trade whole, so a .5 is the two of them to settle, and the ledger
+ * says so rather than deciding. The entitlements still add up to what dropped.
  */
 export function entitlements(total: number, seats: LedgerSeat[]): Map<string, number> {
   const weight = seats.reduce((sum, s) => sum + s.shares, 0);
@@ -136,29 +129,18 @@ export type LedgerDrop = {
    * Pieces of it in the pile this row is about. Defaults to `total`, which is one seat having
    * looted the lot.
    *
-   * Separate from `total` because a drop looted stack by stack sits in SEVERAL piles at once, and
-   * the two numbers answer different questions. Who owes whom is measured against the whole drop.
-   * What a holder's own sales can cover, and how much of their proceeds are somebody else's, is
-   * measured against their pile: they can only ever sell what they picked up, and charging their
-   * tranches against the whole drop would report a debt settled that their sales never touched.
+   * Separate from `total` because a drop looted stack by stack sits in SEVERAL piles at once. Who
+   * owes whom is measured against the whole drop; what a holder's own sales can cover is measured
+   * against their pile, since they can only sell what they picked up.
    */
   held?: number;
-  /**
-   * Pieces of this pile the holder is redeeming rather than selling. Absent is none of them.
-   *
-   * Counted per HOLDER now, not per drop: which boss a redemption came off only mattered while a
-   * debt was priced boss by boss. Kept on the type because the card bounds the redemption box at
-   * the holder's own share, and `ownShareOf` is what draws that line.
-   */
+  /** Pieces of this pile the holder is redeeming rather than selling. Absent is none of them. */
   kept?: number;
   /**
    * Pieces of the CREDITOR's that the holder took and paid for, and what they paid. See V50.
    *
-   * Out of the sellable pile like a redemption, because they never went to market either. What makes
-   * them a different kind is the money: it is one creditor's in full, at a price somebody agreed,
-   * rather than the pile's to divide. Folded into KEPT instead, the same pieces were priced at
-   * whatever average the holder's own sales happened to reach, which with a sliver of pile left is
-   * a 60-piece claim set by one piece.
+   * Not folded into `kept`: the money is one creditor's in full, at an agreed price, rather than the
+   * pile's to divide.
    */
   bought?: { pieces: number; paid: number };
 };
@@ -174,9 +156,6 @@ export function heldOf(drop: LedgerDrop): number {
  * Their entitlement, capped by what they are actually holding: a seat owed more than they picked up
  * has no surplus of their own to redeem. Absent holder reads the pile as all theirs, which is one
  * seat having looted the lot.
- *
- * The line a redemption crosses, and the card that bounds its box reads it from here rather than
- * deciding for itself.
  */
 export function ownShareOf(drop: LedgerDrop, holder?: string): number {
   if (holder === undefined) return heldOf(drop);
@@ -186,17 +165,10 @@ export function ownShareOf(drop: LedgerDrop, holder?: string): number {
 /**
  * Who owes whom out of one drop, and how many pieces.
  *
- * Deterministic on purpose: seats over their share pay seats under it, both in seat order. A stable
- * list is what lets a debt be remembered against a pair, and it means two people reading the same
- * row are told the same thing.
+ * Deterministic: seats over their share pay seats under it, both in seat order, so a debt can be
+ * remembered against a pair. Empty when the pieces were looted the way they divide.
  *
- * Empty when the pieces were looted the way they divide, which is the ordinary night. Nothing to
- * say beats a list of zeroes.
- *
- * A COUNT and never a price. What the pieces are worth is not something this can see: coupons are
- * single-trade, so only the holder can sell them, and the two sides of a debt come off different
- * nights at different prices. It used to apportion the holder's sale proceeds pro rata over the
- * sellable pile, which is what made the ledger ask for somebody else's tranches one by one.
+ * A COUNT and never a price. See the file header.
  */
 export function transfersOf(
   drop: LedgerDrop,
@@ -241,20 +213,12 @@ export function transferKey(transfer: { fromId: string; toId: string }): string 
 /**
  * The order a debt is answered in, and the ONE order every spend in the app runs in.
  *
- * Three keys, and the middle one is the point. `droppedOn` is a date somebody TYPED, so an evening's
- * three bosses all carry the same one and it cannot order them; `recordedAt` is stamped by the
- * server when the drop was logged, which is the order the nights actually happened in.
+ * `droppedOn` is a date somebody TYPED, so an evening's bosses all share one; `recordedAt` is
+ * server-stamped and is the order the nights actually happened in. Without it, ties fell to a random
+ * uuid and two spends could pick different nights out of the same evening.
  *
- * Without it the tie fell to `lootId`, a random uuid, so which of one evening's nights kept a debt
- * was decided by nothing anybody chose: three nights fell on 2026-08-23, a sale covered 85 of the
- * 150 they owed, and Hard Baldrix went silent while Hard Kaling still asked for 30, purely because
- * 28760ee5 sorts before acd816fc. Worse, the two spends disagreed: this file broke the tie on input
- * order and drop-log.ts broke it on the id, so the party badge and the Settlement card could pick
- * different nights out of the same evening.
- *
- * Absent `recordedAt` is a row cached from before the field and sorts first, which is what it meant
- * when it was cached. `lootId` stays as the last resort, so two rows stamped in the same millisecond
- * keep one order across renders rather than moving on a refresh.
+ * Absent `recordedAt` is a row cached from before the field and sorts first. `lootId` is the last
+ * resort, so rows stamped in the same millisecond keep one order across renders.
  */
 export function oldestNightFirst(
   a: { droppedOn: string; recordedAt?: string | null; lootId?: string },
@@ -271,23 +235,15 @@ export function oldestNightFirst(
  * A credit spent over nights, oldest first, leaving what each still owes.
  *
  * A pair's debt is one running count and the nights behind it are a queue, so a credit of 130
- * coupons comes off the oldest 130 of them. Sales are not spent here: see spendSales. That is not
- * a claim about which physical coupons are where: it is the same statement the total already
- * makes, distributed over the rows the reader is looking at, so the list adds up to the figure
- * above it. A list that sums to 180 under a headline of 50 is a wrong number wherever the reader
- * happens to add it up.
+ * coupons comes off the oldest 130 of them, so the list adds up to the figure above it. Sales are
+ * not spent here: see spendSales.
  *
- * By the day the night FELL, never the order the rows are drawn in. The queue is drawn in the
- * catalog's order so that two bosses in one week never swap places.
+ * By when the night FELL (oldestNightFirst), never the order the rows are drawn in.
  *
- * Every night is RETURNED, a covered one at zero rather than dropped. What a night still owes and
- * whether it is one of the nights an act would close are different questions: a night answered in
- * money is finished and closing the books on it is right, so dropping it here would quietly take it
- * out of `settleThePair` and leave it open for ever. Whoever DRAWS the list skips the zeroes. The
- * input order is preserved, because spending order and reading order are different questions too.
+ * Every night is RETURNED, a covered one at zero, in input order. Dropping it would take it out of
+ * `settleThePair` and leave it open for ever; whoever DRAWS the list skips the zeroes.
  *
- * The credit is one CREDITOR's. Spending Owen's answered coupons on a night Felix is owed is the
- * cross-person netting this app refuses everywhere else.
+ * The credit is one CREDITOR's: never spend one person's credit on another's night.
  */
 export function spendOldestFirst<
   T extends { pieces: number; droppedOn: string; recordedAt?: string | null; lootId?: string },
@@ -312,22 +268,14 @@ export type AnsweredSale = {
 /**
  * Sales spent over nights, each sale reaching only the nights already on the books when it was made.
  *
- * The eligibility rule spendOldestFirst's doc has always claimed and never enforced: a sale cannot
- * have come off a night that had not happened yet. Without it every sale ever recorded is one
- * undated pool, re-spent from scratch on each render, and it drains down the queue into nights that
- * fell after it. A night you logged tonight then reads as already answered by a sale from last week,
- * which is silence where a debt should be.
- *
- * Against `recordedAt` and never `droppedOn`, because droppedOn is a date somebody typed: logging a
- * drop, selling, and logging another drop is one date and three acts, and the day cannot order them.
- * A night with no recordedAt is a row cached from before the field, and stays eligible for
- * everything, which is what it meant when it was cached.
+ * A sale cannot have come off a night that had not happened yet, or a night logged tonight reads as
+ * answered by last week's sale. Against `recordedAt`, never `droppedOn` (a typed date that cannot
+ * order a drop, a sale and another drop on one day). A night with no recordedAt is a row cached from
+ * before the field, and stays eligible for everything.
  *
  * Each sale takes the NEWEST nights it could have answered, because a sale is the evening's loot
- * going to market. Oldest first credited a Jupiter sale as "Jupiter (100), Malefic Star (20)" and
- * landed 1 of Owen's 41 sales on whole nights; newest first lands 29, every October one included.
- * Sales are taken in the order they were recorded. Every night is RETURNED at what it still owes,
- * for the reason spendOldestFirst says.
+ * going to market; oldest first lands far fewer sales on whole nights. Sales are taken in the order
+ * they were recorded. Every night is RETURNED, as in spendOldestFirst.
  */
 export function spendSales<
   T extends { pieces: number; droppedOn: string; recordedAt?: string | null; lootId?: string },
@@ -338,8 +286,7 @@ export function spendSales<
     let left = Math.max(0, sale.pieces);
     for (const night of newest) {
       if (left <= 0) break;
-      // A row cached from before the field has no recordedAt, and stays eligible for everything:
-      // that is what it meant when it was cached, and the next fetch corrects it.
+      // No recordedAt is a stale cached row: eligible for everything until the next fetch.
       if (night.recordedAt && night.recordedAt > sale.recordedAt) continue;
       const spent = Math.min(left, owed.get(night)!);
       left -= spent;
@@ -360,10 +307,8 @@ type PlaceableNight = {
 /**
  * Which nights each sale came off, and how many pieces of each, spending exactly as spendSales does.
  *
- * The same walk, so what it names cannot disagree with the nights a card draws as answered: pinned
- * against spendSales in piece-ledger.test.ts. A sale that the nights cannot cover in full is null, not
- * a part of it: a week or boss claimed for some of its coupons is one claimed for money it cannot
- * name.
+ * Pinned against spendSales in piece-ledger.test.ts. A sale the nights cannot cover in full is null,
+ * not a part of it: a partial placement would claim money it cannot name.
  */
 export function placeSalesOnNights<T extends PlaceableNight, S extends AnsweredSale>(
   nights: T[],
