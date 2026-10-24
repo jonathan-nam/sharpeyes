@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, failureText } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
+import { friendsChanged } from "@/lib/friends-changed";
 import { reportDataReady } from "@/lib/rum";
 import { type PersonDraft, peopleBody, toDraft, unclaimed } from "@/lib/people-board";
 import { useCharacterSprites } from "@/lib/ign-sprites";
@@ -85,9 +86,10 @@ export default function PeoplePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
-  // An account linked or unlinked from the other side moves who is whose. Only while nothing here
-  // is unsaved: re-reading under a half-edited board would throw the edit away.
-  useLive("party", () => {
+  // An account linked or unlinked from the other side moves who is whose, and a request answered
+  // clears its row. Only while nothing here is unsaved: re-reading under a half-edited board would
+  // throw the edit away.
+  useLive(["party", "friends"], () => {
     if (JSON.stringify(draft) !== JSON.stringify(toDraft(people))) return;
     void apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, getToken)
       .then((saved) => {
@@ -121,6 +123,53 @@ export default function PeoplePage() {
       invalidate("/api/parties");
     } catch {
       setError("Couldn't unlink them.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Sends a friend request naming this person. True when it went, so the box can close. */
+  async function linkPerson(personId: string, username: string): Promise<boolean> {
+    setBusy(true);
+    setError(null);
+    try {
+      const saved = await apiFetch<Person[]>(
+        `${PEOPLE_KEY}/${encodeURIComponent(personId)}/link`,
+        { method: "POST", body: JSON.stringify({ username }) },
+        getToken,
+      );
+      setPeople(saved);
+      setDraft(toDraft(saved));
+      put(PEOPLE_KEY, saved);
+      // They may have asked first, which makes this an acceptance: off the bell, onto parties.
+      invalidate("/api/parties");
+      invalidate("/api/friends");
+      friendsChanged();
+      return true;
+    } catch (e) {
+      setError(failureText(e, "Couldn't send that. Try again."));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelLink(requestId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiFetch(
+        `/api/friends/requests/${encodeURIComponent(requestId)}`,
+        { method: "DELETE" },
+        getToken,
+      );
+      const saved = await apiFetch<Person[]>(PEOPLE_KEY, { method: "GET" }, getToken);
+      setPeople(saved);
+      setDraft(toDraft(saved));
+      put(PEOPLE_KEY, saved);
+      invalidate("/api/friends");
+    } catch {
+      setError("Couldn't cancel it.");
     } finally {
       setBusy(false);
     }
@@ -210,6 +259,8 @@ export default function PeoplePage() {
               unsaved={dirty}
               inviting={inviting}
               onInvite={invitePerson}
+              onLink={linkPerson}
+              onCancelLink={cancelLink}
               onUnlink={unlinkPerson}
             />
 

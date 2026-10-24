@@ -5496,8 +5496,16 @@ button.link:disabled {
 }
 
 /* Each control takes the column, so neither is sized by its own word length. */
-.person-meta-actions > button {
+.person-meta-actions > button,
+.link-account > button {
   padding-inline: 8px;
+}
+
+/* The Discord username box, stacked like the buttons it replaces. */
+.link-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* The name's own label. The board is a grid of controls with no headings, so without it the box

@@ -152,6 +152,14 @@ export type Person = {
   // another account you are linked to also holds. Absent on a cached payload.
   notOnAccount?: string[];
   contested?: string[];
+  // A friend request sent from their row, while it waits. Absent on a cached payload.
+  request?: PendingLink | null;
+};
+
+// A friend request naming one of your people: its id, to cancel it, and who it went to.
+export type PendingLink = {
+  id: string;
+  username: string | null;
 };
 
 // What POST /api/parties and PUT /api/parties/{id} take. `members` is the OTHER characters: the
