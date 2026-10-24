@@ -191,3 +191,22 @@ export async function apiFetch<T>(
 
   return (await response.json()) as T;
 }
+
+/**
+ * A binary GET behind the same Bearer, for an image only its owner may see. An <img src> cannot
+ * send the header, so the page fetches it and draws an object URL.
+ */
+export async function apiBlob(path: string, getToken: () => Promise<string | null>): Promise<Blob> {
+  if (!API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not set");
+  }
+  const token = await getToken();
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    reportApiFailure({ kind: "http", path, status: response.status });
+    throw new ApiError(response.status, await response.text());
+  }
+  return response.blob();
+}

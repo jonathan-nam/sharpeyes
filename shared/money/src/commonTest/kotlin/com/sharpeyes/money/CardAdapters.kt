@@ -19,6 +19,7 @@ import com.sharpeyes.money.settlement.SaleNight
 import com.sharpeyes.money.settlement.Settlement
 import com.sharpeyes.money.settlement.SoldNights
 import com.sharpeyes.money.settlement.bossesOfSales
+import com.sharpeyes.money.settlement.heldMesos
 import com.sharpeyes.money.settlement.nightsOfSales
 import com.sharpeyes.money.settlement.offsetOf
 import com.sharpeyes.money.settlement.owedByYouShares
@@ -58,6 +59,7 @@ private fun JsonArray.closedSet(i: Int): Set<String> =
 internal val settlementCardAdapters: Map<String, Adapter> =
     mapOf(
         "settlement.offsetOf" to { a -> out(offsetOf(a.arg(0))) },
+        "settlement.heldMesos" to { a -> out(heldMesos(a.arg(0))) },
         "settlement.owedByYouShares" to { a -> out(owedByYouShares(a.arg(0))) },
         "settlement.settleThePair" to { a -> out(settleThePair(a.arg(0))) },
         "settlement.yourPiles" to { a -> out(yourPiles(a.arg(0))) },

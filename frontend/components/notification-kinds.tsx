@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
 import { bossLabel } from "@/lib/boss-difficulty";
+import { sectionHref } from "@/lib/drop-sections";
 import { shortMesos } from "@/lib/drop-split";
 import { formatDollars } from "@/lib/money";
 import { friendsChanged } from "@/lib/friends-changed";
@@ -86,6 +87,15 @@ const KINDS: Record<string, Kind> = {
     text: (p, who) => `${who} sold ${str(p.item)} for ${priceOf(p)}`,
     icon: artOf,
     href: partyPage,
+  },
+  // Backend SettlementListings.kt. Both open the Settlement stage, where the card is.
+  SPLIT_UPDATED: {
+    text: (p, who) => `${who} owes you ${priceOf(p)}`,
+    href: () => sectionHref("settlement"),
+  },
+  LISTING_POSTED: {
+    text: (p, who) => `${who} posted a listing for ${priceOf(p)}`,
+    href: () => sectionHref("settlement"),
   },
 };
 

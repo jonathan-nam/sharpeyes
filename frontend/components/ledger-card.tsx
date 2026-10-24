@@ -240,6 +240,8 @@ export type ClosingAct = {
   detail?: string | null;
   /** Anything else beside it, like what an offset leaves owing. */
   after?: ReactNode;
+  /** Grayed out: already done, and waiting on the other side. */
+  disabled?: boolean;
   onClick: () => void;
 };
 
@@ -254,7 +256,12 @@ export function ClosingActions({ acts, busy }: { acts: ClosingAct[]; busy: boole
       <span className="ledger-heading">Closing Actions</span>
       {acts.map((act) => (
         <span key={act.key} className="ledger-settle">
-          <button type="button" className="party-save" disabled={busy} onClick={act.onClick}>
+          <button
+            type="button"
+            className="party-save"
+            disabled={busy || act.disabled}
+            onClick={act.onClick}
+          >
             {act.label}
           </button>
           {act.detail && <span className="ledger-progress">{act.detail}</span>}
