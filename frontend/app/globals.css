@@ -1618,7 +1618,9 @@ img.user-avatar-img {
   margin-top: 16px;
 }
 
+/* The button sits beside the box, not beside the preview under it. */
 .social-add {
+  align-items: flex-start;
   margin: 0 0 24px;
 }
 
@@ -5500,6 +5502,160 @@ button.link:disabled {
   padding-inline: 8px;
 }
 
+/* Combine Parties, on Social: a row per friend or request; the sender's merge opens under its row,
+   one block per conflict with the two parties side by side, stacked on a phone. */
+.combine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.combine-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.combine-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.combine-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.combine-merge {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.combine {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.combine-title {
+  padding: 0;
+  margin: 0 0 8px;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.combine-faces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.combine-faces > li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* A seat or a difficulty the other party does not have: the difference the sender is choosing between. */
+.combine-faces > li.is-only-here .tile-name,
+.combine-side .is-only-here {
+  color: var(--accent);
+}
+
+/* A character left in two parties: their face beside where they could stay. */
+.combine-clash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+/* A seat a waiting request takes out of yours, a line of its own under the summary. */
+.combine-takes {
+  flex-basis: 100%;
+}
+
+.combine-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 4px;
+}
+
+.combine-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.combine-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.combine-side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+/* A Discord username box with whose account it reaches under it: components/discord-lookup.tsx.
+   The preview keeps its height while empty, so the buttons beside or below do not jump as it fills. */
+.discord-lookup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.discord-lookup .split-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.discord-lookup-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.discord-lookup-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.invite-dialog .discord-lookup {
+  margin-bottom: 12px;
+}
+
 /* The name's own label. The board is a grid of controls with no headings, so without it the box
    is the one thing on the row whose contents are not self-evident. */
 .person-name-field {
@@ -5532,6 +5688,11 @@ button.link:disabled {
 .discord-avatar.is-sm {
   width: 18px;
   height: 18px;
+}
+
+.discord-avatar.is-lg {
+  width: 40px;
+  height: 40px;
 }
 
 .discord-avatar img {
@@ -7730,8 +7891,7 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
 
    ONE SIZE for every row on a settlement card, an offset's and a share's alike: they are the same
    kind of row, and the shares were the half of a section that could not be read. */
-.ledger-drop-head .loot-icon,
-.ledger-entry > .ledger-fold > .loot-shares .loot-icon {
+.ledger-drop-head .loot-icon {
   width: 32px;
   height: 32px;
   image-rendering: auto;

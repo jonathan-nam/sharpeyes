@@ -1,14 +1,10 @@
 // What every pool adds up to: who you still owe, and who still owes you.
 //
-// NOT a second splitter. Every meso below is splitOf()'s, which is splitDrop()'s. This file only
-// decides which SIDE of an unpaid share you are on, and adds up the ones that are yours. If a
-// number here disagrees with the one on a drop's own row, this file is wrong, because that row is
-// reading the same function.
+// NOT a second splitter: every figure is splitOf()'s. This file only decides which SIDE of an
+// unpaid share you are on and adds up yours.
 //
-// One unpaid share is one transfer that has not happened. A share is between two SEATS; the wallet
-// is between two PEOPLE, so shares are folded together by whoever owns the seat on the other side.
-// That fold is the whole reason the wallet is worth having: Pinewick and Pinewick2 are one
-// debt to Chris, and settling it is one transfer rather than two.
+// A share is between two SEATS; the wallet is between two PEOPLE, so shares are folded together by
+// whoever owns the seat on the other side.
 
 import { formatMesos } from "./drop-split";
 import { splitOf } from "./loot";
@@ -19,9 +15,7 @@ import type { Party, PartyMember } from "@/types/party";
 /**
  * A seat is yours when it links to your roster. The config's own character always is.
  *
- * Exported because the Drop Log asks the same question for a different purpose: which unpaid shares
- * this account could do anything about. Two spellings of "mine" would drift, and the two screens
- * would disagree about whose debt a row is.
+ * Shared with the Drop Log so the two screens cannot disagree about whose debt a row is.
  */
 export function isMine(member: PartyMember): boolean {
   return member.characterId !== null;
@@ -35,7 +29,6 @@ export type WalletLine = {
   partyId: string;
   lootId: string;
   name: string;
-  /** The drop's own art, so a list of shares reads like every other list of drops on this account. */
   iconUrl: string | null;
   bossKey: string | null;
   droppedOn: string;
@@ -44,7 +37,7 @@ export type WalletLine = {
   direction: Direction;
   /** A member bought it off the party rather than selling it, so no sale can be named. */
   bought: boolean;
-  /** The seat on your side, and the seat on theirs. Names, because that is what the game knows. */
+  /** The seat on your side, and the seat on theirs, by name. */
   mine: string;
   theirs: string;
   /**
@@ -53,9 +46,8 @@ export type WalletLine = {
    */
   theirsId: string;
   /**
-   * The seat the payout row is against, which is the one being PAID: theirs when you owe, yours
-   * when they owe you. Not interchangeable with theirsId, and settling by that instead would mark
-   * the wrong seat paid on every line you are owed.
+   * The seat being PAID: theirs when you owe, yours when they owe you. Settle by this, not by
+   * theirsId, or every line you are owed marks the wrong seat paid.
    */
   payeeId: string;
   /** What has to move: what the sender lists, before the receiver's Auction House fee. */
@@ -69,26 +61,20 @@ export type WalletLine = {
 /**
  * The same pair of totals in each unit a sale can be priced in.
  *
- * TWO SUMS, NEVER ONE. There is no rate anywhere in this app, so there is no honest way to add
- * $1,000 to 600b, and the sum that looks like an answer would be the wrong number this repo exists
- * to refuse. A screen shows whichever of these is non-zero, or both.
+ * TWO SUMS, NEVER ONE. There is no exchange rate in this app, so dollars and mesos are never added.
  */
 export type Owings = { owe: number; owed: number; net: number };
 
 const noOwings = (): Owings => ({ owe: 0, owed: 0, net: 0 });
 
-// Coupon debt is NOT here, and no longer has a meso figure anywhere. It is a count of pieces:
-// coupons are single-trade, so only the holder can sell them and what they fetched is not knowable
-// from this side. A count cannot be added to a wallet of mesos, so it is stated in its own unit on
-// the Settlement Ledger. See lib/settlement.ts.
+// Coupon debt is NOT here: it is a count of pieces, not mesos. See lib/settlement.ts.
 
 export type Counterparty = {
   key: string;
   name: string;
   /**
-   * False when no person owns that character yet. Then this row is a CHARACTER, not a person, and
-   * the same human may appear twice under two names. Saying so beats quietly showing two debts as
-   * if they were owed to two people.
+   * False when no person owns that character yet. Then this row is a CHARACTER, and the same human
+   * may appear twice under two names.
    */
   attributed: boolean;
   owe: number;
@@ -109,9 +95,8 @@ export type Wallet = {
   /** The same three figures for shares of a sale made in real money. See Owings. */
   usd: Owings;
   /**
-   * Sold drops whose split cannot be read at all, because a seat it names is gone. Counted rather
-   * than skipped: a wallet that quietly leaves out a debt is the wrong number this repo exists to
-   * prevent, and a total with "2 unreadable" beside it is at least honest about being short.
+   * Sold drops whose split cannot be read, because a seat it names is gone. Counted rather than
+   * skipped, so a short total says it is short.
    */
   unreadable: number;
   /**
@@ -140,11 +125,9 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
     const party = partyById.get(pool.partyId);
 
     for (const loot of pool.loot) {
-      // Not sold: the mesos do not exist yet, so nobody owes them.
       if (loot.soldAt === null) continue;
 
-      // Without the party there are no seats to read a share against, which is the same position
-      // splitOf refuses from. Counted for the same reason.
+      // Without the party there are no seats to read a share against.
       const split = party ? splitOf(loot, party.seats) : null;
       if (!party || split === null) {
         unreadable += 1;
@@ -171,8 +154,7 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
         const theirs = sellerMine ? member : seller;
         const mine = sellerMine ? seller : member;
 
-        // A person if you have said whose character it is, otherwise the character itself. Two
-        // unattributed names stay two rows: merging them would be a guess about who plays what.
+        // A person if attributed, otherwise the character. Never merge unattributed names.
         const key = theirs.personId
           ? `person:${theirs.personId}`
           : `character:${theirs.name.toLowerCase()}`;
@@ -217,12 +199,8 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
   }
 
   const counterparties = [...groups.values()].sort(
-    // By how much is outstanding either way, not by the net: a pair who owe each other 5b are the
-    // relationship to look at first even when it nets to nothing.
-    //
-    // Mesos first and dollars as the tie-break, rather than one key made of both. Adding the two
-    // would be the rate this app refuses to invent, and it would be doing it where nobody could see
-    // it: an order is not a figure, so a wrong one is never caught.
+    // By gross outstanding, not net. Mesos first, dollars as the tie-break: never one key made of
+    // both, which would need an exchange rate.
     (a, b) =>
       b.owe + b.owed - (a.owe + a.owed) ||
       b.usd.owe + b.usd.owed - (a.usd.owe + a.usd.owed) ||

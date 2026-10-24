@@ -214,15 +214,18 @@ export function CouponTotal({
   const pieces = sales.reduce((sum, sale) => sum + sale.pieces, 0);
   const mesos = sales.reduce((sum, sale) => sum + sale.mesos, 0);
   return (
-    <ul className="loot-shares">
-      <li className="loot-sale-row">
-        <DropIcon url={iconUrl} />
-        <div className="ledger-offset-text">
-          <span className="loot-share-name">{`${formatPieces(pieces)} ${couponName ?? "coupons"}`}</span>
-          <span className="ledger-offset-sub">
-            <span className="ledger-amount">{formatMesos(mesos, true)}</span>
-            {meta && <span className="loot-meta">{meta}</span>}
-          </span>
+    // A drop row's shape, so it lines up with the ShareRows above it and wears their icon size.
+    <ul className="ledger-queue">
+      <li className="ledger-drop">
+        <div className="ledger-drop-head is-stacked">
+          <DropIcon url={iconUrl} />
+          <div className="ledger-offset-text">
+            <span className="loot-name">{`${formatPieces(pieces)} ${couponName ?? "coupons"}`}</span>
+            <span className="ledger-offset-sub">
+              <span className="ledger-amount">{formatMesos(mesos, true)}</span>
+              {meta && <span className="loot-meta">{meta}</span>}
+            </span>
+          </div>
         </div>
       </li>
     </ul>

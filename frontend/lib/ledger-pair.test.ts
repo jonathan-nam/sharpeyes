@@ -198,11 +198,11 @@ describe("one section for what is unsettled", () => {
     expect(ledger).toContain('<img className="loot-icon" src={apiAssetUrl(url)} alt="" />');
     expect(ledger).toContain("iconUrl: line.iconUrl,");
     expect(wallet).toContain("iconUrl: loot.iconUrl,");
-    // One rule over both lists, so neither can drift: an offset's row and a share's are the same
-    // kind of row, and a sale row under the same heading is one too.
-    const both = rule(
-      ".ledger-drop-head .loot-icon,\n.ledger-entry > .ledger-fold > .loot-shares .loot-icon",
-    );
+    // One rule over every row, so none can drift: an offset's row and a share's are the same kind of
+    // row, and the coupon sale under the same heading is drawn as one too.
+    const coupons = ledger.slice(ledger.indexOf("export function CouponTotal("));
+    expect(coupons.slice(0, coupons.indexOf("\n}\n"))).toContain('className="ledger-drop-head');
+    const both = rule(".ledger-drop-head .loot-icon");
     expect(both).toMatch(/width:\s*32px/);
     expect(both).toMatch(/image-rendering:\s*auto/);
   });

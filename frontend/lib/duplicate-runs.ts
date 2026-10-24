@@ -2,12 +2,11 @@ import type { PartyLootPool } from "@/types/loot";
 import type { Party } from "@/types/party";
 
 /**
- * Drops in YOUR OWN parties that a shared party already records: a character of yours seated in both,
- * same boss, same week. A character clears a boss once a week, so both books are describing one run, and the owner's
- * copy is the one that counts (decided 2026-10-21). Keyed by loot id, naming whose party has it.
+ * Drops in YOUR OWN parties that a shared party already records: a character of yours seated in
+ * both, same boss, same week. A character clears a boss once a week, so both books describe one
+ * run, and the owner's copy counts. Keyed by loot id, naming whose party has it.
  *
- * Only weeks the shared party logged something in. A week only your copy has is the only record of
- * it, and dropping that would lose a drop rather than a duplicate.
+ * Only weeks the shared party logged something in, so a week only your copy has is never dropped.
  */
 export function loggedTwice(
   own: { parties: Party[]; pools: PartyLootPool[] },

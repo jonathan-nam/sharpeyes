@@ -73,6 +73,7 @@ private fun unlinkSide(
     revokeSeats(owner, account)
     Person.update({ (Person.userId eq owner) and (Person.linkedUserId eq account) }) {
         it[linkedUserId] = null
+        it[sharedFrom] = null
         it[updatedAt] = Clock.System.now()
     }
 }

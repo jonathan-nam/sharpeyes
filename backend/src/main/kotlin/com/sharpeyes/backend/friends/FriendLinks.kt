@@ -31,11 +31,14 @@ internal fun linkedTo(
  * Clearly them is the ONE unlinked person [owner] has filed any of [other]'s characters under. Two
  * such people is a question only [owner] can answer, so neither is picked and a new person is made:
  * People then shows the overlap rather than this guessing which one was right.
+ *
+ * [pinned] is the person [owner] named, which wins while it is still theirs and still unlinked.
  */
 internal fun linkSide(
     owner: String,
     other: String,
     now: Instant,
+    pinned: Uuid? = null,
 ) {
     if (linkedTo(owner, other)) return
     val theirs =
@@ -56,7 +59,8 @@ internal fun linkSide(
             .mapTo(mutableSetOf()) { it[PersonCharacter.personId] }
     val name = senderNameFor(other) ?: discordUsernameOf(other) ?: "Friend"
     val person =
-        filed.singleOrNull()
+        pinned?.takeIf { it in unlinked }
+            ?: filed.singleOrNull()
             ?: unlinked.entries
                 .firstOrNull { it.value.equals(name, ignoreCase = true) }
                 ?.key
@@ -99,7 +103,7 @@ private fun freeName(
         ?: generateSequence(2) { it + 1 }.map { "${wanted.first()} $it" }.first { it.lowercase() !in taken }
 }
 
-/** Binds every seat that already names one of [userId]'s characters, in parties of accounts linked to them. */
+/** Binds seats naming [userId]'s characters in linked accounts' parties. See seatInLinkedParties. */
 internal fun seatCharacters(userId: String) {
     Characters
         .selectAll()

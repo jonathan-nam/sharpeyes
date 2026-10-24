@@ -35,6 +35,24 @@ data class FriendView(
     val image: String? = null,
 )
 
+/** Who a typed Discord username is, for the preview beside the box. */
+@Serializable
+data class DiscordLookupResponse(
+    val username: String,
+    val image: String?,
+    /** Their main character, which is how the bell will name them. */
+    val name: String?,
+    val spriteImgUrl: String?,
+    /** The name is your own. */
+    val you: Boolean,
+)
+
+/** Null when nobody here has the name. */
+@Serializable
+data class DiscordLookupAnswer(
+    val found: DiscordLookupResponse?,
+)
+
 @Serializable
 data class SocialResponse(
     /** Yours, so you can tell a friend what to type. Null until you sign in with Discord. */
@@ -55,10 +73,30 @@ internal sealed interface SendOutcome {
 
     /** They had already asked you, so asking back is accepting. */
     data object Accepted : SendOutcome
+
+    /** The person named is not one of yours. */
+    data object NoSuchPerson : SendOutcome
+
+    /** The person named already has an account. */
+    data object PersonLinked : SendOutcome
 }
+
+/** The refusal for each outcome that sends nothing, null for the two that did. */
+internal fun SendOutcome.refusal(): Pair<HttpStatusCode, Refusal>? =
+    when (this) {
+        SendOutcome.Unknown ->
+            HttpStatusCode.NotFound to Refusal("No one here has that Discord name. Check the spelling.")
+        SendOutcome.Yourself ->
+            HttpStatusCode.Conflict to Refusal("That is your own Discord name. Enter a friend's.")
+        SendOutcome.AlreadyFriends -> HttpStatusCode.Conflict to Refusal("You're already friends.")
+        SendOutcome.NoSuchPerson -> HttpStatusCode.NotFound to Refusal("That person is gone. Reload.")
+        SendOutcome.PersonLinked -> HttpStatusCode.Conflict to Refusal("They're already linked.")
+        SendOutcome.Sent, SendOutcome.Accepted -> null
+    }
 
 fun Route.friendRoutes() {
     get { respondSocial() }
+    get("/lookup") { lookupRoute() }
     post("/requests") { sendRoute() }
     post("/requests/{id}/accept") { acceptRoute() }
     delete("/requests/{id}") { dropRoute() }
@@ -76,6 +114,21 @@ private suspend fun RoutingContext.respondSocial() {
     )
 }
 
+/**
+ * GET /api/friends/lookup?username=. Nobody by that name is an answer, not an error: it is asked
+ * as the name is typed, and a 404 per keystroke would be logged as a failure each time.
+ */
+private suspend fun RoutingContext.lookupRoute() {
+    val (userId, email) = call.principalIdAndEmail()
+    val username = call.request.queryParameters["username"].orEmpty()
+    val found =
+        dbQuery {
+            ensureUser(userId, email)
+            lookupFor(userId, username)
+        }
+    call.respond(DiscordLookupAnswer(found))
+}
+
 /** POST /api/friends/requests. Answers with the whole page, a request back being an acceptance. */
 private suspend fun RoutingContext.sendRoute() {
     val (userId, email) = call.principalIdAndEmail()
@@ -85,14 +138,8 @@ private suspend fun RoutingContext.sendRoute() {
             ensureUser(userId, email)
             sendFriendRequest(userId, body.username, Clock.System.now()) to socialFor(userId)
         }
-    when (outcome) {
-        SendOutcome.Unknown ->
-            call.refuse(HttpStatusCode.NotFound, Refusal("No one here has that Discord name. Check the spelling."))
-        SendOutcome.Yourself ->
-            call.refuse(HttpStatusCode.Conflict, Refusal("That is your own Discord name. Enter a friend's."))
-        SendOutcome.AlreadyFriends -> call.refuse(HttpStatusCode.Conflict, Refusal("You're already friends."))
-        SendOutcome.Sent, SendOutcome.Accepted -> call.respond(social)
-    }
+    val refusal = outcome.refusal()
+    if (refusal != null) call.refuse(refusal.first, refusal.second) else call.respond(social)
 }
 
 private suspend fun RoutingContext.acceptRoute() =

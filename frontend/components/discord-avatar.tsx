@@ -4,8 +4,8 @@ export function DiscordAvatar({
   size = "md",
 }: {
   image: string | null | undefined;
-  /** md is the People row's 28px; sm sits inline with a line of text. */
-  size?: "sm" | "md";
+  /** md is the People row's 28px; sm sits inline with a line of text; lg previews an account. */
+  size?: "sm" | "md" | "lg";
 }) {
   if (!image) return null;
   return (

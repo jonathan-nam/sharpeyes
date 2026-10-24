@@ -11,6 +11,7 @@ import com.sharpeyes.backend.invites.inviteRoutes
 import com.sharpeyes.backend.invites.joinRoutes
 import com.sharpeyes.backend.notifications.notificationRoutes
 import com.sharpeyes.backend.pages.pageRoutes
+import com.sharpeyes.backend.parties.combineRoutes
 import com.sharpeyes.backend.parties.partyInviteRoutes
 import com.sharpeyes.backend.parties.partyRoutes
 import com.sharpeyes.backend.parties.peopleRoutes
@@ -196,6 +197,11 @@ private fun Route.socialRoutes() {
         // The party gains a seat, so its members' screens move. See TellLinked.kt.
         tellLinkedOnWrite(Topic.PARTY)
         partyInviteRoutes()
+    }
+    route("/api/party-combines") {
+        // A combine retires a party and moves who reads which drops. See CombineParties.kt.
+        tellLinkedOnWrite(Topic.PARTY, Topic.SETTLEMENT)
+        combineRoutes()
     }
     route("/api/events") { eventRoutes() }
     // A member's writes into the owner's book. See SharedBookWrites.kt.

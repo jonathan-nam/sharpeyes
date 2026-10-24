@@ -7,6 +7,7 @@ import { spriteUrl } from "@/lib/api";
 import { useCarousel } from "@/lib/use-carousel";
 import { ConfirmAct } from "@/components/confirm-act";
 import { DiscordAvatar } from "@/components/discord-avatar";
+import { LinkAccount } from "@/components/link-account";
 import { Tooltip } from "@/components/tooltip";
 import {
   type PersonDraft,
@@ -44,6 +45,8 @@ export function PeopleBoard({
   onRename,
   onRemove,
   onInvite,
+  onLink,
+  onCancelLink,
   onUnlink,
 }: {
   people: PersonDraft[];
@@ -65,6 +68,9 @@ export function PeopleBoard({
   onRename: (index: number, name: string) => void;
   onRemove: (index: number) => void;
   onInvite: (personId: string) => void;
+  /** Asks an existing account to be this person. Resolves to why it was refused, or null once sent. */
+  onLink: (personId: string, username: string) => Promise<string | null>;
+  onCancelLink: (requestId: string) => void;
   /** Takes the account off a person, and their seats in your parties with it. */
   onUnlink: (personId: string) => void;
 }) {
@@ -163,6 +169,16 @@ export function PeopleBoard({
                           {inviting === row.id ? "Generating..." : "Generate Invite Link"}
                         </button>
                       </Tooltip>
+                    )}
+                    {!row.linked && row.id != null && (
+                      <LinkAccount
+                        person={row.name}
+                        request={row.request ?? null}
+                        busy={busy}
+                        unsaved={unsaved}
+                        onSend={(username) => onLink(row.id as string, username)}
+                        onCancel={onCancelLink}
+                      />
                     )}
                     {/* Only where there is an account to take off. A link is a bearer token, so one
                     that reached the wrong person is taken back here rather than being permanent. */}

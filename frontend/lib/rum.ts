@@ -91,6 +91,10 @@ export function markSoftNavigation(path: string): void {
 /** Also allowed by the backend explicitly (VitalsRoutes.kt). */
 const AUTH_READY = "auth-ready";
 
+/** The Drop Log's money worked out in the browser, and the server's fetched. See lib/money-shadow.ts. */
+export const MONEY_BROWSER = "money-browser";
+export const MONEY_FETCH = "money-fetch";
+
 let reportedAuthReady = false;
 
 /**

@@ -191,6 +191,9 @@ class AccountInviteTest {
     @Test
     fun `a second config on the same boss is named rather than dropped`() {
         transaction {
+            // Data written before V100 refused it, which a link must still carry safely: the
+            // trigger is off for this transaction only.
+            exec("SET LOCAL session_replication_role = replica")
             val first = addCharacter(senderId, "tidelark", position = 0)
             val second = addCharacter(senderId, "plumtwig", position = 1)
             attribute("Owen", "Pinewick")
