@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DiscordLookup, reachesSomebody, useDiscordLookup } from "@/components/discord-lookup";
+import { DiscordLookup, mayAsk, useDiscordLookup } from "@/components/discord-lookup";
 import { Tooltip } from "@/components/tooltip";
 import type { PendingLink } from "@/types/party";
 
@@ -127,7 +127,11 @@ function LinkAccountDialog({
           />
           {error && <p className="routine-error">{error}</p>}
           <div className="invite-actions">
-            <button type="submit" className="party-save" disabled={busy || !reachesSomebody(state)}>
+            <button
+              type="submit"
+              className="party-save"
+              disabled={busy || !mayAsk(username, state)}
+            >
               Send Request
             </button>
             <button type="button" className="party-cancel" onClick={onClose}>
