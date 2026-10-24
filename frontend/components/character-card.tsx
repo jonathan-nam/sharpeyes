@@ -1,6 +1,7 @@
 "use client";
 
 import type { DragEvent, ReactNode } from "react";
+import { Tooltip } from "@/components/tooltip";
 import { spriteUrl } from "@/lib/api";
 import type { Character } from "@/types/character";
 
@@ -47,17 +48,20 @@ export function CharacterCard({
           }}
         />
       )}
-      <button
-        type="button"
-        className={`tile-star character-card-star${isMain ? " is-main" : ""}`}
-        aria-label={isMain ? `${character.name} is your main` : `Make ${character.name} your main`}
-        aria-pressed={isMain}
-        title={isMain ? "Your Main" : "Set as Main"}
-        disabled={starBusy}
-        onClick={onStar}
-      >
-        {isMain ? "★" : "☆"}
-      </button>
+      <Tooltip text={isMain ? "Your Main" : "Set as Main"}>
+        <button
+          type="button"
+          className={`tile-star character-card-star${isMain ? " is-main" : ""}`}
+          aria-label={
+            isMain ? `${character.name} is your main` : `Make ${character.name} your main`
+          }
+          aria-pressed={isMain}
+          disabled={starBusy}
+          onClick={onStar}
+        >
+          {isMain ? "★" : "☆"}
+        </button>
+      </Tooltip>
       {character.spriteImgUrl ? (
         <img className="tile-sprite" src={spriteUrl(character.spriteImgUrl)} alt="" />
       ) : (

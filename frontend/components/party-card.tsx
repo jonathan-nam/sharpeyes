@@ -21,6 +21,7 @@ import { partyHref } from "@/lib/party-path";
 import { PartyAccounts } from "@/components/party-accounts";
 import { ChangedBy } from "@/components/changed-by";
 import { ConfirmAct } from "@/components/confirm-act";
+import { Tooltip } from "@/components/tooltip";
 
 // One config: who ran this boss this week, and what its pool is up to.
 //
@@ -266,16 +267,17 @@ export function PartyCard({
             Without a handler it is still SHOWN, just not a control. A past week has an answer
             worth reading; what it does not have is one you may change from here. */}
         {onToggleClear ? (
-          <button
-            type="button"
-            className={`changed-by-anchor party-clear is-${clearClass(clear.cleared)}`}
-            disabled={busy}
-            onClick={() => onToggleClear(nextClear(clear.cleared))}
-            title={clear.cleared === null ? "No capture yet" : undefined}
-          >
-            {clearStateLabel(clear.cleared)}
-            {clearedBy}
-          </button>
+          <Tooltip text={clear.cleared === null ? "No capture yet" : undefined}>
+            <button
+              type="button"
+              className={`changed-by-anchor party-clear is-${clearClass(clear.cleared)}`}
+              disabled={busy}
+              onClick={() => onToggleClear(nextClear(clear.cleared))}
+            >
+              {clearStateLabel(clear.cleared)}
+              {clearedBy}
+            </button>
+          </Tooltip>
         ) : (
           <span
             className={`changed-by-anchor party-clear is-${clearClass(clear.cleared)} is-readonly`}
