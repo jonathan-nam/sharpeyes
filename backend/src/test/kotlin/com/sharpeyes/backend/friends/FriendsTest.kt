@@ -191,6 +191,21 @@ class FriendsTest {
     }
 
     @Test
+    fun `a typed name is looked up the way a request matches it, and shows who it will reach`() {
+        transaction {
+            discordAccount(wren, "wrenb", "orchid88")
+            discordAccount(owen, "owendiscord", "Pinewick")
+
+            val found = lookupFor(wren, " @OwenDiscord ")!!
+            assertEquals("owendiscord", found.username)
+            assertEquals("Pinewick", found.name)
+            assertEquals(false, found.you)
+            assertEquals(true, lookupFor(wren, "wrenb")!!.you)
+            assertNull(lookupFor(wren, "nobody-by-this-name"))
+        }
+    }
+
+    @Test
     fun `nobody, or yourself, is refused`() {
         transaction {
             discordAccount(wren, "wrenb", "orchid88")

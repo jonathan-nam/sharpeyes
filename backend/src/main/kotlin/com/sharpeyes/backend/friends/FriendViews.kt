@@ -29,6 +29,26 @@ private fun requests(
     .where { mine eq userId }
     .orderBy(FriendRequest.createdAt, SortOrder.DESC)
 
+/**
+ * The account a typed Discord username is, as a request to it would show it, so the sender sees who
+ * they are about to ask. Null when nobody here has the name. Discord shows the same face to anyone
+ * who types the name, so this tells nothing Discord does not.
+ */
+internal fun lookupFor(
+    userId: String,
+    username: String,
+): DiscordLookupResponse? {
+    val account = accountNamed(username) ?: return null
+    val (main, sprite) = faceOf(account)
+    return DiscordLookupResponse(
+        username = discordUsernameOf(account) ?: username.trim().removePrefix("@"),
+        image = imageOf(account),
+        name = main,
+        spriteImgUrl = sprite,
+        you = account == userId,
+    )
+}
+
 /** Must be called from inside a `transaction { }` block. */
 internal fun socialFor(userId: String): SocialResponse {
     val names = Person.selectAll().where { Person.userId eq userId }.associate { it[Person.id] to it[Person.name] }

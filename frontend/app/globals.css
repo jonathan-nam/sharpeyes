@@ -1618,7 +1618,9 @@ img.user-avatar-img {
   margin-top: 16px;
 }
 
+/* The button sits beside the box, not beside the preview under it. */
 .social-add {
+  align-items: flex-start;
   margin: 0 0 24px;
 }
 
@@ -5496,8 +5498,7 @@ button.link:disabled {
 }
 
 /* Each control takes the column, so neither is sized by its own word length. */
-.person-meta-actions > button,
-.link-account > button {
+.person-meta-actions > button {
   padding-inline: 8px;
 }
 
@@ -5623,11 +5624,36 @@ button.link:disabled {
   background: var(--surface);
 }
 
-/* The Discord username box, stacked like the buttons it replaces. */
-.link-account {
+/* A Discord username box with whose account it reaches under it: components/discord-lookup.tsx.
+   The preview keeps its height while empty, so the buttons beside or below do not jump as it fills. */
+.discord-lookup {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+}
+
+.discord-lookup .split-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.discord-lookup-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+}
+
+.discord-lookup-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.invite-dialog .discord-lookup {
+  margin-bottom: 12px;
 }
 
 /* The name's own label. The board is a grid of controls with no headings, so without it the box
@@ -5662,6 +5688,11 @@ button.link:disabled {
 .discord-avatar.is-sm {
   width: 18px;
   height: 18px;
+}
+
+.discord-avatar.is-lg {
+  width: 40px;
+  height: 40px;
 }
 
 .discord-avatar img {

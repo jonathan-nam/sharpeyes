@@ -128,10 +128,9 @@ export default function PeoplePage() {
     }
   }
 
-  /** Sends a friend request naming this person. True when it went, so the box can close. */
-  async function linkPerson(personId: string, username: string): Promise<boolean> {
+  /** Sends a friend request naming this person. Why it was refused, said in its dialog, or null. */
+  async function linkPerson(personId: string, username: string): Promise<string | null> {
     setBusy(true);
-    setError(null);
     try {
       const saved = await apiFetch<Person[]>(
         `${PEOPLE_KEY}/${encodeURIComponent(personId)}/link`,
@@ -145,10 +144,9 @@ export default function PeoplePage() {
       invalidate("/api/parties");
       invalidate("/api/friends");
       friendsChanged();
-      return true;
+      return null;
     } catch (e) {
-      setError(failureText(e, "Couldn't send that. Try again."));
-      return false;
+      return failureText(e, "Couldn't send that. Try again.");
     } finally {
       setBusy(false);
     }
