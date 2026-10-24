@@ -2,16 +2,24 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthField, AuthForm } from "@/components/auth-form";
 import { SignInButton } from "@/components/sign-in-button";
 import { SignedOutHero } from "@/components/signed-out-hero";
 import { authClient, PASSWORD_LOGIN } from "@/lib/auth-client";
+import { useAuth } from "@/lib/use-auth";
 
 export default function SignIn() {
   const router = useRouter();
+  const { isSignedIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  // A replayed Discord callback (a phone reloading it after the first one signed in) lands here with
+  // ?error=, although the session it made is live.
+  useEffect(() => {
+    if (isSignedIn) router.replace("/");
+  }, [isSignedIn, router]);
 
   async function submit() {
     const { error } = await authClient.signIn.email({ email, password });
