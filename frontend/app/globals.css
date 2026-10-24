@@ -8381,6 +8381,14 @@ a.notification-sentence:hover {
   }
 }
 
+/* Every character card the same height, sized to hold one boss without scrolling; a card with more
+   scrolls inside itself rather than pushing its row taller than its neighbours. */
+.planner-grid > .planner-character {
+  box-sizing: border-box;
+  height: 460px;
+  overflow-y: auto;
+}
+
 .planner-heading {
   margin: 0;
   font-size: var(--text-lg);
