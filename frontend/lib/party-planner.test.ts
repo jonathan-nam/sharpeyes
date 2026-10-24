@@ -24,8 +24,6 @@ const want = (personId: string, strength: number, extra: Partial<Want> = {}): Wa
   ...extra,
 });
 
-const MIN_CUT = { maxMinutes: 30 };
-
 /** Each party as its members' strengths, strongest first, parties in a stable order. */
 const shape = (plan: Plan, wants: Want[]) => {
   const strength = new Map(wants.map((w) => [w.id, w.strength]));
@@ -65,7 +63,7 @@ describe("planParties", () => {
     // The Hard Limbo report: a soloer at Any Size and a character doing no damage.
     const solo = want("a", SOLO);
     const passenger = want("b", 0);
-    const plan = planParties([solo, passenger], MIN_CUT);
+    const plan = planParties([solo, passenger]);
     expect(plan.unplaced).toEqual([]);
     const [carry] = plan.parties;
     expect(carry?.seats.map((s) => s.shares)).toEqual([1, 0]);
@@ -75,7 +73,7 @@ describe("planParties", () => {
   it("never has a soloer set to Solo carry anybody", () => {
     const solo = want("a", SOLO, { maxParty: 1 });
     const weak = want("b", 20);
-    const plan = planParties([solo, weak], MIN_CUT);
+    const plan = planParties([solo, weak]);
     expect(shape(plan, [solo, weak])).toEqual([[SOLO]]);
     expect(plan.unplaced).toEqual([{ wantId: weak.id, reason: "alone" }]);
   });
@@ -84,7 +82,7 @@ describe("planParties", () => {
     const soloA = want("a", SOLO);
     const soloB = want("b", SOLO);
     const pair = [want("c", 30), want("d", 30)];
-    const plan = planParties([soloA, soloB, ...pair], MIN_CUT);
+    const plan = planParties([soloA, soloB, ...pair]);
     expect(shape(plan, [soloA, soloB, ...pair])).toEqual([[SOLO], [SOLO], [30, 30]]);
   });
 
@@ -95,7 +93,7 @@ describe("planParties", () => {
     const otherHost = want("pellmoor", SOLO);
     const anyone = [want("quillsby", 0), want("ravensoot", 0), want("ambergast", 0)];
     const stuck = want("pellmoor", 0);
-    const plan = planParties([onlyHost, otherHost, ...anyone, stuck], MIN_CUT);
+    const plan = planParties([onlyHost, otherHost, ...anyone, stuck]);
     expect(plan.unplaced).toEqual([]);
     const withOnlyHost = plan.parties.find((p) => p.seats[0]?.wantId === onlyHost.id);
     expect(withOnlyHost?.seats.map((s) => s.wantId)).toContain(stuck.id);
@@ -104,13 +102,13 @@ describe("planParties", () => {
   it("spreads passengers over the soloers before doubling any up", () => {
     const solos = [want("a", SOLO), want("b", SOLO)];
     const riders = [want("c", 0), want("d", 0)];
-    const plan = planParties([...solos, ...riders], MIN_CUT);
+    const plan = planParties([...solos, ...riders]);
     expect(plan.parties.map((p) => p.seats.length)).toEqual([2, 2]);
   });
 
   it("makes as many parties as clear, the most loot and the smallest runs", () => {
     const wants = [want("a", 50), want("b", 40), want("c", 20), want("d", 10)];
-    expect(shape(planParties(wants, MIN_CUT), wants)).toEqual([
+    expect(shape(planParties(wants), wants)).toEqual([
       [50, 10],
       [40, 20],
     ]);
@@ -118,61 +116,57 @@ describe("planParties", () => {
 
   it("places everybody before it makes another party", () => {
     const wants = [want("a", 40), want("b", 30), want("c", 30), want("d", 0)];
-    const plan = planParties(wants, MIN_CUT);
+    const plan = planParties(wants);
     expect(plan.unplaced).toEqual([]);
     expect(plan.parties).toHaveLength(1);
   });
 
   it("splits by strength, so a member doing nothing takes nothing", () => {
     const wants = [want("a", 40), want("b", 20), want("c", 0)];
-    const [party] = planParties(wants, MIN_CUT).parties;
+    const [party] = planParties(wants).parties;
     expect(party?.seats.map((s) => s.shares)).toEqual([2, 1, 0]);
     expect(party?.minutes).toBe(30);
   });
 
   it("never seats two of one person's characters together", () => {
     const wants = [want("a", 30), want("a", 30)];
-    const plan = planParties(wants, MIN_CUT);
+    const plan = planParties(wants);
     expect(plan.parties).toEqual([]);
     expect(plan.unplaced.map((u) => u.reason)).toEqual(["alone", "alone"]);
   });
 
   it("holds to the boss's size and to each character's own", () => {
     const four = ["a", "b", "c", "d"].map((p) => want(p, 15, { bossKey: "limbo" }));
-    expect(planParties(four, MIN_CUT).parties).toEqual([]);
+    expect(planParties(four).parties).toEqual([]);
 
     const capped = [want("a", 30, { maxParty: 2 }), want("b", 15), want("c", 15)];
-    expect(planParties(capped, MIN_CUT).parties).toEqual([]);
+    expect(planParties(capped).parties).toEqual([]);
   });
 
   it("never seats two Lynns together", () => {
     const lynns = [want("a", 30, { job: "Lynn" }), want("b", 30, { job: "Lynn" })];
-    expect(planParties(lynns, MIN_CUT).parties).toEqual([]);
+    expect(planParties(lynns).parties).toEqual([]);
     const mixed = [want("a", 30, { job: "Lynn" }), want("b", 30, { job: "Adele" })];
-    expect(planParties(mixed, MIN_CUT).parties).toHaveLength(1);
+    expect(planParties(mixed).parties).toHaveLength(1);
   });
 
   it("never has a soloing Lynn carry another Lynn", () => {
-    const plan = planParties(
-      [want("a", SOLO, { job: "Lynn" }), want("b", 0, { job: "Lynn" })],
-      MIN_CUT,
-    );
+    const plan = planParties([want("a", SOLO, { job: "Lynn" }), want("b", 0, { job: "Lynn" })]);
     expect(plan.unplaced.map((u) => u.reason)).toEqual(["alone"]);
   });
 
   it("keeps apart the people asked to be kept apart", () => {
     const wants = [want("a", 30), want("b", 30), want("c", 30)];
-    const plan = planParties(wants, { maxMinutes: 30, apart: [["a", "b"]] });
+    const plan = planParties(wants, { apart: [["a", "b"]] });
     const people = plan.parties.map((p) => p.seats.map((s) => s.personId));
     expect(people).toHaveLength(1);
     expect(people[0]).toContain("c");
     expect(people[0]).not.toEqual(expect.arrayContaining(["a", "b"]));
   });
 
-  it("refuses a party slower than the pace, rather than bending it", () => {
-    const wants = [want("a", 30), want("b", 30)];
-    expect(planParties(wants, { maxMinutes: 20 }).parties).toEqual([]);
-    expect(planParties(wants, { maxMinutes: 30 }).parties).toHaveLength(1);
+  it("refuses a party that cannot clear inside the thirty minutes", () => {
+    expect(planParties([want("a", 30), want("b", 29)]).parties).toEqual([]);
+    expect(planParties([want("a", 30), want("b", 30)]).parties).toHaveLength(1);
   });
 
   it("never mixes worlds or modes", () => {
@@ -181,29 +175,29 @@ describe("planParties", () => {
       want("b", 30, { world: "Hyperion" }),
       want("c", 30, { difficulty: "NORMAL" }),
     ];
-    expect(planParties(wants, MIN_CUT).parties).toEqual([]);
+    expect(planParties(wants).parties).toEqual([]);
   });
 
   it("says when a want could clear but was crowded out", () => {
     // Either of b or c finishes a's party, and only one of them can.
     const wants = [want("a", 40), want("b", 20, { maxParty: 2 }), want("c", 20, { maxParty: 2 })];
-    const plan = planParties(wants, MIN_CUT);
+    const plan = planParties(wants);
     expect(plan.unplaced.map((u) => u.reason)).toEqual(["crowded"]);
   });
 
   it("refuses the same character wanting a boss twice", () => {
     const one = want("a", 30);
-    expect(() => planParties([one, { ...one, id: "again" }], MIN_CUT)).toThrow();
+    expect(() => planParties([one, { ...one, id: "again" }])).toThrow();
   });
 
   it("groups a crowd greedily, and every party it makes still clears in time", () => {
     const strengths = [55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 10, 5, 5, 0, 0, 30, 20];
     const wants = strengths.map((s, i) => want(`p${i}`, s));
     expect(wants.length).toBeGreaterThan(EXACT_LIMIT);
-    const plan = planParties(wants, { maxMinutes: 25 });
+    const plan = planParties(wants);
     expect(plan.exact).toBe(false);
     for (const p of plan.parties) {
-      expect(p.minutes).toBeLessThanOrEqual(25);
+      expect(p.minutes).toBeLessThanOrEqual(30);
       expect(p.seats.length).toBeLessThanOrEqual(6);
     }
     const seated = plan.parties.flatMap((p) => p.seats.map((s) => s.wantId));

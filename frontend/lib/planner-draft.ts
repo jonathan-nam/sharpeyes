@@ -27,7 +27,6 @@ export type DraftWant = {
 };
 
 export type Draft = {
-  maxMinutes: number;
   /** Characters added by hand: typed IGNs, and known ones from before they were shown by default. */
   characters: DraftCharacter[];
   /** Known characters taken off the page, lowercased. */
@@ -105,11 +104,7 @@ export function removeCharacter(draft: Draft, roster: RosterGroup[], name: strin
   return { ...draft, characters: draft.characters.filter((c) => c.name !== name), wants };
 }
 
-export const MIN_MINUTES = 10;
-export const MAX_MINUTES = 30;
-
 export const EMPTY_DRAFT: Draft = {
-  maxMinutes: MAX_MINUTES,
   characters: [],
   hidden: [],
   lynns: [],
@@ -170,8 +165,8 @@ export function draftKey(draft: Draft): string {
 
 export function parseDraft(raw: unknown): Draft {
   if (typeof raw !== "object" || raw === null) return EMPTY_DRAFT;
+  // A draft saved while the planner had a Run Length still carries maxMinutes. It is ignored.
   const r = raw as Record<string, unknown>;
-  const minutes = Number(r.maxMinutes);
   const characters = (Array.isArray(r.characters) ? r.characters : []).filter(
     (c): c is DraftCharacter => typeof c?.name === "string" && typeof c?.personId === "string",
   );
@@ -193,10 +188,6 @@ export function parseDraft(raw: unknown): Draft {
       (w.maxParty === null || (Number.isInteger(w.maxParty) && w.maxParty >= 1)),
   );
   return {
-    maxMinutes:
-      Number.isInteger(minutes) && minutes >= MIN_MINUTES && minutes <= MAX_MINUTES
-        ? minutes
-        : MAX_MINUTES,
     characters,
     hidden: hidden.map((h) => h.toLowerCase()),
     lynns: lynns.map((h) => h.toLowerCase()),

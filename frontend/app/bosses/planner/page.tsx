@@ -26,8 +26,6 @@ import {
   draftWants,
   EMPTY_DRAFT,
   jobOf,
-  MAX_MINUTES,
-  MIN_MINUTES,
   type LocalDraft,
   markLynn,
   parseDraft,
@@ -234,7 +232,7 @@ export default function PartyPlannerPage() {
     shown.map((c) => c.name),
     knownSprite(sprites, people),
   );
-  const plan = useMemo(() => planParties(wants, { maxMinutes: draft.maxMinutes }), [wants, draft]);
+  const plan = useMemo(() => planParties(wants), [wants]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
   // The buff note once, under the first slider on the page.
   const firstShown =
@@ -299,24 +297,6 @@ export default function PartyPlannerPage() {
         placeholder={<p className="party-hint">Loading...</p>}
       >
         <div className="planner">
-          <label className="split-field planner-pace">
-            <span>
-              Run Length <strong className="planner-value">Up to {draft.maxMinutes} min</strong>
-            </span>
-            <input
-              type="range"
-              min={MIN_MINUTES}
-              max={MAX_MINUTES}
-              step={1}
-              value={draft.maxMinutes}
-              onChange={(e) => setDraft({ ...draft, maxMinutes: Number(e.target.value) })}
-            />
-            <span className="planner-ends" aria-hidden="true">
-              <span>Fastest</span>
-              <span>Min Cut</span>
-            </span>
-          </label>
-
           <section className="planner-characters">
             {shown.map((c) => {
               const sprite = spriteOf(c.name);

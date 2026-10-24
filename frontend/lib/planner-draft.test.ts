@@ -7,7 +7,6 @@ import {
   EMPTY_DRAFT,
   jobOf,
   markLynn,
-  MAX_MINUTES,
   pickDraft,
   readDraft,
   readLocal,
@@ -43,19 +42,14 @@ describe("reading a stored draft", () => {
 
   it("drops a row it cannot trust rather than clamping it", () => {
     const read = readDraft(
-      JSON.stringify({
-        maxMinutes: 99,
-        wants: [want("Rune"), { ...want("Rune", "limbo"), strength: 75 }],
-      }),
+      JSON.stringify({ wants: [want("Rune"), { ...want("Rune", "limbo"), strength: 75 }] }),
     );
-    expect(read.maxMinutes).toBe(MAX_MINUTES);
     expect(read.wants.map((w) => w.bossKey)).toEqual(["kaling"]);
   });
 
-  it("reads a draft from before hidden characters existed as hiding none", () => {
-    expect(readDraft(JSON.stringify({ maxMinutes: 30, characters: [], wants: [] })).hidden).toEqual(
-      [],
-    );
+  it("reads an older draft, Run Length and all, without what it no longer has", () => {
+    const read = readDraft(JSON.stringify({ maxMinutes: 30, characters: [], wants: [] }));
+    expect(read).toEqual(EMPTY_DRAFT);
   });
 });
 
@@ -138,8 +132,8 @@ describe("what the planner is given", () => {
 });
 
 describe("saving and coming back", () => {
-  const saved = { ...EMPTY_DRAFT, maxMinutes: 20 };
-  const edited = { ...EMPTY_DRAFT, maxMinutes: 15 };
+  const saved = { ...EMPTY_DRAFT, hidden: ["thornwick"] };
+  const edited = { ...EMPTY_DRAFT, hidden: ["pellmoor"] };
   const at = "2026-10-23T12:00:00Z";
   const ms = Date.parse(at);
 

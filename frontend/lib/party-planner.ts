@@ -88,8 +88,6 @@ export type Want = {
 };
 
 export type PlanSettings = {
-  /** The longest a run of two or more may take, 10 to 30. */
-  maxMinutes: number;
   /** Pairs of people who are not to be seated together. */
   apart?: Array<[string, string]>;
 };
@@ -120,7 +118,7 @@ export type Plan = {
 /** Above this many characters on one boss, every grouping is too many to try. 3^14 is ~4.8M. */
 export const EXACT_LIMIT = 14;
 
-export function planParties(wants: Want[], settings: PlanSettings): Plan {
+export function planParties(wants: Want[], settings: PlanSettings = {}): Plan {
   const seen = new Set<string>();
   for (const w of wants) {
     const key = `${w.character}\n${w.world}\n${w.bossKey}`;
@@ -229,7 +227,7 @@ function carry(passengers: Want[], hosts: Want[][], rules: Rules): Set<string> {
 type Rules = {
   /** Whether these may sit together, however long they would take. */
   mayJoin: (members: Want[]) => boolean;
-  /** Whether these may sit together and clear in time. */
+  /** Whether these may sit together and clear inside the thirty minutes. */
   fits: (members: Want[]) => boolean;
 };
 
@@ -251,8 +249,7 @@ function groupRules(bossKey: string, settings: PlanSettings): Rules {
     mayJoin,
     fits(members) {
       if (members.length < 2 || !mayJoin(members)) return false;
-      const strength = members.reduce((sum, m) => sum + m.strength, 0);
-      return strength * settings.maxMinutes >= SOLO * DEFAULT_MINUTES;
+      return members.reduce((sum, m) => sum + m.strength, 0) >= SOLO;
     },
   };
 }
