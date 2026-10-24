@@ -1,4 +1,4 @@
-// The one JSON shape the browser's money figures and the backend's (backend/money) are compared in.
+// The one JSON shape the browser's money figures and the backend's (shared/money) are compared in.
 
 /** Thrown for a value holding a function, which no other side could reproduce. */
 export class NotReplayable extends Error {}
@@ -29,7 +29,7 @@ const isObject = (v: unknown): v is Record<string, unknown> =>
 
 /**
  * Every path where [actual] departs from [expected], as dotted paths (`view.settlement.2.mesos`),
- * leaving out the `$map` and `$set` tags. The backend's own comparison (backend/money Call.kt):
+ * leaving out the `$map` and `$set` tags. The backend's own comparison (shared/money Call.kt):
  * numbers by value, absent the same as null, arrays and Map entries in order.
  */
 export function differences(expected: unknown, actual: unknown, path = ""): string[] {

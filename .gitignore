@@ -29,9 +29,12 @@ frontend/tsconfig.tsbuildinfo
 backend/.gradle/
 backend/build/
 backend/*/build/
+shared/*/.gradle/
+shared/*/build/
 # Kotlin's incremental build cache, written beside the source tree by `gradlew run`.
 backend/.kotlin/
 backend/*/.kotlin/
+shared/*/.kotlin/
 
 # IDE
 .idea/

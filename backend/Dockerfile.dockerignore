@@ -1,0 +1,15 @@
+# The backend image is built from the repo root (see backend/Dockerfile), so without this the whole
+# repo, frontend and test fixtures included, would be sent as context. Everything is out unless named.
+*
+!backend/
+!shared/money/
+!gradle/libs.versions.toml
+!config/
+
+**/.gradle
+**/build
+**/.kotlin
+backend/*.md
+# The money module's tests and their fixtures are not part of the image.
+shared/money/src/commonTest
+shared/money/src/jvmTest

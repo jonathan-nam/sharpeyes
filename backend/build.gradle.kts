@@ -1,20 +1,11 @@
-// Dependency versions current as of scaffolding (2026-07) -- double-check for
-// newer patch releases once the dev container is up and a real build is possible.
-val ktorVersion = "3.5.0"
-val exposedVersion = "1.0.0"
-val flywayVersion = "12.3.0"
-val postgresDriverVersion = "42.7.4"
-val kotlinxSerializationVersion = "1.8.0"
-val logbackVersion = "1.5.12"
-val hikariVersion = "6.2.1"
+// Versions live in ../gradle/libs.versions.toml, shared with shared/money.
 
 plugins {
-    kotlin("jvm") version "2.4.0"
-    kotlin("multiplatform") version "2.4.0" apply false
-    kotlin("plugin.serialization") version "2.4.0"
-    id("io.ktor.plugin") version "3.5.0"
-    id("org.jlleitschuh.gradle.ktlint") version "12.1.2"
-    id("io.gitlab.arturbosch.detekt") version "1.23.7"
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ktor)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 group = "com.sharpeyes"
@@ -24,46 +15,43 @@ application {
     mainClass.set("com.sharpeyes.backend.ApplicationKt")
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
-    implementation("io.ktor:ktor-server-core:$ktorVersion")
-    implementation("io.ktor:ktor-server-netty:$ktorVersion")
-    implementation("io.ktor:ktor-server-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-    implementation("io.ktor:ktor-server-auth:$ktorVersion")
-    implementation("io.ktor:ktor-server-auth-jwt:$ktorVersion")
-    implementation("com.auth0:jwks-rsa:0.22.1") // JWKS fetch/cache. ECDSA only, no EdDSA: see SessionJwtTest
-    implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
-    implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
-    implementation("io.ktor:ktor-server-cors:$ktorVersion")
-    implementation("io.ktor:ktor-server-compression:$ktorVersion")
-    implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.netty)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt)
+    implementation(libs.jwks.rsa) // JWKS fetch/cache. ECDSA only, no EdDSA: see SessionJwtTest
+    implementation(libs.ktor.server.call.logging)
+    implementation(libs.ktor.server.status.pages)
+    implementation(libs.ktor.server.cors)
+    implementation(libs.ktor.server.compression)
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
 
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
+    implementation(libs.kotlinx.serialization.json)
 
-    implementation(project(":money"))
+    // The shared money module, substituted from ../shared/money by settings.gradle.kts.
+    implementation("com.sharpeyes:money")
 
-    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposedVersion")
-    implementation("org.jetbrains.exposed:exposed-json:$exposedVersion")
-    implementation("org.postgresql:postgresql:$postgresDriverVersion")
-    implementation("com.zaxxer:HikariCP:$hikariVersion")
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.exposed.kotlin.datetime)
+    implementation(libs.exposed.json)
+    implementation(libs.postgresql)
+    implementation(libs.hikaricp)
 
-    implementation("org.flywaydb:flyway-core:$flywayVersion")
-    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
+    implementation(libs.flyway.core)
+    implementation(libs.flyway.database.postgresql)
 
-    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    implementation(libs.logback.classic)
 
-    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.7")
+    detektPlugins(libs.detekt.formatting)
 
-    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
-    testImplementation("io.ktor:ktor-client-mock:$ktorVersion")
+    testImplementation(libs.ktor.server.test.host)
+    testImplementation(libs.ktor.client.mock)
     testImplementation(kotlin("test"))
 }
 
@@ -73,16 +61,22 @@ kotlin {
 
 detekt {
     buildUponDefaultConfig = true
-    config.setFrom(files("$rootDir/detekt.yml"))
+    config.setFrom(files("$rootDir/../config/detekt/detekt.yml"))
 }
 
 ktlint {
-    version.set("1.3.1")
+    version.set(libs.versions.ktlint.tool)
 }
+
+// The money build is included, not a subproject, so its checks run only when asked for by name. These
+// keep CI's `./gradlew ktlintCheck detekt test` and the pre-commit hook covering it.
+val money = gradle.includedBuild("money")
 
 tasks.test {
     useJUnitPlatform()
-    // A multiplatform module has no `test` task, only `jvmTest`, so CI's `./gradlew test` reaches the
-    // money module's golden tests through this.
-    dependsOn(":money:jvmTest")
+    dependsOn(money.task(":jvmTest"))
 }
+
+tasks.named("ktlintCheck") { dependsOn(money.task(":ktlintCheck")) }
+
+tasks.named("detekt") { dependsOn(money.task(":detekt")) }

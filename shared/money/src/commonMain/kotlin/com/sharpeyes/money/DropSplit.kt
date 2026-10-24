@@ -7,7 +7,7 @@ import kotlin.math.floor
 // Splitting boss drop money, and the tax that makes it not-division. The port of
 // frontend/lib/drop-split.ts splitDrop, which explains the lazy and fair methods and who pays which
 // fee. Until that file is deleted the two must agree to the meso and to the bit: every case in
-// src/test/resources/money-golden/drop-split.json is the TypeScript's answer, and
+// src/commonTest/resources/money-golden/drop-split.json is the TypeScript's answer, and
 // DropSplitGoldenTest replays them. See docs/backend-arithmetic-plan.md.
 //
 // The arithmetic is done in Double where the TypeScript does it in floating point, in the same

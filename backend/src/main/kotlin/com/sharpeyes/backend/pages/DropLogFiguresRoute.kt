@@ -18,7 +18,7 @@ import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import kotlin.time.measureTimedValue
 
-// The Drop Log's money, worked out on the server by the shared module (backend/money) rather than in
+// The Drop Log's money, worked out on the server by the shared module (shared/money) rather than in
 // the browser. Read off the same two payloads the page reads, as the JSON the browser would receive,
 // so both sides compute from one input. See docs/backend-arithmetic-plan.md, Phases 3 and 4.
 

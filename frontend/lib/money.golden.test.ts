@@ -30,7 +30,7 @@ vi.mock("@/lib/ledger-fates", (load) => record("ledger-fates")(load));
 vi.mock("@/lib/settlement", (load) => record("settlement")(load));
 vi.mock("@/lib/boss-difficulty", (load) => record("boss-difficulty")(load));
 
-const REPO = new URL("../../backend/money/src/jvmTest/resources/money-golden/", import.meta.url)
+const REPO = new URL("../../shared/money/src/commonTest/resources/money-golden/", import.meta.url)
   .pathname;
 const AUDIT = process.env.MONEY_PAGES_DIR;
 const PAGES = AUDIT ?? "";
