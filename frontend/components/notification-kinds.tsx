@@ -70,7 +70,7 @@ const KINDS: Record<string, Kind> = {
   },
   PARTY_COMBINE: {
     text: (p, who) => `${who} asked to combine your ${partyOf(p)} parties`,
-    href: () => "/bosses/parties/combine",
+    href: () => "/social",
   },
   PARTY_COMBINED: {
     text: (p, who) => `${who} combined your ${partyOf(p)} parties`,

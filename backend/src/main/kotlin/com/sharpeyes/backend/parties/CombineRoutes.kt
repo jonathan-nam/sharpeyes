@@ -18,7 +18,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-// /api/party-combines: the Combine Parties page. Every write answers with the whole page. See CombineParties.kt.
+// /api/party-combines: Social's Combine Parties. Every write answers with the whole list. See CombineParties.kt.
 
 /** One of the two parties, as the page draws it. */
 @Serializable

@@ -17,7 +17,6 @@ import { spriteByName } from "@/lib/sprite-by-name";
 import { useRowWrites } from "@/lib/use-row-writes";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
-import type { CombinePage } from "@/types/combine";
 import type { DropTables } from "@/types/drop";
 import type { Party, Person, SavePartyBody } from "@/types/party";
 
@@ -98,17 +97,6 @@ export default function EditPartiesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
-  // Whether a linked owner keeps a party for the same night as one of yours. Apart from the page's
-  // own load, so a failure here costs only the link.
-  const [combinable, setCombinable] = useState(false);
-  useEffect(() => {
-    if (!isLoaded) return;
-    apiFetch<CombinePage>("/api/party-combines", { method: "GET" }, getToken)
-      .then((page) => setCombinable(page.pairs.length > 0))
-      .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, parties]);
-
   // A new party somebody you are linked to already keeps with you, with the body that hit it.
   const [duplicate, setDuplicate] = useState<{
     refusal: string;
@@ -178,11 +166,6 @@ export default function EditPartiesPage() {
           <Link href="/bosses/parties">&larr; Party View</Link>
         </p>
         <span className="page-head-links">
-          {combinable && (
-            <Link className="party-cancel" href="/bosses/parties/combine">
-              Combine Parties
-            </Link>
-          )}
           <Link className="party-cancel" href="/bosses/people">
             Edit People
           </Link>

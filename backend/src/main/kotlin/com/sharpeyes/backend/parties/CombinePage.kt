@@ -9,7 +9,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-// What the Combine Parties page reads. See CombineParties.kt. Inside a transaction, like the rest.
+// What Social's Combine Parties reads. See CombineParties.kt. Inside a transaction, like the rest.
 
 /** What GET /api/party-combines answers. */
 internal fun combinePage(

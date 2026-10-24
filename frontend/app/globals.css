@@ -5501,7 +5501,17 @@ button.link:disabled {
   padding-inline: 8px;
 }
 
-/* Combine Parties: the two parties side by side, stacked on a phone. */
+/* Combine Parties, on Social: one block per pair, the two parties side by side, stacked on a phone. */
+.combine + .combine {
+  margin-top: 20px;
+}
+
+.combine-title {
+  margin: 0 0 8px;
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
 .combine-pair {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
