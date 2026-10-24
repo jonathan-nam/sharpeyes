@@ -7,6 +7,7 @@
 // Every character the app knows of (yours, and your People's) has a card by default, so the draft
 // stores only the exceptions: the known ones taken off the page, and the typed IGNs nobody holds.
 
+import { isIgn } from "@/lib/ign";
 import { SOLO, type Want } from "@/lib/party-planner";
 
 export const DRAFT_KEY = "party-planner-draft";
@@ -44,9 +45,6 @@ export function standaloneId(name: string): string {
   return `ign:${name.toLowerCase()}`;
 }
 
-/** The longest IGN the game allows. */
-export const MAX_IGN = 12;
-
 /** Whose a known character is, keyed by its lowercased name. The first group to name it wins. */
 function knownCharacters(roster: RosterGroup[]): Map<string, DraftCharacter> {
   const known = new Map<string, DraftCharacter>();
@@ -82,7 +80,7 @@ export function resolveCharacter(
   shown: DraftCharacter[],
 ): DraftCharacter | null {
   const name = typed.trim();
-  if (name === "" || name.length > MAX_IGN || /\s/.test(name)) return null;
+  if (!isIgn(name)) return null;
   const key = name.toLowerCase();
   if (shown.some((c) => c.name.toLowerCase() === key)) return null;
   return knownCharacters(roster).get(key) ?? { name, personId: standaloneId(name) };

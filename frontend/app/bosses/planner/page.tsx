@@ -26,7 +26,6 @@ import {
   draftWants,
   EMPTY_DRAFT,
   jobOf,
-  MAX_IGN,
   MAX_MINUTES,
   MIN_MINUTES,
   type LocalDraft,
@@ -41,8 +40,10 @@ import {
   shownCharacters,
   YOU,
 } from "@/lib/planner-draft";
+import { MAX_IGN_LENGTH } from "@/lib/ign";
 import { preloadBossArt } from "@/lib/preload-boss-art";
-import { spriteByName } from "@/lib/sprite-by-name";
+import { useCharacterSprites } from "@/lib/ign-sprites";
+import { knownSprite, spriteByName } from "@/lib/sprite-by-name";
 import { useAuth } from "@/lib/use-auth";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
@@ -228,6 +229,11 @@ export default function PartyPlannerPage() {
     return jobs;
   }, [characters, people]);
   const wants = useMemo(() => draftWants(draft, shown, knownJobs), [draft, shown, knownJobs]);
+  // Every card's sprite, a typed IGN's included: looked up when the page has none. See ign-sprites.
+  const spriteOf = useCharacterSprites(
+    shown.map((c) => c.name),
+    knownSprite(sprites, people),
+  );
   const plan = useMemo(() => planParties(wants, { maxMinutes: draft.maxMinutes }), [wants, draft]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
   // The buff note once, under the first slider on the page.
@@ -313,7 +319,7 @@ export default function PartyPlannerPage() {
 
           <section className="planner-characters">
             {shown.map((c) => {
-              const sprite = sprites.get(c.name);
+              const sprite = spriteOf(c.name);
               const owner = personName(c.personId);
               return (
                 <div key={c.name} className="party-card planner-character">
@@ -485,7 +491,7 @@ export default function PartyPlannerPage() {
                   className="split-input"
                   list="planner-known"
                   placeholder="IGN"
-                  maxLength={MAX_IGN}
+                  maxLength={MAX_IGN_LENGTH}
                   autoComplete="off"
                   spellCheck={false}
                   value={typed}
@@ -526,7 +532,7 @@ export default function PartyPlannerPage() {
                   key={p.seats.map((s) => s.wantId).join("|")}
                   party={p}
                   boss={bossByKey.get(p.bossKey)}
-                  sprite={(name) => sprites.get(name)}
+                  sprite={(name) => spriteOf(name) ?? undefined}
                   personName={personName}
                 />
               ))}
@@ -542,7 +548,7 @@ export default function PartyPlannerPage() {
                         <SeatTile
                           key={u.wantId}
                           want={want}
-                          sprite={sprites.get(want.character)}
+                          sprite={spriteOf(want.character) ?? undefined}
                           owner={personName(want.personId)}
                         >
                           <span className="planner-tile-boss">

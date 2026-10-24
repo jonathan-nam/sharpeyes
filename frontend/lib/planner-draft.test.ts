@@ -7,7 +7,6 @@ import {
   EMPTY_DRAFT,
   jobOf,
   markLynn,
-  MAX_IGN,
   MAX_MINUTES,
   pickDraft,
   readDraft,
@@ -18,6 +17,7 @@ import {
   standaloneId,
   YOU,
 } from "@/lib/planner-draft";
+import { MAX_IGN_LENGTH } from "@/lib/ign";
 
 const roster = [
   { personId: YOU, label: "You", names: ["Rune", "Tide"] },
@@ -120,7 +120,7 @@ describe("adding a character by name", () => {
   });
 
   it("refuses a blank, a name the game would not take, and one already on the page", () => {
-    for (const bad of ["", "   ", "two words", "a".repeat(MAX_IGN + 1), "RUNE"]) {
+    for (const bad of ["", "   ", "two words", "a".repeat(MAX_IGN_LENGTH + 1), "RUNE"]) {
       expect(resolveCharacter(bad, roster, shown)).toBeNull();
     }
   });
