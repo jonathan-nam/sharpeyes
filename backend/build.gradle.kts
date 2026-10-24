@@ -45,6 +45,10 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
 
+    // The money port orders strings the way the browser's localeCompare does, which is ICU's
+    // collation and not Java's. See money/Js.kt.
+    implementation("com.ibm.icu:icu4j:77.1")
+
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-kotlin-datetime:$exposedVersion")
