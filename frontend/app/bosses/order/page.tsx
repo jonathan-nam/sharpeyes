@@ -433,8 +433,8 @@ export default function RunOrderPage() {
     [running, openOnly, answered],
   );
 
-  // Only people with a chip are planned for. Somebody with one character gets none, and their seats
-  // are left out of every run. Counted over the whole period so a filter cannot move who is in.
+  // Only people with a chip are planned for. Somebody with one character gets none, and a party
+  // seating them is not a run. Counted over the whole period so a filter cannot move who is in.
   const switchers = useMemo(
     () => new Set(rosterOfSwitchers(running).map((person) => person.id)),
     [running],
@@ -765,7 +765,7 @@ export default function RunOrderPage() {
           {running.length === 0
             ? "Every boss is off this period."
             : usable.length > 0
-              ? "Nobody in these parties plays a second character."
+              ? "Every party left has someone not in Party Members."
               : running.length === 1
                 ? "Your party is cleared this period."
                 : `All ${running.length} parties are cleared this period.`}

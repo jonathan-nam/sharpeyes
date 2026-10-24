@@ -86,8 +86,8 @@ export function rosterOfSwitchers(parties: Party[]): NightPerson[] {
 /**
  * Your configs as candidate runs.
  *
- * A seat nobody is set as playing is left out of its run, as is one played by somebody outside
- * `people` when it is given. A config with no seat left is not a run.
+ * A config with a seat nobody is set as playing, or one played by somebody outside `people` when it
+ * is given, is not a run. Shrinking it to the seats that remain plans a party that cannot form.
  *
  * The run time comes off the config rather than the boss: two of your characters can run the same
  * Hard Lucid at different speeds, so there is no per-boss answer to take.
@@ -104,8 +104,7 @@ export function runsFromParties(
   };
 
   return parties.flatMap((party) => {
-    const claimed = party.members.filter(counts);
-    if (claimed.length === 0) return [];
+    if (party.members.length === 0 || !party.members.every(counts)) return [];
     return [
       {
         id: party.id,
@@ -117,7 +116,7 @@ export function runsFromParties(
         // is which rather than presenting both as measured.
         minutes: runMinutes(party.minutes),
         assumed: party.minutes === null,
-        seats: claimed.map((member) => ({
+        seats: party.members.map((member) => ({
           character: member.name,
           personId: ownerOf(member),
         })),

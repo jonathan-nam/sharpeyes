@@ -193,29 +193,24 @@ describe("runsFromParties", () => {
     ]);
   });
 
-  it("leaves a seat nobody plays out of the run", () => {
+  // Shrinking it to the seats that are left would plan your half of a duo as a solo.
+  it("drops a config with a seat nobody plays", () => {
     const runs = runsFromParties(
-      [party("1", "lotus", [mine, member({ name: "Stranger" })])],
+      [party("1", "lotus", [mine, member({ name: "Stranger" })]), party("2", "will", [mine])],
       bosses,
     );
-    expect(runs.map((run) => run.seats)).toEqual([[{ character: "Tide", personId: YOU }]]);
+    expect(runs.map((run) => run.id)).toEqual(["2"]);
   });
 
-  it("leaves out the seats of anybody not in the people given", () => {
+  it("drops a config seating anybody not in the people given", () => {
     const runs = runsFromParties(
-      [party("1", "lotus", [mine, chris]), party("2", "will", [chris])],
+      [party("1", "lotus", [mine, chris]), party("2", "will", [mine])],
       bosses,
       new Set([YOU]),
     );
     expect(runs.map((run) => [run.id, run.seats])).toEqual([
-      ["1", [{ character: "Tide", personId: YOU }]],
+      ["2", [{ character: "Tide", personId: YOU }]],
     ]);
-  });
-
-  it("drops a config nobody plays any seat of", () => {
-    expect(runsFromParties([party("1", "lotus", [member({ name: "Stranger" })])], bosses)).toEqual(
-      [],
-    );
   });
 
   it("carries the mode the config says it runs", () => {
