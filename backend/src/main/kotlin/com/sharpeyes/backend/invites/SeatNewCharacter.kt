@@ -7,6 +7,7 @@ import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.parties.bossesRunInOwnParty
+import com.sharpeyes.backend.parties.inPartyFor
 import com.sharpeyes.backend.parties.linkedRosterFor
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
@@ -53,8 +54,11 @@ internal fun seatInLinkedParties(
             .selectAll()
             .where { (Party.userId inList clear) and (Characters.worldType eq worldType) and (Party.standing eq true) }
             .filter { it[Party.bossCatalogId] !in ownBosses }
-            .map { it[Party.id] }
-    for (partyId in parties) {
+            .map { it[Party.id] to it[Party.bossCatalogId] }
+    for ((partyId, bossId) in parties) {
+        // Nor a second party for one boss, a seat bound earlier in this loop included: a character
+        // clears a boss once a period (V100).
+        if (inPartyFor(characterId, bossId, partyId)) continue
         val bound =
             PartyMember.update({
                 (PartyMember.partyId eq partyId) and

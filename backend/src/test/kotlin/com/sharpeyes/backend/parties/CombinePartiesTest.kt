@@ -204,8 +204,8 @@ class CombinePartiesTest {
             val mine = party(xan, thorn, "Pellmoor")
             val theirs = party(yew, pell, "Thornwick")
             val before = thisPeriod().let { LocalDate.fromEpochDays(it.toEpochDays() - 7) }
-            val myOld = drop(mine, before)
-            val theirOld = drop(theirs, before)
+            drop(mine, before)
+            drop(theirs, before)
             link()
             seatCharacters(yew)
             seatCharacters(xan)
@@ -215,9 +215,10 @@ class CombinePartiesTest {
             assertNull(seatOf(theirs, "Thornwick")[PartyMember.linkedCharacterId])
             val pair = combinablePairs(xan).single()
             assertEquals(setOf(mine, theirs), pair.keepable.toSet())
-            // The double count: Yew's own book has this night, and reads Xan's copy of it too.
-            assertEquals(setOf(myOld), readAcross(yew, xan))
-            assertEquals(setOf(theirOld), readAcross(xan, yew))
+            // Both books hold this night, so until the two parties are combined neither is read
+            // across: reading Xan's copy too would count it twice.
+            assertEquals(emptySet(), readAcross(yew, xan))
+            assertEquals(emptySet(), readAcross(xan, yew))
 
             // The same people on both sides: no conflict, and the sender's copy is kept.
             assertIs<CombineAnswer.Done>(sendCombine(xan, friendOf(xan), emptyList(), emptyList(), Clock.System.now()))

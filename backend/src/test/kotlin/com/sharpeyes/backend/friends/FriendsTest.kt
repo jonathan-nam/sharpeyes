@@ -8,8 +8,10 @@ import com.sharpeyes.backend.db.Notification
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notificationsFor
+import com.sharpeyes.backend.pages.sharedBooksFor
 import com.sharpeyes.backend.parties.PersonRequest
 import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.SavePeopleRequest
@@ -37,6 +39,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 
 class FriendsTest {
@@ -66,6 +69,7 @@ class FriendsTest {
         transaction {
             FriendRequest.deleteWhere { FriendRequest.fromUserId inList everyone }
             Notification.deleteWhere { Notification.userId inList everyone }
+            SettlementDebt.deleteWhere { SettlementDebt.userId inList everyone }
             Party.deleteWhere { Party.userId inList everyone }
             Person.deleteWhere { Person.userId inList everyone }
             Characters.deleteWhere { Characters.userId inList everyone }
@@ -288,6 +292,66 @@ class FriendsTest {
             assertEquals("Robin", personOf(owen, wren))
         }
     }
+
+    /** A debt on [owner]'s book naming their person [personName], dated [daysFromNow] from now. */
+    private fun debt(
+        owner: String,
+        personName: String,
+        amount: Long,
+        daysFromNow: Int,
+    ) {
+        val person = Person.selectAll().where { (Person.userId eq owner) and (Person.name eq personName) }.single()
+        val now = Clock.System.now()
+        SettlementDebt.insert {
+            it[id] = Uuid.random()
+            it[userId] = owner
+            it[holderKind] = "PERSON"
+            it[personId] = person[Person.id]
+            it[characterName] = null
+            it[SettlementDebt.amount] = amount
+            it[incurredAt] = now + daysFromNow.days
+            it[createdAt] = now
+        }
+    }
+
+    /** The debt amounts [reader] reads on other accounts' books. */
+    private fun debtsReadBy(reader: String) = sharedBooksFor(reader).flatMap { it.debts }.map { it.amount }.toSet()
+
+    @Test
+    fun `two accounts that each kept a book read each other only from after the link`() {
+        transaction {
+            discordAccount(wren, "wrenb", "orchid88")
+            discordAccount(owen, "owendiscord", "Pinewick")
+            val owl = people(wren, "Owl").getValue("Owl")
+            people(owen, "Robin")
+            // Both books already hold this, so Owen reading Wren's copy would count it twice.
+            debt(wren, "Owl", 100, daysFromNow = -3)
+
+            sendFriendRequest(wren, "owendiscord", Clock.System.now(), owl)
+            acceptFriendRequest(owen, requestFrom(wren), Clock.System.now())
+            debt(wren, "Owl", 200, daysFromNow = 2)
+
+            assertEquals(setOf(200L), debtsReadBy(owen))
+        }
+    }
+
+    @Test
+    fun `an account that arrived with no book of its own reads the whole of the other's`() {
+        transaction {
+            discordAccount(wren, "wrenb", "orchid88")
+            discordAccount(owen, "owendiscord", "Pinewick")
+            val owl = people(wren, "Owl").getValue("Owl")
+            debt(wren, "Owl", 100, daysFromNow = -3)
+
+            sendFriendRequest(wren, "owendiscord", Clock.System.now(), owl)
+            acceptFriendRequest(owen, requestFrom(wren), Clock.System.now())
+
+            assertEquals(setOf(100L), debtsReadBy(owen))
+        }
+    }
+
+    private fun requestFrom(from: String) =
+        FriendRequest.selectAll().where { FriendRequest.fromUserId eq from }.single()[FriendRequest.id]
 
     @Test
     fun `removing a friend unlinks both sides and takes the seats back`() {

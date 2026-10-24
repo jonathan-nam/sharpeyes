@@ -292,10 +292,12 @@ object Person : Table("person") {
     // nothing. See V59__person_pinned.sql.
     val pinned = bool("pinned")
 
-    // The account this person signs in as, once they have accepted an invite (V70). Null for
-    // everybody who does not use the app, which is most of them. Nothing reads it yet: it is
-    // written at the one moment it can be known, so a shared party later has a key to join on.
+    // The account this person signs in as, once linked by an invite or a friend request (V70). Null
+    // for everybody who does not use the app, which is most of them.
     val linkedUserId = text("linked_user_id").nullable()
+
+    // From which date that account reads this person's half of the book. See V99.
+    val sharedFrom = date("shared_from").nullable()
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 

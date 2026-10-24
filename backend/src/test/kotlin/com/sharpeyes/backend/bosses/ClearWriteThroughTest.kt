@@ -270,6 +270,9 @@ class ClearWriteThroughTest {
     @Test
     fun `a copy is not copied on`() {
         transaction {
+            // One character in two accounts' parties for one boss, which V100 now refuses but data
+            // written before it can still hold: the trigger is off for this transaction only.
+            exec("SET LOCAL session_replication_role = replica")
             val (warrior, pine, _) = shared()
             // Pine's account owns a Kalos of its own that seats the owner's warrior.
             savePeople(member, SavePeopleRequest(listOf(PersonRequest(null, "Kip", emptyList()))), Clock.System.now())
