@@ -83,4 +83,7 @@ ktlint {
 
 tasks.test {
     useJUnitPlatform()
+    // An audit of the money port replays fixtures recorded from real pages, hundreds of megabytes of
+    // them (MONEY_GOLDEN_DIR, docs/backend-arithmetic-plan.md). -PtestHeap=6g; the default is Gradle's.
+    maxHeapSize = providers.gradleProperty("testHeap").getOrElse("512m")
 }

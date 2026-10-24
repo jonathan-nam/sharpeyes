@@ -45,6 +45,9 @@ class ModuleGoldenTest {
     @Test
     fun `ledger-fates`() = check("ledger-fates", ledgerFatesAdapters)
 
+    @Test
+    fun settlement() = check("settlement", settlementAdapters)
+
     private companion object {
         const val SHOWN = 5
     }

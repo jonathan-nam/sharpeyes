@@ -97,6 +97,24 @@ internal fun jsonMatches(
     }
 }
 
+/** Where [actual] first departs from [expected], as a path and both values, or null when they match. */
+internal fun firstDifference(
+    expected: JsonElement?,
+    actual: JsonElement?,
+    path: String = "$",
+): String? {
+    val e = expected ?: JsonNull
+    val a = actual ?: JsonNull
+    return when {
+        e is JsonArray && a is JsonArray && e.size == a.size ->
+            e.indices.firstNotNullOfOrNull { firstDifference(e[it], a[it], "$path[$it]") }
+        e is JsonObject && a is JsonObject ->
+            (e.keys + a.keys).firstNotNullOfOrNull { firstDifference(e[it], a[it], "$path.$it") }
+        jsonMatches(e, a) -> null
+        else -> "$path expected ${e.toString().take(LIMIT)} got ${a.toString().take(LIMIT)}"
+    }
+}
+
 private fun primitivesMatch(
     e: JsonPrimitive,
     a: JsonPrimitive,
