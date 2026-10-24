@@ -1,12 +1,12 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.db.PartyCombineItem
 import com.sharpeyes.backend.db.PartyCombineRequest
 import com.sharpeyes.backend.db.PartyCombineSeat
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
-import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.and

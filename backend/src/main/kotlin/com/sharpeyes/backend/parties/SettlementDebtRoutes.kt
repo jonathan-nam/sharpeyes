@@ -1,9 +1,13 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.system.Refusal
+import com.sharpeyes.api.vestige.AddSettlementDebtRequest
+import com.sharpeyes.api.vestige.SettlementDebtPayoutRow
+import com.sharpeyes.api.vestige.SettlementDebtResponse
+import com.sharpeyes.api.vestige.VestigeHolder
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
 import com.sharpeyes.backend.events.eventPerson
-import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -18,7 +22,6 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -69,45 +72,6 @@ private const val MAX_AMOUNT = 1_000_000_000_000L
 
 /** As long as a note may be, matching the check in V56. Room for what it was for, not for a story. */
 private const val MAX_NOTE = 120
-
-/** One share an offset discharged. The PAYOUT, since one drop owes several people. See V58. */
-@Serializable
-data class SettlementDebtPayoutRow(
-    val lootId: String,
-    val memberId: String,
-)
-
-@Serializable
-data class SettlementDebtResponse(
-    val id: String,
-    val holder: VestigeHolder,
-    val amount: Long,
-    val note: String? = null,
-    /** The shares this discharged. Empty on a hand-entered debt, which is most of them. See V58. */
-    val payouts: List<SettlementDebtPayoutRow> = emptyList(),
-    val incurredAt: String,
-    /** The reader wrote it, which is what lets them take it back. See V88. */
-    val recordedByYou: Boolean = true,
-    /** Who did, as the reader calls them, when it was not the reader. */
-    val recordedByName: String? = null,
-)
-
-@Serializable
-data class AddSettlementDebtRequest(
-    val holder: VestigeHolder,
-    val amount: Long,
-    val note: String? = null,
-    /** Only an offset names any. Absent is a debt somebody typed, which discharges no share. */
-    val payouts: List<SettlementDebtPayoutRow> = emptyList(),
-    /**
-     * When the act happened, where that is not now.
-     *
-     * Only splitting an old offset into its shares sends one. Those rows are the SAME act as the
-     * entry they replace, so re-dating them to the day of the split would move a history entry to
-     * today and lose the one fact that tells two offsets against one person apart.
-     */
-    val incurredAt: String? = null,
-)
 
 fun Route.settlementDebtRoutes() {
     get { listDebts() }
@@ -276,7 +240,7 @@ internal fun debtRefusal(
             "a PERSON holder needs a personId, and nothing else does"
         (holder.kind == "CHARACTER") != (holder.characterName != null) ->
             "a CHARACTER holder needs a characterName, and nothing else does"
-        holder.personId != null && runCatching { Uuid.parse(holder.personId) }.isFailure ->
+        holder.personId?.let { runCatching { Uuid.parse(it) }.isFailure } == true ->
             "personId is not an id"
         // SIGNED since V57. Positive is theirs to pay, negative is a debt of yours discharged
         // against it. Zero is refused: an adjustment of nothing is the absence of one.

@@ -1,8 +1,8 @@
 package com.sharpeyes.backend.notifications
 
+import com.sharpeyes.api.loot.LootResponse
 import com.sharpeyes.backend.bosses.bossCatalog
 import com.sharpeyes.backend.events.ACTOR
-import com.sharpeyes.backend.parties.LootResponse
 import com.sharpeyes.backend.parties.audienceOf
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject

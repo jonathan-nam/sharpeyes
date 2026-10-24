@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.backend.bosses.clearSkipsOfSeats
 import com.sharpeyes.backend.bosses.periodOf
 import com.sharpeyes.backend.bosses.periodStartFor

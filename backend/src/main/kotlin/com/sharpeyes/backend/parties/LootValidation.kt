@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.LotSaleRequest
+import com.sharpeyes.api.loot.SellLootRequest
 import com.sharpeyes.backend.db.DropCatalog
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll

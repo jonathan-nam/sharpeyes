@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.PartyMember
 import org.jetbrains.exposed.v1.core.JoinType

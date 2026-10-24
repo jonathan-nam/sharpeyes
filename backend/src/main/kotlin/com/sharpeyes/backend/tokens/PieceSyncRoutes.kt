@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.tokens
 
+import com.sharpeyes.api.tokens.PieceSyncResponse
+import com.sharpeyes.api.tokens.SavePieceSyncRequest
 import com.sharpeyes.backend.db.Users
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -11,24 +13,12 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
 import io.ktor.server.routing.put
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 
 // Mirrored by the frontend's types/piece-sync.ts field-for-field.
-
-@Serializable
-data class PieceSyncResponse(
-    val enabled: Boolean,
-    val gaps: List<PieceSyncGapResponse>,
-)
-
-@Serializable
-data class SavePieceSyncRequest(
-    val enabled: Boolean,
-)
 
 fun Route.pieceSyncRoutes() {
     get { getPieceSync() }

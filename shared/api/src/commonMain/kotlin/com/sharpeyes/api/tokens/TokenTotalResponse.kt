@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.tokens
+package com.sharpeyes.api.tokens
 
 import kotlinx.serialization.Serializable
 

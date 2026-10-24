@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.screenshots
+package com.sharpeyes.api.screenshots
 
 import kotlinx.serialization.Serializable
 

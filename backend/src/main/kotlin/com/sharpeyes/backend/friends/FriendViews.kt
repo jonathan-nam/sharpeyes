@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.friends
 
+import com.sharpeyes.api.friends.DiscordLookupResponse
+import com.sharpeyes.api.friends.FriendView
+import com.sharpeyes.api.friends.SocialResponse
 import com.sharpeyes.backend.db.FriendRequest
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.parties.imageOf

@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.notifications
+package com.sharpeyes.api.notifications
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement

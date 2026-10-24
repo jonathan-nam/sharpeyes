@@ -1,6 +1,10 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.backend.events.EventTarget
+import com.sharpeyes.api.events.EventTarget
+import com.sharpeyes.api.vestige.SharedDisposalRequest
+import com.sharpeyes.api.vestige.SharedMoneyRequest
+import com.sharpeyes.api.vestige.SharedTrancheRequest
+import com.sharpeyes.api.vestige.VestigeTrancheShareRow
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.pages.bookBetween
@@ -16,29 +20,12 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
-import kotlinx.serialization.Serializable
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 // /api/shared-books/{personId}/...: a member's writes into the owner's book, where {personId} is the
 // member's person row on the owner's account (SharedBookResponse.personId). Each answers with that
 // book re-read, from the member's side. See SharedBookWrites.kt.
-
-@Serializable
-data class SharedTrancheRequest(
-    val pieces: Double,
-    val amount: Long? = null,
-    val disposition: String = SOLD,
-    /** Pieces of the sale that were somebody else's, in the owner's book's holder shape. */
-    val shares: List<VestigeTrancheShareRow> = emptyList(),
-)
-
-@Serializable
-data class SharedMoneyRequest(
-    /** A debt in the owner's terms (positive is you owing them), or what you paid them. */
-    val amount: Long,
-    val note: String? = null,
-)
 
 fun Route.sharedBookRoutes() {
     // The owner's Settlement card moves, and so does the member's own.
@@ -54,15 +41,6 @@ fun Route.sharedBookRoutes() {
         delete("/disposals/{rowId}") { remove(SharedRow.DISPOSAL) }
     }
 }
-
-@Serializable
-data class SharedDisposalRequest(
-    val amount: Long,
-    /** OFFSET or PAID. */
-    val kind: String,
-    /** In the owner's terms: THEM is the member holding the owner's money. */
-    val heldBy: String,
-)
 
 private suspend fun RoutingContext.addDisposal() {
     val request = call.receive<SharedDisposalRequest>()

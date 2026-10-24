@@ -1,6 +1,8 @@
 package com.sharpeyes.backend.friends
 
-import com.sharpeyes.backend.plugins.Refusal
+import com.sharpeyes.api.friends.DiscordLookupAnswer
+import com.sharpeyes.api.friends.SendFriendRequest
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.refuse
@@ -14,72 +16,8 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import kotlinx.serialization.Serializable
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
-
-@Serializable
-data class SendFriendRequest(
-    val username: String,
-)
-
-/** Somebody else's account, as the Social page shows it. */
-@Serializable
-data class FriendView(
-    /** The request's id on a request, the person's id on a friend. */
-    val id: String,
-    val username: String?,
-    val name: String?,
-    val spriteImgUrl: String?,
-    /** Their current Discord avatar. See imagesOf. */
-    val image: String? = null,
-)
-
-/** Who a typed Discord username is, for the preview beside the box. */
-@Serializable
-data class DiscordLookupResponse(
-    val username: String,
-    val image: String?,
-    /** Their main character, which is how the bell will name them. */
-    val name: String?,
-    val spriteImgUrl: String?,
-    /** The name is your own. */
-    val you: Boolean,
-)
-
-/** Null when nobody here has the name. */
-@Serializable
-data class DiscordLookupAnswer(
-    val found: DiscordLookupResponse?,
-)
-
-@Serializable
-data class SocialResponse(
-    /** Yours, so you can tell a friend what to type. Null until you sign in with Discord. */
-    val username: String?,
-    val friends: List<FriendView>,
-    val outgoing: List<FriendView>,
-)
-
-/** What sending a request did. */
-internal sealed interface SendOutcome {
-    data object Unknown : SendOutcome
-
-    data object Yourself : SendOutcome
-
-    data object AlreadyFriends : SendOutcome
-
-    data object Sent : SendOutcome
-
-    /** They had already asked you, so asking back is accepting. */
-    data object Accepted : SendOutcome
-
-    /** The person named is not one of yours. */
-    data object NoSuchPerson : SendOutcome
-
-    /** The person named already has an account. */
-    data object PersonLinked : SendOutcome
-}
 
 /** The refusal for each outcome that sends nothing, null for the two that did. */
 internal fun SendOutcome.refusal(): Pair<HttpStatusCode, Refusal>? =

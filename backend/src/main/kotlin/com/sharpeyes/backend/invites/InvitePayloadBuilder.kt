@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.invites
 
+import com.sharpeyes.api.invites.InviteOmission
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party

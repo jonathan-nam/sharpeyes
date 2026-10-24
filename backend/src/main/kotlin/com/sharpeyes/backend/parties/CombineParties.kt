@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.bosses.partySeatsChanged
 import com.sharpeyes.backend.bosses.periodAfter
 import com.sharpeyes.backend.bosses.periodStartFor
@@ -13,7 +14,6 @@ import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publish
 import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.friends.seatCharacters
-import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.SortOrder

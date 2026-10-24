@@ -1,12 +1,12 @@
-package com.sharpeyes.backend.pages
+package com.sharpeyes.api.pages
 
-import com.sharpeyes.backend.parties.PartyLootPoolResponse
-import com.sharpeyes.backend.parties.PartyResponse
-import com.sharpeyes.backend.parties.ProceedsDisposalResponse
-import com.sharpeyes.backend.parties.SettlementDebtResponse
-import com.sharpeyes.backend.parties.VestigePaymentResponse
-import com.sharpeyes.backend.parties.VestigeSettlementResponse
-import com.sharpeyes.backend.parties.VestigeTrancheResponse
+import com.sharpeyes.api.loot.PartyLootPoolResponse
+import com.sharpeyes.api.parties.PartyResponse
+import com.sharpeyes.api.vestige.ProceedsDisposalResponse
+import com.sharpeyes.api.vestige.SettlementDebtResponse
+import com.sharpeyes.api.vestige.VestigePaymentResponse
+import com.sharpeyes.api.vestige.VestigeSettlementResponse
+import com.sharpeyes.api.vestige.VestigeTrancheResponse
 import kotlinx.serialization.Serializable
 
 /** One owner's book, cut to what it says between them and you. */

@@ -1,5 +1,6 @@
-package com.sharpeyes.backend.parties
+package com.sharpeyes.api.parties
 
+import com.sharpeyes.api.invites.PendingInviteView
 import kotlinx.serialization.Serializable
 
 // Mirrored by the frontend's types/party.ts field-for-field.

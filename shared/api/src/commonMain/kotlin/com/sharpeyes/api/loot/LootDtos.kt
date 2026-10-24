@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.parties
+package com.sharpeyes.api.loot
 
 import kotlinx.serialization.Serializable
 

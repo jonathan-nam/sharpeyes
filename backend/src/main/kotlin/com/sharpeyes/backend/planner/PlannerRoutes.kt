@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.planner
 
+import com.sharpeyes.api.planner.SavePlannerRequest
+import com.sharpeyes.api.planner.SavedPlannerResponse
 import com.sharpeyes.backend.db.PartyPlannerDraft
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -12,7 +14,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
 import io.ktor.server.routing.put
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import org.jetbrains.exposed.v1.core.eq
@@ -22,18 +23,6 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 
 // The Party Planner's saved settings. Mirrored by the frontend's types/planner.ts.
-
-/** What was last saved, or nulls for an account that never has. */
-@Serializable
-data class SavedPlannerResponse(
-    val draft: JsonElement?,
-    val savedAt: String?,
-)
-
-@Serializable
-data class SavePlannerRequest(
-    val draft: JsonElement,
-)
 
 /** Far more than a full roster of characters and bosses needs, and a cap on what one row holds. */
 internal const val MAX_DRAFT_CHARS = 200_000

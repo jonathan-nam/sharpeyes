@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.vestige.OffsetSharesRequest
+import com.sharpeyes.api.vestige.OffsetSharesResponse
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test

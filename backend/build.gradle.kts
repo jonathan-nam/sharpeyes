@@ -36,6 +36,9 @@ dependencies {
     // The shared money module, substituted from ../shared/money by settings.gradle.kts.
     implementation("com.sharpeyes:money")
 
+    // The HTTP API's types, substituted from ../shared/api.
+    implementation("com.sharpeyes:api")
+
     implementation(libs.exposed.core)
     implementation(libs.exposed.jdbc)
     implementation(libs.exposed.kotlin.datetime)
@@ -68,15 +71,15 @@ ktlint {
     version.set(libs.versions.ktlint.tool)
 }
 
-// The money build is included, not a subproject, so its checks run only when asked for by name. These
-// keep CI's `./gradlew ktlintCheck detekt test` and the pre-commit hook covering it.
-val money = gradle.includedBuild("money")
+// The shared builds are included, not subprojects, so their checks run only when asked for by name.
+// These keep CI's `./gradlew ktlintCheck detekt test` and the pre-commit hook covering them.
+val shared = listOf("money", "api").map { gradle.includedBuild(it) }
 
 tasks.test {
     useJUnitPlatform()
-    dependsOn(money.task(":jvmTest"))
+    shared.forEach { dependsOn(it.task(":jvmTest")) }
 }
 
-tasks.named("ktlintCheck") { dependsOn(money.task(":ktlintCheck")) }
+tasks.named("ktlintCheck") { shared.forEach { dependsOn(it.task(":ktlintCheck")) } }
 
-tasks.named("detekt") { dependsOn(money.task(":detekt")) }
+tasks.named("detekt") { shared.forEach { dependsOn(it.task(":detekt")) } }

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.SellLootRequest
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyLootBundle

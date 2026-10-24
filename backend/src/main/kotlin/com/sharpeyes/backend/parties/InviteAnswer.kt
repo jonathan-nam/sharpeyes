@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.bosses.clearSkipsOfSeats
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
@@ -11,7 +12,6 @@ import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
 import com.sharpeyes.backend.notifications.resolve
-import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.JoinType

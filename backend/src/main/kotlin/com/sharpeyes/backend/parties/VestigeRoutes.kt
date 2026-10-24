@@ -1,12 +1,19 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.system.Refusal
+import com.sharpeyes.api.vestige.AddVestigeTrancheRequest
+import com.sharpeyes.api.vestige.BOUGHT
+import com.sharpeyes.api.vestige.KEPT
+import com.sharpeyes.api.vestige.SOLD
+import com.sharpeyes.api.vestige.VestigeHolder
+import com.sharpeyes.api.vestige.VestigeTrancheResponse
+import com.sharpeyes.api.vestige.VestigeTrancheShareRow
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.db.VestigeTrancheShare
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.events.tellLinkedOnWrite
-import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -22,7 +29,6 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -56,21 +62,6 @@ internal const val PERSON = "PERSON"
 internal const val SELF = "SELF"
 internal const val CHARACTER = "CHARACTER"
 
-/** A sale, with money in it. */
-internal const val SOLD = "SOLD"
-
-/** Pieces redeemed rather than sold, so out of the pile every price is derived from. See V46. */
-private const val KEPT = "KEPT"
-
-/**
- * The creditor's pieces, taken by the holder at an agreed price. See V50.
- *
- * Carries money like a sale and leaves the pile like a redemption. What it is NOT is a sale: the
- * proceeds are one creditor's in full rather than the pile's to divide pro rata, because these
- * pieces never went to market.
- */
-private const val BOUGHT = "BOUGHT"
-
 /**
  * Every disposition that names a price. Only a redemption realized nothing.
  *
@@ -78,72 +69,6 @@ private const val BOUGHT = "BOUGHT"
  * it needs one to divide. See shareRefusal.
  */
 internal val PRICED = setOf(SOLD, BOUGHT)
-
-/**
- * Whose pile a tranche is, as the three kinds V39 stores.
- *
- * Carried on the way out as well as in, so a client never has to infer the kind from which field is
- * null. A pile with no kind is a pile belonging to nobody, and it would price every boss it covers
- * at nothing.
- */
-@Serializable
-data class VestigeHolder(
-    val kind: String,
-    val personId: String? = null,
-    /** Lowercased, as stored: it is an identity, and seats are matched by name everywhere else. */
-    val characterName: String? = null,
-)
-
-/**
- * How many pieces of one sale were somebody else's. See V56.
- *
- * A COUNT. Their share of the money is `pieces * tranche amount / tranche pieces`, worked out on
- * read, so correcting a mistyped amount moves it. Storing the meso figure here would be storing a
- * derived share, which is what V40 exists to refuse.
- */
-@Serializable
-data class VestigeTrancheShareRow(
-    /** The CREDITOR, in the same holder shape the pile uses. Never the pile's own holder. */
-    val holder: VestigeHolder,
-    val pieces: Double,
-)
-
-@Serializable
-data class VestigeTrancheResponse(
-    val id: String,
-    val holder: VestigeHolder,
-    val pieces: Double,
-    /**
-     * Mesos for the whole tranche. The per-piece figure is derived by the client, never stored.
-     *
-     * Null on a KEPT row. A redemption has no price, which is the point of recording it: those
-     * pieces come out of the pile the prices are derived from instead of being priced at nothing.
-     */
-    val amount: Long? = null,
-    /** SOLD or KEPT. Carried out, so a client never infers a redemption from a missing amount. */
-    val disposition: String,
-    /** Whose pieces this sale was, where any of them were not the seller's. Empty is all their own. */
-    val shares: List<VestigeTrancheShareRow> = emptyList(),
-    val soldAt: String,
-    /** The reader wrote it, which is what lets them take it back. See V88. */
-    val recordedByYou: Boolean = true,
-    /** Who did, as the reader calls them, when it was not the reader. */
-    val recordedByName: String? = null,
-)
-
-@Serializable
-data class AddVestigeTrancheRequest(
-    val holder: VestigeHolder,
-    val pieces: Double,
-    val amount: Long? = null,
-    /** Defaults to a sale, which is what every tranche was before V46. */
-    val disposition: String = SOLD,
-    /**
-     * Pieces of this sale that were somebody else's. Absent is all the seller's own, which is every
-     * tranche entered before V56.
-     */
-    val shares: List<VestigeTrancheShareRow> = emptyList(),
-)
 
 /**
  * The piece ledger's three inputs, which are one feature under three paths.
@@ -329,7 +254,7 @@ internal fun trancheRefusal(
             "a $PERSON holder needs a personId, and nothing else does"
         (holder.kind == CHARACTER) != (holder.characterName != null) ->
             "a $CHARACTER holder needs a characterName, and nothing else does"
-        holder.personId != null && runCatching { Uuid.parse(holder.personId) }.isFailure ->
+        holder.personId?.let { runCatching { Uuid.parse(it) }.isFailure } == true ->
             "personId is not an id"
         pieces <= 0 || pieces > MAX_PIECES -> "pieces must be above 0 and at most $MAX_PIECES"
         // Zero is refused, where V38 documented it as how a stack handed over rather than sold was

@@ -1,5 +1,9 @@
 package com.sharpeyes.backend.characters
 
+import com.sharpeyes.api.characters.CharacterResponse
+import com.sharpeyes.api.characters.CreateCharacterRequest
+import com.sharpeyes.api.characters.ReorderCharactersRequest
+import com.sharpeyes.api.characters.UpdateCharacterRequest
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.invites.seatInLinkedParties
 import com.sharpeyes.backend.plugins.dbQuery

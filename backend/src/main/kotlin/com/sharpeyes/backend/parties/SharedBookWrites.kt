@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.vestige.VestigeHolder
+import com.sharpeyes.api.vestige.VestigeTrancheShareRow
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember

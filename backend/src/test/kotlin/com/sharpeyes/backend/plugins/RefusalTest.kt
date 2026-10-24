@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.plugins
 
+import com.sharpeyes.api.system.Refusal
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode

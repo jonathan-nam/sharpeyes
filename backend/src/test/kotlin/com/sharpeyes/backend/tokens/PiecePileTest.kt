@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.tokens
 
+import com.sharpeyes.api.parties.SavePartyRequest
+import com.sharpeyes.api.tokens.PieceSyncGap
 import com.sharpeyes.backend.bosses.WEEKLY_CADENCE
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.bosses.setBossClearByHand
@@ -15,7 +17,6 @@ import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.TokenCatalog
 import com.sharpeyes.backend.db.TokenClearAmount
 import com.sharpeyes.backend.db.Users
-import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.SeatContext
 import com.sharpeyes.backend.parties.bossIdForKey
 import com.sharpeyes.backend.parties.createParty

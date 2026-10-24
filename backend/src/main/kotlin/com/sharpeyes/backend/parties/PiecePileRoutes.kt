@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.PiecePileResponse
+import com.sharpeyes.api.loot.PieceTakeResponse
+import com.sharpeyes.api.loot.SavePiecePileRequest
 import com.sharpeyes.backend.bosses.WEEKLY_CADENCE
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.bosses.periodStartFor
@@ -22,7 +25,6 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
 import kotlinx.datetime.LocalDate
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -33,33 +35,6 @@ import kotlin.uuid.Uuid
 
 // A party's weekly pile of Eternal pieces, read and corrected on Party View. See tokens/PiecePiles.kt.
 // Mirrored by the frontend's types/piece-pile.ts field-for-field.
-
-@Serializable
-data class PieceTakeResponse(
-    val memberId: String,
-    val quantity: Int,
-)
-
-@Serializable
-data class PiecePileResponse(
-    val partyId: String,
-    val weekStart: String,
-    val tokenCatalogId: String,
-    val tokenName: String,
-    val iconUrl: String?,
-    val difficulty: String,
-    val total: Int,
-    val stackSize: Int,
-    val takes: List<PieceTakeResponse>,
-)
-
-@Serializable
-data class SavePiecePileRequest(
-    val weekStart: String,
-    val total: Int,
-    // Seat id to pieces taken. Every seat sent; one left out took none.
-    val takes: Map<String, Int>,
-)
 
 /** Every pile on your parties for one week, the current one unless `?week=` says otherwise. */
 internal suspend fun RoutingContext.listPiecePilesRoute() {

@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.sprites
 
+import com.sharpeyes.api.sprites.SpriteLookupRequest
+import com.sharpeyes.api.sprites.SpriteLookupResponse
 import com.sharpeyes.backend.db.IgnSprite
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -15,7 +17,6 @@ import io.ktor.server.routing.post
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.upsert
@@ -122,21 +123,6 @@ internal suspend fun lookUpIgns(
         key to (fresh[key] ?: asked[key]?.first ?: IgnAnswer(null, null))
     }
 }
-
-@Serializable
-data class SpriteLookupRequest(
-    val names: List<String>,
-)
-
-/**
- * Each name as sent, to its sprite's proxy path and its job, either null where Nexon has no such
- * character.
- */
-@Serializable
-data class SpriteLookupResponse(
-    val sprites: Map<String, String?>,
-    val jobs: Map<String, String?> = emptyMap(),
-)
 
 fun Route.spriteLookupRoutes(
     nexonLookupService: NexonLookupService,

@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.invites.PendingInviteView
+import com.sharpeyes.api.parties.PartyResponse
+import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
@@ -7,7 +10,6 @@ import com.sharpeyes.backend.db.PartyInvite
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.JoinType
@@ -35,13 +37,6 @@ internal data class Invitee(
 internal data class InviteOutcome(
     val invited: List<String>,
     val alreadyPartied: List<String>,
-)
-
-/** A pending invite as the party's owner sees it. */
-@Serializable
-data class PendingInviteView(
-    val id: String,
-    val name: String,
 )
 
 /**

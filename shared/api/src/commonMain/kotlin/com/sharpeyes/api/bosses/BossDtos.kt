@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.bosses
+package com.sharpeyes.api.bosses
 
 import kotlinx.serialization.Serializable
 

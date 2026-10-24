@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.pages.DropLogPageResponse
+import com.sharpeyes.api.pages.SharedBookResponse
 import com.sharpeyes.backend.plugins.addSpan
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail

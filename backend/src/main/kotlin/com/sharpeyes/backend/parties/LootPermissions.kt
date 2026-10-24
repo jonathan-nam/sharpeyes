@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.backend.plugins.Refusal
+import com.sharpeyes.api.loot.LootResponse
+import com.sharpeyes.api.system.Refusal
 import kotlin.uuid.Uuid
 
 // What a member may do to a row in a pool they do not own, beyond canEditParty. The owner passes

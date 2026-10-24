@@ -1,4 +1,4 @@
-package com.sharpeyes.backend.characters
+package com.sharpeyes.api.characters
 
 import kotlinx.serialization.Serializable
 

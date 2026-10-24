@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.events
 
+import com.sharpeyes.api.events.LiveData
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import io.ktor.http.CacheControl
 import io.ktor.http.ContentType
@@ -11,7 +12,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.utils.io.writeStringUtf8
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.minutes
@@ -55,14 +55,6 @@ fun Route.eventRoutes() {
         }
     }
 }
-
-/** Who and what, for the page to show on the thing that moved. Never who else was told. */
-@Serializable
-private data class LiveData(
-    val actor: String?,
-    val image: String?,
-    val target: EventTarget,
-)
 
 private fun dataOf(event: Event): String =
     Json.encodeToString(LiveData.serializer(), LiveData(event.actor, event.image, event.target))

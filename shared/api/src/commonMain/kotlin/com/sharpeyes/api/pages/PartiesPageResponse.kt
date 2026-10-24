@@ -1,14 +1,14 @@
-package com.sharpeyes.backend.pages
+package com.sharpeyes.api.pages
 
-import com.sharpeyes.backend.bosses.BossClearsViewResponse
-import com.sharpeyes.backend.bosses.BossDropResponse
-import com.sharpeyes.backend.bosses.BossResponse
-import com.sharpeyes.backend.characters.CharacterResponse
-import com.sharpeyes.backend.parties.PartyLootPoolResponse
-import com.sharpeyes.backend.parties.PartyResponse
-import com.sharpeyes.backend.parties.PersonResponse
-import com.sharpeyes.backend.parties.SeatedPartyResponse
-import com.sharpeyes.backend.parties.VestigeSettlementResponse
+import com.sharpeyes.api.bosses.BossClearsViewResponse
+import com.sharpeyes.api.bosses.BossDropResponse
+import com.sharpeyes.api.bosses.BossResponse
+import com.sharpeyes.api.characters.CharacterResponse
+import com.sharpeyes.api.loot.PartyLootPoolResponse
+import com.sharpeyes.api.parties.PartyResponse
+import com.sharpeyes.api.parties.PersonResponse
+import com.sharpeyes.api.parties.SeatedPartyResponse
+import com.sharpeyes.api.vestige.VestigeSettlementResponse
 import kotlinx.serialization.Serializable
 
 /**
