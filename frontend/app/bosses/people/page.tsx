@@ -12,7 +12,8 @@ import { apiFetch, failureText } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { type PersonDraft, peopleBody, toDraft, unclaimed } from "@/lib/people-board";
-import { spriteByName } from "@/lib/sprite-by-name";
+import { useCharacterSprites } from "@/lib/ign-sprites";
+import { knownSprite, spriteByName } from "@/lib/sprite-by-name";
 import type { Character } from "@/types/character";
 import type { Invite } from "@/types/invite";
 import type { Party, Person, SeatedParty } from "@/types/party";
@@ -176,6 +177,10 @@ export default function PeoplePage() {
   const knownCharacters = Array.from(
     new Set([...mine, ...draft.flatMap((p) => p.characters), ...unassigned]),
   ).sort();
+  const spriteFor = useCharacterSprites(
+    [...draft.flatMap((p) => [...p.characters, ...p.owned]), ...unassigned],
+    knownSprite(sprites, people),
+  );
 
   return (
     <main className="page">
@@ -195,7 +200,7 @@ export default function PeoplePage() {
               people={draft}
               unassigned={unassigned}
               knownCharacters={knownCharacters}
-              spriteFor={(name) => sprites.get(name) ?? null}
+              spriteFor={spriteFor}
               busy={busy}
               onChange={setDraft}
               onRename={(index, name) =>

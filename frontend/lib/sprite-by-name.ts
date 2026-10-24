@@ -1,5 +1,5 @@
 import type { Character } from "@/types/character";
-import type { Party } from "@/types/party";
+import type { Party, Person } from "@/types/party";
 
 /**
  * Every character name the app can draw a sprite for, to the backend-relative path of that sprite.
@@ -33,4 +33,24 @@ export function spriteByName(characters: Character[], parties: Party[]): Map<str
     if (character.spriteImgUrl) sprites.set(character.name, character.spriteImgUrl);
   }
   return sprites;
+}
+
+/**
+ * What the page can draw for a name without asking: the sprites above, then what People recorded
+ * for the characters filed under someone (Person.sprites). Case-blind, as the game's names are.
+ *
+ * Hand the result to useCharacterSprites (lib/ign-sprites.ts), which looks up whatever this misses.
+ */
+export function knownSprite(
+  sprites: Map<string, string>,
+  people: Person[],
+): (name: string) => string | null {
+  const byKey = new Map<string, string>();
+  for (const person of people) {
+    for (const [name, path] of Object.entries(person.sprites ?? {}))
+      byKey.set(name.toLowerCase(), path);
+  }
+  // After People, so a seat's or your own character's sprite wins, as in spriteByName.
+  for (const [name, path] of sprites) byKey.set(name.toLowerCase(), path);
+  return (name) => sprites.get(name) ?? byKey.get(name.trim().toLowerCase()) ?? null;
 }

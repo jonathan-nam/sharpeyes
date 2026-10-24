@@ -158,6 +158,10 @@ data class PersonResponse(
      * them. See personCharacters.
      */
     val ownedCharacters: List<String> = emptyList(),
+    /** The job of each of ownedCharacters, by name, where their account recorded one. */
+    val ownedJobs: Map<String, String> = emptyMap(),
+    /** The sprite proxy path of each of `characters` that Nexon has, by name. See IgnSprites.kt. */
+    val sprites: Map<String, String> = emptyMap(),
     /**
      * They sign in as an account of their own, having accepted a link (V70).
      *

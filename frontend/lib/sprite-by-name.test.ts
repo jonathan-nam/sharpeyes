@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { spriteByName } from "./sprite-by-name";
+import { knownSprite, spriteByName } from "./sprite-by-name";
 import type { Character } from "@/types/character";
-import type { Party, PartyMember } from "@/types/party";
+import type { Party, PartyMember, Person } from "@/types/party";
 
 const seat = (name: string, spriteImgUrl: string | null): PartyMember => ({
   id: `seat-${name}`,
@@ -101,5 +101,32 @@ describe("spriteByName", () => {
 
   it("says nothing about a name it has never seen", () => {
     expect(spriteByName([], []).get("Whoever")).toBeUndefined();
+  });
+});
+
+describe("knownSprite", () => {
+  // Invented names: see CLAUDE.md, "No PII or real IGNs".
+  const person = (sprites: Record<string, string>) =>
+    ({
+      id: "p",
+      name: "Pellmoor",
+      characters: Object.keys(sprites),
+      ownedCharacters: [],
+      linked: false,
+      pinned: false,
+      sprites,
+    }) as Person;
+
+  it("draws a character filed under somebody from People's sprites, case-blind", () => {
+    const known = knownSprite(new Map(), [person({ Ravensoot: "/character-sprites/r.png" })]);
+    expect(known("ravensoot")).toBe("/character-sprites/r.png");
+    expect(known("Quillsby")).toBeNull();
+  });
+
+  it("prefers a seat's or your own sprite over People's", () => {
+    const known = knownSprite(new Map([["Ravensoot", "/character-sprites/seat.png"]]), [
+      person({ Ravensoot: "/character-sprites/people.png" }),
+    ]);
+    expect(known("Ravensoot")).toBe("/character-sprites/seat.png");
   });
 });

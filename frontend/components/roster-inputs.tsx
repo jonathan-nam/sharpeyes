@@ -2,6 +2,7 @@
 
 import { KNOWN_CHARACTERS_ID } from "@/components/known-characters";
 import { spriteUrl } from "@/lib/api";
+import { useCharacterSprites } from "@/lib/ign-sprites";
 import { MAX_PARTY } from "@/lib/parties";
 
 // The OTHER seats in a party, as names you can type over. Your own character is the config, so it
@@ -19,22 +20,23 @@ export function RosterInputs({
   members: string[];
   onChange: (members: string[]) => void;
   /**
-   * The sprite for a name as typed, backend-relative, or null for one we cannot draw.
+   * The sprite the page already has for a name, backend-relative, or null.
    *
-   * Optional: without it the boxes are text alone, which is what Party View's row still gets. A
-   * typed name is matched exactly, so a half-typed one has no sprite until it is a whole name, and
-   * that is the point. The frame filling in is what says the name landed on somebody real.
+   * Optional: without it the boxes are text alone, which is what Party View's row still gets. With
+   * it, a name the page cannot draw is looked up once typing settles (useCharacterSprites). The
+   * frame filling in is what says the name landed on somebody real.
    */
   spriteFor?: (name: string) => string | null;
   /** A save is in flight, and what is typed into these boxes is about to be replaced by it. */
   disabled?: boolean;
 }) {
+  const sprite = useCharacterSprites(spriteFor ? members : [], spriteFor ?? noSprite);
   return (
     <div className={`config-members${spriteFor ? " has-sprites" : ""}`}>
       {members.map((member, index) => (
         // Positions in a list of text: there is nothing else to key on until it is saved.
         <span className="config-member" key={index}>
-          {spriteFor && <MemberSprite sprite={spriteFor(member.trim())} />}
+          {spriteFor && <MemberSprite sprite={sprite(member.trim())} />}
           <span className="config-member-box">
             <input
               className="split-input"
@@ -73,6 +75,8 @@ export function RosterInputs({
     </div>
   );
 }
+
+const noSprite = () => null;
 
 /**
  * Who a box has landed on, above the box.

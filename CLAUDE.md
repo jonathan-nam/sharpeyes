@@ -82,6 +82,19 @@ than none: they are confidently wrong, and they are believed.
 **No em dashes.** Write two sentences. Where the second clause cannot stand alone, use a comma, a
 colon, or parentheses. This applies to comments, docs and commit messages alike.
 
+## No PII or real IGNs
+
+Code, tests, comments, docs and commit messages never carry a real person's name, account, email or
+character IGN. This repo is public. Use invented values instead ("Thornwick", "Pellmoor"), and
+invent them whole: a real IGN with a letter added or changed is still that IGN.
+
+Describe a reported case by its shape ("a passenger whose only soloer is the same player"), not by
+who reported it. Real names belong in conversation, never in the tree.
+
+Older code still holds some, notably the vision HUD tests, whose fixture captures show the names.
+Do not add more. Versioned migrations (`V*__*.sql`) cannot be edited at all, comments included:
+Flyway checksums every applied one and a changed file stops the backend from booting.
+
 ## The failure this project exists to prevent
 
 A **plausible, confident, wrong number**. Not a crash, a count that looks right and is not.

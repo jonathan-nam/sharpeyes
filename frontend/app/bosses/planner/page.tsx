@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { DifficultySelect } from "@/components/difficulty-select";
+import { FilterOptions, GroupingTabs } from "@/components/grouping-tabs";
 import { IconSelect, type IconOption } from "@/components/icon-select";
 import { PageSwap } from "@/components/page-swap";
 import { apiAssetUrl, apiFetch, failureText, spriteUrl } from "@/lib/api";
@@ -25,10 +26,9 @@ import {
   draftKey,
   draftWants,
   EMPTY_DRAFT,
-  MAX_IGN,
-  MAX_MINUTES,
-  MIN_MINUTES,
+  jobOf,
   type LocalDraft,
+  markLynn,
   parseDraft,
   pickDraft,
   readLocal,
@@ -39,8 +39,11 @@ import {
   shownCharacters,
   YOU,
 } from "@/lib/planner-draft";
+import { MAX_IGN_LENGTH } from "@/lib/ign";
+import { byBoss, byCharacter, type PlanGrouping } from "@/lib/planner-view";
 import { preloadBossArt } from "@/lib/preload-boss-art";
-import { spriteByName } from "@/lib/sprite-by-name";
+import { useCharacterSprites } from "@/lib/ign-sprites";
+import { knownSprite, spriteByName } from "@/lib/sprite-by-name";
 import { useAuth } from "@/lib/use-auth";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
@@ -134,6 +137,7 @@ export default function PartyPlannerPage() {
   const [saved, setSaved] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [grouping, setGrouping] = useState<PlanGrouping>("character");
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -216,9 +220,32 @@ export default function PartyPlannerPage() {
   const [typed, setTyped] = useState("");
   const adding = resolveCharacter(typed, roster, shown);
 
-  const wants = useMemo(() => draftWants(draft, shown), [draft, shown]);
-  const plan = useMemo(() => planParties(wants, { maxMinutes: draft.maxMinutes }), [wants, draft]);
+  const knownJobs = useMemo(() => {
+    const jobs = new Map<string, string>();
+    for (const c of characters) if (c.jobName) jobs.set(c.name.toLowerCase(), c.jobName);
+    for (const p of people) {
+      for (const [name, job] of Object.entries(p.ownedJobs ?? {}))
+        jobs.set(name.toLowerCase(), job);
+    }
+    return jobs;
+  }, [characters, people]);
+  const wants = useMemo(() => draftWants(draft, shown, knownJobs), [draft, shown, knownJobs]);
+  // Every card's sprite, a typed IGN's included: looked up when the page has none. See ign-sprites.
+  const spriteOf = useCharacterSprites(
+    shown.map((c) => c.name),
+    knownSprite(sprites, people),
+  );
+  const plan = useMemo(() => planParties(wants), [wants]);
   const wantById = new Map(wants.map((w) => [w.id, w]));
+  const card = (p: PlannedParty) => (
+    <PlannedCard
+      key={p.seats.map((s) => s.wantId).join("|")}
+      party={p}
+      boss={bossByKey.get(p.bossKey)}
+      sprite={(name) => spriteOf(name) ?? undefined}
+      personName={personName}
+    />
+  );
   // The buff note once, under the first slider on the page.
   const firstShown =
     shown.map((c) => draft.wants.findIndex((w) => w.character === c.name)).find((i) => i >= 0) ??
@@ -282,27 +309,9 @@ export default function PartyPlannerPage() {
         placeholder={<p className="party-hint">Loading...</p>}
       >
         <div className="planner">
-          <label className="split-field planner-pace">
-            <span>
-              Run Length <strong className="planner-value">Up to {draft.maxMinutes} min</strong>
-            </span>
-            <input
-              type="range"
-              min={MIN_MINUTES}
-              max={MAX_MINUTES}
-              step={1}
-              value={draft.maxMinutes}
-              onChange={(e) => setDraft({ ...draft, maxMinutes: Number(e.target.value) })}
-            />
-            <span className="planner-ends" aria-hidden="true">
-              <span>Fastest</span>
-              <span>Min Cut</span>
-            </span>
-          </label>
-
-          <section className="planner-characters">
+          <section className="planner-grid">
             {shown.map((c) => {
-              const sprite = sprites.get(c.name);
+              const sprite = spriteOf(c.name);
               const owner = personName(c.personId);
               return (
                 <div key={c.name} className="party-card planner-character">
@@ -314,7 +323,25 @@ export default function PartyPlannerPage() {
                     )}
                     <div className="planner-character-name">
                       <h2 className="party-card-name">{c.name}</h2>
-                      {owner && <span className="party-card-size">{owner}</span>}
+                      {(owner || knownJobs.has(c.name.toLowerCase())) && (
+                        <span className="party-card-size">
+                          {[owner, knownJobs.get(c.name.toLowerCase())].filter(Boolean).join(" · ")}
+                        </span>
+                      )}
+                      {!knownJobs.has(c.name.toLowerCase()) && (
+                        <button
+                          type="button"
+                          className={`run-chip planner-lynn${jobOf(c.name, knownJobs, draft) === "Lynn" ? " is-on" : ""}`}
+                          aria-pressed={jobOf(c.name, knownJobs, draft) === "Lynn"}
+                          onClick={() =>
+                            setDraft(
+                              markLynn(draft, c.name, jobOf(c.name, knownJobs, draft) !== "Lynn"),
+                            )
+                          }
+                        >
+                          Lynn
+                        </button>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -456,7 +483,7 @@ export default function PartyPlannerPage() {
                   className="split-input"
                   list="planner-known"
                   placeholder="IGN"
-                  maxLength={MAX_IGN}
+                  maxLength={MAX_IGN_LENGTH}
                   autoComplete="off"
                   spellCheck={false}
                   value={typed}
@@ -492,15 +519,62 @@ export default function PartyPlannerPage() {
             <section className="planner-plan">
               <h2 className="planner-heading">Parties</h2>
               {!plan.exact && <p className="party-hint">Large groups are approximate.</p>}
-              {plan.parties.map((p) => (
-                <PlannedCard
-                  key={p.seats.map((s) => s.wantId).join("|")}
-                  party={p}
-                  boss={bossByKey.get(p.bossKey)}
-                  sprite={(name) => sprites.get(name)}
-                  personName={personName}
-                />
-              ))}
+              {plan.parties.length > 0 && (
+                <FilterOptions>
+                  <GroupingTabs
+                    value={grouping}
+                    options={[
+                      { value: "character", label: "By Character" },
+                      { value: "boss", label: "By Boss" },
+                    ]}
+                    onChange={setGrouping}
+                  />
+                </FilterOptions>
+              )}
+              {grouping === "character" &&
+                byCharacter(
+                  plan.parties,
+                  shown.map((c) => c.name),
+                ).map((group) => {
+                  const sprite = spriteOf(group.key);
+                  const owner = personName(
+                    shown.find((c) => c.name === group.key)?.personId ?? YOU,
+                  );
+                  return (
+                    <section className="party-group" key={group.key}>
+                      <header className="party-banner">
+                        {sprite ? (
+                          <img className="party-banner-sprite" src={spriteUrl(sprite)} alt="" />
+                        ) : (
+                          <span className="party-banner-sprite is-empty" aria-hidden="true" />
+                        )}
+                        <h2 className="party-group-name">{group.key}</h2>
+                        {owner && <span className="party-card-size">{owner}</span>}
+                        <span className="party-banner-count">
+                          {group.parties.length} {group.parties.length === 1 ? "boss" : "bosses"}
+                        </span>
+                      </header>
+                      <div className="planner-grid">{group.parties.map(card)}</div>
+                    </section>
+                  );
+                })}
+              {grouping === "boss" &&
+                byBoss(plan.parties, bosses).map((group) => {
+                  const [bossKey = "", difficulty = ""] = group.key.split("|");
+                  const boss = bossByKey.get(bossKey);
+                  const art = bossArt(boss, bossKey);
+                  return (
+                    <section className="party-group" key={group.key}>
+                      <header className="party-group-head">
+                        {art && <img className="boss-portrait" src={art} alt="" />}
+                        <h2 className="party-group-name">
+                          {bossLabel(boss?.name ?? bossKey, difficulty)}
+                        </h2>
+                      </header>
+                      <div className="planner-grid">{group.parties.map(card)}</div>
+                    </section>
+                  );
+                })}
               {plan.unplaced.length > 0 && (
                 <div className="party-card">
                   <h3 className="party-card-name">No Party</h3>
@@ -513,7 +587,7 @@ export default function PartyPlannerPage() {
                         <SeatTile
                           key={u.wantId}
                           want={want}
-                          sprite={sprites.get(want.character)}
+                          sprite={spriteOf(want.character) ?? undefined}
                           owner={personName(want.personId)}
                         >
                           <span className="planner-tile-boss">
