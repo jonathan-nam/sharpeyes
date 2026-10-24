@@ -33,6 +33,7 @@ class ModuleGoldenTest {
             mapOf(
                 "loot.saleMoney" to { a -> out(saleMoney(a.arg<Loot>(0))) },
                 "loot.splitOf" to { a -> out(splitOf(a.arg(0), a.arg(1))) },
+                "loot.statusLabel" to { a -> out(statusLabel(a.arg(0))) },
             ),
         )
 

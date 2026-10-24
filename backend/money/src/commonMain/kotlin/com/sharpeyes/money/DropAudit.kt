@@ -227,3 +227,33 @@ fun buildDropAudit(
         events = headEvents(entry, bossName) + inOrder(acts(entry, loot, party, book)),
     )
 }
+
+/**
+ * Every drop's history, as the drop page builds it: its own log, closures from every settlement, and
+ * runs logged twice left in. Null for a drop whose party is not on the page.
+ */
+fun dropAudits(
+    page: DropLogPage,
+    books: List<SharedBook>,
+): List<DropAudit?> {
+    val shared = sharedHistory(books)
+    val parties = page.parties + shared.parties
+    val pools = page.pools + shared.pools
+    val settlements = page.settlements + shared.settlements
+    val log = buildDropLog(parties, pools, page.drops, closedByHolder(settlements).closed)
+    val names = LinkedHashMap<String, String>()
+    for (person in page.people) names["person:${person.id}"] = person.name
+    names.putAll(shared.names)
+    for (seat in parties.flatMap { foldSeats(it.seats) }) names[seat.key] = seat.name
+    val book =
+        AuditBook(
+            log.entries,
+            pools,
+            parties,
+            page.bosses.associateBy { it.bossKey },
+            settlements,
+            page.debts + shared.debts,
+            names,
+        )
+    return log.entries.map { buildDropAudit(it.lootId, book) }
+}

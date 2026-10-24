@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { committedGolden, seeded } from "@/lib/golden";
 import { goldenAccount } from "@/lib/golden-pages";
 import { goldenJson, recorded, recording, resetRecording } from "@/lib/golden-record";
+import { bossLabel } from "@/lib/boss-difficulty";
+import { buildDropAudit } from "@/lib/drop-audit";
 import { buildDropLog } from "@/lib/drop-log";
 import { loggedTwice, withoutLoot } from "@/lib/duplicate-runs";
 import {
@@ -41,6 +43,7 @@ import { sharedHistory } from "@/lib/shared-history";
 import { sharedPile } from "@/lib/shared-pile";
 import {
   closedByHolder,
+  foldSeats,
   couponMoney,
   holderKey,
   type HolderLedger,
@@ -238,7 +241,37 @@ function figures(page: DropLogPage, books: SharedBook[]) {
           : null,
       ),
     ],
+    audits: audits(page, books),
   };
+}
+
+/** Every drop's history, the way app/bosses/drops/[loot]/page.tsx builds one. */
+function audits(page: DropLogPage, books: SharedBook[]) {
+  const shared = sharedHistory(books);
+  const parties = [...page.parties, ...shared.parties];
+  const pools = [...page.pools, ...shared.pools];
+  const settlements = [...page.settlements, ...shared.settlements];
+  const log = buildDropLog(parties, pools, page.drops, closedByHolder(settlements).closed);
+  const names = new Map<string, string>();
+  for (const person of page.people) names.set(`person:${person.id}`, person.name);
+  for (const [key, name] of shared.names) names.set(key, name);
+  for (const party of parties)
+    for (const seat of foldSeats(party.seats)) names.set(seat.key, seat.name);
+  const bosses = new Map(page.bosses.map((b) => [b.bossKey, b]));
+  const debts = [...page.debts, ...shared.debts];
+  return log.entries.map((e) =>
+    buildDropAudit(
+      e.lootId,
+      log.entries,
+      pools,
+      parties,
+      bosses,
+      settlements,
+      debts,
+      names,
+      bossLabel,
+    ),
+  );
 }
 
 type Case = { name: string; page: DropLogPage; books: SharedBook[] };

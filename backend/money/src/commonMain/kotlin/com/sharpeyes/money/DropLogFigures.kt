@@ -50,6 +50,8 @@ data class DropLogFigures(
     val cards: List<CardView>,
     /** Your drawn piles, then the linked holders' piles, then one per shared book (null where none). */
     val piles: List<PileCard?>,
+    /** Every drop's own page, in the drop page's log order. See dropAudits. */
+    val audits: List<DropAudit?>,
 )
 
 /** The pools cut by who logged each drop: whoever logged it sells it. */
@@ -171,5 +173,6 @@ fun dropLogFigures(
         sales = sales,
         cards = cards,
         piles = sale.piles(sharedPiles),
+        audits = dropAudits(page, books),
     )
 }
