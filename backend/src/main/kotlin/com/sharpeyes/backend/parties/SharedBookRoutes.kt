@@ -3,7 +3,6 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.backend.events.EventTarget
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.tellLinkedOnWrite
-import com.sharpeyes.backend.notifications.noticeLedger
 import com.sharpeyes.backend.pages.bookBetween
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -137,7 +136,6 @@ private suspend fun RoutingContext.addMoney(kind: SharedRow) {
             } else {
                 insertSharedPayment(book, writer, request.amount, note, now)
             }
-            noticeLedger(book.personId, if (kind == SharedRow.DEBT) "debt" else "payment", request.amount, note)
             null
         }
     }

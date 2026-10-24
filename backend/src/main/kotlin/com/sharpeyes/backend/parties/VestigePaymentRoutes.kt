@@ -2,7 +2,6 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.VestigePayment
 import com.sharpeyes.backend.events.eventPerson
-import com.sharpeyes.backend.notifications.noticeLedger
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -117,7 +116,6 @@ private suspend fun RoutingContext.addPaymentRoute() {
                 it[receivedAt] = now
                 it[createdAt] = now
             }
-            noticeLedger(person, "payment", request.amount, note)
             paymentsFor(userId)
         }
     // The whole tally, like the tranche write: what a holder still owes is read off all of it, so a

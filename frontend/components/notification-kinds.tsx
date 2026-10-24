@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { apiFetch } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
-import { BOSS_ART, BOSS_ART_2X } from "@/lib/boss-art";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { shortMesos } from "@/lib/drop-split";
 import { formatDollars } from "@/lib/money";
@@ -24,7 +23,7 @@ export type KindActions = {
  * needs an answer brings its buttons and is cleared by answering; one without gets a dismiss.
  *
  * A change somebody made to something shared is a sentence instead of a title, beside the art of
- * what changed (the drop, the boss) where it has some. See backend PartyNotices.kt.
+ * what changed (the drop) where it has some. See backend PartyNotices.kt.
  */
 type Kind = {
   title?: string;
@@ -33,51 +32,20 @@ type Kind = {
   text?: (payload: Payload, who: string) => string;
   /** Backend-relative art for what changed. */
   icon?: (payload: Payload) => string | null;
-  /** Set on the icon, for art that is not a 46px drop icon. */
-  iconClass?: string;
   href?: (payload: Payload) => string;
 };
 
 type Payload = AppNotification["payload"];
 
 const str = (value: unknown) => (typeof value === "string" ? value : "");
-const num = (value: unknown) => (typeof value === "number" ? value : 0);
 
 const artOf = (p: Payload) => str(p.icon) || null;
 
-/** The 80px portrait for the 26px one the payload names, which is drawn here at a drop's 46. */
-function bossArtOf(p: Payload): string | null {
-  const key = Object.keys(BOSS_ART).find((k) => BOSS_ART[k] === p.icon);
-  return (key && BOSS_ART_2X[key]) || artOf(p);
-}
 const partyPage = (p: Payload) => `/bosses/parties/${encodeURIComponent(str(p.partyId))}`;
 
 function priceOf(p: Payload): string {
   if (typeof p.usdCents === "number") return formatDollars(p.usdCents);
   return typeof p.amount === "number" ? shortMesos(p.amount) : "";
-}
-
-function shareText(p: Payload, who: string): string {
-  if (typeof p.count === "number") {
-    const shares = p.count === 1 ? "1 share" : `${p.count} shares`;
-    return p.how === "OFFSET" ? `${who} offset ${shares}` : `${who} marked ${shares} sent`;
-  }
-  return `${who} marked a ${str(p.item)} share ${p.paid ? "paid" : "unpaid"}`;
-}
-
-function clearText(p: Payload, who: string): string {
-  const boss = bossLabel(str(p.boss) || "a boss", str(p.difficulty) || null);
-  return p.cleared ? `${who} cleared ${boss}` : `${who} unmarked ${boss}`;
-}
-
-function ledgerText(p: Payload, who: string): string {
-  const amount = shortMesos(num(p.amount));
-  if (p.entry === "payment") {
-    return p.toYou
-      ? `${who} recorded ${amount} paid to you`
-      : `${who} recorded ${amount} paid by you`;
-  }
-  return p.toYou ? `${who} recorded ${amount} owed to you` : `${who} recorded ${amount} you owe`;
 }
 
 /** The party an invite is about, as the bell names it: the leader's character and the boss. */
@@ -105,18 +73,6 @@ const KINDS: Record<string, Kind> = {
     icon: artOf,
     href: partyPage,
   },
-  SHARE_MARKED: {
-    text: shareText,
-    icon: artOf,
-    href: (p) => (p.partyId ? partyPage(p) : "/bosses/drops"),
-  },
-  STACKS_CHANGED: {
-    text: (p, who) => `${who} updated the stacks on ${str(p.item)}`,
-    icon: artOf,
-    href: partyPage,
-  },
-  CLEAR_MARKED: { text: clearText, icon: bossArtOf, iconClass: "is-boss", href: partyPage },
-  LEDGER_ENTRY: { text: ledgerText, href: () => "/bosses/drops" },
 };
 
 /** Null for a kind this build does not know, which the bell leaves out rather than guesses at. */

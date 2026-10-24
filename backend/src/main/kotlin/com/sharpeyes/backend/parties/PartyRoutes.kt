@@ -6,7 +6,6 @@ import com.sharpeyes.backend.events.EventTarget
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.events.tellLinkedOnWrite
-import com.sharpeyes.backend.notifications.noticeClear
 import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -340,7 +339,6 @@ private suspend fun RoutingContext.setClearRoute() {
                         .first()
                 setPartyClear(found, boss[BossCatalog.id], boss[BossCatalog.reset], request.cleared, Clock.System.now())
                 publishToParty(partyId, Topic.CLEARS)
-                noticeClear(found, request.cleared)
             }
             if (found == null) null else findParty(partyId, userId)
         }

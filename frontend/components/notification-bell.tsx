@@ -133,11 +133,7 @@ function NotificationItem({
           did it, so its Discord face first; their main's sprite where none. */}
       {icon ? (
         <span className="notification-art">
-          <img
-            className={`notification-icon ${kind.iconClass ?? ""}`.trim()}
-            src={apiAssetUrl(icon)}
-            alt=""
-          />
+          <img className="notification-icon" src={apiAssetUrl(icon)} alt="" />
           {actor?.image && <img className="notification-badge" src={actor.image} alt="" />}
         </span>
       ) : actor?.image ? (
