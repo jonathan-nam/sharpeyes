@@ -224,8 +224,10 @@ function SharedCardView({
         acts={closingActs({
           net: card.net,
           name: card.name,
+          // Every share both ways and the coupon money: everything one press settles.
           detail: listed([
             ...sendable.map((part) => part.label),
+            ...detail.theyOwe.map((line) => line.name),
             ...(card.youHold > 0 ? [heldFor] : []),
           ]),
           close,
