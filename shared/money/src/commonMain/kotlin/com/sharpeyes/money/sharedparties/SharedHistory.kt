@@ -1,4 +1,4 @@
-package com.sharpeyes.money.shared
+package com.sharpeyes.money.sharedparties
 
 import com.sharpeyes.money.Holder
 import com.sharpeyes.money.Party

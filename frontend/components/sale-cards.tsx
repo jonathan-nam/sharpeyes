@@ -1,8 +1,8 @@
 "use client";
 
-import { LotSale } from "@/components/lot-sale";
+import { BulkSale } from "@/components/bulk-sale";
 import { RowSale } from "@/components/row-sale";
-import type { LotDrop, LotRow } from "@/lib/lot-sale";
+import type { BulkDrop, SaleRow } from "@/lib/bulk-sale";
 import type { DropLogWrites } from "@/lib/use-drop-log-writes";
 import type { DropLogPage } from "@/types/page";
 
@@ -14,29 +14,29 @@ import type { DropLogPage } from "@/types/page";
  */
 export function SaleCards({
   page,
-  lots,
+  bulk,
   alone,
   writes,
 }: {
   page: Pick<DropLogPage, "parties" | "bosses" | "characters">;
   /** See saleQueues. Passed in because the Sales tab also counts them. */
-  lots: LotDrop[];
-  alone: LotRow[];
-  writes: Pick<DropLogWrites, "busy" | "lotSale" | "rowSale">;
+  bulk: BulkDrop[];
+  alone: SaleRow[];
+  writes: Pick<DropLogWrites, "busy" | "bulkSale" | "rowSale">;
 }) {
   const bossByKey = new Map(page.bosses.map((b) => [b.bossKey, b]));
   const partyById = new Map(page.parties.map((p) => [p.id, p]));
   const characterById = new Map(page.characters.map((c) => [c.id, c]));
   return (
     <>
-      <LotSale
-        drops={lots}
+      <BulkSale
+        drops={bulk}
         bossByKey={bossByKey}
         partyById={partyById}
         busy={writes.busy}
-        onSell={writes.lotSale}
+        onSell={writes.bulkSale}
       />
-      {/* After the lots, which are one card per drop however many rows each covers, so the shorter
+      {/* After the bulk sales, which are one card per drop however many rows each covers, so the shorter
           list is the one on top. */}
       <RowSale
         rows={alone}

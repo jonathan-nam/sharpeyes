@@ -156,8 +156,8 @@ versions from `gradle/libs.versions.toml`. The plan is `docs/backend-arithmetic-
 ### The API's types live in `shared/api`
 
 Every request and response body the backend serves is a `@Serializable` class in `shared/api`, built
-and included like `shared/money`, one package per feature (`com.sharpeyes.api.parties`, `.vestige`,
-...). The plan is `docs/shared-modules-plan.md`.
+and included like `shared/money`, one package per feature (`com.sharpeyes.api.parties`, `.coupons`,
+`.settlement`, ...), named in the words the screens use. The plan is `docs/shared-modules-plan.md`.
 
 - **A new endpoint's body goes in `shared/api`**, never beside its route. Only what goes over the
   wire does: a database payload or a vision response stays in the backend.

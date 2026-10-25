@@ -1,8 +1,8 @@
 package com.sharpeyes.backend.users
 
-import com.sharpeyes.api.users.SaveMainCharacterRequest
-import com.sharpeyes.api.users.SaveSettingsRequest
-import com.sharpeyes.api.users.SettingsResponse
+import com.sharpeyes.api.settings.SaveMainCharacterRequest
+import com.sharpeyes.api.settings.SaveSettingsRequest
+import com.sharpeyes.api.settings.SettingsResponse
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Users
 import com.sharpeyes.backend.plugins.dbQuery

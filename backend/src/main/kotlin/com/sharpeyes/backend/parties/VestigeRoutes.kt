@@ -1,13 +1,13 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.AddVestigeTrancheRequest
+import com.sharpeyes.api.coupons.BOUGHT
+import com.sharpeyes.api.coupons.KEPT
+import com.sharpeyes.api.coupons.SOLD
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeTrancheResponse
+import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import com.sharpeyes.api.system.Refusal
-import com.sharpeyes.api.vestige.AddVestigeTrancheRequest
-import com.sharpeyes.api.vestige.BOUGHT
-import com.sharpeyes.api.vestige.KEPT
-import com.sharpeyes.api.vestige.SOLD
-import com.sharpeyes.api.vestige.VestigeHolder
-import com.sharpeyes.api.vestige.VestigeTrancheResponse
-import com.sharpeyes.api.vestige.VestigeTrancheShareRow
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeTranche
 import com.sharpeyes.backend.db.VestigeTrancheShare

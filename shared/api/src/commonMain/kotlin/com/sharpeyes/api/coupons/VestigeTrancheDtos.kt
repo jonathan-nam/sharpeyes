@@ -1,4 +1,4 @@
-package com.sharpeyes.api.vestige
+package com.sharpeyes.api.coupons
 
 import kotlinx.serialization.Serializable
 

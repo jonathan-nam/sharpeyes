@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.vestige.VestigeHolder
-import com.sharpeyes.api.vestige.VestigeTrancheShareRow
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import kotlin.uuid.Uuid
 
 // Whose pieces a priced tranche was: the one place a coupon debt gets a price. See V56.

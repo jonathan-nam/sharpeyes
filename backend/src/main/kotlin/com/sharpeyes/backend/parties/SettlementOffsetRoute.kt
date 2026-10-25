@@ -1,10 +1,10 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.settlement.OffsetPartRow
+import com.sharpeyes.api.settlement.OffsetSharesRequest
+import com.sharpeyes.api.settlement.OffsetSharesResponse
 import com.sharpeyes.api.system.Refusal
-import com.sharpeyes.api.vestige.OffsetPartRow
-import com.sharpeyes.api.vestige.OffsetSharesRequest
-import com.sharpeyes.api.vestige.OffsetSharesResponse
-import com.sharpeyes.api.vestige.VestigeHolder
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
 import com.sharpeyes.backend.db.VestigeProceedsDisposal

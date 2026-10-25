@@ -2,14 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   evenShares,
   fungibleDropKeys,
-  lotDrops,
-  lotQueue,
-  lotRosters,
-  lotSaleBody,
-  priceLot,
-  proposeLot,
+  bulkDrops,
+  bulkQueue,
+  bulkRosters,
+  bulkSaleBody,
+  priceBulkSale,
+  proposeBulkSale,
   rowSales,
-} from "./lot-sale";
+} from "./bulk-sale";
 import { largestRemainder } from "./piece-ledger";
 import { SELF_KEY } from "./vestige-ledger";
 import type { BossDrop, DropTables } from "@/types/drop";
@@ -120,7 +120,7 @@ const catalogDrop = (
 /** Your character and one stranger, in two parties on two bosses. */
 const duo = () => [seat("m1", "Marrow", { mine: true }), seat("m2", "Rune")];
 
-describe("which drops are sold as a lot", () => {
+describe("which drops are sold in bulk", () => {
   it("reads the catalog rather than a list of its own", () => {
     const tables: DropTables = {
       limbo: [catalogDrop(STONE, true), catalogDrop("whisper-of-the-source", false)],
@@ -139,7 +139,7 @@ describe("which drops are sold as a lot", () => {
   });
 });
 
-describe("the queue a lot is drawn from", () => {
+describe("the queue a bulk sale is drawn from", () => {
   const parties = [party("p1", "limbo", duo()), party("p2", "kaling", duo())];
   const pools = [
     pool("p1", [drop("l2", STONE, "2026-08-06", ["m1", "m2"])]),
@@ -147,11 +147,11 @@ describe("the queue a lot is drawn from", () => {
   ];
 
   it("is oldest first, across parties", () => {
-    expect(lotQueue(parties, pools, STONE, SELF_KEY).map((r) => r.lootId)).toEqual(["l1", "l2"]);
+    expect(bulkQueue(parties, pools, STONE, SELF_KEY).map((r) => r.lootId)).toEqual(["l1", "l2"]);
   });
 
   it("names your own seat as the seller, and opens every seat on one share", () => {
-    const [first] = lotQueue(parties, pools, STONE, SELF_KEY);
+    const [first] = bulkQueue(parties, pools, STONE, SELF_KEY);
     expect(first?.sellerMemberId).toBe("m1");
     expect(evenShares(first?.ran ?? [])).toEqual({ m1: 1, m2: 1 });
   });
@@ -160,13 +160,13 @@ describe("the queue a lot is drawn from", () => {
     // Rune's 2 is an entitlement to the vestige stacks, which is the only thing that column says.
     // Reading it here sold a pile of grindstones 1:2 off a set of boxes that opened even.
     const carried = [seat("m1", "Marrow", { mine: true }), seat("m2", "Rune", { shares: 2 })];
-    const queue = lotQueue(
+    const queue = bulkQueue(
       [party("p1", "limbo", carried)],
       [pool("p1", [drop("l1", STONE, "2026-07-30", ["m1", "m2"])])],
       STONE,
       SELF_KEY,
     );
-    expect(lotSaleBody(STONE, 1, "RECEIVED", "FAIR", queue).rows[0]?.shares).toEqual({
+    expect(bulkSaleBody(STONE, 1, "RECEIVED", "FAIR", queue).rows[0]?.shares).toEqual({
       m1: 1,
       m2: 1,
     });
@@ -174,13 +174,13 @@ describe("the queue a lot is drawn from", () => {
 
   it("splits evenly whatever the week itself was pinned on", () => {
     const carried = [seat("m1", "Marrow", { mine: true }), seat("m2", "Rune", { shares: 1 })];
-    const queue = lotQueue(
+    const queue = bulkQueue(
       [party("p1", "limbo", carried)],
       [pool("p1", [drop("l1", STONE, "2026-07-30", ["m1", "m2"], { sharesThatWeek: { m2: 2 } })])],
       STONE,
       SELF_KEY,
     );
-    expect(lotSaleBody(STONE, 1, "RECEIVED", "FAIR", queue).rows[0]?.shares).toEqual({
+    expect(bulkSaleBody(STONE, 1, "RECEIVED", "FAIR", queue).rows[0]?.shares).toEqual({
       m1: 1,
       m2: 1,
     });
@@ -190,7 +190,7 @@ describe("the queue a lot is drawn from", () => {
     const sold = [
       pool("p1", [drop("l1", STONE, "2026-07-30", ["m1"], { soldAt: "2026-08-01T00:00:00Z" })]),
     ];
-    expect(lotQueue(parties, sold, STONE, SELF_KEY)).toEqual([]);
+    expect(bulkQueue(parties, sold, STONE, SELF_KEY)).toEqual([]);
   });
 
   it("leaves out a row somebody kept", () => {
@@ -199,22 +199,22 @@ describe("the queue a lot is drawn from", () => {
         drop("l1", STONE, "2026-07-30", ["m1"], { takenByMemberId: "m1", status: "TAKEN" }),
       ]),
     ];
-    expect(lotQueue(parties, kept, STONE, SELF_KEY)).toEqual([]);
+    expect(bulkQueue(parties, kept, STONE, SELF_KEY)).toEqual([]);
   });
 
   it("leaves out another drop entirely", () => {
-    expect(lotQueue(parties, pools, BOX, SELF_KEY)).toEqual([]);
+    expect(bulkQueue(parties, pools, BOX, SELF_KEY)).toEqual([]);
   });
 
   it("leaves out a week you did not run, since the sale could not name you as seller", () => {
     const guestWeek = [pool("p1", [drop("l1", STONE, "2026-07-30", ["m2"])])];
-    expect(lotQueue(parties, guestWeek, STONE, SELF_KEY)).toEqual([]);
+    expect(bulkQueue(parties, guestWeek, STONE, SELF_KEY)).toEqual([]);
   });
 
   it("leaves out a Heroic pool, where nothing is sold at all", () => {
     const heroic = [party("p1", "limbo", duo(), { worldType: "HEROIC" })];
     expect(
-      lotQueue(heroic, [pool("p1", [drop("l1", STONE, "2026-07-30", ["m1"])])], STONE, SELF_KEY),
+      bulkQueue(heroic, [pool("p1", [drop("l1", STONE, "2026-07-30", ["m1"])])], STONE, SELF_KEY),
     ).toEqual([]);
   });
 });
@@ -236,7 +236,7 @@ describe("the drops that price alone", () => {
     expect(rows([drop("l1", RING, "2026-07-30", ["m1", "m2"])])).toEqual(["l1"]);
   });
 
-  it("leaves out an interchangeable drop, which is a lot instead", () => {
+  it("leaves out an interchangeable drop, which is sold in bulk instead", () => {
     // The two lists must not overlap: a grindstone offered here as well would be two ways to price
     // one row, and whichever was used second would overwrite the first.
     expect(rows([drop("l1", STONE, "2026-07-30", ["m1", "m2"])])).toEqual([]);
@@ -256,7 +256,7 @@ describe("the drops that price alone", () => {
     expect(rows([freeText])).toEqual(["l1"]);
   });
 
-  it("is oldest first, and carries the seller and the even split a lot row does", () => {
+  it("is oldest first, and carries the seller and the even split a bulk-sale row does", () => {
     const found = rowSales(
       parties,
       [
@@ -274,7 +274,7 @@ describe("the drops that price alone", () => {
     expect(evenShares(found[0]?.ran ?? [])).toEqual({ m1: 1, m2: 1 });
   });
 
-  it("shares the lot queue's own rules about what is sellable", () => {
+  it("shares the bulk queue's own rules about what is sellable", () => {
     const sold = drop("l1", RING, "2026-07-30", ["m1"], { soldAt: "2026-08-01T00:00:00Z" });
     expect(rows([sold])).toEqual([]);
     expect(rows([drop("l1", RING, "2026-07-30", ["m2"])])).toEqual([]);
@@ -287,8 +287,8 @@ describe("the drops that price alone", () => {
   });
 });
 
-describe("proposing the rows a lot covers", () => {
-  const queue = lotQueue(
+describe("proposing the rows a bulk sale covers", () => {
+  const queue = bulkQueue(
     [party("p1", "limbo", duo())],
     [
       pool("p1", [
@@ -302,13 +302,13 @@ describe("proposing the rows a lot covers", () => {
   );
 
   it("takes the oldest rows, and only as many as were sold", () => {
-    const proposal = proposeLot(queue, 2);
+    const proposal = proposeBulkSale(queue, 2);
     expect(proposal.rows.map((r) => r.lootId)).toEqual(["l1", "l2"]);
     expect(proposal.units).toBe(2);
   });
 
   it("proposes nothing for more than the queue holds, and says what it holds", () => {
-    const proposal = proposeLot(queue, 5);
+    const proposal = proposeBulkSale(queue, 5);
     expect(proposal.rows).toEqual([]);
     expect(proposal.reachable).toEqual([1, 2, 3]);
   });
@@ -316,7 +316,7 @@ describe("proposing the rows a lot covers", () => {
   it("refuses a count that lands mid-row rather than rounding to the nearest", () => {
     // Two rows of two: 1 and 3 are not sellable amounts, and picking the closest would file a sale
     // for a quantity nobody entered.
-    const stacked = lotQueue(
+    const stacked = bulkQueue(
       [party("p1", "limbo", duo())],
       [
         pool("p1", [
@@ -327,17 +327,17 @@ describe("proposing the rows a lot covers", () => {
       STONE,
       SELF_KEY,
     );
-    expect(proposeLot(stacked, 3).rows).toEqual([]);
-    expect(proposeLot(stacked, 3).reachable).toEqual([2, 4]);
-    expect(proposeLot(stacked, 4).rows.map((r) => r.lootId)).toEqual(["l1", "l2"]);
+    expect(proposeBulkSale(stacked, 3).rows).toEqual([]);
+    expect(proposeBulkSale(stacked, 3).reachable).toEqual([2, 4]);
+    expect(proposeBulkSale(stacked, 4).rows.map((r) => r.lootId)).toEqual(["l1", "l2"]);
   });
 
   it("proposes nothing for nothing", () => {
-    expect(proposeLot(queue, 0).rows).toEqual([]);
+    expect(proposeBulkSale(queue, 0).rows).toEqual([]);
   });
 });
 
-describe("what each row of a lot sold for", () => {
+describe("what each row of a bulk sale sold for", () => {
   const rowsOf = (units: number[]) =>
     units.map((u, i) => ({
       lootId: `l${i}`,
@@ -355,11 +355,16 @@ describe("what each row of a lot sold for", () => {
     }));
 
   it("divides the total evenly when it divides", () => {
-    expect(priceLot(2 * B, rowsOf([1, 1, 1, 1]))).toEqual([500 * M, 500 * M, 500 * M, 500 * M]);
+    expect(priceBulkSale(2 * B, rowsOf([1, 1, 1, 1]))).toEqual([
+      500 * M,
+      500 * M,
+      500 * M,
+      500 * M,
+    ]);
   });
 
   it("adds up to exactly the total when it does not divide", () => {
-    const amounts = priceLot(1 * B, rowsOf([1, 1, 1]));
+    const amounts = priceBulkSale(1 * B, rowsOf([1, 1, 1]));
     expect(amounts.reduce((sum, n) => sum + n, 0)).toBe(1 * B);
     // The odd meso goes to one row, not to none of them: a per-unit price rounded and multiplied
     // out would leave the party a meso short with every figure looking ordinary.
@@ -367,16 +372,16 @@ describe("what each row of a lot sold for", () => {
   });
 
   it("prices a row of three at three times a row of one", () => {
-    expect(priceLot(4 * B, rowsOf([3, 1]))).toEqual([3 * B, 1 * B]);
+    expect(priceBulkSale(4 * B, rowsOf([3, 1]))).toEqual([3 * B, 1 * B]);
   });
 
   it("is the same arithmetic the piece ledger divides pieces with", () => {
-    expect(priceLot(7, rowsOf([1, 1, 1]))).toEqual(largestRemainder(7, [1, 1, 1]));
+    expect(priceBulkSale(7, rowsOf([1, 1, 1]))).toEqual(largestRemainder(7, [1, 1, 1]));
   });
 });
 
-describe("the request a confirmed lot sends", () => {
-  const queue = lotQueue(
+describe("the request a confirmed bulk sale sends", () => {
+  const queue = bulkQueue(
     [party("p1", "limbo", duo()), party("p2", "kaling", duo())],
     [
       pool("p1", [drop("l1", STONE, "2026-07-16", ["m1", "m2"])]),
@@ -387,7 +392,7 @@ describe("the request a confirmed lot sends", () => {
   );
 
   it("names every row with its own party, seller and slice", () => {
-    const body = lotSaleBody(STONE, 2 * B, "RECEIVED", "FAIR", proposeLot(queue, 2).rows);
+    const body = bulkSaleBody(STONE, 2 * B, "RECEIVED", "FAIR", proposeBulkSale(queue, 2).rows);
     expect(body.rows).toEqual([
       {
         partyId: "p1",
@@ -407,18 +412,18 @@ describe("the request a confirmed lot sends", () => {
   });
 
   it("carries the total, which is what the server checks the slices against", () => {
-    const body = lotSaleBody(STONE, 1 * B, "LISTED", "LAZY", proposeLot(queue, 2).rows);
+    const body = bulkSaleBody(STONE, 1 * B, "LISTED", "LAZY", proposeBulkSale(queue, 2).rows);
     expect(body.total).toBe(1 * B);
     expect(body.rows.reduce((sum, r) => sum + r.amount, 0)).toBe(body.total);
   });
 });
 
-// A lot used to pin an even split with no boxes to say so, so every pile of grindstones reached the
+// A bulk sale used to pin an even split with no boxes to say so, so every pile of grindstones reached the
 // Settlement Ledger as one, whatever the party had agreed. The boxes are per ROSTER: one person
-// holds a different seat id in each pool a lot spans, and a four-week pile the same two ran is one
+// holds a different seat id in each pool a bulk sale spans, and a four-week pile the same two ran is one
 // ratio to type rather than four.
-describe("the seats a lot's share boxes stand for", () => {
-  const rosterQueue = lotQueue(
+describe("the seats a bulk sale's share boxes stand for", () => {
+  const rosterQueue = bulkQueue(
     [party("p1", "limbo", duo()), party("p2", "kaling", [...duo(), seat("m3", "Kelp")])],
     [
       pool("p1", [
@@ -432,25 +437,25 @@ describe("the seats a lot's share boxes stand for", () => {
   );
 
   it("is one set of boxes per distinct roster, not per row", () => {
-    expect(lotRosters(rosterQueue).map((r) => r.names)).toEqual([
+    expect(bulkRosters(rosterQueue).map((r) => r.names)).toEqual([
       ["Marrow", "Rune"],
       ["Marrow", "Rune", "Kelp"],
     ]);
   });
 
   it("offers no boxes for a row nobody else ran, which has nothing to divide", () => {
-    const solo = lotQueue(
+    const solo = bulkQueue(
       [party("p1", "limbo", duo())],
       [pool("p1", [drop("l1", STONE, "2026-07-16", ["m1"])])],
       STONE,
       SELF_KEY,
     );
-    expect(lotRosters(solo)).toEqual([]);
+    expect(bulkRosters(solo)).toEqual([]);
   });
 
   it("applies a typed ratio to every row that roster ran, by their seat in it", () => {
-    const [duoRoster, trioRoster] = lotRosters(rosterQueue);
-    const body = lotSaleBody(STONE, 3 * B, "RECEIVED", "FAIR", rosterQueue, {
+    const [duoRoster, trioRoster] = bulkRosters(rosterQueue);
+    const body = bulkSaleBody(STONE, 3 * B, "RECEIVED", "FAIR", rosterQueue, {
       [duoRoster!.key]: { Marrow: 1, Rune: 2 },
       [trioRoster!.key]: { Marrow: 1, Rune: 1, Kelp: 0 },
     });
@@ -463,7 +468,7 @@ describe("the seats a lot's share boxes stand for", () => {
 
   it("is an even split where nothing was typed", () => {
     expect(
-      lotSaleBody(STONE, 3 * B, "RECEIVED", "FAIR", rosterQueue).rows.map((r) => r.shares),
+      bulkSaleBody(STONE, 3 * B, "RECEIVED", "FAIR", rosterQueue).rows.map((r) => r.shares),
     ).toEqual([
       { m1: 1, m2: 1 },
       { m1: 1, m2: 1, m3: 1 },
@@ -472,7 +477,7 @@ describe("the seats a lot's share boxes stand for", () => {
   });
 });
 
-describe("the drops a lot can be entered for", () => {
+describe("the drops a bulk sale can be entered for", () => {
   it("lists only what is waiting, most units first", () => {
     const parties = [party("p1", "limbo", duo())];
     const pools = [
@@ -484,7 +489,7 @@ describe("the drops a lot can be entered for", () => {
         drop("l4", BOX, "2026-07-30", ["m1"], { soldAt: "2026-08-01T00:00:00Z" }),
       ]),
     ];
-    const drops = lotDrops(parties, pools, new Set([STONE, BOX]), SELF_KEY);
+    const drops = bulkDrops(parties, pools, new Set([STONE, BOX]), SELF_KEY);
     expect(drops.map((d) => [d.dropKey, d.units])).toEqual([
       [STONE, 2],
       [BOX, 1],
@@ -492,7 +497,7 @@ describe("the drops a lot can be entered for", () => {
   });
 
   it("leaves out a drop with an empty queue rather than showing a box that refuses everything", () => {
-    const drops = lotDrops(
+    const drops = bulkDrops(
       [party("p1", "limbo", duo())],
       [pool("p1", [])],
       new Set([STONE]),

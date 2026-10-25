@@ -3,14 +3,14 @@ package com.sharpeyes.api.pages
 import com.sharpeyes.api.bosses.BossDropResponse
 import com.sharpeyes.api.bosses.BossResponse
 import com.sharpeyes.api.characters.CharacterResponse
+import com.sharpeyes.api.coupons.VestigePaymentResponse
+import com.sharpeyes.api.coupons.VestigeSettlementResponse
+import com.sharpeyes.api.coupons.VestigeTrancheResponse
 import com.sharpeyes.api.loot.PartyLootPoolResponse
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonResponse
-import com.sharpeyes.api.vestige.ProceedsDisposalResponse
-import com.sharpeyes.api.vestige.SettlementDebtResponse
-import com.sharpeyes.api.vestige.VestigePaymentResponse
-import com.sharpeyes.api.vestige.VestigeSettlementResponse
-import com.sharpeyes.api.vestige.VestigeTrancheResponse
+import com.sharpeyes.api.settlement.ProceedsDisposalResponse
+import com.sharpeyes.api.settlement.SettlementDebtResponse
 import kotlinx.serialization.Serializable
 
 /**

@@ -1,12 +1,12 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.coupons.SOLD
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonRequest
 import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.api.parties.SavePeopleRequest
-import com.sharpeyes.api.vestige.SOLD
-import com.sharpeyes.api.vestige.VestigeHolder
-import com.sharpeyes.api.vestige.VestigeTrancheShareRow
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party

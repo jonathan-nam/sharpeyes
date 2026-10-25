@@ -1,6 +1,6 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.vestige.ReportedFigure
+import com.sharpeyes.api.settlement.ReportedFigure
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Notification
 import com.sharpeyes.backend.db.Person

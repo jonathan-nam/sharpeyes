@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.tokens
 
-import com.sharpeyes.api.tokens.TokenCatalogResponse
-import com.sharpeyes.api.tokens.TokenTotalResponse
+import com.sharpeyes.api.inventory.TokenCatalogResponse
+import com.sharpeyes.api.inventory.TokenTotalResponse
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.RedemptionRule

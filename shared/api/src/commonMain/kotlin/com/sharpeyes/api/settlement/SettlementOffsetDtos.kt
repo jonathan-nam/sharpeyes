@@ -1,5 +1,6 @@
-package com.sharpeyes.api.vestige
+package com.sharpeyes.api.settlement
 
+import com.sharpeyes.api.coupons.VestigeHolder
 import com.sharpeyes.api.loot.PartyLootPoolResponse
 import kotlinx.serialization.Serializable
 

@@ -28,7 +28,7 @@ import com.sharpeyes.money.settlement.sliceActToWeek
 import com.sharpeyes.money.settlement.splittableDebts
 import com.sharpeyes.money.settlement.weekSplit
 import com.sharpeyes.money.settlement.yourPiles
-import com.sharpeyes.money.shared.DecidedSerializer
+import com.sharpeyes.money.sharedparties.DecidedSerializer
 import com.sharpeyes.money.split.isMine
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer

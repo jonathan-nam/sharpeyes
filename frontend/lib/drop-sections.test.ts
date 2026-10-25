@@ -8,7 +8,7 @@ import {
   shownSection,
 } from "./drop-sections";
 
-const none = { unanswered: 0, holders: 0, lots: 0, rows: 0 };
+const none = { unanswered: 0, holders: 0, bulk: 0, rows: 0 };
 const keys = (trades?: boolean) => dropSections(trades).map((s) => s.key);
 
 describe("how many cards the Sale Ledger holds", () => {
@@ -17,7 +17,7 @@ describe("how many cards the Sale Ledger holds", () => {
   });
 
   it("counts a card per holder and per pile", () => {
-    expect(saleCards({ unanswered: 2, holders: 3, lots: 2, rows: 0 })).toBe(6);
+    expect(saleCards({ unanswered: 2, holders: 3, bulk: 2, rows: 0 })).toBe(6);
   });
 
   it("counts a card per drop that prices alone", () => {

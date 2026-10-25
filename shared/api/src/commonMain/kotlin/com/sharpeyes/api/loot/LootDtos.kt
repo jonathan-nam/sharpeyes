@@ -195,18 +195,18 @@ data class SellLootRequest(
 )
 
 /**
- * One row of a lot, priced: which drop in which pool, and the sale to file against it.
+ * One row of a bulk sale, priced: which drop in which pool, and the sale to file against it.
  *
- * The amount is this row's slice of what the lot fetched, worked out by the client so the split's
- * arithmetic keeps its one implementation (frontend/lib/lot-sale.ts, over piece-ledger's largest
- * remainder). The route checks the slices add up to the lot rather than dividing anything itself.
+ * The amount is this row's slice of what the bulk sale fetched, worked out by the client so the split's
+ * arithmetic keeps its one implementation (frontend/lib/bulk-sale.ts, over piece-ledger's largest
+ * remainder). The route checks the slices add up to the bulk sale rather than dividing anything itself.
  */
 @Serializable
-data class LotSaleRow(
+data class BulkSaleRow(
     val partyId: String,
     val lootId: String,
     val amount: Long,
-    // The seller's seat IN THIS PARTY. One person selling a lot holds a different seat in each pool
+    // The seller's seat IN THIS PARTY. One person selling in bulk holds a different seat in each pool
     // it spans, so this cannot be one id for the request.
     val sellerMemberId: String,
     val shares: Map<String, Int> = emptyMap(),
@@ -220,18 +220,18 @@ data class LotSaleRow(
  * ones than the preview showed, the moment a tab is stale or two are open, and the sale would land
  * on a party that never made it.
  *
- * All of them or none, for the reason SettleRequest gives: a lot that half-lands leaves some rows
+ * All of them or none, for the reason SettleRequest gives: a bulk sale that half-lands leaves some rows
  * priced and some not, with nothing on screen saying which half happened.
  */
 @Serializable
-data class LotSaleRequest(
+data class BulkSaleRequest(
     // Every row has to be this drop, and it has to be one the catalog marks fungible.
     val dropKey: String,
-    // What the whole lot fetched. Checked against the rows, never divided here.
+    // What the whole bulk sale fetched. Checked against the rows, never divided here.
     val total: Long,
     val amountBasis: String,
     val splitMethod: String,
-    val rows: List<LotSaleRow>,
+    val rows: List<BulkSaleRow>,
 )
 
 @Serializable

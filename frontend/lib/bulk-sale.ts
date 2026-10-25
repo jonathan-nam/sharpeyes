@@ -8,14 +8,14 @@
 // That is only honest because of what those drops ARE, which is why the catalog says so per drop
 // (`fungible` in catalog/drops.yaml). A Whisper of the Source has its own potential lines and its own
 // price, so two of them are two different sales, and a queue that picked one would file a sale
-// against a party that did not make it. See the note on `proposeLot`.
+// against a party that did not make it. See the note on `proposeBulkSale`.
 //
 // Which is why `rowSales` is here too: those drops are sold from the Drop Log as well, a card per
 // row rather than a queue, and the two lists must not overlap. Both read the same `fungible` set,
 // so nothing can be offered twice and nothing can fall between them.
 //
 // NOTHING here is a second splitter. A row, once priced, goes through the ordinary sale: splitOf(),
-// which is splitDrop(). The only arithmetic in this file is dividing the lot's mesos across the rows
+// which is splitDrop(). The only arithmetic in this file is dividing the bulk sale's mesos across the rows
 // it covers, and that is piece-ledger's largestRemainder, so the slices add up to exactly what was
 // entered.
 
@@ -45,13 +45,13 @@ export function fungibleDropKeys(dropTables: DropTables): Set<string> {
 }
 
 /** One unsold row a sale could be filed against, with everything that sale needs. */
-export type LotRow = {
+export type SaleRow = {
   lootId: string;
   partyId: string;
   /**
-   * Units of the lot this row is. What FELL, so a row of three grindstones is three of them.
+   * Units of the bulk sale this row is. What FELL, so a row of three grindstones is three of them.
    *
-   * The row is priced whole or not at all, which is what makes a lot land on row boundaries: half a
+   * The row is priced whole or not at all, which is what makes a bulk sale land on row boundaries: half a
    * row sold would need a sale amount for a part of a row, and the row has one.
    */
   units: number;
@@ -67,7 +67,7 @@ export type LotRow = {
   sellerName: string;
   /**
    * The seats that ran that week: who this row divides between, and what the card's share boxes are
-   * one of each. Every seat, not only the uneven ones, so a lot that does not divide is tellable
+   * one of each. Every seat, not only the uneven ones, so a bulk sale that does not divide is tellable
    * from one that does.
    */
   ran: PartyMember[];
@@ -83,7 +83,7 @@ export type LotRow = {
  * cannot shuffle between reads.
  *
  * A row is only here when the holder has a seat that RAN that week: they are who the sale names as
- * seller, and the server refuses a seller who was not there. So a lot is one person's, and a pool
+ * seller, and the server refuses a seller who was not there. So a bulk sale is one person's, and a pool
  * where they did not run is not theirs to price.
  *
  * Shared by the two ways a drop is priced from the Drop Log, a queue of interchangeable copies and
@@ -95,9 +95,9 @@ function sellableRows(
   /** Whose rows these are, as holderKey() spells it. `SELF_KEY` is yours. */
   holder: string,
   wanted: (loot: Loot, party: Party) => boolean,
-): LotRow[] {
+): SaleRow[] {
   const partyById = new Map(parties.map((p) => [p.id, p]));
-  const rows: LotRow[] = [];
+  const rows: SaleRow[] = [];
 
   for (const pool of pools) {
     const party = partyById.get(pool.partyId);
@@ -137,21 +137,21 @@ function sellableRows(
   );
 }
 
-/** The unsold rows of one interchangeable drop that a lot could cover, oldest first. */
-export function lotQueue(
+/** The unsold rows of one interchangeable drop that a bulk sale could cover, oldest first. */
+export function bulkQueue(
   parties: Party[],
   pools: PartyLootPool[],
   dropKey: string,
   holder: string,
-): LotRow[] {
+): SaleRow[] {
   return sellableRows(parties, pools, holder, (loot) => loot.dropKey === dropKey);
 }
 
 /**
- * One share each, keyed by seat id. What a lot pins where nobody typed a ratio.
+ * One share each, keyed by seat id. What a bulk sale pins where nobody typed a ratio.
  *
  * Even, never seeded from `party_member.shares`: that is the stack entitlement the party config
- * writes, and a party on 1:2 vestige stacks sold every lot of grindstones 1:2 and said so nowhere.
+ * writes, and a party on 1:2 vestige stacks sold every pile of grindstones 1:2 and said so nowhere.
  * See the note in loot-row.tsx.
  */
 export function evenShares(ran: PartyMember[]): Record<string, number> {
@@ -161,28 +161,28 @@ export function evenShares(ran: PartyMember[]): Record<string, number> {
 /**
  * The seats a set of share boxes stands for: the names that ran, in the order the row lists them.
  *
- * By NAME, and keyed by the sorted names, because one lot spans pools and a person holds a
+ * By NAME, and keyed by the sorted names, because one bulk sale spans pools and a person holds a
  * different seat id in each. Rows that the same people ran take one set of boxes, which is what
  * makes a four-week pile of grindstones one ratio to type rather than four.
  */
-export type LotRoster = {
+export type BulkRoster = {
   key: string;
   names: string[];
 };
 
-export function rosterOf(row: LotRow): LotRoster {
+export function rosterOf(row: SaleRow): BulkRoster {
   const names = row.ran.map((s) => s.name);
   return { key: [...names].sort().join("\u0000"), names };
 }
 
 /**
- * The distinct rosters among the rows a lot covers, in queue order.
+ * The distinct rosters among the rows a bulk sale covers, in queue order.
  *
  * Only the rows that divide: a solo row has nobody to divide with, and a box beside one name would
  * be a ratio against nothing.
  */
-export function lotRosters(rows: LotRow[]): LotRoster[] {
-  const seen = new Map<string, LotRoster>();
+export function bulkRosters(rows: SaleRow[]): BulkRoster[] {
+  const seen = new Map<string, BulkRoster>();
   for (const row of rows) {
     if (row.ran.length < 2) continue;
     const roster = rosterOf(row);
@@ -191,20 +191,20 @@ export function lotRosters(rows: LotRow[]): LotRoster[] {
   return [...seen.values()];
 }
 
-/** What one row of a lot divides by: the counts typed against its roster, or one each. */
-export function rowShares(row: LotRow, typed: LotShares): Record<string, number> {
+/** What one row of a bulk sale divides by: the counts typed against its roster, or one each. */
+export function rowShares(row: SaleRow, typed: BulkShares): Record<string, number> {
   const counts = typed[rosterOf(row).key];
   if (!counts) return evenShares(row.ran);
   return Object.fromEntries(row.ran.map((s) => [s.id, counts[s.name] ?? 1]));
 }
 
 /** Share counts as the card holds them: per roster, then per name. */
-export type LotShares = Record<string, Record<string, number>>;
+export type BulkShares = Record<string, Record<string, number>>;
 
-/** Which rows a lot of this size covers, or why it covers none. */
-export type LotProposal = {
+/** Which rows a bulk sale of this size covers, or why it covers none. */
+export type BulkProposal = {
   /** The rows it would sell, oldest first. Empty when the count cannot be made. */
-  rows: LotRow[];
+  rows: SaleRow[];
   /** Units those rows come to. Equal to the count asked for whenever `rows` is not empty. */
   units: number;
   /**
@@ -228,8 +228,8 @@ export type LotProposal = {
  * Refuses rather than rounds when the count does not land on a row boundary. Every prefix that IS
  * reachable is named, so "3 grindstones" against rows of two says what can be sold instead.
  */
-export function proposeLot(queue: LotRow[], units: number): LotProposal {
-  const rows: LotRow[] = [];
+export function proposeBulkSale(queue: SaleRow[], units: number): BulkProposal {
+  const rows: SaleRow[] = [];
   let covered = 0;
   for (const row of queue) {
     if (covered + row.units > units) break;
@@ -263,8 +263,8 @@ export function nearestCounts(reachable: number[], asked: number): number[] {
   return [below, above].filter((n): n is number => n !== undefined);
 }
 
-/** One row of a lot, priced. Mirrors backend's LotSaleRow. */
-export type LotSaleRowBody = {
+/** One row of a bulk sale, priced. Mirrors backend's BulkSaleRow. */
+export type BulkSaleRowBody = {
   partyId: string;
   lootId: string;
   amount: number;
@@ -272,17 +272,17 @@ export type LotSaleRowBody = {
   shares: Record<string, number>;
 };
 
-/** POST /api/parties/loot/lot. Mirrors backend's LotSaleRequest. */
-export type LotSaleBody = {
+/** POST /api/parties/loot/bulk-sale. Mirrors the API's BulkSaleRequest. */
+export type BulkSaleBody = {
   dropKey: string;
   total: number;
   amountBasis: string;
   splitMethod: string;
-  rows: LotSaleRowBody[];
+  rows: BulkSaleRowBody[];
 };
 
 /**
- * What each row of the lot sold for: the total split across them by how many units each holds.
+ * What each row of the bulk sale sold for: the total split across them by how many units each holds.
  *
  * Largest remainder, so the slices add up to EXACTLY what was entered. A per-unit price rounded and
  * then multiplied out would not: 1b across three rows is 333,333,333 each and a meso short of the
@@ -291,24 +291,24 @@ export type LotSaleBody = {
  *
  * Positional with `rows`.
  */
-export function priceLot(total: number, rows: LotRow[]): number[] {
+export function priceBulkSale(total: number, rows: SaleRow[]): number[] {
   return largestRemainder(
     total,
     rows.map((r) => r.units),
   );
 }
 
-/** The request for a proposal somebody has confirmed. Priced here, so one place divides the lot. */
-export function lotSaleBody(
+/** The request for a proposal somebody has confirmed. Priced here, so one place divides the sale. */
+export function bulkSaleBody(
   dropKey: string,
   total: number,
   amountBasis: string,
   splitMethod: string,
-  rows: LotRow[],
+  rows: SaleRow[],
   /** What was typed into the share boxes. Absent is an even split, which is what they open on. */
-  typed: LotShares = {},
-): LotSaleBody {
-  const amounts = priceLot(total, rows);
+  typed: BulkShares = {},
+): BulkSaleBody {
+  const amounts = priceBulkSale(total, rows);
   return {
     dropKey,
     total,
@@ -325,11 +325,11 @@ export function lotSaleBody(
 }
 
 /** One drop with a queue behind it. What the page draws a panel per. */
-export type LotDrop = {
+export type BulkDrop = {
   dropKey: string;
   name: string;
   iconUrl: string | null;
-  queue: LotRow[];
+  queue: SaleRow[];
   /** Units across the whole queue. What the panel counts down. */
   units: number;
 };
@@ -341,15 +341,15 @@ export type LotDrop = {
  * refuses everything typed into it. Ordered by how much is waiting, so the pile that has been
  * building is the one at the top, and by name so two equal piles keep one order.
  */
-export function lotDrops(
+export function bulkDrops(
   parties: Party[],
   pools: PartyLootPool[],
   fungible: Set<string>,
   holder: string,
-): LotDrop[] {
-  const out: LotDrop[] = [];
+): BulkDrop[] {
+  const out: BulkDrop[] = [];
   for (const dropKey of fungible) {
-    const queue = lotQueue(parties, pools, dropKey, holder);
+    const queue = bulkQueue(parties, pools, dropKey, holder);
     if (queue.length === 0) continue;
     out.push({
       dropKey,
@@ -365,7 +365,7 @@ export function lotDrops(
 /**
  * Every unsold drop of yours that prices ALONE, oldest first.
  *
- * The complement of the lots above, and the four accessories, the four hammers, the selection box
+ * The complement of the bulk drops above, and the four accessories, the four hammers, the selection box
  * and the two rings are all in it. Each has its own potential lines and its own price, so a queue
  * holding two of them could only guess which one went, which is why they are out of `fungible` and
  * why each gets a card naming ONE row instead. A row somebody points at raises no such question.
@@ -382,7 +382,7 @@ export function rowSales(
   dropTables: DropTables,
   fungible: Set<string>,
   holder: string,
-): LotRow[] {
+): SaleRow[] {
   return sellableRows(
     parties,
     pools,
@@ -400,10 +400,10 @@ export function saleQueues(
   pools: PartyLootPool[],
   dropTables: DropTables,
   holder: string,
-): { lots: LotDrop[]; alone: LotRow[] } {
+): { bulk: BulkDrop[]; alone: SaleRow[] } {
   const fungible = fungibleDropKeys(dropTables);
   return {
-    lots: lotDrops(parties, pools, fungible, holder),
+    bulk: bulkDrops(parties, pools, fungible, holder),
     alone: rowSales(parties, pools, dropTables, fungible, holder),
   };
 }

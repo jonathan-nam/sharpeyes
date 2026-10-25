@@ -11,12 +11,17 @@ Two Kotlin Multiplatform builds under `shared/`, each its own Gradle build that 
 ```
 shared/
   api/     com.sharpeyes.api      every request and response body, and apiJson
-    bosses/ characters/ combine/ events/ friends/ invites/ loot/ notifications/
-    pages/ parties/ planner/ screenshots/ sprites/ system/ tokens/ users/ vestige/
+    bosses/ characters/ combine/ coupons/ events/ friends/ inventory/ invites/ loot/
+    notifications/ pages/ parties/ planner/ screenshots/ settings/ settlement/ sprites/ system/
   money/   com.sharpeyes.money    the ledger arithmetic, ported from frontend/lib
     (root: Model.kt inputs, JavaScript-parity helpers, World.kt)
-    split/ lots/ pieces/ coupons/ settlement/ droplog/ shared/
+    split/ sales/ pieces/ coupons/ settlement/ droplog/ sharedparties/
 ```
+
+Packages and files are named in the screens' words: `coupons`, not vestige; `inventory`, not
+tokens; `sales/BulkSale.kt` for the card that sells several of one drop at once. Two URLs keep older
+words (`/api/vestige-*`, `/api/tokens`), and the classes inside `split/Owed.kt` keep the TypeScript's
+names (`Wallet`) until `wallet.ts` is deleted, since the golden fixtures are keyed by them.
 
 ### What goes in `shared/api`
 

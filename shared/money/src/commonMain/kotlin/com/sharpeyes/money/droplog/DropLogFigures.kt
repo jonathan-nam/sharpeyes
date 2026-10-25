@@ -15,13 +15,13 @@ import com.sharpeyes.money.coupons.paymentsSinceClosing
 import com.sharpeyes.money.coupons.runningBalance
 import com.sharpeyes.money.coupons.stillOpen
 import com.sharpeyes.money.coupons.unanswered
-import com.sharpeyes.money.lots.SaleQueues
-import com.sharpeyes.money.lots.saleQueues
 import com.sharpeyes.money.pieces.heldOfYoursBy
 import com.sharpeyes.money.pieces.outstandingOf
 import com.sharpeyes.money.pieces.owedByCreditor
 import com.sharpeyes.money.pieces.stillAsking
 import com.sharpeyes.money.pieces.worthDrawing
+import com.sharpeyes.money.sales.SaleQueues
+import com.sharpeyes.money.sales.saleQueues
 import com.sharpeyes.money.settlement.CardView
 import com.sharpeyes.money.settlement.PileCard
 import com.sharpeyes.money.settlement.SettlementView
@@ -33,14 +33,14 @@ import com.sharpeyes.money.settlement.pileCard
 import com.sharpeyes.money.settlement.settlementView
 import com.sharpeyes.money.settlement.splittableDebts
 import com.sharpeyes.money.settlement.yourPiles
-import com.sharpeyes.money.shared.DecidedSerializer
-import com.sharpeyes.money.shared.SharedCard
-import com.sharpeyes.money.shared.SharedPile
-import com.sharpeyes.money.shared.loggedTwice
-import com.sharpeyes.money.shared.sharedCard
-import com.sharpeyes.money.shared.sharedHistory
-import com.sharpeyes.money.shared.sharedPile
-import com.sharpeyes.money.shared.withoutLoot
+import com.sharpeyes.money.sharedparties.DecidedSerializer
+import com.sharpeyes.money.sharedparties.SharedCard
+import com.sharpeyes.money.sharedparties.SharedPile
+import com.sharpeyes.money.sharedparties.loggedTwice
+import com.sharpeyes.money.sharedparties.sharedCard
+import com.sharpeyes.money.sharedparties.sharedHistory
+import com.sharpeyes.money.sharedparties.sharedPile
+import com.sharpeyes.money.sharedparties.withoutLoot
 import kotlinx.serialization.Serializable
 
 // Every figure the Drop Log and its cards draw, off one account's two payloads: its own page and the

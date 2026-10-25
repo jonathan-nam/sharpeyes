@@ -10,7 +10,7 @@ import { sharePercents } from "./shares";
 // so that party's every ring and grindstone opened at 1:2 as well. It divides the coupon pile and
 // nothing else, which is ranSeats' job.
 //
-// The lot side of this is pinned by lot-sale.test.ts, which can call the function. There are no
+// The bulk-sale side of this is pinned by bulk-sale.test.ts, which can call the function. There are no
 // component tests in this repo, so the form's seed is read off the source, as piece-row-guard does.
 //
 // One file, because there is one form: LootSaleForm is the boxes on the pool row AND the boxes on
@@ -21,7 +21,7 @@ const source = (...parts: string[]) =>
 
 const form = source("components", "loot-sale-form.tsx");
 const row = source("components", "loot-row.tsx");
-const lot = source("components", "lot-sale.tsx");
+const lot = source("components", "bulk-sale.tsx");
 
 describe("the sale form's share boxes", () => {
   it("open on one share each", () => {
@@ -76,12 +76,12 @@ describe("the percentage a share count comes to", () => {
   });
 });
 
-// A lot had no share boxes at all, so every pile of grindstones was written as an even split and
-// reached the Settlement Ledger as one, whatever the party had agreed. lot-sale.test.ts pins what
+// A bulk sale had no share boxes at all, so every pile of grindstones was written as an even split and
+// reached the Settlement Ledger as one, whatever the party had agreed. bulk-sale.test.ts pins what
 // the ratio does; this pins that there is somewhere to type it.
-describe("the lot card's share boxes", () => {
+describe("the bulk-sale card's share boxes", () => {
   it("draws a box per name, one set per roster the sale covers", () => {
-    expect(lot).toContain("lotRosters(proposal.rows)");
+    expect(lot).toContain("bulkRosters(proposal.rows)");
     expect(lot).toContain("aria-label={`Shares for ${name}`}");
   });
 

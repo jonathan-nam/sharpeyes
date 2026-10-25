@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { apiFetch, readBack } from "@/lib/api";
 import { put } from "@/lib/cache";
-import type { LotRow, LotSaleBody } from "@/lib/lot-sale";
+import type { SaleRow, BulkSaleBody } from "@/lib/bulk-sale";
 import type { PartyLootPool, SellLootBody, SettleBody } from "@/types/loot";
 import type { DropLogPage } from "@/types/page";
 import type { Person } from "@/types/party";
@@ -139,12 +139,12 @@ export function useDropLogWrites(
    * Prices a pile of one interchangeable drop across every pool it sits in.
    *
    * Answers with the pools, so the rows redraw from what the server actually wrote rather than from
-   * the proposal that was confirmed. All of them or none: see lotSaleRoute.
+   * the proposal that was confirmed. All of them or none: see bulkSaleRoute.
    */
-  const lotSale = (body: LotSaleBody) =>
+  const bulkSale = (body: BulkSaleBody) =>
     track(async () =>
       apply({
-        pools: await call<PartyLootPool[]>("/api/parties/loot/lot", {
+        pools: await call<PartyLootPool[]>("/api/parties/loot/bulk-sale", {
           method: "POST",
           body: JSON.stringify(body),
         }),
@@ -158,7 +158,7 @@ export function useDropLogWrites(
    * write and cannot come out differently. Answers with the pools, which is what takes the card off
    * the list.
    */
-  const rowSale = (row: LotRow, body: SellLootBody) =>
+  const rowSale = (row: SaleRow, body: SellLootBody) =>
     track(async () => {
       await call<unknown>(`/api/parties/${row.partyId}/loot/${row.lootId}/sale`, {
         method: "PUT",
@@ -179,7 +179,7 @@ export function useDropLogWrites(
     settleShares,
     closeWrite,
     pin,
-    lotSale,
+    bulkSale,
     rowSale,
   };
 }

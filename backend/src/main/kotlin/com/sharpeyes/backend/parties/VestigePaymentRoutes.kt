@@ -1,9 +1,9 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.AddVestigePaymentRequest
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigePaymentResponse
 import com.sharpeyes.api.system.Refusal
-import com.sharpeyes.api.vestige.AddVestigePaymentRequest
-import com.sharpeyes.api.vestige.VestigeHolder
-import com.sharpeyes.api.vestige.VestigePaymentResponse
 import com.sharpeyes.backend.db.VestigePayment
 import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.plugins.dbQuery

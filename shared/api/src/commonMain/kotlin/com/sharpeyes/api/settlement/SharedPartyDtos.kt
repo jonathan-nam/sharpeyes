@@ -1,5 +1,7 @@
-package com.sharpeyes.api.vestige
+package com.sharpeyes.api.settlement
 
+import com.sharpeyes.api.coupons.SOLD
+import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import kotlinx.serialization.Serializable
 
 @Serializable

@@ -35,13 +35,13 @@ export type SaleCards = {
   /** One card per person holding a pile of coupons. */
   holders: number;
   /** One card per pile of an interchangeable drop waiting to be priced. */
-  lots: number;
+  bulk: number;
   /** One card per unsold drop that prices alone, which is a row rather than a pile. See rowSales. */
   rows: number;
 };
 
-export function saleCards({ unanswered, holders, lots, rows }: SaleCards): number {
-  return (unanswered > 0 ? 1 : 0) + holders + lots + rows;
+export function saleCards({ unanswered, holders, bulk, rows }: SaleCards): number {
+  return (unanswered > 0 ? 1 : 0) + holders + bulk + rows;
 }
 
 // The tab labels, which are the nouns and not the furniture. "Ledger" was on three of the four and

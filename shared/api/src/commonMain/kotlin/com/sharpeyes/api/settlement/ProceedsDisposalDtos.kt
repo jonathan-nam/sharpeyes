@@ -1,6 +1,11 @@
-package com.sharpeyes.api.vestige
+package com.sharpeyes.api.settlement
 
+import com.sharpeyes.api.coupons.VestigeHolder
 import kotlinx.serialization.Serializable
+
+// Whose pile a proceeds disposal speaks for, as `heldBy` carries it. See V91.
+const val HELD_BY_YOU = "YOU"
+const val HELD_BY_THEM = "THEM"
 
 @Serializable
 data class ProceedsDisposalResponse(

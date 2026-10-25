@@ -1,10 +1,10 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import com.sharpeyes.api.events.EventTarget
-import com.sharpeyes.api.vestige.SharedDisposalRequest
-import com.sharpeyes.api.vestige.SharedMoneyRequest
-import com.sharpeyes.api.vestige.SharedTrancheRequest
-import com.sharpeyes.api.vestige.VestigeTrancheShareRow
+import com.sharpeyes.api.settlement.SharedDisposalRequest
+import com.sharpeyes.api.settlement.SharedMoneyRequest
+import com.sharpeyes.api.settlement.SharedTrancheRequest
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.pages.bookBetween

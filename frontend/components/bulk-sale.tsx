@@ -6,15 +6,15 @@ import { apiAssetUrl, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
 import {
-  type LotDrop,
-  type LotSaleBody,
-  type LotShares,
-  lotRosters,
-  lotSaleBody,
+  type BulkDrop,
+  type BulkSaleBody,
+  type BulkShares,
+  bulkRosters,
+  bulkSaleBody,
   nearestCounts,
-  priceLot,
-  proposeLot,
-} from "@/lib/lot-sale";
+  priceBulkSale,
+  proposeBulkSale,
+} from "@/lib/bulk-sale";
 import { formatDropped } from "@/lib/loot";
 import { parseShares, sharePercents } from "@/lib/shares";
 import type { Boss } from "@/types/boss";
@@ -27,21 +27,21 @@ import type { Party } from "@/types/party";
 // which rows are OLDEST but not which of several identical drops actually left the inventory, so it
 // proposes and you confirm. What it must never do is pick quietly.
 //
-// Nothing here divides anything. The per-row amounts are priceLot()'s, which is piece-ledger's
+// Nothing here divides anything. The per-row amounts are priceBulkSale()'s, which is piece-ledger's
 // largestRemainder, and each row's split stays splitDrop()'s once it is sold.
 
-export function LotSale({
+export function BulkSale({
   drops,
   bossByKey,
   partyById,
   busy,
   onSell,
 }: {
-  drops: LotDrop[];
+  drops: BulkDrop[];
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   busy: boolean;
-  onSell: (body: LotSaleBody) => Promise<void>;
+  onSell: (body: BulkSaleBody) => Promise<void>;
 }) {
   // Cards only. The "Outstanding Sales" heading covers these AND the coupon piles, so it belongs to
   // whatever draws both, not to one of them.
@@ -49,7 +49,7 @@ export function LotSale({
   return (
     <>
       {drops.map((drop) => (
-        <LotCard
+        <BulkCard
           key={drop.dropKey}
           drop={drop}
           bossByKey={bossByKey}
@@ -62,18 +62,18 @@ export function LotSale({
   );
 }
 
-function LotCard({
+function BulkCard({
   drop,
   bossByKey,
   partyById,
   busy,
   onSell,
 }: {
-  drop: LotDrop;
+  drop: BulkDrop;
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   busy: boolean;
-  onSell: (body: LotSaleBody) => Promise<void>;
+  onSell: (body: BulkSaleBody) => Promise<void>;
 }) {
   const [count, setCount] = useState("");
   const [amount, setAmount] = useState("");
@@ -86,10 +86,10 @@ function LotCard({
   const asked = Number(count.trim());
   const wanted = Number.isInteger(asked) && asked >= 1 ? asked : null;
   const total = parseMesos(amount);
-  const proposal = wanted === null ? null : proposeLot(drop.queue, wanted);
+  const proposal = wanted === null ? null : proposeBulkSale(drop.queue, wanted);
   // Only ever over the rows the proposal actually covers, so a figure on screen is a figure that
   // would be filed. The queue's other rows are not part of this sale.
-  const amounts = proposal && total !== null ? priceLot(total, proposal.rows) : null;
+  const amounts = proposal && total !== null ? priceBulkSale(total, proposal.rows) : null;
 
   // A count that does not land on a whole row. The rows either side are the choice, and saying
   // nothing here would leave a disabled button with no reason.
@@ -103,11 +103,11 @@ function LotCard({
   // One set of boxes per roster among the rows this sale would cover, so the ratio is typed once
   // for a pile the same people ran. Off the proposal rather than the queue: the boxes say what
   // would be written, and the queue's other rows are not part of this sale.
-  const rosters = proposal ? lotRosters(proposal.rows) : [];
+  const rosters = proposal ? bulkRosters(proposal.rows) : [];
   const shareOf = (key: string, name: string) => shares[key]?.[name] ?? "1";
   const entered = rosters.map((r) => r.names.map((name) => parseShares(shareOf(r.key, name))));
   const sharesReadable = entered.every((counts) => counts.every((count) => count !== null));
-  const typed: LotShares = Object.fromEntries(
+  const typed: BulkShares = Object.fromEntries(
     rosters.map((r, i) => [
       r.key,
       Object.fromEntries(r.names.map((name, j) => [name, entered[i]?.[j] ?? 1])),
@@ -137,7 +137,7 @@ function LotCard({
     setRefusal(null);
     try {
       await onSell(
-        lotSaleBody(drop.dropKey, total!, amountBasis, splitMethod, proposal!.rows, typed),
+        bulkSaleBody(drop.dropKey, total!, amountBasis, splitMethod, proposal!.rows, typed),
       );
       setCount("");
       setAmount("");
@@ -194,7 +194,7 @@ function LotCard({
               inputMode="decimal"
             />
           </Field>
-          {/* No "member bought": a lot spans pools, and one member cannot have bought a pile out of
+          {/* No "member bought": a bulk sale spans pools, and one member cannot have bought a pile out of
               parties they were not in. That case stays on the row, where it names its own buyer. */}
           <Field on label="Sale Type" cls="is-pick">
             <select
@@ -287,7 +287,7 @@ function LotCard({
                       .join(" · ")}
                   </span>
                   {amounts && (
-                    <span className="lot-row-amount">{formatMesos(amounts[i] ?? 0, true)}</span>
+                    <span className="bulk-row-amount">{formatMesos(amounts[i] ?? 0, true)}</span>
                   )}
                 </div>
               </li>

@@ -1,4 +1,4 @@
-package com.sharpeyes.money.shared
+package com.sharpeyes.money.sharedparties
 
 import com.sharpeyes.money.Boss
 import com.sharpeyes.money.DropLogPage

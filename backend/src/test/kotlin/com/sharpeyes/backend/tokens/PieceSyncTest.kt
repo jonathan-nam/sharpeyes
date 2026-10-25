@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.tokens
 
+import com.sharpeyes.api.inventory.PieceSyncGap
 import com.sharpeyes.api.parties.SavePartyRequest
-import com.sharpeyes.api.tokens.PieceSyncGap
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.bosses.setBossClearByHand
 import com.sharpeyes.backend.bosses.upsertBossClears

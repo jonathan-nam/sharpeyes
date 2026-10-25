@@ -1,5 +1,6 @@
-package com.sharpeyes.api.vestige
+package com.sharpeyes.api.settlement
 
+import com.sharpeyes.api.coupons.VestigeHolder
 import kotlinx.serialization.Serializable
 
 /** One share an offset discharged. The PAYOUT, since one drop owes several people. See V58. */

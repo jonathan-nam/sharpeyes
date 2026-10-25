@@ -59,8 +59,10 @@ fun Route.partyRoutes(
     post("/loot") { logDropRoute() }
     post("/loot/settle") { settleRoute() }
     // A pile of one interchangeable drop, priced in one go across every pool it sits in. See
-    // lotSaleRoute.
-    post("/loot/lot") { lotSaleRoute() }
+    // bulkSaleRoute.
+    post("/loot/bulk-sale") { bulkSaleRoute() }
+    // The old path, for a tab opened before the rename. Remove once that deploy has settled.
+    post("/loot/lot") { bulkSaleRoute() }
     // Which mode a boss run alone is run at, by character and boss. Constant, so ahead of /{id}.
     put("/solo") { setSoloDifficultyRoute() }
     // Every party's pile of Eternal pieces for a week, for Party View and Run Order. Constant, so

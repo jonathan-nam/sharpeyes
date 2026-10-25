@@ -1,4 +1,4 @@
-package com.sharpeyes.money.lots
+package com.sharpeyes.money.sales
 
 import com.sharpeyes.money.BossDrop
 import com.sharpeyes.money.Loot
@@ -13,11 +13,11 @@ import com.sharpeyes.money.droplog.isPieceDrop
 import com.sharpeyes.money.localeCompare
 import kotlinx.serialization.Serializable
 
-// What is waiting to be sold, and by whom: the lots of interchangeable drops and the drops that price
-// alone. The port of the queue half of frontend/lib/lot-sale.ts.
+// What is waiting to be sold, and by whom: the piles of interchangeable drops and the drops that price
+// alone. The port of the queue half of frontend/lib/bulk-sale.ts.
 
 @Serializable
-data class LotRow(
+data class SaleRow(
     val lootId: String,
     val partyId: String,
     val units: Double,
@@ -34,18 +34,18 @@ data class LotRow(
 )
 
 @Serializable
-data class LotDrop(
+data class BulkDrop(
     val dropKey: String,
     val name: String,
     val iconUrl: String? = null,
-    val queue: List<LotRow>,
+    val queue: List<SaleRow>,
     val units: Double,
 )
 
 @Serializable
 data class SaleQueues(
-    val lots: List<LotDrop>,
-    val alone: List<LotRow>,
+    val bulk: List<BulkDrop>,
+    val alone: List<SaleRow>,
 )
 
 /** Drops any copy of which is any other: a grindstone is a grindstone. In catalog order. */
@@ -62,10 +62,10 @@ private fun sellableRow(
     party: Party,
     loot: Loot,
     holder: String,
-): LotRow? {
+): SaleRow? {
     val ran = party.seats.filter { it.id in loot.ranThatWeek }
     val seller = ran.find { holderKey(holderOf(it)) == holder } ?: return null
-    return LotRow(
+    return SaleRow(
         lootId = loot.id,
         partyId = pool.partyId,
         units = loot.quantity,
@@ -88,7 +88,7 @@ private fun sellableRows(
     pools: List<PartyLootPool>,
     holder: String,
     wanted: (Loot, Party) -> Boolean,
-): List<LotRow> {
+): List<SaleRow> {
     val partyById = parties.associateBy { it.id }
     val rows =
         pools.flatMap { pool ->
@@ -105,25 +105,25 @@ private fun sellableRows(
     }
 }
 
-fun lotQueue(
+fun bulkQueue(
     parties: List<Party>,
     pools: List<PartyLootPool>,
     dropKey: String,
     holder: String,
-): List<LotRow> = sellableRows(parties, pools, holder) { loot, _ -> loot.dropKey == dropKey }
+): List<SaleRow> = sellableRows(parties, pools, holder) { loot, _ -> loot.dropKey == dropKey }
 
-/** One lot per interchangeable drop with anything to sell, the biggest first. */
-fun lotDrops(
+/** One pile per interchangeable drop with anything to sell, the biggest first. */
+fun bulkDrops(
     parties: List<Party>,
     pools: List<PartyLootPool>,
     fungible: Set<String>,
     holder: String,
-): List<LotDrop> {
-    val lots =
+): List<BulkDrop> {
+    val bulk =
         fungible.mapNotNull { dropKey ->
-            val queue = lotQueue(parties, pools, dropKey, holder)
+            val queue = bulkQueue(parties, pools, dropKey, holder)
             queue.firstOrNull()?.let {
-                LotDrop(
+                BulkDrop(
                     dropKey,
                     it.name,
                     it.iconUrl,
@@ -135,7 +135,7 @@ fun lotDrops(
                 )
             }
         }
-    return lots.sortedWith { a, b ->
+    return bulk.sortedWith { a, b ->
         compareNumbers(b.units - a.units).takeIf { it != 0 }
             ?: localeCompare(a.name, b.name)
     }
@@ -148,7 +148,7 @@ fun rowSales(
     dropTables: Map<String, List<BossDrop>>,
     fungible: Set<String>,
     holder: String,
-): List<LotRow> =
+): List<SaleRow> =
     sellableRows(parties, pools, holder) { loot, party ->
         (loot.dropKey ?: "") !in fungible && !isPieceDrop(loot, party, dropTables)
     }
@@ -161,7 +161,7 @@ fun saleQueues(
 ): SaleQueues {
     val fungible = fungibleDropKeys(dropTables)
     return SaleQueues(
-        lotDrops(parties, pools, fungible, holder),
+        bulkDrops(parties, pools, fungible, holder),
         rowSales(parties, pools, dropTables, fungible, holder),
     )
 }

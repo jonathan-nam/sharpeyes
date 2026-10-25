@@ -29,7 +29,7 @@ import kotlin.uuid.Uuid
 /**
  * Selling a pile of one interchangeable drop in one go, against a real Postgres.
  *
- * What is worth a database here is that a refusal writes NOTHING. A lot spans pools, so a loop that
+ * What is worth a database here is that a refusal writes NOTHING. A bulk sale spans pools, so a loop that
  * priced three rows and then hit a fourth it could not sell would commit the three, and no screen
  * would say which of them had landed. That shape is worse than a refusal, because the figures it
  * leaves all look ordinary.
@@ -38,7 +38,7 @@ import kotlin.uuid.Uuid
  * drops ARE, and the flag is the only thing standing between the queue and a drop whose copies each
  * have their own price.
  */
-class LotSaleTest {
+class BulkSaleTest {
     private val userId = "user_test_lot_sale_1"
     private val dropped = LocalDate.parse("2026-07-20")
 
@@ -108,7 +108,7 @@ class LotSaleTest {
         lootId: Uuid,
         amount: Long,
         seller: String = party.members.first().id,
-    ) = LotRow(
+    ) = SaleRow(
         Uuid.parse(party.id),
         lootId,
         amount,
@@ -116,13 +116,13 @@ class LotSaleTest {
         party.members.associate { it.id to 1 },
     )
 
-    private fun sellLot(
+    private fun sellBulk(
         dropKey: String,
-        rows: List<LotRow>,
-    ) = sellLot(userId, dropKey, "RECEIVED", "FAIR", rows, Clock.System.now())
+        rows: List<SaleRow>,
+    ) = sellBulk(userId, dropKey, "RECEIVED", "FAIR", rows, Clock.System.now())
 
     @Test
-    fun `a lot prices every row it names, across pools`() {
+    fun `a bulk sale prices every row it names, across pools`() {
         transaction {
             val limbo = duo("limbo")
             val baldrix = duo("baldrix")
@@ -130,7 +130,7 @@ class LotSaleTest {
             val second = addDrop(baldrix, "grindstone-of-faith")
 
             assertNull(
-                sellLot(
+                sellBulk(
                     "grindstone-of-faith",
                     listOf(row(limbo, first, 500_000_000), row(baldrix, second, 500_000_000)),
                 ),
@@ -153,13 +153,13 @@ class LotSaleTest {
     }
 
     @Test
-    fun `a drop that is not sold as a lot is refused, and nothing is written`() {
+    fun `a drop that is not sold in bulk is refused, and nothing is written`() {
         transaction {
             val party = duo("limbo")
             val unique = addDrop(party, "whisper-of-the-source")
 
-            val why = sellLot("whisper-of-the-source", listOf(row(party, unique, 12_000_000_000)))
-            assertTrue(why!!.contains("not sold as a lot"))
+            val why = sellBulk("whisper-of-the-source", listOf(row(party, unique, 12_000_000_000)))
+            assertTrue(why!!.contains("not sold in bulk"))
             // The whole point of the flag: a ring with its own potential lines cannot be assigned by
             // a queue, so the row is still waiting to be priced where it sits.
             assertEquals("PENDING", findLoot(unique, Uuid.parse(party.id))!!.status)
@@ -168,7 +168,7 @@ class LotSaleTest {
     }
 
     @Test
-    fun `one row it cannot sell refuses the whole lot`() {
+    fun `one row it cannot sell refuses the whole bulk sale`() {
         transaction {
             val party = duo("limbo")
             val partyId = Uuid.parse(party.id)
@@ -176,7 +176,7 @@ class LotSaleTest {
             val alreadySold = addDrop(party, "grindstone-of-faith")
 
             // Sold by hand, the way somebody who priced one row before opening the Drop Log would
-            // have left it. The queue that proposed this lot is stale.
+            // have left it. The queue that proposed this bulk sale is stale.
             sellLoot(
                 alreadySold,
                 SellLootRequest(1_000_000_000, "LISTED", "FAIR", party.members.first().id),
@@ -186,12 +186,12 @@ class LotSaleTest {
             )
 
             val why =
-                sellLot(
+                sellBulk(
                     "grindstone-of-faith",
                     listOf(row(party, good, 500_000_000), row(party, alreadySold, 500_000_000)),
                 )
             assertTrue(why!!.contains("has sold since this list was drawn"))
-            // The row it COULD have sold is untouched. A half-priced lot is the shape nobody can
+            // The row it COULD have sold is untouched. A half-priced bulk sale is the shape nobody can
             // correct, since nothing says which half landed.
             assertEquals("PENDING", findLoot(good, partyId)!!.status)
             // And the one that was already sold keeps the price somebody entered by hand.
@@ -200,7 +200,7 @@ class LotSaleTest {
     }
 
     @Test
-    fun `a kept row refuses the whole lot`() {
+    fun `a kept row refuses the whole bulk sale`() {
         transaction {
             val party = duo("limbo")
             val partyId = Uuid.parse(party.id)
@@ -209,7 +209,7 @@ class LotSaleTest {
             setLootTakenBy(kept, Uuid.parse(party.members.first().id), Clock.System.now())
 
             val why =
-                sellLot(
+                sellBulk(
                     "grindstone-of-faith",
                     listOf(row(party, good, 500_000_000), row(party, kept, 500_000_000)),
                 )
@@ -227,7 +227,7 @@ class LotSaleTest {
             val stranger = Uuid.random()
 
             val why =
-                sellLot(
+                sellBulk(
                     "grindstone-of-faith",
                     listOf(row(party, stone, 500_000_000, seller = stranger.toString())),
                 )
@@ -237,27 +237,27 @@ class LotSaleTest {
     }
 
     @Test
-    fun `a lot may not reach a pool this account does not own`() {
+    fun `a bulk sale may not reach a pool this account does not own`() {
         transaction {
             val party = duo("limbo")
             val stone = addDrop(party, "grindstone-of-faith")
 
             val why =
-                sellLot("grindstone-of-faith", listOf(row(party, stone, 500_000_000).copy(partyId = Uuid.random())))
+                sellBulk("grindstone-of-faith", listOf(row(party, stone, 500_000_000).copy(partyId = Uuid.random())))
             assertTrue(why!!.contains("not in your parties"))
             assertEquals("PENDING", findLoot(stone, Uuid.parse(party.id))!!.status)
         }
     }
 
     @Test
-    fun `every row of a lot has to be the same drop`() {
+    fun `every row of a bulk sale has to be the same drop`() {
         transaction {
             val party = duo("limbo")
             val stone = addDrop(party, "grindstone-of-faith")
             val box = addDrop(party, "eternal-armor-of-desire-box")
 
             val why =
-                sellLot(
+                sellBulk(
                     "grindstone-of-faith",
                     listOf(row(party, stone, 500_000_000), row(party, box, 500_000_000)),
                 )
@@ -273,9 +273,9 @@ class LotSaleTest {
      * which copy went, and one wrongly left out is a pile you still have to price row by row.
      */
     @Test
-    fun `only interchangeable drops are sold as a lot`() {
+    fun `only interchangeable drops are sold in bulk`() {
         transaction {
-            val asLots =
+            val asBulkDrops =
                 listOf(
                     "grindstone-of-faith",
                     "grindstone-of-life",
@@ -286,7 +286,7 @@ class LotSaleTest {
                     "eternal-armor-of-oaths-box",
                     "eternal-armor-of-radiance-box",
                 )
-            asLots.forEach { assertNull(lotDropRefusal(it), "$it should be sold as a lot") }
+            asBulkDrops.forEach { assertNull(bulkDropRefusal(it), "$it should be sold in bulk") }
 
             // Accessories and rings have their own potential lines, so two copies are two prices.
             // Vestige coupons settle through the tranche ledger instead.
@@ -302,13 +302,13 @@ class LotSaleTest {
                 "vestige-of-erion",
             ).forEach {
                 assertTrue(
-                    lotDropRefusal(it)!!.contains("not sold as a lot"),
-                    "$it should not be sold as a lot",
+                    bulkDropRefusal(it)!!.contains("not sold in bulk"),
+                    "$it should not be sold in bulk",
                 )
             }
 
             // A key the catalog does not have at all is refused too, rather than throwing.
-            assertTrue(lotDropRefusal("no-such-drop") != null)
+            assertTrue(bulkDropRefusal("no-such-drop") != null)
         }
     }
 }

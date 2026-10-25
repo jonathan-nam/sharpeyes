@@ -1,8 +1,8 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.vestige.AddVestigeSettlementRequest
-import com.sharpeyes.api.vestige.VestigeHolder
-import com.sharpeyes.api.vestige.VestigeSettlementResponse
+import com.sharpeyes.api.coupons.AddVestigeSettlementRequest
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeSettlementResponse
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.Person

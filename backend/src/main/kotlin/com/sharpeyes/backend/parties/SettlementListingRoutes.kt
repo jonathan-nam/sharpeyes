@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.settlement.ReportFiguresRequest
 import com.sharpeyes.api.system.Refusal
-import com.sharpeyes.api.vestige.ReportFiguresRequest
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.failing
 import com.sharpeyes.backend.plugins.principalIdAndEmail

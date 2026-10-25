@@ -7574,9 +7574,9 @@ button.link:disabled {
   gap: 4px;
 }
 
-/* The share boxes for the rows a lot would cover. Its own row in the form's wrap, so the price line
+/* The share boxes for the rows a bulk sale would cover. Its own row in the form's wrap, so the price line
    keeps its line and the button keeps the next one. */
-/* The lot card's form. .ledger-sale, which this was, is a wrapping ROW, so the boxes, the splits
+/* The bulk-sale card's form. .ledger-sale, which this was, is a wrapping ROW, so the boxes, the splits
    and the sell all shared one wrap and it sized its own boxes; naming the boxes wants a row of
    their own and the sizes the fields bring. .ledger-sale still draws the Settlement Ledger's
    unlabelled lines, which is why this is a class of its own rather than a change to that one. */
@@ -7931,9 +7931,9 @@ button.ledger-drop-sale.is-armed:hover:not(:disabled) {
   background: var(--good);
 }
 
-/* What one row of a lot would be filed at. Right-aligned against the boss and date beside it, so a
+/* What one row of a bulk sale would be filed at. Right-aligned against the boss and date beside it, so a
    column of them reads as the split of the price above. */
-.lot-row-amount {
+.bulk-row-amount {
   margin-left: auto;
   color: var(--good);
   font-size: var(--text-base);

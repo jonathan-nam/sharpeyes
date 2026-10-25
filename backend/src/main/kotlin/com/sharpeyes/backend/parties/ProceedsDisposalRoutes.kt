@@ -1,10 +1,10 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.vestige.AddProceedsDisposalRequest
-import com.sharpeyes.api.vestige.HELD_BY_THEM
-import com.sharpeyes.api.vestige.HELD_BY_YOU
-import com.sharpeyes.api.vestige.ProceedsDisposalResponse
-import com.sharpeyes.api.vestige.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.settlement.AddProceedsDisposalRequest
+import com.sharpeyes.api.settlement.HELD_BY_THEM
+import com.sharpeyes.api.settlement.HELD_BY_YOU
+import com.sharpeyes.api.settlement.ProceedsDisposalResponse
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
 import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.plugins.dbQuery

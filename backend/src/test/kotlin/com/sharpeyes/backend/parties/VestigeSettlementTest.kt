@@ -1,6 +1,6 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.vestige.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeHolder
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertTrue

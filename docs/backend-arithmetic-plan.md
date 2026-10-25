@@ -24,7 +24,7 @@ It also fixes things that hurt today:
   (`lib/duplicate-runs.ts`); the member's card reads the raw book (`sharedCard`). One computation
   on the server is one answer.
 - **The server trusts amounts it cannot check.** An offset's amount is the client's `splitOf`; the
-  backend stores whatever arrives. A lot sale is at least checked to add up (`LootValidation.kt`),
+  backend stores whatever arrives. A bulk sale is at least checked to add up (`LootValidation.kt`),
   but the division is still the client's.
 
 ## What moves
@@ -42,11 +42,11 @@ The money modules in `frontend/lib`, in dependency order (each imports only what
 | `settlement.ts`, `settlement-view.ts` | 1542 | One card per person: money, pieces, offsets, held money. 137 tests. |
 | `duplicate-runs.ts`, `shared-history.ts`, `shared-book.ts`, `shared-pile.ts` | 403 | The shared book read from the member's side. |
 | `drop-log.ts`, `settled-log.ts`, `drop-audit.ts`, `ledger-fates.ts` | ~1990 | The Drop Log, Settled tab and one drop's history. |
-| `lot-sale.ts` | 409 | Dividing one sale over a queue of rows (largest remainder). |
+| `bulk-sale.ts` | 409 | Dividing one sale over a queue of rows (largest remainder). |
 
 About 7,450 lines and roughly 650 tests (counted 2026-10-24). Screens that call into them today: the Drop Log
 (`/bosses/drops`, `/bosses/drops/[loot]`), Party View (`/bosses/parties`, the party page), the
-Split calculator (`/bosses/split`), and the loot row, sale form, lot sale, settled view and
+Split calculator (`/bosses/split`), and the loot row, sale form, bulk sale, settled view and
 settlement cards.
 
 **Not in scope:** the Party Planner, Run Order and boss clear logic. They are not money and nothing
@@ -143,7 +143,7 @@ languages. See open questions.
 ### Phase 6: flip the writes
 
 Writes send the act, not the arithmetic. Offset and Mark Sent name which shares; the server prices
-them. A lot sale names the rows; the server divides it. Client-supplied amounts on those routes are
+them. A bulk sale names the rows; the server divides it. Client-supplied amounts on those routes are
 refused once every client is on the new shape.
 
 Settlement listings (#827) drop their figure-reporting endpoint: the server records each card's

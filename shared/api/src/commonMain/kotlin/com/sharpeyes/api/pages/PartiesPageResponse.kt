@@ -4,11 +4,11 @@ import com.sharpeyes.api.bosses.BossClearsViewResponse
 import com.sharpeyes.api.bosses.BossDropResponse
 import com.sharpeyes.api.bosses.BossResponse
 import com.sharpeyes.api.characters.CharacterResponse
+import com.sharpeyes.api.coupons.VestigeSettlementResponse
 import com.sharpeyes.api.loot.PartyLootPoolResponse
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonResponse
 import com.sharpeyes.api.parties.SeatedPartyResponse
-import com.sharpeyes.api.vestige.VestigeSettlementResponse
 import kotlinx.serialization.Serializable
 
 /**

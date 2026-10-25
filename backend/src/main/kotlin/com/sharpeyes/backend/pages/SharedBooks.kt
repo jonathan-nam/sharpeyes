@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.coupons.VestigeHolder
 import com.sharpeyes.api.pages.SharedBookResponse
-import com.sharpeyes.api.vestige.VestigeHolder
 import com.sharpeyes.backend.db.PartyReadCutoff
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.invites.senderNameFor

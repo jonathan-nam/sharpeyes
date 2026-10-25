@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.tokens
 
-import com.sharpeyes.api.tokens.PieceSyncGap
-import com.sharpeyes.api.tokens.PieceSyncGapResponse
+import com.sharpeyes.api.inventory.PieceSyncGap
+import com.sharpeyes.api.inventory.PieceSyncGapResponse
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.characters.writeTokenCount
 import com.sharpeyes.backend.db.BossCatalog

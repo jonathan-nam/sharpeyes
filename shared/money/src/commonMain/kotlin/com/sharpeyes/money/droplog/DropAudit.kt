@@ -14,7 +14,7 @@ import com.sharpeyes.money.coupons.foldSeats
 import com.sharpeyes.money.coupons.holderKey
 import com.sharpeyes.money.localeCompare
 import com.sharpeyes.money.settlement.bossLabel
-import com.sharpeyes.money.shared.sharedHistory
+import com.sharpeyes.money.sharedparties.sharedHistory
 import com.sharpeyes.money.split.splitOf
 import kotlinx.serialization.Serializable
 

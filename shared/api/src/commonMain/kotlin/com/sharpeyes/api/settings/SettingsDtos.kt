@@ -1,4 +1,4 @@
-package com.sharpeyes.api.users
+package com.sharpeyes.api.settings
 
 import kotlinx.serialization.Serializable
 

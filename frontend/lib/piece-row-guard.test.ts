@@ -62,7 +62,7 @@ describe("a piece drop cannot be sold through its own row", () => {
   it("names every screen that draws the sale form without a row around it", () => {
     // The form is its own component now, so the `pieces` gate above is not the only thing standing
     // between a coupon stack and a price box: anything rendering LootSaleForm directly answers for
-    // its own rows. RowSale's come from rowSales, which drops piece drops (see lot-sale.test.ts).
+    // its own rows. RowSale's come from rowSales, which drops piece drops (see bulk-sale.test.ts).
     // A third caller has to be looked at, so it fails here rather than shipping.
     const dir = join(__dirname, "..", "components");
     const callers = readdirSync(dir).filter((file) =>

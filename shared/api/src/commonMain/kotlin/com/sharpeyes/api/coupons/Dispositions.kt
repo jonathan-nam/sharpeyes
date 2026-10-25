@@ -1,4 +1,4 @@
-package com.sharpeyes.api.vestige
+package com.sharpeyes.api.coupons
 
 // What a tranche's pieces became, as `disposition` carries it.
 
@@ -16,7 +16,3 @@ const val KEPT = "KEPT"
  * pieces never went to market.
  */
 const val BOUGHT = "BOUGHT"
-
-// Whose pile a proceeds disposal speaks for, as `heldBy` carries it. See V91.
-const val HELD_BY_YOU = "YOU"
-const val HELD_BY_THEM = "THEM"

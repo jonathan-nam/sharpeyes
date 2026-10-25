@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.events.EventTarget
-import com.sharpeyes.api.vestige.SettlementListingView
+import com.sharpeyes.api.settlement.SettlementListingView
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.SettlementListing
 import com.sharpeyes.backend.events.Topic

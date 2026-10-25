@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.tokens
 
-import com.sharpeyes.api.tokens.PieceSyncResponse
-import com.sharpeyes.api.tokens.SavePieceSyncRequest
+import com.sharpeyes.api.inventory.PieceSyncResponse
+import com.sharpeyes.api.inventory.SavePieceSyncRequest
 import com.sharpeyes.backend.db.Users
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
