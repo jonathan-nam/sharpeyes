@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { apiAssetUrl } from "@/lib/api";
 import { difficultyLabel } from "@/lib/boss-difficulty";
 import { parseCount, pileProblem } from "@/lib/piece-pile";
@@ -99,24 +100,14 @@ export function PiecePileEditor({
         {form.added ? (
           <>
             {dirty && (
-              <button
-                type="button"
-                className="party-save"
-                disabled={busy || problem !== null}
-                onClick={save}
-              >
+              <Button variant="primary" disabled={busy || problem !== null} onClick={save}>
                 Save
-              </button>
+              </Button>
             )}
             {dirty && (
-              <button
-                type="button"
-                className="party-cancel"
-                disabled={busy}
-                onClick={() => setTakes(saved)}
-              >
+              <Button variant="secondary" disabled={busy} onClick={() => setTakes(saved)}>
                 Revert
-              </button>
+              </Button>
             )}
             {onRemove && (
               <button
@@ -131,17 +122,12 @@ export function PiecePileEditor({
           </>
         ) : (
           <>
-            <button
-              type="button"
-              className="party-save"
-              disabled={busy || problem !== null}
-              onClick={save}
-            >
+            <Button variant="primary" disabled={busy || problem !== null} onClick={save}>
               Add
-            </button>
-            <button type="button" className="party-cancel" disabled={busy} onClick={onCancel}>
+            </Button>
+            <Button variant="secondary" disabled={busy} onClick={onCancel}>
               Cancel
-            </button>
+            </Button>
           </>
         )}
       </div>

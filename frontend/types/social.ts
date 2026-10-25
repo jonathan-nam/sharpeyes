@@ -17,4 +17,16 @@ export type Social = {
   username: string | null;
   friends: FriendView[];
   outgoing: FriendView[];
+  /** Requests to you. Absent on a cached payload. */
+  incoming?: FriendView[];
+};
+
+/** GET /api/party-invites: a seat offered to one of your characters. See PartyInvites.kt. */
+export type IncomingInvite = {
+  id: string;
+  partyId: string;
+  character: string;
+  boss: string;
+  difficulty: string | null;
+  leader: string;
 };

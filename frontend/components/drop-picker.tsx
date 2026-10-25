@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Field } from "@/components/add-field";
+import { Button } from "@/components/button";
 import { failureText, isDuplicateDrop } from "@/lib/api";
 import { DropSelect } from "@/components/drop-select";
 import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
@@ -289,19 +290,20 @@ export function DropPicker({
 
       {pickedPiece ? null : card ? (
         <Tooltip text="Add Drop">
-          <button
+          <Button
+            variant="primary"
             type="submit"
-            className="party-save add-plus"
+            className="add-plus"
             aria-label="Add Drop"
             disabled={busy || !ready}
           >
             <span aria-hidden="true">+</span>
-          </button>
+          </Button>
         </Tooltip>
       ) : (
-        <button type="submit" className="party-save" disabled={busy || !ready}>
+        <Button variant="primary" type="submit" disabled={busy || !ready}>
           Add Drop
-        </button>
+        </Button>
       )}
     </>
   );
@@ -339,14 +341,9 @@ export function DropPicker({
       {duplicate && (
         <p className="split-error">
           {duplicate}{" "}
-          <button
-            type="button"
-            className="party-save"
-            onClick={() => void send(true)}
-            disabled={busy}
-          >
+          <Button variant="primary" onClick={() => void send(true)} disabled={busy}>
             Add Again
-          </button>
+          </Button>
         </p>
       )}
       {pile}

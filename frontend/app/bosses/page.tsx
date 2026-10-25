@@ -1,5 +1,6 @@
 "use client";
 
+import { ButtonLink } from "@/components/button";
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
@@ -199,9 +200,9 @@ export default function BossesPage() {
             {/* Which bosses a character runs is set one character at a time, on its own page: the
                 whole set is the thing being answered, and a grid of cells cannot show one
                 character's set without you reading down a column. */}
-            <Link className="party-cancel" href="/bosses/routine">
+            <ButtonLink variant="secondary" href="/bosses/routine">
               Edit Bosses
-            </Link>
+            </ButtonLink>
           </span>
         )}
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/button";
 import { ChangedBy } from "@/components/changed-by";
 import { useState, type ReactNode } from "react";
 import { CopyAmount } from "@/components/copy-amount";
@@ -209,15 +210,14 @@ export function LootRow({
           {divides(ran) &&
             !instanced &&
             sellers.map((m) => (
-              <button
+              <Button
                 key={m.id}
-                type="button"
-                className="party-cancel"
+                variant="secondary"
                 onClick={() => onSetTaken(m.id)}
                 disabled={busy}
               >
                 {m.name} took it
-              </button>
+              </Button>
             ))}
           {mayRemove && (
             <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
@@ -236,14 +236,9 @@ export function LootRow({
               "Somebody no longer in the party"}
           </span>
           {actsAs(loot.takenByMemberId) && (
-            <button
-              type="button"
-              className="party-cancel"
-              onClick={() => onSetTaken(null)}
-              disabled={busy}
-            >
+            <Button variant="secondary" onClick={() => onSetTaken(null)} disabled={busy}>
               Put Back
-            </button>
+            </Button>
           )}
           {!readOnly && (
             <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
@@ -273,24 +268,18 @@ export function LootRow({
           />
         ) : (
           <div className="loot-actions">
-            <button
-              type="button"
-              className="party-save"
-              onClick={() => setSelling(true)}
-              disabled={busy}
-            >
+            <Button variant="primary" onClick={() => setSelling(true)} disabled={busy}>
               Mark Sold
-            </button>
+            </Button>
             {keepers.map((m) => (
-              <button
+              <Button
                 key={m.id}
-                type="button"
-                className="party-cancel"
+                variant="secondary"
                 onClick={() => onSetTaken(m.id)}
                 disabled={busy}
               >
                 {keepers.length === 1 ? "Keep" : `${m.name} kept it`}
-              </button>
+              </Button>
             ))}
             {mayRemove && (
               <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
@@ -391,9 +380,9 @@ export function LootRow({
 
           {actsAs(loot.sellerMemberId) && (
             <div className="loot-actions">
-              <button type="button" className="party-cancel" onClick={onUnsell} disabled={busy}>
+              <Button variant="secondary" onClick={onUnsell} disabled={busy}>
                 Undo Sale
-              </button>
+              </Button>
               {!readOnly && (
                 <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
                   Remove

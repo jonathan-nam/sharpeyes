@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type ReactNode, useEffect } from "react";
+import { Button } from "@/components/button";
 import { CopyAmount } from "@/components/copy-amount";
 import { DiscordAvatar } from "@/components/discord-avatar";
 import { apiAssetUrl } from "@/lib/api";
@@ -41,9 +42,9 @@ export function LedgerHead({
       {/* What built the figure and what came off it: a history, which grows for as long as the two
           of you play, so it is a click away rather than the top half of the card. */}
       {onHistory && (
-        <button type="button" className="party-cancel ledger-history-open" onClick={onHistory}>
+        <Button variant="secondary" className="ledger-history-open" onClick={onHistory}>
           History
-        </button>
+        </Button>
       )}
     </header>
   );
@@ -78,9 +79,9 @@ export function HistoryDialog({
         <h2 className="invite-title">Settlement History</h2>
         {children}
         <div className="invite-actions">
-          <button type="button" className="party-cancel" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -256,14 +257,9 @@ export function ClosingActions({ acts, busy }: { acts: ClosingAct[]; busy: boole
       <span className="ledger-heading">Closing Actions</span>
       {acts.map((act) => (
         <span key={act.key} className="ledger-settle">
-          <button
-            type="button"
-            className="party-save"
-            disabled={busy || act.disabled}
-            onClick={act.onClick}
-          >
+          <Button variant="primary" disabled={busy || act.disabled} onClick={act.onClick}>
             {act.label}
-          </button>
+          </Button>
           {act.detail && <span className="ledger-progress">{act.detail}</span>}
           {act.after}
         </span>

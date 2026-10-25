@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/button";
 import { PageSwap } from "@/components/page-swap";
 import { InviteLink } from "@/components/invite-link";
 import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
@@ -278,9 +279,9 @@ export default function PeoplePage() {
               >
                 Add Person
               </button>
-              <button type="button" className="party-save" disabled={busy || !dirty} onClick={save}>
+              <Button variant="primary" disabled={busy || !dirty} onClick={save}>
                 {busy ? "Saving..." : "Save People"}
-              </button>
+              </Button>
               {error && <span className="split-error">{error}</span>}
               {inviteError && <span className="split-error">{inviteError}</span>}
             </div>

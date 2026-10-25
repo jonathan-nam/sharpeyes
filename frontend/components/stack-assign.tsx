@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/button";
 import { failureText } from "@/lib/api";
 import { useState } from "react";
 import {
@@ -131,14 +132,9 @@ function ShareBoxes({
       </div>
 
       <div className="loot-actions">
-        <button
-          type="button"
-          className="party-save"
-          disabled={busy || !adds}
-          onClick={() => void save()}
-        >
+        <Button variant="primary" disabled={busy || !adds} onClick={() => void save()}>
           Save Split
-        </button>
+        </Button>
         {/* Only the arithmetic, and only while it is wrong: what is left to place is the one thing
             the boxes cannot show, and it is what the button is waiting for. */}
         {readable && !adds && (

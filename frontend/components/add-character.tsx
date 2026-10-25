@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/use-auth";
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { apiFetch } from "@/lib/api";
 import type { Character } from "@/types/character";
 
@@ -58,9 +59,9 @@ export function AddCharacter({ onAdded }: { onAdded: (character: Character) => v
           disabled={submitting}
           onChange={(e) => setName(e.target.value)}
         />
-        <button type="submit" className="party-save" disabled={submitting || !name.trim()}>
+        <Button variant="primary" type="submit" disabled={submitting || !name.trim()}>
           {submitting ? "Adding..." : "Add Character"}
-        </button>
+        </Button>
       </form>
       {error && <p className="routine-error">{error}</p>}
     </>

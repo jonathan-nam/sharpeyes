@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { apiAssetUrl, failureText } from "@/lib/api";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
@@ -162,9 +163,9 @@ function DropArrangement({
           </li>
         ))}
         <li>
-          <button type="button" className="party-save" disabled={busy} onClick={() => void save()}>
+          <Button variant="primary" disabled={busy} onClick={() => void save()}>
             Save
-          </button>
+          </Button>
         </li>
       </ul>
 

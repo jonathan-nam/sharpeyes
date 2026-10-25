@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { DropPicker } from "@/components/drop-picker";
 import { LootList, type StackAssignment } from "@/components/loot-list";
 import { StackAssign } from "@/components/stack-assign";
@@ -103,13 +104,9 @@ export function LootPool({
       <div className="loot-pool-head">
         <h2 className="loot-pool-title">Loot Pool</h2>
         {correctable && (
-          <button
-            type="button"
-            className="party-cancel"
-            onClick={() => setEditing((open) => !open)}
-          >
+          <Button variant="secondary" onClick={() => setEditing((open) => !open)}>
             {editing ? "Cancel" : "Edit"}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -194,13 +191,9 @@ export function LootPool({
           the only place to do it. */}
       {hidden > 0 && (
         <div className="loot-elsewhere">
-          <button
-            type="button"
-            className="party-cancel"
-            onClick={() => setShowingOthers((open) => !open)}
-          >
+          <Button variant="secondary" onClick={() => setShowingOthers((open) => !open)}>
             {showingOthers ? "Hide" : "Other Nights"}
-          </button>
+          </Button>
           {showingOthers &&
             others.map((night) => (
               <div className="loot-night" key={night.weekStart}>

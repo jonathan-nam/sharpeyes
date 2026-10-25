@@ -190,6 +190,21 @@ class FriendsTest {
         }
     }
 
+    // Social lists them, so a request cleared from the bell can still be answered.
+    @Test
+    fun `a request waits on the one asked, under the same id the bell answers it by`() {
+        transaction {
+            discordAccount(wren, "wrenb", "orchid88")
+            discordAccount(owen, "owendiscord", "Pinewick")
+            sendFriendRequest(wren, "owendiscord", Clock.System.now())
+            val asked = notificationsFor(owen).notifications.single()
+
+            assertEquals(listOf(asked.subjectId), socialFor(owen).incoming.map { it.id })
+            assertEquals(listOf("wrenb"), socialFor(owen).incoming.map { it.username })
+            assertEquals(emptyList(), socialFor(wren).incoming)
+        }
+    }
+
     @Test
     fun `a typed name is looked up the way a request matches it, and shows who it will reach`() {
         transaction {

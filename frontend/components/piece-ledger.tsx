@@ -4,6 +4,7 @@ import { formatPieces } from "@/lib/piece-ledger";
 import Link from "next/link";
 import { useState } from "react";
 import { Field } from "@/components/add-field";
+import { Button } from "@/components/button";
 import { apiAssetUrl, failureText } from "@/lib/api";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
@@ -415,9 +416,9 @@ function HolderCard({
                 />
               </Field>
             )}
-            <button type="submit" className="party-save" disabled={busy || entry === null}>
+            <Button variant="primary" type="submit" disabled={busy || entry === null}>
               Add
-            </button>
+            </Button>
           </form>
         ) : (
           <span className="ledger-progress ledger-none">No coupons outstanding</span>

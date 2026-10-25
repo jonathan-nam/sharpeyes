@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/button";
 
 /**
  * A button that asks before it acts: one press opens the question, the act hangs off the second.
@@ -28,14 +29,9 @@ export function ConfirmAct({
       <button type="button" className="party-delete" onClick={onConfirm} disabled={busy}>
         {question}
       </button>
-      <button
-        type="button"
-        className="party-cancel"
-        onClick={() => setAsking(false)}
-        disabled={busy}
-      >
+      <Button variant="secondary" onClick={() => setAsking(false)} disabled={busy}>
         {keep}
-      </button>
+      </Button>
     </>
   ) : (
     <button type="button" className="party-delete" onClick={() => setAsking(true)} disabled={busy}>

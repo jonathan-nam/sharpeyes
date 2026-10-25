@@ -2,11 +2,16 @@ package com.sharpeyes.backend.notifications
 
 import com.sharpeyes.api.loot.LootResponse
 import com.sharpeyes.backend.bosses.bossCatalog
+import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.events.ACTOR
 import com.sharpeyes.backend.parties.audienceOf
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.select
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -32,16 +37,47 @@ private fun bossNameOf(key: String): String? = bossCatalog().firstOrNull { it.bo
 
 private fun JsonObject.with(extra: JsonObject): JsonObject = JsonObject(this + extra)
 
-/** Everybody [partyId] reaches but whoever is making this change. */
+/** Everybody [partyId] reaches but whoever is making this change, each with [forUser] added. */
 private fun tellParty(
     partyId: Uuid,
     kind: String,
     subject: Uuid?,
     payload: JsonObject,
+    forUser: (user: String, actor: String) -> JsonObject = { _, _ -> JsonObject(emptyMap()) },
 ) {
     val actor = ACTOR.get() ?: return
     val now = Clock.System.now()
-    for (user in audienceOf(partyId) - actor) notify(user, kind, now, subject, actor, payload)
+    for (user in audienceOf(partyId) - actor) {
+        notify(user, kind, now, subject, actor, payload.with(forUser(user, actor)))
+    }
+}
+
+/**
+ * The person whose Settlement card stands between [user] and [actor] over [partyId], in the party
+ * owner's book: the card a sale lands on. A member settles with the owner, so a member hearing of
+ * another member's sale is pointed at their own card with the owner.
+ */
+private fun cardOver(
+    partyId: Uuid,
+    user: String,
+    actor: String,
+): JsonObject {
+    val owner =
+        Party
+            .select(Party.userId)
+            .where { Party.id eq partyId }
+            .firstOrNull()
+            ?.get(Party.userId)
+    val linked = if (user == owner) actor else user
+    val person =
+        owner?.let {
+            Person
+                .select(Person.id)
+                .where { (Person.userId eq it) and (Person.linkedUserId eq linked) }
+                .firstOrNull()
+                ?.get(Person.id)
+        }
+    return buildJsonObject { person?.let { put("personId", it.toString()) } }
 }
 
 /** A drop of a party you are in sold, in mesos or in dollars. */
@@ -58,4 +94,5 @@ internal fun noticeSale(
             put("usdCents", loot.saleUsdCents)
         },
     ),
+    forUser = { user, actor -> cardOver(partyId, user, actor) },
 )

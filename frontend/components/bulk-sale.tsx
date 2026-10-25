@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Field } from "@/components/add-field";
+import { Button } from "@/components/button";
 import { apiAssetUrl, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatMesos, parseMesos } from "@/lib/drop-split";
@@ -253,11 +254,11 @@ function BulkCard({
             })}
           </div>
         )}
-        <button type="submit" className="party-save" disabled={busy || !ready}>
+        <Button variant="primary" type="submit" disabled={busy || !ready}>
           {proposal && proposal.rows.length > 0
             ? `Sell ${proposal.rows.length === 1 ? "This Drop" : `These ${proposal.rows.length}`}`
             : "Sell"}
-        </button>
+        </Button>
 
         {instead.length > 0 && <span className="split-error">Sell {instead.join(" or ")}.</span>}
         {refusal && <span className="split-error">{refusal}</span>}

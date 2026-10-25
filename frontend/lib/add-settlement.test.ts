@@ -44,7 +44,7 @@ describe("the way in for somebody with no card", () => {
     // The b/m suffix is the one thing about parseMesos nobody can guess, so it stays a placeholder.
     expect(component).toContain('placeholder="1.5b"');
     // And the submit is the card's mark, not a word that would read as a second kind of act.
-    expect(component).toContain('className="party-save ledger-add"');
+    expect(component).toMatch(/variant="primary"\s+type="submit"\s+className="ledger-add"/);
   });
 
   it("offers a shared owner both ways, signed as their book counts it", () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { ButtonLink } from "@/components/button";
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
@@ -166,9 +167,9 @@ export default function EditPartiesPage() {
           <Link href="/bosses/parties">&larr; Party View</Link>
         </p>
         <span className="page-head-links">
-          <Link className="party-cancel" href="/bosses/people">
+          <ButtonLink variant="secondary" href="/bosses/people">
             Edit People
-          </Link>
+          </ButtonLink>
         </span>
       </div>
       <h1 className="page-title">Edit Parties</h1>

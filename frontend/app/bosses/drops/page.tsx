@@ -5,7 +5,7 @@ import { DropLogSkeleton } from "@/components/drop-log-skeleton";
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { LogDrop } from "@/components/log-drop";
 import { PieceLedger } from "@/components/piece-ledger";
 import { SaleCards } from "@/components/sale-cards";
@@ -48,6 +48,8 @@ import {
   dropSections,
   saleCards,
   sectionFromQuery,
+  cardFromQuery,
+  cardAnchor,
   sectionHref,
   shownSection,
 } from "@/lib/drop-sections";
@@ -185,6 +187,18 @@ export default function DropLogPage() {
     () => undefined,
   );
   const [chosen, setChosen] = useState<DropSectionKey | null>(null);
+  // A notification's View Settlement asks for one card. A newly asked card beats a tab clicked
+  // before it, since the link may land on this page while it is already open.
+  const askedCard = useSyncExternalStore(
+    noSubscription,
+    () => cardFromQuery(window.location.search),
+    () => undefined,
+  );
+  const [cardSeen, setCardSeen] = useState(askedCard);
+  if (askedCard !== cardSeen) {
+    setCardSeen(askedCard);
+    setChosen(null);
+  }
   const section = chosen ?? asked ?? "drops";
   function chooseSection(key: DropSectionKey) {
     setChosen(key);
@@ -308,6 +322,17 @@ export default function DropLogPage() {
       .catch(() => setState("error"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
+
+  // To the asked card once it is drawn, and once per ask, so a refetch does not pull the page back.
+  const scrolledTo = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (state !== "loaded" || section !== "settlement" || !askedCard) return;
+    if (scrolledTo.current === askedCard) return;
+    const card = document.getElementById(cardAnchor(askedCard));
+    if (!card) return;
+    scrolledTo.current = askedCard;
+    card.scrollIntoView({ block: "start" });
+  }, [state, section, askedCard]);
 
   /**
    * Logs the drop, then reads the log back.

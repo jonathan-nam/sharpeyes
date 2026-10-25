@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/button";
 import { failureText } from "@/lib/api";
 import { useState } from "react";
 import { holderKey, holderOf } from "@/lib/vestige-ledger";
@@ -131,14 +132,9 @@ function PickupBoxes({
       </div>
 
       <div className="loot-actions">
-        <button
-          type="button"
-          className="party-save"
-          disabled={busy || !adds}
-          onClick={() => void save()}
-        >
+        <Button variant="primary" disabled={busy || !adds} onClick={() => void save()}>
           Save Pickup
-        </button>
+        </Button>
         {readable && !adds && (
           <span className="split-error">
             {assigned} of {drop.bundles} stacks placed

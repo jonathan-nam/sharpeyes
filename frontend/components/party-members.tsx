@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { ConfirmAct } from "@/components/confirm-act";
 import type { PartyMember } from "@/types/party";
 
@@ -63,12 +64,12 @@ export function PartyMembers({
                   <option key={p} value={p} />
                 ))}
               </datalist>
-              <button type="submit" className="party-save" disabled={busy || !name.trim()}>
+              <Button variant="primary" type="submit" disabled={busy || !name.trim()}>
                 Invite
-              </button>
-              <button type="button" className="party-cancel" onClick={() => setAsking(null)}>
+              </Button>
+              <Button variant="secondary" onClick={() => setAsking(null)}>
                 Cancel
-              </button>
+              </Button>
             </form>
           ) : (
             <span key={seat.id} className="loot-share-input">
