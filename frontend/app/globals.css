@@ -266,6 +266,14 @@ html:not(.has-session) .header-reserved {
   color: var(--ink-strong);
 }
 
+.section-menu-dev {
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  vertical-align: -1px;
+  color: var(--muted-2);
+}
+
 /* A page that has been asked for and not arrived.
    A bar across the top, and the outgoing page dimmed under it. The mark was on the menu entry
    once, which meant holding the panel open to show it, and a menu that does not close on a click

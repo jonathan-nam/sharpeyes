@@ -23,6 +23,8 @@ export type SectionItem = {
    * "Individual View".
    */
   hidden?: boolean;
+  /** Listed, and marked as unfinished. */
+  inDevelopment?: boolean;
 };
 
 /**
@@ -62,7 +64,7 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
   {
     group: "Utility",
     items: [
-      { href: "/bosses/planner", label: "Party Planner" },
+      { href: "/bosses/planner", label: "Party Planner", inDevelopment: true },
       { href: "/bosses/split", label: "Drop Splitter", interactiveOnly: true },
     ],
   },
