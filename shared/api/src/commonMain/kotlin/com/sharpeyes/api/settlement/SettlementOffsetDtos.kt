@@ -39,6 +39,13 @@ data class OffsetSharesRequest(
      * its own: see writeClose.
      */
     val holding: Long? = null,
+    /**
+     * Shares THEY owe you that the act closes too, so one press settles the pair both ways (closingNet
+     * on the client, 2026-10-25). An offset takes each off what you owe them: an entry of plus this.
+     */
+    val received: List<OffsetPartRow> = emptyList(),
+    /** Mesos of YOURS they are holding that the act decides about. Written as heldBy THEM. */
+    val heldByThem: Long? = null,
 )
 
 /**

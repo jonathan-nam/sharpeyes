@@ -16,13 +16,15 @@ import com.sharpeyes.money.coupons.holderKey
 import com.sharpeyes.money.coupons.holderName
 import com.sharpeyes.money.coupons.paymentsSinceClosing
 import com.sharpeyes.money.pieces.owedByCreditor
+import com.sharpeyes.money.settlement.ClosingNet
 import com.sharpeyes.money.settlement.Discharge
 import com.sharpeyes.money.settlement.Settlement
 import com.sharpeyes.money.settlement.SettlementTotals
 import com.sharpeyes.money.settlement.SettlementView
 import com.sharpeyes.money.settlement.bossLabel
+import com.sharpeyes.money.settlement.closingNet
 import com.sharpeyes.money.settlement.decidedSales
-import com.sharpeyes.money.settlement.heldMesos
+import com.sharpeyes.money.settlement.flipNet
 import com.sharpeyes.money.settlement.moneyRows
 import com.sharpeyes.money.settlement.settlementView
 import com.sharpeyes.money.settlement.undecidedSales
@@ -88,15 +90,9 @@ data class SharedCard(
     val piecesOwed: Double,
     val piecesOwe: Double,
     val usd: Owings,
-    /** Mesos each side holds for the other, as the owner's card works it out. See heldMesos. */
-    val held: SharedHeld,
+    /** What a closing act settles, from your side: the owner's own figure, turned round. */
+    val net: ClosingNet,
     val detail: SharedDetail,
-)
-
-@Serializable
-data class SharedHeld(
-    val byOwner: Double,
-    val byYou: Double,
 )
 
 @Serializable
@@ -263,7 +259,7 @@ fun sharedCard(
         piecesOwe = row.pieces,
         // Their dollars turned round: what they owe is what you are owed.
         usd = Owings(owe = row.usd.owed, owed = row.usd.owe, net = -row.usd.net),
-        held = heldMesos(row).let { SharedHeld(byOwner = it.byYou, byYou = it.byThem) },
+        net = flipNet(closingNet(row)),
         detail = detail,
     )
 }

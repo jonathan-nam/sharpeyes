@@ -9,7 +9,7 @@ export type SettlementListing = {
   /** The card: the member's person row on the owner's account. */
   personId: string;
   payer: Payer;
-  /** The Held By figure it was posted for. Good for exactly this amount and no other. */
+  /** The net it was posted for (closingNet). Good for exactly this amount and no other. */
   amount: number;
   postedByYou: boolean;
   createdAt: string;

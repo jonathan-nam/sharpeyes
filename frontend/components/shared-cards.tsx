@@ -4,12 +4,13 @@ import { ChangedBy } from "@/components/changed-by";
 import { formatPieces } from "@/lib/piece-ledger";
 import { useCallback, useState } from "react";
 import { CopyAmount } from "@/components/copy-amount";
-import { type ListingKit, ListingThumb, PostListingDialog } from "@/components/settlement-listing";
-import { liveListing } from "@/lib/settlement-listings";
+import { type ListingKit, PostListingDialog } from "@/components/settlement-listing";
+import { liveListing, paysOn } from "@/lib/settlement-listings";
 import { cardAnchor } from "@/lib/drop-sections";
-import type { SettlementListing } from "@/types/settlement-listing";
+import { type CloseKind, closeBody, closingActs } from "@/components/closing-acts";
+import { flipNet } from "@/lib/settlement";
+import type { ClosePots } from "@/types/vestige";
 import {
-  type ClosingAct,
   ClosingActions,
   CouponTotal,
   HeldBy,
@@ -42,10 +43,8 @@ export type SharedWrites = {
     note: string,
   ) => Promise<void>;
   remove: (personId: string, kind: "debts" | "payments" | "disposals", id: string) => Promise<void>;
-  /** What became of their money you hold: off what they owe you, or sent. See V91. */
-  decide: (personId: string, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
-  /** Marks a share of a drop you sold as sent. */
-  send: (to: NonNullable<SharedPart["send"]>) => Promise<void>;
+  /** One closing act, in the owner's terms: POST /api/shared-books/{personId}/close/{kind}. */
+  close: (personId: string, kind: CloseKind, pots: ClosePots) => Promise<void>;
 };
 
 /** The coupon's art and name, for the coupon-sale rows. See vestigeOf. */
@@ -93,22 +92,17 @@ function SharedCardView({
   const { detail } = card;
   const [refusal, setRefusal] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
-  // You are the MEMBER here. Yours is for what the owner holds; theirs is for what you hold.
-  const yourListing = listings
-    ? liveListing(listings.listings, card.personId, "OWNER", card.held.byOwner)
-    : null;
-  const theirListing = listings
-    ? liveListing(listings.listings, card.personId, "MEMBER", card.held.byYou)
-    : null;
-  /** Their listing beside the act that pays it: Mark Sent for your shares, else for their coupon money. */
-  const withListingBeside = (listing: SettlementListing | null, acts: ClosingAct[]) => {
-    const send = acts.findIndex((one) => one.key === "send");
-    const at = send >= 0 ? send : acts.findIndex((one) => one.key === "paid");
-    if (!listing || !listings || at < 0) return acts;
-    return acts.map((one, i) =>
-      i === at ? { ...one, after: <ListingThumb listing={listing} kit={listings} /> } : one,
-    );
-  };
+  // You are the MEMBER here, and `card.net` is read from your side. Yours is posted for the owner to
+  // pay (they owe net); theirs for you to pay (you owe net).
+  const listingFor = (payer: "OWNER" | "MEMBER") =>
+    listings
+      ? liveListing(listings.listings, card.personId, payer, paysOn(card.net, "MEMBER", payer))
+      : null;
+  const yourListing = listingFor("OWNER");
+  const theirListing = listingFor("MEMBER");
+  /** One press, sent in the owner's terms: the net turned back round. See closeShared. */
+  const close = (kind: CloseKind) =>
+    act(writes.close(card.personId, kind, closeBody(flipNet(card.net), kind)));
   const [showHistory, setShowHistory] = useState(false);
   const closeHistory = useCallback(() => setShowHistory(false), []);
   const act = (action: Promise<void>) => {
@@ -120,12 +114,8 @@ function SharedCardView({
     onRemove: (part: SharedPart) =>
       part.remove && act(writes.remove(card.personId, part.remove.kind, part.remove.id)),
   };
-  // Every share of a drop you sold that you still owe, sent in one press rather than one per drop.
-  // One at a time: each answers with the whole book, and racing them redraws off the last to land.
+  // Every share of a drop you sold that you still owe: money of theirs in your hands.
   const sendable = detail.owe.flatMap((part) => (part.send ? [part] : []));
-  const sendAll = async () => {
-    for (const part of sendable) await writes.send(part.send!);
-  };
   const sharesYouHold = sendable.reduce((sum, part) => sum + part.mesos, 0);
   const sharesTheyHold = detail.theyOwe
     .filter((line) => line.currency === "MESO")
@@ -231,63 +221,38 @@ function SharedCardView({
 
       <ClosingActions
         busy={writes.busy}
-        acts={withListingBeside(theirListing, [
-          ...(card.youHold > 0
-            ? [
-                {
-                  key: "offset",
-                  label: `Take ${formatMesos(card.youHold, true)} Off Owed Amount`,
-                  detail: heldFor,
-                  onClick: () => act(writes.decide(card.personId, "OFFSET", card.youHold)),
+        acts={closingActs({
+          net: card.net,
+          name: card.name,
+          // Every share both ways and the coupon money: everything one press settles.
+          detail: listed([
+            ...sendable.map((part) => part.label),
+            ...detail.theyOwe.map((line) => line.name),
+            ...(card.youHold > 0 ? [heldFor] : []),
+          ]),
+          close,
+          listings: listings
+            ? {
+                kit: listings,
+                yours: yourListing,
+                theirs: theirListing,
+                post: () => setPosting(true),
+                replace: (image) =>
+                  listings.post(card.personId, paysOn(card.net, "MEMBER", "OWNER"), image),
+                remove: () => {
+                  if (yourListing) act(listings.remove(yourListing.id));
                 },
-                {
-                  key: "paid",
-                  label: `Mark ${formatMesos(card.youHold, true)} Sent`,
-                  detail: heldFor,
-                  onClick: () => act(writes.decide(card.personId, "PAID", card.youHold)),
-                },
-              ]
-            : []),
-          ...(sendable.length > 0
-            ? [
-                {
-                  key: "send",
-                  label: `Mark ${formatMesos(sharesYouHold, true)} Sent`,
-                  detail: listed(sendable.map((part) => part.label)),
-                  onClick: () => act(sendAll()),
-                },
-              ]
-            : []),
-          ...(listings && card.held.byOwner > 0
-            ? [
-                {
-                  key: "listing",
-                  label: `Post Listing for ${formatMesos(card.held.byOwner, true)}`,
-                  disabled: yourListing !== null,
-                  after: yourListing && (
-                    <>
-                      <ListingThumb
-                        listing={yourListing}
-                        kit={listings}
-                        onReplace={(image) =>
-                          listings.post(card.personId, card.held.byOwner, image)
-                        }
-                        onRemove={() => act(listings.remove(yourListing.id))}
-                      />
-                      <span className="ledger-progress">{`Awaiting action from ${card.name}`}</span>
-                    </>
-                  ),
-                  onClick: () => setPosting(true),
-                },
-              ]
-            : []),
-        ])}
+              }
+            : undefined,
+        })}
       />
 
       {posting && listings && (
         <PostListingDialog
-          amount={card.held.byOwner}
-          onPost={(image) => listings.post(card.personId, card.held.byOwner, image)}
+          amount={paysOn(card.net, "MEMBER", "OWNER")}
+          onPost={(image) =>
+            listings.post(card.personId, paysOn(card.net, "MEMBER", "OWNER"), image)
+          }
           onClose={() => setPosting(false)}
         />
       )}

@@ -11,7 +11,8 @@ import {
   keptOfYours,
   moneyRows,
   offsetOf,
-  heldMesos,
+  closingNet,
+  flipNet,
   owedByYouShares,
   splittableDebts,
   settleThePair,
@@ -2188,24 +2189,94 @@ describe("sliceActToWeek", () => {
   });
 });
 
-describe("what each side holds for the other", () => {
-  it("is the meso shares each way, apart and never netted", () => {
-    // A listing is posted for one of these exactly, so a share running the other way must not
-    // come off it.
-    const row = buildSettlement(
-      [],
-      wallet([
-        counterparty("person:p-owen", "Owen", [
-          line("l1", 500 * M, "owe"),
-          line("l2", 300 * M, "owe"),
-          line("l3", 700 * M, "owed"),
-        ]),
-      ]),
-    )[0]!;
-    expect(heldMesos(row)).toEqual({ byYou: 800 * M, byThem: 700 * M });
+describe("what one closing act settles, netted", () => {
+  // The scenarios agreed with Jonathan on 2026-10-25. A = shares you owe, D = shares they owe you,
+  // B = their coupon money you hold, C = your coupon money they hold.
+  const card = (lines: WalletLine[], held: { holding?: number; heldByThem?: number } = {}) => {
+    // A card of held money alone has no share to build its row from, so one is built and cleared.
+    const built = lines.length > 0 ? lines : [line("x", M, "owed")];
+    const row = buildSettlement([], wallet([counterparty("person:p-owen", "Owen", built)]))[0]!;
+    const shares =
+      lines.length > 0 ? row : { ...row, lines: [], parts: { ...row.parts, shares: 0 } };
+    return { ...shares, holding: held.holding ?? 0, heldByThem: held.heldByThem ?? 0 };
+  };
+  const usd = (lootId: string, cents: number, direction: "owe" | "owed"): WalletLine => ({
+    ...line(lootId, cents, direction),
+    currency: "USD",
+  });
+  const sent = (net: ReturnType<typeof closingNet>) => [net.payer, net.mesos];
+
+  it("has you pay the shares you owe (1)", () => {
+    expect(sent(closingNet(card([line("a", 2_000 * M, "owe")])))).toEqual(["YOU", 2_000 * M]);
   });
 
-  it("is nothing either way on a card of entered debts alone", () => {
+  it("nets shares that run both ways, and closes both (2)", () => {
+    const net = closingNet(card([line("a", 2_000 * M, "owe"), line("d", 500 * M, "owed")]));
+    expect(sent(net)).toEqual(["YOU", 1_500 * M]);
+    expect(net.sharesYouOwe.map((s) => s.lootId)).toEqual(["a"]);
+    expect(net.sharesTheyOwe.map((s) => s.lootId)).toEqual(["d"]);
+  });
+
+  it("has them pay money of yours they hold (3)", () => {
+    expect(sent(closingNet(card([], { heldByThem: 300 * M })))).toEqual(["THEM", 300 * M]);
+  });
+
+  it("takes what they hold off the shares you owe, so you pay the difference (4)", () => {
+    // Bro's card on 2026-10-25: a listing offered for the 319.5m he held, when Jonathan owed more.
+    const net = closingNet(card([line("a", 2_468_431_118, "owe")], { heldByThem: 319_499_940 }));
+    expect(sent(net)).toEqual(["YOU", 2_148_931_178]);
+  });
+
+  it("is even, with nobody paying, when the pots cancel (5)", () => {
+    const net = closingNet(card([line("a", 1_000 * M, "owe")], { heldByThem: 1_000 * M }));
+    expect(sent(net)).toEqual([null, 0]);
+    expect(net.open).toBe(true);
+  });
+
+  it("turns round when what they hold is the larger (6)", () => {
+    expect(sent(closingNet(card([line("a", 200 * M, "owe")], { heldByThem: 1_000 * M })))).toEqual([
+      "THEM",
+      800 * M,
+    ]);
+  });
+
+  it("nets their money you hold against the shares they owe (7)", () => {
+    expect(sent(closingNet(card([line("d", 200 * M, "owed")], { holding: 500 * M })))).toEqual([
+      "YOU",
+      300 * M,
+    ]);
+  });
+
+  it("keeps dollars out of the net and names them apart (8)", () => {
+    const net = closingNet(
+      card([line("a", 1_000 * M, "owe"), usd("u", 30_000, "owe")], { heldByThem: 300 * M }),
+    );
+    expect(sent(net)).toEqual(["YOU", 700 * M]);
+    expect(net.usdYouOwe).toBe(30_000);
+    expect(net.sharesYouOwe.map((s) => s.lootId)).toEqual(["a", "u"]);
+  });
+
+  it("leaves entered debts out, and offers them to an Offset (9)", () => {
+    const row = buildSettlement(
+      [],
+      wallet([counterparty("person:p-owen", "Owen", [line("a", 2_000 * M, "owe")])]),
+      [
+        {
+          id: "d-1",
+          holder: OWEN,
+          amount: 5_000 * M,
+          note: null,
+          payouts: [],
+          incurredAt: "2026-08-10T00:00:00Z",
+        },
+      ],
+    )[0]!;
+    const net = closingNet(row);
+    expect(sent(net)).toEqual(["YOU", 2_000 * M]);
+    expect(net.enteredBalance).toBe(5_000 * M);
+  });
+
+  it("settles nothing on a card of entered debts alone", () => {
     const row = buildSettlement([], wallet([]), [
       {
         id: "d-1",
@@ -2216,6 +2287,14 @@ describe("what each side holds for the other", () => {
         incurredAt: "2026-08-10T00:00:00Z",
       },
     ])[0]!;
-    expect(heldMesos(row)).toEqual({ byYou: 0, byThem: 0 });
+    expect(closingNet(row)).toMatchObject({ payer: null, mesos: 0, open: false });
+  });
+
+  it("reads the same from the other end, turned round", () => {
+    const net = closingNet(card([line("a", 200 * M, "owe")], { heldByThem: 1_000 * M }));
+    const theirs = flipNet(net);
+    expect(sent(theirs)).toEqual(["YOU", 800 * M]);
+    expect(theirs.holding).toBe(1_000 * M);
+    expect(theirs.sharesTheyOwe).toEqual(net.sharesYouOwe);
   });
 });

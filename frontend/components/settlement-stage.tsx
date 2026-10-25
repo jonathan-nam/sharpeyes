@@ -160,35 +160,15 @@ export function SettlementStage({
           if (row.holder.personId === null) return;
           await writes.pin(row.holder.personId, pinned);
         }}
-        // ONE request, and one repaint. It was a settle followed by an entry per share, and the
-        // halves of an offset cancel: between them the ledger said the shares were paid and nothing
-        // had come off the debt, which walked Owen's card from 253.86b up to 254b and back down over
-        // two round trips. A failure in the gap left it there.
-        //
-        // The coupon money is in the same request for the same reason one step out. It was a
-        // disposal of its own after this one, and both come off what they owe you, so a press
-        // covering the pair took Owen's card down by the shares and then down again by the money:
-        // one button, one figure, two visible steps.
-        //
-        // The server writes all of it in one transaction and answers with every list, so there is
-        // no order to get right here and no half of the act to leave behind. ONE ROW PER SHARE
-        // still, so the history reads as the drops it was rather than as a figure naming nobody:
-        // see writeClose.
-        onOffsetAll={(holder: Holder, name, parts, holding) =>
-          // Invisible on the card, which names the drop itself once an entry has one share behind
-          // it. It is what the debt row says on its own.
-          writes.closeWrite("offset", { holder, note: `offset against ${name}`, parts, holding })
-        }
-        // The same act pointed the other way, and one request for the same reason: the two pots it
-        // moves are the two the Unsettled Amounts figure is made of.
-        onSendAll={(holder: Holder, parts, holding) =>
-          writes.closeWrite("sent", { holder, parts, holding })
-        }
-        onDecideHeld={(holder: Holder, kind, amount) =>
-          writes.disposalWrite(DISPOSALS_KEY, {
-            method: "POST",
-            body: JSON.stringify({ holder, amount, kind, heldBy: "THEM" }),
-          })
+        // ONE request, and one repaint, for every pot the press settles both ways: the halves of an
+        // offset cancel, and as separate requests the card drew between them (Owen's card walked
+        // from 253.86b up to 254b and back). The server writes it in one transaction, one entry per
+        // share so the history reads as the drops it was: see writeClose.
+        onClose={(holder: Holder, name, kind, pots) =>
+          kind === "OFFSET"
+            ? // The debt row's own words; the card names the drop once an entry has one behind it.
+              writes.closeWrite("offset", { holder, note: `offset against ${name}`, ...pots })
+            : writes.closeWrite("sent", { holder, ...pots })
         }
       />
 

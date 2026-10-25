@@ -37,11 +37,21 @@ describe("figuresToReport", () => {
     ]);
   });
 
-  it("reports a shared card from its owner's arithmetic, both ways", () => {
-    const card = { personId: "p-9", held: { byOwner: 700, byYou: 200 } } as SharedCard;
-    expect(figuresToReport([], [], [card])).toEqual([
-      { personId: "p-9", payer: "OWNER", amount: 700 },
-      { personId: "p-9", payer: "MEMBER", amount: 200 },
+  // The net, from the member's side: only the one who pays it has a figure.
+  const sharedNet = (payer: "YOU" | "THEM", mesos: number) =>
+    ({ personId: "p-9", net: { payer, mesos } }) as unknown as SharedCard;
+
+  it("reports the member's own net payment as theirs, and nothing for the owner", () => {
+    expect(figuresToReport([], [], [sharedNet("YOU", 500)])).toEqual([
+      { personId: "p-9", payer: "OWNER", amount: 0 },
+      { personId: "p-9", payer: "MEMBER", amount: 500 },
+    ]);
+  });
+
+  it("reports the owner's net payment as the owner's, read from the member's side", () => {
+    expect(figuresToReport([], [], [sharedNet("THEM", 500)])).toEqual([
+      { personId: "p-9", payer: "OWNER", amount: 500 },
+      { personId: "p-9", payer: "MEMBER", amount: 0 },
     ]);
   });
 });

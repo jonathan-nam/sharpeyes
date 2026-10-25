@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.settlement.HELD_BY_THEM
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
@@ -12,6 +13,7 @@ import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.SettlementDebtPayout
 import com.sharpeyes.backend.db.Users
+import com.sharpeyes.backend.db.VestigeProceedsDisposal
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
@@ -25,6 +27,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -69,6 +72,7 @@ class SettlementOffsetDbTest {
             // A party hangs off a character, and its members, loot and payout rows hang off it.
             Characters.deleteWhere { Characters.userId inList owners }
             SettlementDebt.deleteWhere { SettlementDebt.userId inList owners }
+            VestigeProceedsDisposal.deleteWhere { VestigeProceedsDisposal.userId inList owners }
             Person.deleteWhere { Person.userId inList owners }
             Users.deleteWhere { Users.id inList owners }
         }
@@ -368,6 +372,96 @@ class SettlementOffsetDbTest {
             assertIs<OffsetWrite.Unreachable>(result)
             assertEquals(0, paidRows(lootId))
             assertTrue(debtsFor(userId).isEmpty())
+        }
+    }
+
+    // One press settles the pair both ways (closingNet, 2026-10-25): a share each way and the money
+    // of yours they hold, all in the one write.
+    @Test
+    fun `sending closes the shares both ways and the money they hold, together`() {
+        transaction {
+            ensureUser(userId, "offset@example.com")
+            val owen = person(userId, "Owen")
+            val (lootId, members) = nightOwing(userId, seats = 2)
+
+            val result =
+                writeClose(
+                    userId,
+                    holderFor(owen),
+                    CloseAct(
+                        kind = CLOSE_PAID,
+                        note = null,
+                        parts = listOf(OffsetPart(lootId, members[0], 0)),
+                        holding = null,
+                        received = listOf(OffsetPart(lootId, members[1], 0)),
+                        heldByThem = 319_499_940,
+                    ),
+                    Clock.System.now(),
+                )
+            assertIs<OffsetWrite.Wrote>(result)
+            assertEquals(2, paidRows(lootId))
+            val held = disposalsFor(userId).single()
+            assertEquals(listOf(HELD_BY_THEM, CLOSE_PAID, 319_499_940L), listOf(held.heldBy, held.kind, held.amount))
+            // Money that crossed takes nothing off anybody's debt.
+            assertTrue(debtsFor(userId).isEmpty())
+        }
+    }
+
+    // An offset moves every pot into the entries without the balance moving: a share you owe comes
+    // off what they owe you, one they owe comes off what you owe them.
+    @Test
+    fun `an offset signs each share's entry by the way it ran`() {
+        val answer =
+            transaction {
+                ensureUser(userId, "offset@example.com")
+                val owen = person(userId, "Owen")
+                val (lootId, members) = nightOwing(userId, seats = 2)
+                val result =
+                    writeClose(
+                        userId,
+                        holderFor(owen),
+                        CloseAct(
+                            kind = CLOSE_OFFSET,
+                            note = null,
+                            parts = listOf(OffsetPart(lootId, members[0], 2_000_000_000)),
+                            holding = null,
+                            received = listOf(OffsetPart(lootId, members[1], 500_000_000)),
+                        ),
+                        Clock.System.now(),
+                    )
+                assertIs<OffsetWrite.Wrote>(result)
+                result.answer
+            }
+        assertEquals(listOf(-2_000_000_000L, 500_000_000L), answer.debts.map { it.amount }.sorted())
+        assertTrue(answer.debts.all { it.payouts.size == 1 })
+    }
+
+    // The member's close runs in the owner's book, so it must reach only shares of the member's own
+    // seats: never a share between the owner and somebody else.
+    @Test
+    fun `a member may close only shares of their own seats`() {
+        transaction {
+            ensureUser(userId, "offset@example.com")
+            ensureUser(strangerId, "member@example.com")
+            setActiveWorld(strangerId, WORLD_INTERACTIVE)
+            val (lootId, members) = nightOwing(userId, seats = 2)
+            val theirs = Uuid.random()
+            val now = Clock.System.now()
+            val member = strangerId
+            Characters.insert {
+                it[Characters.id] = theirs
+                it[Characters.userId] = member
+                it[Characters.name] = "Pinewick"
+                it[Characters.worldType] = WORLD_INTERACTIVE
+                it[Characters.position] = 0
+                it[Characters.createdAt] = now
+                it[Characters.updatedAt] = now
+            }
+            PartyMember.update({ PartyMember.id eq members[0] }) { it[linkedCharacterId] = theirs }
+
+            assertTrue(memberMayClose(member, listOf(lootId to members[0])))
+            assertTrue(!memberMayClose(member, listOf(lootId to members[1])))
+            assertTrue(!memberMayClose(member, listOf(lootId to members[0], lootId to members[1])))
         }
     }
 }

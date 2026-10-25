@@ -17,16 +17,15 @@ import {
   ShareRows,
   UnsettledAmounts,
 } from "@/components/ledger-card";
-import { type ListingKit, ListingThumb, PostListingDialog } from "@/components/settlement-listing";
+import { type ListingKit, PostListingDialog } from "@/components/settlement-listing";
 import { WeekFilter } from "@/components/week-stepper";
-import { liveListing } from "@/lib/settlement-listings";
+import { liveListing, paysOn } from "@/lib/settlement-listings";
 import { formatWeekStart } from "@/lib/boss-clears";
 import { bossLabel } from "@/lib/boss-difficulty";
 import {
   type Discharge,
   type HeldOfYours,
   type Settlement,
-  type OffsetPart,
   type OffsetShare,
   moneyRows,
   offsetOf,
@@ -35,12 +34,13 @@ import {
   nightsOfSales,
   type SaleNight,
   sliceActToWeek,
-  owedByYouShares,
   undecidedSales,
   heldByThem,
-  heldMesos,
+  closingNet,
   shareKey,
 } from "@/lib/settlement";
+import { type CloseKind, closeBody, closingActs } from "@/components/closing-acts";
+import type { ClosePots } from "@/types/vestige";
 import { apiAssetUrl, failureText } from "@/lib/api";
 import { CopyAmount } from "@/components/copy-amount";
 import { SharpEyesMark } from "@/components/sharp-eyes-mark";
@@ -112,17 +112,13 @@ export function SettlementLedger({
   onRemoveKeep,
   onSettleShares,
   onPin,
-  onOffsetAll,
-  onSendAll,
-  onDecideHeld,
+  onClose,
   images = new Map(),
   linked = new Set(),
   listings,
 }: {
   /** Auction house listings on the linked cards. None drawn without it. */
   listings?: ListingKit;
-  /** What became of money of yours they hold: off what you owe them, or sent to you. See V91. */
-  onDecideHeld: (holder: Holder, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
   rows: Settlement[];
   /** Linked people's Discord avatars, keyed by their card's key (`person:<id>`). */
   images?: Map<string, string>;
@@ -164,32 +160,10 @@ export function SettlementLedger({
   /** Keeps this person's card drawn with nothing outstanding, or stops. See V59. */
   onPin: (row: Settlement, pinned: boolean) => Promise<void>;
   /**
-   * Discharges everything of theirs you are sitting on against what they owe you. See V57 and V61.
-   *
-   * BOTH POTS in one call, and that is the whole reason it is one: the shares you owe and their own
-   * money a sale left with you both come off their debt, so written as two the card drew between
-   * them and one press walked the figure down in two steps.
-   *
-   * `holding` is undefined where there is none, which is a card with only shares to settle.
+   * One closing act, settling the pair both ways in ONE write: every pot closingNet names. OFFSET
+   * takes the net off an entered debt, PAID records it as crossing. See components/closing-acts.tsx.
    */
-  onOffsetAll: (
-    holder: Holder,
-    name: string,
-    parts: OffsetPart[],
-    holding: number | undefined,
-  ) => Promise<void>;
-  /**
-   * The same two pots, recorded as SENT: it left your hands and their debt did not move.
-   *
-   * The shares carry no figure, unlike an offset's. Nothing is priced by sending, so there is no
-   * entry for a figure to go on, and a share of a DOLLAR sale is settled by this and could not be
-   * put on a meso row anyway. See offsetOf for why an offset is the meso half alone.
-   */
-  onSendAll: (
-    holder: Holder,
-    payouts: { lootId: string; memberId: string }[],
-    holding: number | undefined,
-  ) => Promise<void>;
+  onClose: (holder: Holder, name: string, kind: CloseKind, pots: ClosePots) => Promise<void>;
 }) {
   if (rows.length === 0) return null;
   return (
@@ -217,9 +191,7 @@ export function SettlementLedger({
           onRemoveKeep={onRemoveKeep}
           onSettleShares={onSettleShares}
           onPin={onPin}
-          onOffsetAll={onOffsetAll}
-          onSendAll={onSendAll}
-          onDecideHeld={onDecideHeld}
+          onClose={onClose}
         />
       ))}
     </>
@@ -243,15 +215,13 @@ function SettlementCard({
   onRemoveKeep,
   onSettleShares,
   onPin,
-  onOffsetAll,
-  onSendAll,
-  onDecideHeld,
+  onClose,
   image,
   linked,
   listings,
 }: {
   listings?: ListingKit;
-  onDecideHeld: (holder: Holder, kind: "OFFSET" | "PAID", amount: number) => Promise<void>;
+  onClose: (holder: Holder, name: string, kind: CloseKind, pots: ClosePots) => Promise<void>;
   row: Settlement;
   /** Their Discord avatar, when they are linked. */
   image: string | null;
@@ -286,33 +256,6 @@ function SettlementCard({
   onSettleShares: (payouts: { lootId: string; memberId: string }[]) => Promise<void>;
   /** Keeps this person's card drawn with nothing outstanding, or stops. See V59. */
   onPin: (row: Settlement, pinned: boolean) => Promise<void>;
-  /**
-   * Discharges everything of theirs you are sitting on against what they owe you. See V57 and V61.
-   *
-   * BOTH POTS in one call, and that is the whole reason it is one: the shares you owe and their own
-   * money a sale left with you both come off their debt, so written as two the card drew between
-   * them and one press walked the figure down in two steps.
-   *
-   * `holding` is undefined where there is none, which is a card with only shares to settle.
-   */
-  onOffsetAll: (
-    holder: Holder,
-    name: string,
-    parts: OffsetPart[],
-    holding: number | undefined,
-  ) => Promise<void>;
-  /**
-   * The same two pots, recorded as SENT: it left your hands and their debt did not move.
-   *
-   * The shares carry no figure, unlike an offset's. Nothing is priced by sending, so there is no
-   * entry for a figure to go on, and a share of a DOLLAR sale is settled by this and could not be
-   * put on a meso row anyway. See offsetOf for why an offset is the meso half alone.
-   */
-  onSendAll: (
-    holder: Holder,
-    payouts: { lootId: string; memberId: string }[],
-    holding: number | undefined,
-  ) => Promise<void>;
 }) {
   const [kept, setKept] = useState("");
   // Whether the history of what has come off is open. Folded by default: it is the half that grows.
@@ -476,65 +419,9 @@ function SettlementCard({
   const paidIn = row.disposals.filter((d) => d.kind === "PAID" && heldByThem(d));
 
   const offset = offsetOf(row);
-  // Mesos a settle would declare you have ALREADY sent. Off the offset, rather than summed again
-  // here: two spellings of one figure is how the button and its label come to disagree.
-  const owes = offset.amount;
-  // The aggregate Settle that used to live here is GONE, and its history is worth keeping.
-  //
-  // It marked every share on the card paid in BOTH directions, on the reasoning that a relationship
-  // is settled by one transfer of the difference. That holds while a card is in one unit. It stops
-  // holding the moment one is not: there is no rate to net $333.33 against 2.32b, so collecting
-  // what they owe and recording what you owe as sent are two acts on two days, and one button doing
-  // both records a transfer that never happened. It was already the card's sharpest edge before
-  // that (it was pulled off cards with nothing to collect for the same family of reason), and the
-  // shares list carries a per-line act now, which is the same write with the direction it belongs
-  // to. See the button in the shares list.
-  /**
-   * The two pots a closing act moves, and they stay two pots everywhere else on this card.
-   *
-   * SHARES you owe are your cut of a night of theirs. HOLDING is their own money, which a sale of
-   * their coupons left in your hands. What can happen to each is the same pair of things, so one
-   * button covers both: one trade settles both, and two buttons wearing one word ("Offset" twice,
-   * "Mark Sent" beside "I paid them") said nothing about which pot each was for.
-   *
-   * Each pot is still WRITTEN on its own, so a click is two calls where both apply. If the second is
-   * refused the first stands, which the refusal line says; both are reversible where they are drawn,
-   * a disposal on this card and a share on the party page.
-   */
-  const offsettable = offset.offered || row.holding > 0;
-  /**
-   * Whether there is anything of theirs to send.
-   *
-   * Distinct from Settle, which collects, and from Offset, which discharges against a debt of
-   * theirs. This is the third thing that can happen: the mesos left your hands.
-   *
-   * It went missing when Settle was pulled off a card with nothing to collect, and pulling it was
-   * right; what was wrong was leaving no act in its place. Felix's card said "you owe 289,382,716"
-   * with nothing to do about it, which is a ledger you cannot keep.
-   *
-   * Dollars are in it for the same reason. `owes` is the meso figure alone (an offset cannot be
-   * made in dollars, see offsetOf), so without this a share of a real money sale that YOU owe drew
-   * the same dead card the note above is about.
-   */
-  const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;
-
-  /**
-   * The mesos an act moves: the shares and the money you are holding, added, which is the
-   * Unsettled Amounts figure. The list under that figure is where the two are told apart.
-   */
-  const moved = (shares: number) => formatMesos(shares + row.holding, true);
-
-  /**
-   * The same, with the dollar half beside it, for the acts that move both.
-   *
-   * Never one sum, there being no rate to add them at, and never the mesos alone: a caption that
-   * names one unit describes half of what its button does. Settle collected $333.33 while saying
-   * only that it recorded 2.32b sent, which is a button doing something it did not mention.
-   */
-  const movedBoth = (shares: number, cents: number) =>
-    [shares > 0 || row.holding > 0 ? moved(shares) : null, cents > 0 ? formatDollars(cents) : null]
-      .filter(Boolean)
-      .join(" and ");
+  // Closing Actions settle the pair both ways in one press, netted in mesos with dollars named apart
+  // (closingNet, 2026-10-25). A both-ways settle was pulled once because a button added $333.33 to
+  // 2.32b; the dollars now never net, which is what made it safe to bring back.
 
   // The sales the held money is still sitting on, where they can be told exactly. See undecidedSales.
   const held = undecidedSales(row);
@@ -552,7 +439,7 @@ function SettlementCard({
       : null;
   const sharesOwed = (all: boolean) =>
     row.lines
-      .filter((line) => line.direction === "owe" && (all || line.currency === "MESO"))
+      .filter((line) => all || line.currency === "MESO")
       .map((line) => {
         const boss = bossByKey.get(line.bossKey ?? "");
         const party = partyById.get(line.partyId);
@@ -567,17 +454,8 @@ function SettlementCard({
       : `${named.slice(0, 3).join(", ")} and ${named.length - 3} more`;
   };
   const theirCoupons = coupons(theirHeld, row.heldByThem);
-  const offsetFor = listed([
-    ...(offset.offered ? sharesOwed(false) : []),
-    coupons(held, row.holding),
-    theirCoupons,
-  ]);
-  const sentFor = listed([...sharesOwed(true), coupons(held, row.holding), theirCoupons]);
-
-  // Both directions netted (Jonathan, 2026-10-23): each act also closes the money of yours they
-  // hold, so its figure is the difference and one press settles the pair. Negative runs their way.
-  const offsetNet = (offset.offered ? offset.amount : 0) + row.holding - row.heldByThem;
-  const sendNet = owes + row.holding - row.heldByThem;
+  // Every share both ways and both pots of coupon money: everything one press settles.
+  const closeFor = listed([...sharesOwed(true), coupons(held, row.holding), theirCoupons]);
 
   /**
    * What is still to settle with them, in the two shapes it comes in. See offsetOf and V61.
@@ -632,11 +510,15 @@ function SettlementCard({
   // is for what you hold, and sits beside the act that pays it.
   const personId = row.holder.personId;
   const kit = linked && personId !== null ? listings : undefined;
-  const holds = heldMesos(row);
-  const yourListing =
-    kit && personId ? liveListing(kit.listings, personId, "MEMBER", holds.byThem) : null;
-  const theirListing =
-    kit && personId ? liveListing(kit.listings, personId, "OWNER", holds.byYou) : null;
+  // Everything Closing Actions offers, from one netted figure. See closingNet.
+  const net = closingNet(row);
+  // Yours is posted for them to pay (they owe net), theirs for you to pay (you owe net).
+  const listingFor = (payer: "OWNER" | "MEMBER") =>
+    kit && personId
+      ? liveListing(kit.listings, personId, payer, paysOn(net, "OWNER", payer))
+      : null;
+  const yourListing = listingFor("MEMBER");
+  const theirListing = listingFor("OWNER");
 
   /**
    * One share, as every drop row on this account reads: its art, its name, the boss, whose share,
@@ -692,36 +574,10 @@ function SettlementCard({
   // Whether the coupon lists need telling apart. See the note where they are drawn.
   const bothWays = theirNights.length > 0 && myNights.length > 0;
 
-  // The coupon money the act decides about, or nothing to decide. Undefined rather than zero: a
-  // disposal of nought is a row saying an act happened that did not.
-  const heldOrNone = row.holding > 0 ? row.holding : undefined;
-  /** Everything of theirs that can come off their debt. ONE call: see onOffsetAll. */
-  const offsetAll = () =>
-    onOffsetAll(row.holder, row.name, offset.offered ? offset.parts : [], heldOrNone);
-  /**
-   * Everything of theirs that has left your hands.
-   *
-   * Every share you owe, whatever it is denominated in. It used to be gated on the meso figure, so a
-   * card whose only debt of yours was a share of a DOLLAR sale drew the button and settled nothing
-   * when it was pressed. Marking a share sent is a boolean, not a subtraction, so it has no unit to
-   * disagree with: see offsetOf for why an offset is the meso half alone.
-   */
-  const sendAll = () => onSendAll(row.holder, owedByYouShares(row), heldOrNone);
-
-  /**
-   * The two acts with their money of yours folded in, so each settles both directions (see
-   * offsetNet). Offset then takes what they hold off what you owe them; Mark Sent then marks it
-   * received, which is the same books as them sending it and you sending the whole. Mesos only:
-   * the dollar shares are marked as before, there being no rate to net them at. Two requests: if
-   * the second is refused the first stands, and the refusal line says so.
-   */
-  const offsetNetted = async () => {
-    if (offsettable) await offsetAll();
-    if (row.heldByThem > 0) await onDecideHeld(row.holder, "OFFSET", row.heldByThem);
-  };
-  const sendNetted = async () => {
-    if (sendable) await sendAll();
-    if (row.heldByThem > 0) await onDecideHeld(row.holder, "PAID", row.heldByThem);
+  /** One press, settling every pot closingNet names, both ways. See components/closing-acts.tsx. */
+  const close = (kind: CloseKind) => {
+    const pots = closeBody(net, kind);
+    void write(onClose(row.holder, row.name, kind, pots), null);
   };
 
   /**
@@ -1367,82 +1223,31 @@ function SettlementCard({
           them. */}
       <ClosingActions
         busy={busy}
-        acts={[
-          // Discharged against what they owe you, rather than by money crossing. What YOU owe, and
-          // only that: handed every line it also marked their shares to you paid, so the offset
-          // quietly collected money nobody had sent. Only where there is something of theirs to
-          // offset against, or their held money is all that is open: with nothing to offset, it
-          // would close their half alone and leave your shares standing, which is not the netted act.
-          ...(offsettable || (row.heldByThem > 0 && !sendable)
-            ? [
-                {
-                  key: "offset",
-                  label:
-                    row.heldByThem === 0
-                      ? `Offset ${moved(offset.offered ? offset.amount : 0)}`
-                      : offsetNet >= 0
-                        ? `Offset ${formatMesos(offsetNet, true)}`
-                        : `Take ${formatMesos(-offsetNet, true)} Off Owed Amount`,
-                  detail: offsetFor,
-                  // What it leaves behind, where their debt cannot cover the shares, because the
-                  // alternative is a button promising to take 800m off a 500m debt. Only where the
-                  // shares are the whole act: with their money in it too the remainder is a
-                  // subtraction across two pots, and this card does not make that one.
-                  after: offset.leftOwing > 0 && row.holding === 0 && (
-                    <span className="ledger-progress">
-                      {`You still owe ${formatMesos(offset.leftOwing, true)}`}
-                    </span>
-                  ),
-                  onClick: () => void write(offsetNetted(), null),
-                },
-              ]
-            : []),
-          // You actually sent them the mesos. Named for the direction, so it cannot be read as the
-          // collecting act or as the offset.
-          ...(sendable || row.heldByThem > 0
-            ? [
-                {
-                  key: "send",
-                  label:
-                    row.heldByThem === 0
-                      ? `Mark ${movedBoth(owes, row.usd.owe)} Sent`
-                      : sendNet >= 0
-                        ? `Mark ${movedBoth(owes - row.heldByThem, row.usd.owe)} Sent`
-                        : `Mark ${formatMesos(-sendNet, true)} Received`,
-                  detail: sentFor,
-                  after: kit && theirListing && <ListingThumb listing={theirListing} kit={kit} />,
-                  onClick: () => void write(sendNetted(), null),
-                },
-              ]
-            : []),
-          ...(kit && personId && holds.byThem > 0
-            ? [
-                {
-                  key: "listing",
-                  label: `Post Listing for ${formatMesos(holds.byThem, true)}`,
-                  disabled: yourListing !== null,
-                  after: yourListing && (
-                    <>
-                      <ListingThumb
-                        listing={yourListing}
-                        kit={kit}
-                        onReplace={(image) => kit.post(personId, holds.byThem, image)}
-                        onRemove={() => void write(kit.remove(yourListing.id), null)}
-                      />
-                      <span className="ledger-progress">{`Awaiting action from ${row.name}`}</span>
-                    </>
-                  ),
-                  onClick: () => setPosting(true),
-                },
-              ]
-            : []),
-        ]}
+        acts={closingActs({
+          net,
+          name: row.name,
+          detail: closeFor,
+          close,
+          listings:
+            kit && personId
+              ? {
+                  kit,
+                  yours: yourListing,
+                  theirs: theirListing,
+                  post: () => setPosting(true),
+                  replace: (image) => kit.post(personId, paysOn(net, "OWNER", "MEMBER"), image),
+                  remove: () => {
+                    if (yourListing) void write(kit.remove(yourListing.id), null);
+                  },
+                }
+              : undefined,
+        })}
       />
 
       {posting && kit && personId && (
         <PostListingDialog
-          amount={holds.byThem}
-          onPost={(image) => kit.post(personId, holds.byThem, image)}
+          amount={paysOn(net, "OWNER", "MEMBER")}
+          onPost={(image) => kit.post(personId, paysOn(net, "OWNER", "MEMBER"), image)}
           onClose={() => setPosting(false)}
         />
       )}

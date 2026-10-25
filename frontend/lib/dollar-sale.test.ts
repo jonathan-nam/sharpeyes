@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildDropLog, groupDrops } from "./drop-log";
-import { buildSettlement, isEmpty, offsetOf, settlementTotals, sharesOf } from "./settlement";
+import {
+  buildSettlement,
+  closingNet,
+  isEmpty,
+  offsetOf,
+  settlementTotals,
+  sharesOf,
+} from "./settlement";
+import { closeLabel } from "@/components/closing-acts";
+import { formatDollars } from "./money";
 import { saleMoney, splitOf } from "./loot";
 import { buildWallet } from "./wallet";
 import type { Loot, PartyLootPool } from "@/types/loot";
@@ -303,9 +312,13 @@ describe("what the closing actions say they move", () => {
   });
 
   it("names both units in what Mark Sent records, and offers it for a dollar debt at all", () => {
-    expect(source).toContain("const sendable = owes > 0 || row.usd.owe > 0 || row.holding > 0;");
-    expect(source).toContain("Mark ${movedBoth(owes, row.usd.owe)} Sent");
-    // Side by side, never added: there is no rate in this app to add them at.
-    expect(source).toContain('.join(" and ")');
+    // A card whose only open share is a dollar one still has an act, and its label names the
+    // dollars, side by side with any mesos and never added: there is no rate here to add them at.
+    const steve = buildSettlement([], buildWallet([party()], pools([inDollars()]))).find(
+      (row) => row.name === "Steve",
+    )!;
+    const dollarsOnly = closingNet(steve);
+    expect(dollarsOnly.open).toBe(true);
+    expect(closeLabel(dollarsOnly)).toBe(`Mark ${formatDollars(33_333)} Sent`);
   });
 });

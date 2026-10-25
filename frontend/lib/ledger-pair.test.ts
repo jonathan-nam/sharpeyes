@@ -14,6 +14,8 @@ const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
 // The card is settlement-ledger.tsx drawn through ledger-card.tsx, so a guard reads both.
 const ledger = read("components", "settlement-ledger.tsx") + read("components", "ledger-card.tsx");
+const shared = read("components", "shared-cards.tsx");
+const acts = read("components", "closing-acts.tsx");
 // The Settlement tab's body. See components/settlement-stage.tsx.
 const stage = read("components", "settlement-stage.tsx");
 const view = read("lib", "settlement-view.ts");
@@ -221,29 +223,23 @@ describe("one section for what is unsettled", () => {
 });
 
 describe("every act in one step", () => {
-  it("collapses the two ways of sending into one", () => {
-    // "Mark Sent" a step above "I paid them" was one errand in two buttons: shares of a night, and
-    // their own money a coupon sale left with you. One trade settles both.
-    // The label, not the word: the comment above the acts records the shape this replaced.
+  it("draws every closing act on both cards from one builder", () => {
+    // Each card deciding its own buttons is how the owner's netted while the member's did not, and
+    // a listing offered beside a figure running the other way (2026-10-25). The labels live in
+    // components/closing-acts.tsx and nowhere else; see lib/closing-acts.test.ts.
+    for (const card of [ledger, shared]) {
+      expect(card).toContain("acts={closingActs({");
+      expect(card).not.toMatch(/`Mark \$\{/);
+      expect(card).not.toMatch(/`Offset \$\{/);
+    }
     expect(ledger.match(/^\s*I paid them$/gm)).toBeNull();
-    expect(ledger.match(/Mark \$\{movedBoth\(owes, row\.usd\.owe\)\} Sent/g)).toHaveLength(1);
-    expect(ledger.match(/`Offset \$\{moved\(/g)).toHaveLength(1);
   });
 
-  it("writes both pots in ONE call, one press being one act", () => {
-    // They were two calls, on the reasoning that a share is a claim and their money is already here.
-    // They are still two facts and the server still writes them as two rows; what cannot be two is
-    // the REQUEST, because both come off what they owe you and each answer drew the card. One press
-    // of Offset walked Owen's owed figure down by the shares, then down again by the money.
-    expect(ledger).toContain(
-      "onOffsetAll(row.holder, row.name, offset.offered ? offset.parts : [], heldOrNone)",
-    );
-    expect(ledger).toContain(
-      "const sendAll = () => onSendAll(row.holder, owedByYouShares(row), heldOrNone);",
-    );
-    // Undefined and never nought: a disposal of nothing is a row saying an act happened that did not.
-    expect(ledger).toContain("const heldOrNone = row.holding > 0 ? row.holding : undefined;");
-    // And the two-request shape is gone from the card entirely, not just from the button.
+  it("writes every pot in ONE call, one press being one act", () => {
+    // Each answer drew the card, so two requests walked Owen's owed figure down in two steps. The
+    // body itself is pinned in lib/closing-acts.test.ts.
+    expect(ledger).toContain("void write(onClose(row.holder, row.name, kind, pots), null);");
+    expect(ledger).not.toContain("onDecideHeld");
     expect(ledger).not.toContain("onDisposeProceeds");
   });
 
@@ -273,20 +269,17 @@ describe("every act in one step", () => {
 
   it("titles every act the same way, so one is not a different kind of thing", () => {
     // One case for every act, Title Case like every other button in the app, and each names the
-    // amount it moves. Settle is gone: see settlement-figure.
-    expect(ledger).toContain("`Offset ${moved(offset.offered ? offset.amount : 0)}`");
-    expect(ledger).toContain("`Mark ${movedBoth(owes, row.usd.owe)} Sent`");
-    // Netted against the money of yours they hold, both directions in one act (2026-10-23).
-    expect(ledger).toContain("`Take ${formatMesos(-offsetNet, true)} Off Owed Amount`");
-    expect(ledger).toContain("`Mark ${formatMesos(-sendNet, true)} Received`");
-    expect(ledger).toContain("`Mark ${movedBoth(owes - row.heldByThem, row.usd.owe)} Sent`");
+    // amount it moves. What each says is pinned in lib/closing-acts.test.ts; this keeps the case.
+    expect(acts).toContain("`Offset ${amount}`");
+    expect(acts).toContain("`Take ${amount} Off Owed Amount`");
+    expect(acts).toContain('"Mark Settled"');
     expect(ledger).not.toMatch(/^\s*Settle$/gm);
-    // Received on the line; sent only for the lot, under Closing Actions.
+    // Received on the line, the per-share act; the lot under Closing Actions.
     expect(ledger).toContain("Mark Received");
-    expect(ledger).not.toContain('"Mark Received" : "Mark Sent"');
-    expect(ledger).not.toContain("Mark received");
-    expect(ledger).not.toContain("Mark sent");
-    expect(ledger).not.toContain("Mark Settled");
+    for (const source of [ledger, acts]) {
+      expect(source).not.toContain("Mark received");
+      expect(source).not.toContain("Mark sent");
+    }
   });
 });
 

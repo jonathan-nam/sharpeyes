@@ -2,6 +2,8 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import com.sharpeyes.api.events.EventTarget
+import com.sharpeyes.api.settlement.OffsetSharesRequest
+import com.sharpeyes.api.settlement.SharedCloseRequest
 import com.sharpeyes.api.settlement.SharedDisposalRequest
 import com.sharpeyes.api.settlement.SharedMoneyRequest
 import com.sharpeyes.api.settlement.SharedTrancheRequest
@@ -39,6 +41,43 @@ fun Route.sharedBookRoutes() {
         delete("/payments/{rowId}") { remove(SharedRow.PAYMENT) }
         post("/disposals") { addDisposal() }
         delete("/disposals/{rowId}") { remove(SharedRow.DISPOSAL) }
+        post("/close/{kind}") { closeShared() }
+    }
+}
+
+/**
+ * POST /api/shared-books/{personId}/close/{offset|sent}: the member's one press, settling the pair
+ * both ways in the owner's book. See writeClose; the member may close only shares of their own seats.
+ */
+private suspend fun RoutingContext.closeShared() {
+    val kind =
+        when (call.parameters["kind"]) {
+            "offset" -> CLOSE_OFFSET
+            "sent" -> CLOSE_PAID
+            else -> return call.respond(HttpStatusCode.NotFound)
+        }
+    val shared = call.receive<SharedCloseRequest>()
+    val note = shared.note?.trim()?.takeIf { it.isNotEmpty() }
+    inBook { book, writer ->
+        val request =
+            OffsetSharesRequest(
+                holder = book.holder,
+                note = note,
+                parts = shared.parts,
+                holding = shared.holding,
+                received = shared.received,
+                heldByThem = shared.heldByThem,
+            )
+        closeRefusal(book.holder, note, request, kind) ?: run {
+            val act = closeActOf(request, kind, note, writer)
+            val shares = (act.parts + act.received).map { it.lootId to it.memberId }
+            if (!memberMayClose(writer, shares)) return@run "You can only settle shares you sent or were sent."
+            when (writeClose(book.owner, book.holder, act, Clock.System.now())) {
+                is OffsetWrite.Wrote -> null
+                OffsetWrite.AlreadyDischarged -> "This is already settled. Reload to see it."
+                OffsetWrite.NotYourPerson, OffsetWrite.Unreachable -> "A drop named here is not in this book any more."
+            }
+        }
     }
 }
 

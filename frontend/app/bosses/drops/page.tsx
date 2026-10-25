@@ -242,22 +242,13 @@ export default function DropLogPage() {
         );
         await readBack(load);
       }),
-    // Money of theirs you hold from a sale of their coupons: THEM in their book. See V91.
-    decide: (personId, kind, amount) =>
+    // One press settling the pair both ways, in the owner's book and in one transaction. See
+    // SharedBookRoutes.kt closeShared, which holds a member to shares of their own seats.
+    close: (personId, kind, pots) =>
       writes.track(async () => {
         await apiFetch<unknown>(
-          `/api/shared-books/${encodeURIComponent(personId)}/disposals`,
-          { method: "POST", body: JSON.stringify({ amount, kind, heldBy: "THEM" }) },
-          getToken,
-        );
-        await readBack(load);
-      }),
-    // The payout route, which lets the seller mark their own drop's share sent. See LootPermissions.
-    send: (to) =>
-      writes.track(async () => {
-        await apiFetch<unknown>(
-          `/api/parties/${to.partyId}/loot/${to.lootId}/payouts/${to.payeeId}`,
-          { method: "PUT", body: JSON.stringify({ paid: true }) },
+          `/api/shared-books/${encodeURIComponent(personId)}/close/${kind === "OFFSET" ? "offset" : "sent"}`,
+          { method: "POST", body: JSON.stringify(pots) },
           getToken,
         );
         await readBack(load);

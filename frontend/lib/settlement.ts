@@ -918,19 +918,102 @@ export function offsetOf(row: Settlement): Offset {
   };
 }
 
+/** Who sends the mesos a closing act moves, from the card's own side. */
+export type NetPayer = "YOU" | "THEM" | null;
+
+/** One share a closing act settles. Its unit says whether an Offset can take it (mesos only). */
+export type ClosingShare = OffsetPart & { currency: string };
+
 /**
- * Mesos each side of a card is holding for the other: the two Held By figures.
+ * Everything one closing act settles between the pair, netted, and who pays.
  *
- * ONE function because both cards (yours, and theirs read from the other end) draw these figures,
- * and an auction house listing is only good for the exact amount it was posted for. Two copies of
- * this sum that disagreed would delete every listing the moment the other side looked at it. See
- * backend SettlementListings.kt.
+ * Every button in Closing Actions on both cards reads this and nothing else, so the payer's Mark
+ * Sent, the payee's Mark Received and listing, and the even pair's Mark Settled cannot disagree
+ * (Jonathan, 2026-10-25). Four meso pots net: shares each way and coupon money held each way.
+ * Entered debts stay out, settled by a payment or taken by an Offset. Dollars never net.
  */
-export function heldMesos(row: Settlement): { byYou: number; byThem: number } {
-  const theirShares = row.lines
-    .filter((line) => line.direction === "owed" && line.currency === "MESO")
+export type ClosingNet = {
+  /** Mesos that cross, after netting. Zero when the pair is even. */
+  mesos: number;
+  /** Who sends them. Null when even. */
+  payer: NetPayer;
+  /** Every share you owe, mesos and dollars. One press marks them all paid. */
+  sharesYouOwe: ClosingShare[];
+  /** Every share they owe you, mesos and dollars. */
+  sharesTheyOwe: ClosingShare[];
+  /** Their coupon money you hold. */
+  holding: number;
+  /** Your coupon money they hold. */
+  heldByThem: number;
+  /** Cents of dollar shares each way, closed by the same press and named beside the mesos. */
+  usdYouOwe: number;
+  usdTheyOwe: number;
+  /**
+   * The entered balance an Offset takes the mesos off instead of their crossing: positive is what
+   * they owe you outside the four pots. See offsetAgainst on the cards.
+   */
+  enteredBalance: number;
+  /** Whether there is anything for a closing act to settle. */
+  open: boolean;
+};
+
+/** Off the shares, never alongside them, so the parts always add up to what they say. */
+const sharesRunning = (row: Settlement, direction: "owe" | "owed"): ClosingShare[] =>
+  row.lines
+    .filter((line) => line.direction === direction)
+    .map((line) => ({
+      lootId: line.lootId,
+      memberId: line.payeeId,
+      amount: line.pay,
+      currency: line.currency,
+    }));
+
+const mesosOf = (row: Settlement, direction: "owe" | "owed") =>
+  row.lines
+    .filter((line) => line.direction === direction && line.currency === "MESO")
     .reduce((sum, line) => sum + line.pay, 0);
-  return { byYou: offsetOf(row).amount + row.holding, byThem: row.heldByThem + theirShares };
+
+const centsOf = (row: Settlement, direction: "owe" | "owed") =>
+  row.lines
+    .filter((line) => line.direction === direction && line.currency === "USD")
+    .reduce((sum, line) => sum + line.pay, 0);
+
+/** [net] read from the other end: what the member's card draws from the owner's row. */
+export function flipNet(net: ClosingNet): ClosingNet {
+  return {
+    mesos: net.mesos,
+    payer: net.payer === "YOU" ? "THEM" : net.payer === "THEM" ? "YOU" : null,
+    sharesYouOwe: net.sharesTheyOwe,
+    sharesTheyOwe: net.sharesYouOwe,
+    holding: net.heldByThem,
+    heldByThem: net.holding,
+    usdYouOwe: net.usdTheyOwe,
+    usdTheyOwe: net.usdYouOwe,
+    enteredBalance: -net.enteredBalance,
+    open: net.open,
+  };
+}
+
+/** What one closing act settles on this card, and which way the mesos go. See ClosingNet. */
+export function closingNet(row: Settlement): ClosingNet {
+  const signed = mesosOf(row, "owe") + row.holding - row.heldByThem - mesosOf(row, "owed");
+  const sharesYouOwe = sharesRunning(row, "owe");
+  const sharesTheyOwe = sharesRunning(row, "owed");
+  // Their side whole, less the shares this act closes: what an Offset has to come off.
+  const theirSide = Object.values(row.parts).reduce((sum, part) => sum + part, 0);
+  return {
+    mesos: Math.abs(signed),
+    payer: signed > 0 ? "YOU" : signed < 0 ? "THEM" : null,
+    sharesYouOwe,
+    sharesTheyOwe,
+    holding: row.holding,
+    heldByThem: row.heldByThem,
+    usdYouOwe: centsOf(row, "owe"),
+    usdTheyOwe: centsOf(row, "owed"),
+    enteredBalance: theirSide - row.parts.shares,
+    open:
+      sharesYouOwe.length > 0 || sharesTheyOwe.length > 0 || row.holding > 0 || row.heldByThem > 0,
+  };
 }
 
 /** Nothing stands between you either way. */
