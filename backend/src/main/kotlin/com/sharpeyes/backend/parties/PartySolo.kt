@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.backend.bosses.bossClearedOn
 import com.sharpeyes.backend.bosses.clearChanged
 import com.sharpeyes.backend.bosses.periodStartFor

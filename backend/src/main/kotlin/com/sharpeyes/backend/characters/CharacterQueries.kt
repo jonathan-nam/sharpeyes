@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.characters
 
+import com.sharpeyes.api.characters.CharacterResponse
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.services.NexonLookupResult
 import com.sharpeyes.backend.sprites.spriteProxyPath

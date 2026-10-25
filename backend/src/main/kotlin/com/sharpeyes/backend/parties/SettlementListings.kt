@@ -1,14 +1,14 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.events.EventTarget
+import com.sharpeyes.api.settlement.SettlementListingView
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.SettlementListing
-import com.sharpeyes.backend.events.EventTarget
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publish
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
 import com.sharpeyes.backend.notifications.resolve
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.JoinType
@@ -63,17 +63,6 @@ internal fun listingCardFor(
         }
     return if (owner != null && member != null && side != null) ListingCard(personId, owner, member, side) else null
 }
-
-@Serializable
-data class SettlementListingView(
-    val id: String,
-    val personId: String,
-    /** OWNER or MEMBER: the side holding the money, who the listing is for. */
-    val payer: String,
-    val amount: Long,
-    val postedByYou: Boolean,
-    val createdAt: String,
-)
 
 /** Every listing on a card [userId] is either side of. No image: that is its own request. */
 internal fun listingsFor(userId: String): List<SettlementListingView> =

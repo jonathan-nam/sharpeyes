@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.events
 
+import com.sharpeyes.api.events.EventTarget
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.plugins.dbQuery
 import io.ktor.http.HttpMethod

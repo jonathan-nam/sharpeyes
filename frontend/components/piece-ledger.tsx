@@ -421,7 +421,7 @@ function HolderCard({
             </Button>
           </form>
         ) : (
-          <span className="ledger-progress ledger-none">No vestiges outstanding</span>
+          <span className="ledger-progress ledger-none">No coupons outstanding</span>
         )}
         {/* What the sale pays out, worked out rather than asked for. The one place a coupon debt gets
             a price, and it only can here: these pieces were in YOUR inventory, so the figure being

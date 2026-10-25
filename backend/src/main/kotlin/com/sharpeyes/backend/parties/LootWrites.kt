@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.SellLootRequest
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyLootBundle
@@ -320,7 +321,7 @@ internal fun settlePayouts(
 }
 
 /** One row of a lot with its ids parsed, so the checks and the writes read the same values. */
-internal data class LotRow(
+internal data class SaleRow(
     val partyId: Uuid,
     val lootId: Uuid,
     val amount: Long,
@@ -336,21 +337,21 @@ internal data class LotRow(
  * fungible, no row may already be sold, and every row has to be the same drop.
  *
  * Already sold is a refusal rather than an update, unlike the single-row sale, which is deliberately
- * re-sendable so a mistyped price can be fixed. A lot names rows a queue proposed, and a row that
+ * re-sendable so a mistyped price can be fixed. A bulk sale names rows a queue proposed, and a row that
  * sold since the queue was drawn is evidence the queue is stale: re-pricing it would silently
  * overwrite a sale somebody entered by hand.
  */
-internal fun sellLot(
+internal fun sellBulk(
     userId: String,
     dropKey: String,
     amountBasis: String,
     splitMethod: String,
-    rows: List<LotRow>,
+    rows: List<SaleRow>,
     now: Instant,
 ): String? {
     // Every row read and checked before any is written. Exposed would roll back a throw, but a
     // refusal is not a throw, and returning early from a half-written loop would commit the prefix.
-    val refusal = lotDropRefusal(dropKey) ?: rows.firstNotNullOfOrNull { lotRowRefusal(userId, dropKey, it) }
+    val refusal = bulkDropRefusal(dropKey) ?: rows.firstNotNullOfOrNull { bulkRowRefusal(userId, dropKey, it) }
     if (refusal != null) return refusal
 
     rows.forEach { row ->
@@ -372,17 +373,17 @@ internal fun sellLot(
 }
 
 /**
- * Why this one row cannot take its slice of a lot, or null.
+ * Why this one row cannot take its slice of a bulk sale, or null.
  *
- * sellLoot's own rules, plus two the shape needs. Every row has to be the drop the lot is of, and
- * none may already be sold: a lot names rows a queue proposed, so a row that sold since the queue was
+ * sellLoot's own rules, plus two the shape needs. Every row has to be the drop the bulk sale is of, and
+ * none may already be sold: a bulk sale names rows a queue proposed, so a row that sold since the queue was
  * drawn is evidence the queue is stale, and re-pricing it would overwrite a sale entered by hand.
  * The single-row sale is deliberately re-sendable, which is the opposite rule for the opposite reason.
  */
-private fun lotRowRefusal(
+private fun bulkRowRefusal(
     userId: String,
     dropKey: String,
-    row: LotRow,
+    row: SaleRow,
 ): String? {
     // A member's rows as well as the owner's, on the single sale's own terms: see sellRefusal.
     val loot = if (canEditParty(row.partyId, userId)) findLoot(row.lootId, row.partyId, userId) else null

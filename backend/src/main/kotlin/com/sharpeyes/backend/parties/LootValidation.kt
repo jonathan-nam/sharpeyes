@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.BulkSaleRequest
+import com.sharpeyes.api.loot.SellLootRequest
 import com.sharpeyes.backend.db.DropCatalog
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -98,47 +100,47 @@ internal fun takenRefusal(
     }
 
 /**
- * Why a pile of this drop cannot be priced as one lot, or null.
+ * Why a pile of this drop cannot be priced as one bulk sale, or null.
  *
- * The gate on the lot sale. Without it, that route prices any drop off a queue, including the ones
+ * The gate on the bulk sale. Without it, that route prices any drop off a queue, including the ones
  * whose copies each carry their own potential and their own price, and for those a queue can only
  * guess which one went. A key the catalog does not have is refused here too.
  *
  * Reads the catalog, unlike the pure checks around it, because whether copies are interchangeable is
  * a property of the drop rather than of the request. See V45__drop_fungible.sql.
  */
-internal fun lotDropRefusal(dropKey: String): String? {
+internal fun bulkDropRefusal(dropKey: String): String? {
     val fungible =
         DropCatalog
             .selectAll()
             .where { DropCatalog.dropKey eq dropKey }
             .firstOrNull()
             ?.get(DropCatalog.fungible) == true
-    return if (fungible) null else "$dropKey is not sold as a lot, so each of its drops is priced where it sits"
+    return if (fungible) null else "$dropKey is not sold in bulk, so each of its drops is priced where it sits"
 }
 
 /**
- * Why these rows cannot be one lot, or null. The checks that need no database.
+ * Why these rows cannot be one bulk sale, or null. The checks that need no database.
  *
  * Split from the per-row ones in LootWrites.kt because these are about the LOT: that it names
  * something, that it names nothing twice, and that the slices its rows carry add up to the sale.
- * That last one is the important one. The rows carry the division of the lot, so this is the only
+ * That last one is the important one. The rows carry the division of the bulk sale, so this is the only
  * check that it IS a division of it, and a client that lost a meso to rounding would otherwise file
  * rows summing to less than the price with every figure downstream looking ordinary.
  */
-internal fun lotRequestRefusal(
-    request: LotSaleRequest,
-    rows: List<LotRow>,
+internal fun bulkRequestRefusal(
+    request: BulkSaleRequest,
+    rows: List<SaleRow>,
 ): String? =
     when {
         rows.isEmpty() -> "name at least one drop to sell"
         rows.map { it.lootId }.distinct().size != rows.size ->
-            "the same drop is named twice, so the lot would price it once and be short"
+            "the same drop is named twice, so the bulk sale would price it once and be short"
         request.amountBasis !in AMOUNT_BASES -> "amountBasis must be LISTED, RECEIVED or BOUGHT"
         request.splitMethod !in SPLIT_METHODS -> "splitMethod must be LAZY or FAIR"
         request.total < 0 -> "total must be zero or more"
         rows.sumOf { it.amount } != request.total ->
-            "the rows add up to ${rows.sumOf { it.amount }}, not the ${request.total} the lot sold for"
+            "the rows add up to ${rows.sumOf { it.amount }}, not the ${request.total} the bulk sale sold for"
         else -> null
     }
 

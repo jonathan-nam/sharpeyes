@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.characters
 
+import com.sharpeyes.api.characters.SetTokenCountRequest
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.TokenCatalog
 import com.sharpeyes.backend.plugins.dbQuery

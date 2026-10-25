@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.pages.DropLogPageResponse
 import com.sharpeyes.backend.bosses.bossCatalog
 import com.sharpeyes.backend.bosses.dropTables
 import com.sharpeyes.backend.characters.charactersInActiveWorld

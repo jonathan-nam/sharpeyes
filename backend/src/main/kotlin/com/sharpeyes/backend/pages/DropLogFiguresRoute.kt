@@ -1,14 +1,16 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.pages.DropLogPageResponse
+import com.sharpeyes.api.pages.SharedBookResponse
 import com.sharpeyes.backend.plugins.addSpan
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.span
 import com.sharpeyes.backend.users.ensureUser
-import com.sharpeyes.money.DropLogFigures
 import com.sharpeyes.money.DropLogPage
 import com.sharpeyes.money.SharedBook
-import com.sharpeyes.money.dropLogFigures
+import com.sharpeyes.money.droplog.DropLogFigures
+import com.sharpeyes.money.droplog.dropLogFigures
 import com.sharpeyes.money.moneyJson
 import io.ktor.http.ContentType
 import io.ktor.server.application.call

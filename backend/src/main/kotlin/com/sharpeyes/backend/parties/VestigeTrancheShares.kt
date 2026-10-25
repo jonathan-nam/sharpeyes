@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import kotlin.uuid.Uuid
 
 // Whose pieces a priced tranche was: the one place a coupon debt gets a price. See V56.
@@ -49,7 +51,7 @@ internal fun shareRefusal(
         shares.any { (it.holder.kind == CHARACTER) != (it.holder.characterName != null) } ->
             "a $CHARACTER holder needs a characterName, and nothing else does"
         shares.any {
-            it.holder.personId != null && runCatching { Uuid.parse(it.holder.personId) }.isFailure
+            it.holder.personId?.let { id -> runCatching { Uuid.parse(id) }.isFailure } == true
         } -> "personId is not an id"
         shares.any { it.pieces <= 0 } -> "shares[].pieces must be above 0"
         // The holder cannot owe themselves any of their own pile, and a creditor named twice would

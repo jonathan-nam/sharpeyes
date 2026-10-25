@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.notifications
 
+import com.sharpeyes.api.parties.PersonRequest
+import com.sharpeyes.api.parties.SavePartyRequest
+import com.sharpeyes.api.parties.SavePeopleRequest
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Notification
@@ -7,9 +10,6 @@ import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.events.ACTOR
 import com.sharpeyes.backend.parties.LootedDrop
-import com.sharpeyes.backend.parties.PersonRequest
-import com.sharpeyes.backend.parties.SavePartyRequest
-import com.sharpeyes.backend.parties.SavePeopleRequest
 import com.sharpeyes.backend.parties.addLoot
 import com.sharpeyes.backend.parties.allLootFor
 import com.sharpeyes.backend.parties.bossIdForKey

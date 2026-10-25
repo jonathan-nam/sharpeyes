@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.invites
 
+import com.sharpeyes.api.invites.AcceptedInvite
 import com.sharpeyes.backend.bosses.clearSkipsOfSeats
 import com.sharpeyes.backend.bosses.partySeatsChanged
 import com.sharpeyes.backend.db.Characters

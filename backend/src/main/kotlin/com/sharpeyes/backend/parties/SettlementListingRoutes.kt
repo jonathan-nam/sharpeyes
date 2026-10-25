@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.backend.plugins.Refusal
+import com.sharpeyes.api.settlement.ReportFiguresRequest
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.failing
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -23,7 +24,6 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
-import kotlinx.serialization.Serializable
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -42,11 +42,6 @@ private val WEBP = "WEBP".encodeToByteArray()
 
 /** Where a RIFF file names its format. */
 private const val RIFF_FORMAT_AT = 8
-
-@Serializable
-data class ReportFiguresRequest(
-    val figures: List<ReportedFigure>,
-)
 
 fun Route.settlementListingRoutes() {
     get { answer { } }

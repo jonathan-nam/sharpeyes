@@ -1,6 +1,12 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.backend.events.EventTarget
+import com.sharpeyes.api.coupons.VestigeTrancheShareRow
+import com.sharpeyes.api.events.EventTarget
+import com.sharpeyes.api.settlement.OffsetSharesRequest
+import com.sharpeyes.api.settlement.SharedCloseRequest
+import com.sharpeyes.api.settlement.SharedDisposalRequest
+import com.sharpeyes.api.settlement.SharedMoneyRequest
+import com.sharpeyes.api.settlement.SharedTrancheRequest
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.pages.bookBetween
@@ -16,29 +22,12 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
-import kotlinx.serialization.Serializable
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 // /api/shared-books/{personId}/...: a member's writes into the owner's book, where {personId} is the
 // member's person row on the owner's account (SharedBookResponse.personId). Each answers with that
 // book re-read, from the member's side. See SharedBookWrites.kt.
-
-@Serializable
-data class SharedTrancheRequest(
-    val pieces: Double,
-    val amount: Long? = null,
-    val disposition: String = SOLD,
-    /** Pieces of the sale that were somebody else's, in the owner's book's holder shape. */
-    val shares: List<VestigeTrancheShareRow> = emptyList(),
-)
-
-@Serializable
-data class SharedMoneyRequest(
-    /** A debt in the owner's terms (positive is you owing them), or what you paid them. */
-    val amount: Long,
-    val note: String? = null,
-)
 
 fun Route.sharedBookRoutes() {
     // The owner's Settlement card moves, and so does the member's own.
@@ -55,20 +44,6 @@ fun Route.sharedBookRoutes() {
         post("/close/{kind}") { closeShared() }
     }
 }
-
-/**
- * A closing act from the member's side, in the owner's terms: `parts` are shares the owner owes the
- * member, `received` shares the member owes the owner, `holding` the member's money the owner holds,
- * `heldByThem` the owner's money the member holds. The same pots writeClose takes.
- */
-@Serializable
-data class SharedCloseRequest(
-    val note: String? = null,
-    val parts: List<OffsetPartRow> = emptyList(),
-    val holding: Long? = null,
-    val received: List<OffsetPartRow> = emptyList(),
-    val heldByThem: Long? = null,
-)
 
 /**
  * POST /api/shared-books/{personId}/close/{offset|sent}: the member's one press, settling the pair
@@ -105,15 +80,6 @@ private suspend fun RoutingContext.closeShared() {
         }
     }
 }
-
-@Serializable
-data class SharedDisposalRequest(
-    val amount: Long,
-    /** OFFSET or PAID. */
-    val kind: String,
-    /** In the owner's terms: THEM is the member holding the owner's money. */
-    val heldBy: String,
-)
 
 private suspend fun RoutingContext.addDisposal() {
     val request = call.receive<SharedDisposalRequest>()

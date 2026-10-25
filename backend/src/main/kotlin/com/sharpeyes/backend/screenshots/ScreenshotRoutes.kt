@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.screenshots
 
+import com.sharpeyes.api.screenshots.ResolveScreenshotRequest
+import com.sharpeyes.api.screenshots.UploadScreenshotRequest
 import com.sharpeyes.backend.characters.findOwnedCharacter
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam

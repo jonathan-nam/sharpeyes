@@ -1,12 +1,17 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.events.EventTarget
+import com.sharpeyes.api.parties.DuplicateParty
+import com.sharpeyes.api.parties.PartyResponse
+import com.sharpeyes.api.parties.SavePartyRequest
+import com.sharpeyes.api.parties.SaveWeekRosterRequest
+import com.sharpeyes.api.parties.SetClearRequest
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
-import com.sharpeyes.backend.events.EventTarget
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.events.tellLinkedOnWrite
-import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -54,8 +59,10 @@ fun Route.partyRoutes(
     post("/loot") { logDropRoute() }
     post("/loot/settle") { settleRoute() }
     // A pile of one interchangeable drop, priced in one go across every pool it sits in. See
-    // lotSaleRoute.
-    post("/loot/lot") { lotSaleRoute() }
+    // bulkSaleRoute.
+    post("/loot/bulk-sale") { bulkSaleRoute() }
+    // The old path, for a tab opened before the rename. Remove once that deploy has settled.
+    post("/loot/lot") { bulkSaleRoute() }
     // Which mode a boss run alone is run at, by character and boss. Constant, so ahead of /{id}.
     put("/solo") { setSoloDifficultyRoute() }
     // Every party's pile of Eternal pieces for a week, for Party View and Run Order. Constant, so

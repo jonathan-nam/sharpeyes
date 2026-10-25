@@ -361,12 +361,12 @@ describe("the totals over what is finished", () => {
     // A coupon night has no one price: its pieces sell in lots that name no night, so the money is
     // stated whole or not at all. Without it the view was every sale but the vestiges.
     const rows = buildSettledLog(logOf([drop()]));
-    const withLots = settledTotals(rows, { pooled: 2_000 * M, yourTake: 1_200 * M });
+    const withBulkSales = settledTotals(rows, { pooled: 2_000 * M, yourTake: 1_200 * M });
 
-    expect(withLots.pooled).toBe(9_500 * M + 2_000 * M);
-    expect(withLots.yourTake).toBe(settledTotals(rows).yourTake + 1_200 * M);
+    expect(withBulkSales.pooled).toBe(9_500 * M + 2_000 * M);
+    expect(withBulkSales.yourTake).toBe(settledTotals(rows).yourTake + 1_200 * M);
     // And the counts are the rows', which coupon lots are not: a lot is not a settled night.
-    expect([withLots.nights, withLots.sales]).toEqual([0, 1]);
+    expect([withBulkSales.nights, withBulkSales.sales]).toEqual([0, 1]);
   });
 
   it("is the rows alone when no coupons have sold", () => {

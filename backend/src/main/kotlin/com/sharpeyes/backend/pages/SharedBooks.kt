@@ -1,11 +1,12 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.pages.SharedBookResponse
 import com.sharpeyes.backend.db.PartyReadCutoff
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.invites.senderNameFor
 import com.sharpeyes.backend.parties.PERSON
 import com.sharpeyes.backend.parties.SELF
-import com.sharpeyes.backend.parties.VestigeHolder
 import com.sharpeyes.backend.parties.allLootFor
 import com.sharpeyes.backend.parties.clashesIn
 import com.sharpeyes.backend.parties.debtsFor

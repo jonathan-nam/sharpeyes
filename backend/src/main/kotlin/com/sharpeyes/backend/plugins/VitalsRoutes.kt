@@ -1,12 +1,12 @@
 package com.sharpeyes.backend.plugins
 
+import com.sharpeyes.api.system.VitalReport
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
@@ -63,23 +63,6 @@ private val POOR =
 
 // Below this, keep decimals (CLS is a small fraction); at or above, a whole millisecond.
 private const val DECIMAL_BELOW = 10.0
-
-// Anonymous by construction: no user id, no IP is read or stored. Location is coarse
-// (tz, lang) and shared by thousands, which is what makes "slow loads come from
-// Australia" answerable without logging who.
-@Serializable
-private data class VitalReport(
-    val name: String,
-    val value: Double,
-    val rating: String? = null,
-    val route: String? = null,
-    val nav: String? = null,
-    val conn: String? = null,
-    val device: String? = null,
-    val tz: String? = null,
-    val lang: String? = null,
-    val v: String? = null,
-)
 
 fun Route.vitalsRoutes() {
     // Unauthenticated and fire-and-forget: a navigator.sendBeacon target, sent as

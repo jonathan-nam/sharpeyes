@@ -686,7 +686,7 @@ describe("the picker the card draws", () => {
   it("says the boxes are gone, and offers nothing that would open them again", () => {
     // The card states the position and takes no entry. A control that reopened the boxes went with
     // the one on the page: see the block below for what that costs.
-    expect(source).toContain("No vestiges outstanding");
+    expect(source).toContain("No coupons outstanding");
     expect(source).not.toMatch(/setEntering/);
     expect(source).not.toContain("Record a sale");
   });

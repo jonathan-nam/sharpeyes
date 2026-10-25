@@ -19,7 +19,7 @@ const kotlin = readFileSync(
     __dirname,
     "..",
     "..",
-    "backend/src/main/kotlin/com/sharpeyes/backend/pages/PartiesPageResponse.kt",
+    "shared/api/src/commonMain/kotlin/com/sharpeyes/api/pages/PartiesPageResponse.kt",
   ),
   "utf8",
 );

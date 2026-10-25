@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.LootBundleResponse
+import com.sharpeyes.api.loot.LootBundlesRequest
 import com.sharpeyes.backend.db.PartyLootBundle
 import com.sharpeyes.backend.db.VestigeSettlementLoot
 import com.sharpeyes.backend.plugins.dbQuery

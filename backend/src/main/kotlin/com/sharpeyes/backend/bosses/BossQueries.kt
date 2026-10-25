@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.bosses
 
+import com.sharpeyes.api.bosses.BossClearResponse
+import com.sharpeyes.api.bosses.BossPieceResponse
+import com.sharpeyes.api.bosses.BossResponse
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Characters

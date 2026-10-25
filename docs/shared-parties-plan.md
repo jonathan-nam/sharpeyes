@@ -89,7 +89,7 @@ both cards side by side and does not net them, the same rule as the per-party wa
 - `canEditParty` instead of `ownsParty` on: add loot, sell / unsell, taken, and delete. An Editor
   acts only as their own seats (`mayActAs`): sells as themselves, corrects or undoes only their own
   sale, marks kept or puts back only as themselves, and deletes only an unsold drop they logged
-  (`LootPermissions.kt`). Config, roster, skip, pieces, clear, bundles, lot sale and delete party
+  (`LootPermissions.kt`). Config, roster, skip, pieces, clear, bundles, bulk sale and delete party
   stay on `ownsParty`.
 - **Payouts stay the owner's.** "Mark payouts they owe as sent" contradicts "a payment counts when
   the receiver records it", so it was left out. Revisit with phase 3's payments.

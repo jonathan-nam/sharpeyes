@@ -197,4 +197,6 @@ export type AddSettlementDebtBody = {
   note?: string;
   // Only an offset names any. Absent is a debt somebody typed, which discharges no share.
   payouts?: SettlementDebtPayout[];
+  // ISO timestamp. The server defaults it to now.
+  incurredAt?: string | null;
 };

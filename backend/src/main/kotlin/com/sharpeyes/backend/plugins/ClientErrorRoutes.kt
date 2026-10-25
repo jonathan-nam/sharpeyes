@@ -1,12 +1,12 @@
 package com.sharpeyes.backend.plugins
 
+import com.sharpeyes.api.system.ClientErrorReport
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.call
 import io.ktor.server.request.receiveText
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.slf4j.LoggerFactory
 
@@ -48,28 +48,6 @@ internal fun endpointShape(path: String): String =
         .substringBefore('?')
         .split('/')
         .joinToString("/") { if (UUID_SEGMENT.matches(it) || NUMERIC_SEGMENT.matches(it)) ":id" else it }
-
-/**
- * Anonymous by construction, exactly as the vitals beacon is: no user id, no IP, no request body.
- * A path is an API route ("/api/parties"), never an id-bearing one the caller composed.
- */
-@Serializable
-private data class ClientErrorReport(
-    val kind: String,
-    val path: String? = null,
-    val status: Int? = null,
-    val route: String? = null,
-    val nav: String? = null,
-    val conn: String? = null,
-    val device: String? = null,
-    val tz: String? = null,
-    val lang: String? = null,
-    val v: String? = null,
-    /** A parity report's first differing path. */
-    val field: String? = null,
-    /** A parity report's number of differing paths. */
-    val count: Int? = null,
-)
 
 fun Route.clientErrorRoutes() {
     // Unauthenticated and fire-and-forget, for the same reasons as /api/vitals: a sendBeacon

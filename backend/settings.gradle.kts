@@ -4,6 +4,10 @@ rootProject.name = "sharpeyes-backend"
 // "com.sharpeyes:money" in build.gradle.kts resolves to it. See shared/money/build.gradle.kts.
 includeBuild("../shared/money")
 
+// The HTTP API's types, shared with every client. "com.sharpeyes:api" resolves to it. See
+// shared/api/build.gradle.kts.
+includeBuild("../shared/api")
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

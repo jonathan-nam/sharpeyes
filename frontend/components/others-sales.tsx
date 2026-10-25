@@ -3,7 +3,7 @@
 import { apiAssetUrl } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatDropped } from "@/lib/loot";
-import type { LotRow } from "@/lib/lot-sale";
+import type { SaleRow } from "@/lib/bulk-sale";
 import type { Boss } from "@/types/boss";
 import type { Party } from "@/types/party";
 
@@ -16,7 +16,7 @@ export function OthersSales({
   bossByKey,
   partyById,
 }: {
-  rows: LotRow[];
+  rows: SaleRow[];
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
 }) {

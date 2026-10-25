@@ -1,8 +1,11 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.AddVestigePaymentRequest
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigePaymentResponse
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.db.VestigePayment
 import com.sharpeyes.backend.events.eventPerson
-import com.sharpeyes.backend.plugins.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -17,7 +20,6 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -46,26 +48,6 @@ private const val MAX_AMOUNT = 1_000_000_000_000L
 
 /** As long as a note may be, matching the check in V64 and the one an entered debt carries. */
 private const val MAX_NOTE = 120
-
-@Serializable
-data class VestigePaymentResponse(
-    val id: String,
-    val holder: VestigeHolder,
-    val amount: Long,
-    val note: String? = null,
-    val receivedAt: String,
-    /** The reader wrote it, which is what lets them take it back. See V88. */
-    val recordedByYou: Boolean = true,
-    /** Who did, as the reader calls them, when it was not the reader. */
-    val recordedByName: String? = null,
-)
-
-@Serializable
-data class AddVestigePaymentRequest(
-    val holder: VestigeHolder,
-    val amount: Long,
-    val note: String? = null,
-)
 
 fun Route.vestigePaymentRoutes() {
     get { listPayments() }
@@ -165,7 +147,7 @@ internal fun paymentRefusal(
             "a PERSON holder needs a personId, and nothing else does"
         (holder.kind == "CHARACTER") != (holder.characterName != null) ->
             "a CHARACTER holder needs a characterName, and nothing else does"
-        holder.personId != null && runCatching { Uuid.parse(holder.personId) }.isFailure ->
+        holder.personId?.let { runCatching { Uuid.parse(it) }.isFailure } == true ->
             "personId is not an id"
         // Signed (V89): negative is money YOU sent them, which is what they are owed less by.
         amount == 0L || abs(amount) > MAX_AMOUNT -> "amount must be nonzero and at most $MAX_AMOUNT either way"

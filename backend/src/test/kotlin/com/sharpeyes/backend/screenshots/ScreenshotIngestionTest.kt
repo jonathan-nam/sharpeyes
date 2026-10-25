@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.screenshots
 
+import com.sharpeyes.api.screenshots.ScreenshotOutcome
+import com.sharpeyes.api.screenshots.UploadScreenshotRequest
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters

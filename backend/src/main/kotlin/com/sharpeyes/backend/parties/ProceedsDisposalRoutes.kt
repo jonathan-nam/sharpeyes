@@ -1,5 +1,10 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.settlement.AddProceedsDisposalRequest
+import com.sharpeyes.api.settlement.HELD_BY_THEM
+import com.sharpeyes.api.settlement.HELD_BY_YOU
+import com.sharpeyes.api.settlement.ProceedsDisposalResponse
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
 import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.plugins.dbQuery
@@ -15,7 +20,6 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -44,34 +48,6 @@ private const val MAX_AMOUNT = 1_000_000_000_000L
 
 private const val OFFSET = "OFFSET"
 private const val PAID = "PAID"
-internal const val HELD_BY_YOU = "YOU"
-internal const val HELD_BY_THEM = "THEM"
-
-@Serializable
-data class ProceedsDisposalResponse(
-    val id: String,
-    val holder: VestigeHolder,
-    val amount: Long,
-    /**
-     * OFFSET: it came off their debt (THEM: off yours). PAID: you sent it to them (THEM: they sent it
-     * to you).
-     */
-    val kind: String,
-    val decidedAt: String,
-    /** YOU: your pile sold their coupons. THEM: their pile sold yours. See V91. */
-    val heldBy: String = HELD_BY_YOU,
-    /** Whether the viewer wrote it. See V88. */
-    val recordedByYou: Boolean = true,
-    val recordedByName: String? = null,
-)
-
-@Serializable
-data class AddProceedsDisposalRequest(
-    val holder: VestigeHolder,
-    val amount: Long,
-    val kind: String,
-    val heldBy: String = HELD_BY_YOU,
-)
 
 fun Route.proceedsDisposalRoutes() {
     get { listDisposals() }
@@ -173,7 +149,7 @@ internal fun disposalRefusal(
             "a PERSON holder needs a personId, and nothing else does"
         (holder.kind == "CHARACTER") != (holder.characterName != null) ->
             "a CHARACTER holder needs a characterName, and nothing else does"
-        holder.personId != null && runCatching { Uuid.parse(holder.personId) }.isFailure ->
+        holder.personId?.let { runCatching { Uuid.parse(it) }.isFailure } == true ->
             "personId is not an id"
         // Your own pile owes you nothing, so there is no money of yours for you to decide about.
         holder.kind == "SELF" -> "there is nothing of your own to offset or pay out"

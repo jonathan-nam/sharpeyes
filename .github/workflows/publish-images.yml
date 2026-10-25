@@ -27,7 +27,7 @@ jobs:
       # commit SHA, so a tag that exists for one image and not another is a deploy that cannot run.
       matrix:
         include:
-          # The backend builds from the root, to reach shared/money. See backend/Dockerfile.
+          # The backend builds from the root, to reach shared/. See backend/Dockerfile.
           - name: backend
             context: .
             file: backend/Dockerfile
