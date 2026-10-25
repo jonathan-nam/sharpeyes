@@ -1,8 +1,8 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.coupons.AddVestigePaymentRequest
+import com.sharpeyes.api.coupons.AddPaymentRequest
+import com.sharpeyes.api.coupons.PaymentResponse
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.coupons.VestigePaymentResponse
 import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.db.VestigePayment
 import com.sharpeyes.backend.events.eventPerson
@@ -67,7 +67,7 @@ private suspend fun RoutingContext.listPayments() {
 
 private suspend fun RoutingContext.addPaymentRoute() {
     val (userId, email) = call.principalIdAndEmail()
-    val request = call.receive<AddVestigePaymentRequest>()
+    val request = call.receive<AddPaymentRequest>()
     // Which Settlement card this is, for the other side's screen. See tellLinkedOnWrite.
     call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
@@ -166,7 +166,7 @@ internal fun paymentRefusal(
 internal fun paymentsFor(
     userId: String,
     viewer: String = userId,
-): List<VestigePaymentResponse> {
+): List<PaymentResponse> {
     val rows =
         VestigePayment
             .selectAll()
@@ -184,7 +184,7 @@ internal fun paymentsFor(
                 personId = it[VestigePayment.personId]?.toString(),
                 characterName = it[VestigePayment.characterName],
             )
-        VestigePaymentResponse(
+        PaymentResponse(
             id = it[VestigePayment.id].toString(),
             holder = holder,
             amount = it[VestigePayment.amount],

@@ -1,17 +1,17 @@
 package com.sharpeyes.api.pages
 
-import com.sharpeyes.api.coupons.VestigePaymentResponse
-import com.sharpeyes.api.coupons.VestigeSettlementResponse
-import com.sharpeyes.api.coupons.VestigeTrancheResponse
+import com.sharpeyes.api.coupons.CouponSaleResponse
+import com.sharpeyes.api.coupons.CouponSettlementResponse
+import com.sharpeyes.api.coupons.PaymentResponse
 import com.sharpeyes.api.loot.PartyLootPoolResponse
 import com.sharpeyes.api.parties.PartyResponse
-import com.sharpeyes.api.settlement.ProceedsDisposalResponse
+import com.sharpeyes.api.settlement.HeldMoneyResponse
 import com.sharpeyes.api.settlement.SettlementDebtResponse
 import kotlinx.serialization.Serializable
 
 /** One owner's book, cut to what it says between them and you. */
 @Serializable
-data class SharedBookResponse(
+data class SharedPartiesResponse(
     /** What you call them: your own person row for their account, else their main character. */
     val ownerName: String,
     /** Their current Discord avatar. See imagesOf. */
@@ -22,9 +22,9 @@ data class SharedBookResponse(
     val ownerPersonId: String?,
     val parties: List<PartyResponse>,
     val pools: List<PartyLootPoolResponse>,
-    val tranches: List<VestigeTrancheResponse>,
-    val payments: List<VestigePaymentResponse>,
-    val settlements: List<VestigeSettlementResponse>,
+    val tranches: List<CouponSaleResponse>,
+    val payments: List<PaymentResponse>,
+    val settlements: List<CouponSettlementResponse>,
     val debts: List<SettlementDebtResponse>,
-    val disposals: List<ProceedsDisposalResponse>,
+    val disposals: List<HeldMoneyResponse>,
 )

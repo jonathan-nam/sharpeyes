@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.CouponSaleShareRow
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
@@ -138,7 +138,7 @@ internal data class TrancheEntry(
     val pieces: Double,
     val amount: Long?,
     val disposition: String,
-    val shares: List<VestigeTrancheShareRow>,
+    val shares: List<CouponSaleShareRow>,
 )
 
 /** A debt in the owner's terms: positive is the member owing the owner. */

@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.CouponSaleShareRow
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -17,7 +17,7 @@ class SettlementBalanceTest {
     private fun share(
         holder: VestigeHolder,
         pieces: Int,
-    ) = VestigeTrancheShareRow(holder, pieces.toDouble())
+    ) = CouponSaleShareRow(holder, pieces.toDouble())
 
     @Test
     fun `a sale may say how many of its pieces were somebody else's`() {

@@ -37,7 +37,7 @@ data class ScreenshotResultResponse(
     // is the difference between a one-click confirmation and a blank row that
     // looks like nothing happened. (It looked like nothing happened, because the
     // response dropped them.)
-    val tokenCounts: List<DetectedTokenResponse> = emptyList(),
+    val tokenCounts: List<DetectedItemResponse> = emptyList(),
     // Same rule as tokenCounts: what we read, on every outcome. One capture can hold the inventory
     // and the Maple Planner at once, so these are additional to the tokens above, not instead of.
     val bossClears: List<DetectedBossClearResponse> = emptyList(),
@@ -53,14 +53,14 @@ data class ScreenshotResultResponse(
 data class DetectedBossClearResponse(
     // The catalog key, e.g. "chosen-seren".
     val bossKey: String,
-    // Resolved server-side from boss_catalog, for the reason DetectedTokenResponse carries a
+    // Resolved server-side from boss_catalog, for the reason DetectedItemResponse carries a
     // displayName: the prose name is not derivable from the key.
     val displayName: String,
     val cleared: Boolean,
 )
 
 @Serializable
-data class DetectedTokenResponse(
+data class DetectedItemResponse(
     // The parser's key (token_catalog.vision_key), e.g. "kalos-token".
     val tokenName: String,
     // The human name, e.g. "Kalos's Residual Determination". The two are not

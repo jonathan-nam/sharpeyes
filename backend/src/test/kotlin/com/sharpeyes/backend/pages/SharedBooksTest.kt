@@ -1,8 +1,8 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.coupons.CouponSaleShareRow
 import com.sharpeyes.api.coupons.SOLD
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonRequest
 import com.sharpeyes.api.parties.SavePartyRequest
@@ -229,7 +229,7 @@ class SharedBooksTest {
             insertSharedTranche(
                 book,
                 member,
-                TrancheEntry(60.0, 3_000_000_000, SOLD, listOf(VestigeTrancheShareRow(VestigeHolder(SELF), 30.0))),
+                TrancheEntry(60.0, 3_000_000_000, SOLD, listOf(CouponSaleShareRow(VestigeHolder(SELF), 30.0))),
                 now,
             )
 

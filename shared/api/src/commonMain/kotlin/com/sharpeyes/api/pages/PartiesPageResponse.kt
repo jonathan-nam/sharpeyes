@@ -4,7 +4,7 @@ import com.sharpeyes.api.bosses.BossClearsViewResponse
 import com.sharpeyes.api.bosses.BossDropResponse
 import com.sharpeyes.api.bosses.BossResponse
 import com.sharpeyes.api.characters.CharacterResponse
-import com.sharpeyes.api.coupons.VestigeSettlementResponse
+import com.sharpeyes.api.coupons.CouponSettlementResponse
 import com.sharpeyes.api.loot.PartyLootPoolResponse
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonResponse
@@ -52,6 +52,6 @@ data class PartiesExtrasResponse(
     val drops: Map<String, List<BossDropResponse>>,
     val people: List<PersonResponse>,
     val pools: List<PartyLootPoolResponse>,
-    val settlements: List<VestigeSettlementResponse>,
+    val settlements: List<CouponSettlementResponse>,
     val seated: List<SeatedPartyResponse>,
 )

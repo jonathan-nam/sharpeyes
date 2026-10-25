@@ -1,6 +1,6 @@
 package com.sharpeyes.backend.characters
 
-import com.sharpeyes.api.characters.SetTokenCountRequest
+import com.sharpeyes.api.characters.SetItemCountRequest
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.TokenCatalog
 import com.sharpeyes.backend.plugins.dbQuery
@@ -44,7 +44,7 @@ internal suspend fun RoutingContext.setCharacterTokenCount() {
     val characterId = call.parseUuidParam("id")
     val tokenId = call.parseUuidParam("tokenId")
     if (characterId == null || tokenId == null) return
-    val request = call.receive<SetTokenCountRequest>()
+    val request = call.receive<SetItemCountRequest>()
 
     if (request.quantity < 0 || request.quantity > MAX_QUANTITY) {
         call.respond(HttpStatusCode.BadRequest, "quantity must be between 0 and $MAX_QUANTITY")

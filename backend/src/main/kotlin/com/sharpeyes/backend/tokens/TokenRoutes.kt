@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.tokens
 
-import com.sharpeyes.api.inventory.TokenCatalogResponse
-import com.sharpeyes.api.inventory.TokenTotalResponse
+import com.sharpeyes.api.inventory.ItemCatalogResponse
+import com.sharpeyes.api.inventory.ItemTotalResponse
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.RedemptionRule
@@ -58,7 +58,7 @@ private suspend fun RoutingContext.getTokenCatalog() {
  * test that re-typed the query would agree with itself instead. Renaming the group in
  * catalog/items.yaml empties the inventory with nothing else to say so.
  */
-internal fun bossTokenCatalog(): List<TokenCatalogResponse> =
+internal fun bossTokenCatalog(): List<ItemCatalogResponse> =
     TokenCatalog
         .join(
             RedemptionRule,
@@ -69,7 +69,7 @@ internal fun bossTokenCatalog(): List<TokenCatalogResponse> =
         .where { isBossToken() }
         .orderBy(TokenCatalog.sortOrder)
         .map {
-            TokenCatalogResponse(
+            ItemCatalogResponse(
                 tokenCatalogId = it[TokenCatalog.id].toString(),
                 name = it[TokenCatalog.name],
                 iconUrl = it[TokenCatalog.iconRefKey]?.let { file -> "/token-icons/$file" },
@@ -99,7 +99,7 @@ private suspend fun RoutingContext.getTokenTotals() {
 // TokenTotalsTest can exercise this exact query, the ownership scoping and the
 // GROUP BY are the two things most likely to be quietly wrong, and a test that
 // re-typed the query would prove nothing about the one that actually runs.
-internal fun tokenTotalsFor(userId: String): List<TokenTotalResponse> {
+internal fun tokenTotalsFor(userId: String): List<ItemTotalResponse> {
     val totalQuantity = CharacterTokenCount.quantity.sum()
     val contributors = CharacterTokenCount.characterId.countDistinct()
 
@@ -133,7 +133,7 @@ internal fun tokenTotalsFor(userId: String): List<TokenTotalResponse> {
             RedemptionRule.redeemThreshold,
         ).orderBy(TokenCatalog.sortOrder)
         .map { row ->
-            TokenTotalResponse(
+            ItemTotalResponse(
                 tokenCatalogId = row[TokenCatalog.id].toString(),
                 name = row[TokenCatalog.name],
                 iconUrl = row[TokenCatalog.iconRefKey]?.let { "/token-icons/$it" },

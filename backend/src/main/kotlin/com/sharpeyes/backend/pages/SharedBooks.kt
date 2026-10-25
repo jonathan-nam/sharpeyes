@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.pages
 
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.pages.SharedBookResponse
+import com.sharpeyes.api.pages.SharedPartiesResponse
 import com.sharpeyes.backend.db.PartyReadCutoff
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.invites.senderNameFor
@@ -37,7 +37,7 @@ import kotlin.uuid.Uuid
 // cannot come out of different arithmetic. Inside a transaction, like the rest.
 
 /** Every book that has a person row linked to [userId]'s account, cut to that pair. */
-internal fun sharedBooksFor(userId: String): List<SharedBookResponse> =
+internal fun sharedBooksFor(userId: String): List<SharedPartiesResponse> =
     Person
         .selectAll()
         .where { Person.linkedUserId eq userId }
@@ -50,7 +50,7 @@ internal fun bookBetween(
     owner: String,
     member: String,
     personId: String,
-): SharedBookResponse {
+): SharedPartiesResponse {
     val names = { holder: VestigeHolder -> holder.kind == PERSON && holder.personId == personId }
     val selfOrYou = { holder: VestigeHolder -> holder.kind == SELF || names(holder) }
     val reads = CrossRead(owner, member, personId)
@@ -84,7 +84,7 @@ internal fun bookBetween(
             .filter { names(it.holder) || it.lootIds.isNotEmpty() }
 
     val yours = personFor(member, owner)
-    return SharedBookResponse(
+    return SharedPartiesResponse(
         ownerName = yours?.get(Person.name) ?: senderNameFor(owner) ?: "Party owner",
         ownerImage = imageOf(owner),
         personId = personId,

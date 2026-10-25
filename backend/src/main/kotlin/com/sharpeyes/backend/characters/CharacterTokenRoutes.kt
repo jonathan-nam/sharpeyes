@@ -1,6 +1,6 @@
 package com.sharpeyes.backend.characters
 
-import com.sharpeyes.api.characters.CharacterTokenResponse
+import com.sharpeyes.api.characters.CharacterItemResponse
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.RedemptionRule
@@ -57,7 +57,7 @@ internal suspend fun RoutingContext.getAllCharacterTokens() {
                 .where { (Characters.userId eq userId) and inActiveWorld(userId) and isBossToken() }
                 .orderBy(TokenCatalog.sortOrder)
                 .groupBy({ it[CharacterTokenCount.characterId].toString() }) {
-                    it.toCharacterTokenResponse()
+                    it.toCharacterItemResponse()
                 }
         }
     call.respond(byCharacter)
@@ -92,7 +92,7 @@ internal suspend fun RoutingContext.getCharacterTokens() {
  * Must be called inside a transaction. Internal so a test can prove the filter against a character
  * that really does hold a symbol, which is the only way to tell "left out" from "never stored".
  */
-internal fun characterTokensFor(characterId: Uuid): List<CharacterTokenResponse> =
+internal fun characterTokensFor(characterId: Uuid): List<CharacterItemResponse> =
     CharacterTokenCount
         .innerJoin(TokenCatalog)
         // LEFT join. Every boss token currently HAS a redemption rule, so an inner join would pass
@@ -105,10 +105,10 @@ internal fun characterTokensFor(characterId: Uuid): List<CharacterTokenResponse>
         ).selectAll()
         .where { (CharacterTokenCount.characterId eq characterId) and isBossToken() }
         .orderBy(TokenCatalog.sortOrder)
-        .map { it.toCharacterTokenResponse() }
+        .map { it.toCharacterItemResponse() }
 
-private fun ResultRow.toCharacterTokenResponse(): CharacterTokenResponse =
-    CharacterTokenResponse(
+private fun ResultRow.toCharacterItemResponse(): CharacterItemResponse =
+    CharacterItemResponse(
         tokenCatalogId = this[TokenCatalog.id].toString(),
         name = this[TokenCatalog.name],
         // icon_ref_key is a bare filename; Routing.kt serves the seed-assets

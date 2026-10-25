@@ -18,10 +18,13 @@ shared/
     split/ sales/ pieces/ coupons/ settlement/ droplog/ sharedparties/
 ```
 
-Packages and files are named in the screens' words: `coupons`, not vestige; `inventory`, not
-tokens; `sales/BulkSale.kt` for the card that sells several of one drop at once. Two URLs keep older
-words (`/api/vestige-*`, `/api/tokens`), and the classes inside `split/Owed.kt` keep the TypeScript's
-names (`Wallet`) until `wallet.ts` is deleted, since the golden fixtures are keyed by them.
+Packages, files and API classes are named in the screens' words: `coupons`, not vestige; items, not
+tokens (`ItemCatalogResponse`); a coupon sale, not a tranche (`CouponSaleResponse`); held money,
+not a proceeds disposal (`HeldMoneyResponse`); `sales/BulkSale.kt` for the card that sells several
+of one drop at once. The URLs and database names keep the older words (`/api/vestige-*`,
+`/api/tokens`, `vestige_tranche`), and money's classes keep the TypeScript's names (`Wallet` in
+`split/OwedShares.kt`, `VestigeTranche` in `Model.kt`) until each TypeScript module is deleted, since
+the golden fixtures are keyed by them.
 
 ### What goes in `shared/api`
 

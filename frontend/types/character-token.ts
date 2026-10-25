@@ -1,4 +1,4 @@
-// Mirrors backend's characters/CharacterDtos.kt CharacterTokenResponse field-for-field.
+// Mirrors backend's characters/CharacterDtos.kt CharacterItemResponse field-for-field.
 export type CharacterToken = {
   tokenCatalogId: string;
   name: string;

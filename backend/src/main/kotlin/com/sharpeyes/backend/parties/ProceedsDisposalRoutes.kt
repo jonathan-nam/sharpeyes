@@ -1,10 +1,10 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.settlement.AddProceedsDisposalRequest
+import com.sharpeyes.api.settlement.AddHeldMoneyRequest
 import com.sharpeyes.api.settlement.HELD_BY_THEM
 import com.sharpeyes.api.settlement.HELD_BY_YOU
-import com.sharpeyes.api.settlement.ProceedsDisposalResponse
+import com.sharpeyes.api.settlement.HeldMoneyResponse
 import com.sharpeyes.backend.db.VestigeProceedsDisposal
 import com.sharpeyes.backend.events.eventPerson
 import com.sharpeyes.backend.plugins.dbQuery
@@ -67,7 +67,7 @@ private suspend fun RoutingContext.listDisposals() {
 
 private suspend fun RoutingContext.addDisposalRoute() {
     val (userId, email) = call.principalIdAndEmail()
-    val request = call.receive<AddProceedsDisposalRequest>()
+    val request = call.receive<AddHeldMoneyRequest>()
     // Which Settlement card this is, for the other side's screen. See tellLinkedOnWrite.
     call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
@@ -168,7 +168,7 @@ internal fun disposalRefusal(
 internal fun disposalsFor(
     userId: String,
     viewer: String = userId,
-): List<ProceedsDisposalResponse> {
+): List<HeldMoneyResponse> {
     val rows =
         VestigeProceedsDisposal
             .selectAll()
@@ -186,7 +186,7 @@ internal fun disposalsFor(
                 personId = it[VestigeProceedsDisposal.personId]?.toString(),
                 characterName = it[VestigeProceedsDisposal.characterName],
             )
-        ProceedsDisposalResponse(
+        HeldMoneyResponse(
             id = it[VestigeProceedsDisposal.id].toString(),
             holder = holder,
             amount = it[VestigeProceedsDisposal.amount],
