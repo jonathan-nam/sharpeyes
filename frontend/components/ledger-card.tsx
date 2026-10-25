@@ -260,7 +260,11 @@ export function ClosingActions({ acts, busy }: { acts: ClosingAct[]; busy: boole
           <Button variant="primary" disabled={busy || act.disabled} onClick={act.onClick}>
             {act.label}
           </Button>
-          {act.detail && <span className="ledger-progress">{act.detail}</span>}
+          {act.detail && (
+            <span className="ledger-progress ledger-settle-detail" title={act.detail}>
+              {act.detail}
+            </span>
+          )}
           {act.after}
         </span>
       ))}
