@@ -1,10 +1,20 @@
-import { heldMesos, type Settlement } from "@/lib/settlement";
+import { type ClosingNet, closingNet, type Settlement } from "@/lib/settlement";
 import type { SharedCard } from "@/lib/shared-book";
 import type { Payer, SettlementListing } from "@/types/settlement-listing";
 
 // Auction house listings on a Settlement card. A listing is good for the figure it was posted for
 // and no other: the figures below are reported as the page draws, and the backend deletes a listing
-// for any other amount. See backend SettlementListings.kt.
+// for any other amount. The figure is what the payer sends after netting (closingNet), so the
+// payee's listing and the payer's Mark Sent name one amount. See backend SettlementListings.kt.
+
+/**
+ * What [payer] sends on a card, given its net read from [reader]'s side: the net where they are
+ * the one paying, nothing where they are not.
+ */
+export function paysOn(net: ClosingNet, reader: Payer, payer: Payer): number {
+  const theyPay = reader === payer ? net.payer === "YOU" : net.payer === "THEM";
+  return theyPay ? net.mesos : 0;
+}
 
 export const LISTINGS_KEY = "/api/settlement-listings";
 
@@ -44,15 +54,19 @@ export function figuresToReport(
 ): ReportedFigure[] {
   const own = linkedPeople.flatMap((personId) => {
     const row = rows.find((one) => one.key === `person:${personId}`);
-    const held = row ? heldMesos(row) : { byYou: 0, byThem: 0 };
-    return [
-      { personId, payer: "OWNER" as const, amount: held.byYou },
-      { personId, payer: "MEMBER" as const, amount: held.byThem },
-    ];
+    const net = row ? closingNet(row) : null;
+    return (["OWNER", "MEMBER"] as const).map((payer) => ({
+      personId,
+      payer,
+      amount: net ? paysOn(net, "OWNER", payer) : 0,
+    }));
   });
-  const shared = cards.flatMap((card) => [
-    { personId: card.personId, payer: "OWNER" as const, amount: card.held.byOwner },
-    { personId: card.personId, payer: "MEMBER" as const, amount: card.held.byYou },
-  ]);
+  const shared = cards.flatMap((card) =>
+    (["OWNER", "MEMBER"] as const).map((payer) => ({
+      personId: card.personId,
+      payer,
+      amount: paysOn(card.net, "MEMBER", payer),
+    })),
+  );
   return [...own, ...shared];
 }

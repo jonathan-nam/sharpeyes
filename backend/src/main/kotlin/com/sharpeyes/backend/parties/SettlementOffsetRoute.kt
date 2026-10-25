@@ -66,6 +66,13 @@ data class OffsetSharesRequest(
      * its own: see writeClose.
      */
     val holding: Long? = null,
+    /**
+     * Shares THEY owe you that the act closes too, so one press settles the pair both ways (closingNet
+     * on the client, 2026-10-25). An offset takes each off what you owe them: an entry of plus this.
+     */
+    val received: List<OffsetPartRow> = emptyList(),
+    /** Mesos of YOURS they are holding that the act decides about. Written as heldBy THEM. */
+    val heldByThem: Long? = null,
 )
 
 /**
@@ -92,6 +99,10 @@ internal data class CloseAct(
     val note: String?,
     val parts: List<OffsetPart>,
     val holding: Long?,
+    val received: List<OffsetPart> = emptyList(),
+    val heldByThem: Long? = null,
+    /** The member writing into the owner's book, or null for the owner. See V88. */
+    val recordedBy: String? = null,
 )
 
 /** One share of the act with its ids parsed, so the checks and the writes read the same values. */
@@ -140,22 +151,14 @@ private suspend fun RoutingContext.closeRoute(kind: String) {
     val holder = request.holder.normalised()
     val note = request.note?.trim()?.takeIf { it.isNotEmpty() }
 
-    val refusal = closeRefusal(holder, note, request.parts, request.holding, kind)
+    val refusal = closeRefusal(holder, note, request, kind)
     if (refusal != null) return call.respond(HttpStatusCode.BadRequest, refusal)
 
-    // Every id parses: closeRefusal proved it.
-    val parts =
-        request.parts.map { OffsetPart(Uuid.parse(it.lootId), Uuid.parse(it.memberId), it.amount) }
-
+    val act = closeActOf(request, kind, note)
     val result =
         dbQuery {
             ensureUser(userId, email)
-            writeClose(
-                userId,
-                holder,
-                CloseAct(kind, note, parts, request.holding),
-                Clock.System.now(),
-            )
+            writeClose(userId, holder, act, Clock.System.now())
         }
     when (result) {
         is OffsetWrite.AlreadyDischarged ->
@@ -169,6 +172,25 @@ private suspend fun RoutingContext.closeRoute(kind: String) {
             )
         is OffsetWrite.Wrote -> call.respond(HttpStatusCode.Created, result.answer)
     }
+}
+
+/** [request] parsed. Every id parses: closeRefusal proved it before this is called. */
+internal fun closeActOf(
+    request: OffsetSharesRequest,
+    kind: String,
+    note: String?,
+    recordedBy: String? = null,
+): CloseAct {
+    val parse = { row: OffsetPartRow -> OffsetPart(Uuid.parse(row.lootId), Uuid.parse(row.memberId), row.amount) }
+    return CloseAct(
+        kind = kind,
+        note = note,
+        parts = request.parts.map(parse),
+        holding = request.holding,
+        received = request.received.map(parse),
+        heldByThem = request.heldByThem,
+        recordedBy = recordedBy,
+    )
 }
 
 /**
@@ -195,9 +217,8 @@ internal fun writeClose(
     now: Instant,
 ): OffsetWrite {
     val kind = act.kind
-    val parts = act.parts
     val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
-    val shares = parts.map { it.lootId to it.memberId }
+    val shares = (act.parts + act.received).map { it.lootId to it.memberId }
     return when {
         // Scoped to the account, the check the foreign key does not make. See ownsPerson.
         holder.kind == "PERSON" && !ownsPerson(userId, person) -> OffsetWrite.NotYourPerson
@@ -208,10 +229,15 @@ internal fun writeClose(
         // when it refuses, so this branch leaves no half of the act behind either.
         shares.isNotEmpty() && !settlePayouts(userId, shares, now) -> OffsetWrite.Unreachable
         else -> {
+            val entry = Entry(userId, holder, person, act.note, act.recordedBy, now)
             if (kind == CLOSE_OFFSET) {
-                for (part in parts) writeOffsetRow(userId, holder, person, act.note, part, now)
+                // A share you owe comes off what they owe you; one they owe comes off what you owe
+                // them. Each pot moves into the entries without the balance changing.
+                for (part in act.parts) writeOffsetRow(entry, part, -part.amount)
+                for (part in act.received) writeOffsetRow(entry, part, part.amount)
             }
-            act.holding?.let { writeDisposalRow(userId, holder, person, kind, it, now) }
+            act.holding?.let { writeDisposalRow(entry, kind, it, HELD_BY_YOU) }
+            act.heldByThem?.let { writeDisposalRow(entry, kind, it, HELD_BY_THEM) }
             OffsetWrite.Wrote(
                 OffsetSharesResponse(allLootFor(userId), debtsFor(userId), disposalsFor(userId)),
             )
@@ -219,26 +245,34 @@ internal fun writeClose(
     }
 }
 
-/** One share's entry, and the link back to the share it discharged. See V58. */
+/** Who an act's rows are written for and by, and when. */
+private class Entry(
+    val userId: String,
+    val holder: VestigeHolder,
+    val person: Uuid?,
+    val note: String?,
+    val recordedBy: String?,
+    val now: Instant,
+)
+
+/** One share's entry of [signed] mesos, and the link back to the share it discharged. See V58. */
 private fun writeOffsetRow(
-    userId: String,
-    holder: VestigeHolder,
-    person: Uuid?,
-    note: String?,
+    entry: Entry,
     part: OffsetPart,
-    now: Instant,
+    signed: Long,
 ) {
     val newDebtId = Uuid.random()
     SettlementDebt.insert {
         it[id] = newDebtId
-        it[SettlementDebt.userId] = userId
-        it[holderKind] = holder.kind
-        it[personId] = person
-        it[characterName] = holder.characterName
-        it[amount] = -part.amount
-        it[SettlementDebt.note] = note
-        it[incurredAt] = now
-        it[createdAt] = now
+        it[userId] = entry.userId
+        it[holderKind] = entry.holder.kind
+        it[personId] = entry.person
+        it[characterName] = entry.holder.characterName
+        it[amount] = signed
+        it[note] = entry.note
+        it[incurredAt] = entry.now
+        it[createdAt] = entry.now
+        it[recordedByUserId] = entry.recordedBy
     }
     // The very row the settle just marked paid, so the entry can name what discharged it a month
     // later.
@@ -249,25 +283,25 @@ private fun writeOffsetRow(
     }
 }
 
-/** What became of the coupon money of theirs. The same row POST /api/proceeds-disposals writes. */
+/** What became of the coupon money one side holds. The same row POST /api/proceeds-disposals writes. */
 private fun writeDisposalRow(
-    userId: String,
-    holder: VestigeHolder,
-    person: Uuid?,
+    entry: Entry,
     kind: String,
     amount: Long,
-    now: Instant,
+    heldBy: String,
 ) {
     VestigeProceedsDisposal.insert {
         it[id] = Uuid.random()
-        it[VestigeProceedsDisposal.userId] = userId
-        it[holderKind] = holder.kind
-        it[personId] = person
-        it[characterName] = holder.characterName
+        it[userId] = entry.userId
+        it[holderKind] = entry.holder.kind
+        it[personId] = entry.person
+        it[characterName] = entry.holder.characterName
         it[VestigeProceedsDisposal.amount] = amount
         it[VestigeProceedsDisposal.kind] = kind
-        it[decidedAt] = now
-        it[createdAt] = now
+        it[VestigeProceedsDisposal.heldBy] = heldBy
+        it[decidedAt] = entry.now
+        it[createdAt] = entry.now
+        it[recordedByUserId] = entry.recordedBy
     }
 }
 
@@ -277,33 +311,44 @@ private fun writeDisposalRow(
  * Every share row against the rules a typed entry meets, since an offset's rows become entries, and
  * the held money against the rules the standalone disposal meets, since it becomes that row.
  */
-private fun closeRefusal(
+internal fun closeRefusal(
     holder: VestigeHolder,
     note: String?,
-    parts: List<OffsetPartRow>,
-    holding: Long?,
+    request: OffsetSharesRequest,
     kind: String,
-): String? =
-    when {
-        // Neither pot is nothing happening, and it would still answer 201.
-        parts.isEmpty() && holding == null -> "name at least one share or an amount to settle"
-        // Positive on the way in, negative in the ledger. A negative here would write an entry that
-        // ADDS to what they owe you under the word "offset", the opposite act wearing its name.
-        // Only an offset becomes an entry: sending marks shares paid and prices nothing.
-        kind == CLOSE_OFFSET && parts.any { it.amount <= 0 } ->
-            "a share to offset must be above zero"
-        parts.any { Uuid.parseOrNull(it.lootId) == null || Uuid.parseOrNull(it.memberId) == null } ->
+): String? {
+    val all = request.parts + request.received
+    return when {
+        // No pot is nothing happening, and it would still answer 201.
+        all.isEmpty() && request.holding == null && request.heldByThem == null ->
+            "name at least one share or an amount to settle"
+        // Positive on the way in, signed in the ledger by direction. A negative here would write an
+        // entry running the opposite way under the word "offset". Only an offset becomes an entry:
+        // sending marks shares paid and prices nothing.
+        kind == CLOSE_OFFSET && all.any { it.amount <= 0 } -> "a share to offset must be above zero"
+        all.any { Uuid.parseOrNull(it.lootId) == null || Uuid.parseOrNull(it.memberId) == null } ->
             "malformed lootId or memberId"
         // Past the branch above, every id parses. Refused rather than left to the index in V68: both
         // rows are legitimate on their own, and a constraint violation reads as a bug where this
-        // reads as the double count it is.
-        parts.map { Uuid.parse(it.lootId) to Uuid.parse(it.memberId) }.toSet().size != parts.size ->
+        // reads as the double count it is. Across both directions, since one share is one row.
+        all.map { Uuid.parse(it.lootId) to Uuid.parse(it.memberId) }.toSet().size != all.size ->
             "the same share is named twice"
-        // Both pots, never whichever is checked first: an act carrying a bad share AND a bad amount
+        // Every pot, never whichever is checked first: an act carrying a bad share AND a bad amount
         // would have been refused for one and written the other on the retry.
-        else ->
-            holding?.let { disposalRefusal(holder, it, kind) }
-                ?: parts
-                    .takeIf { kind == CLOSE_OFFSET }
-                    ?.firstNotNullOfOrNull { debtRefusal(holder, -it.amount, note) }
+        else -> potRefusal(holder, note, request, kind)
     }
+}
+
+/** The held amounts against the disposal rules, and an offset's entries against the debt rules. */
+private fun potRefusal(
+    holder: VestigeHolder,
+    note: String?,
+    request: OffsetSharesRequest,
+    kind: String,
+): String? {
+    val entries =
+        if (kind == CLOSE_OFFSET) request.parts.map { -it.amount } + request.received.map { it.amount } else emptyList()
+    return request.holding?.let { disposalRefusal(holder, it, kind, HELD_BY_YOU) }
+        ?: request.heldByThem?.let { disposalRefusal(holder, it, kind, HELD_BY_THEM) }
+        ?: entries.firstNotNullOfOrNull { debtRefusal(holder, it, note) }
+}

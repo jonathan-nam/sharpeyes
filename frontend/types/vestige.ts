@@ -135,19 +135,24 @@ export type OffsetShares = {
   disposals: ProceedsDisposal[];
 };
 
-// POST /api/settlement-debts/offset, and /sent for the same act pointed the other way.
+// POST /api/settlement-debts/offset, and /sent for the same act pointed the other way. The member's
+// side posts the same pots to /api/shared-books/{personId}/close/{offset|sent}, without `holder`.
 //
-// `holding` is their own money a sale of their coupons left in your hands, which one press decides
-// about alongside the shares. Absent where there is none.
-export type CloseSettlementBody = {
-  holder: Holder;
+// One press settles the pair both ways (closingNet): `parts` are shares you owe, `received` shares
+// they owe you, `holding` their coupon money you hold, `heldByThem` yours they hold. Each absent where
+// there is none.
+export type ClosePots = {
   note?: string;
   // `amount` only where the act prices something, which is an offset: it is the figure the entry
   // carries. Sending prices nothing, and a share of a DOLLAR sale is settled by it, so there is no
   // meso figure to put on one. The server refuses an offset whose share names none.
   parts: { lootId: string; memberId: string; amount?: number }[];
+  received?: { lootId: string; memberId: string; amount?: number }[];
   holding?: number;
+  heldByThem?: number;
 };
+
+export type CloseSettlementBody = ClosePots & { holder: Holder };
 
 // What became of the money a sale of somebody else's coupons left in your hands. See V61.
 //

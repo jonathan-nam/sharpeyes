@@ -1,5 +1,12 @@
 import { bossLabel } from "@/lib/boss-difficulty";
-import { heldMesos, moneyRows, type SettlementTotals, undecidedSales } from "@/lib/settlement";
+import {
+  type ClosingNet,
+  closingNet,
+  flipNet,
+  moneyRows,
+  type SettlementTotals,
+  undecidedSales,
+} from "@/lib/settlement";
 import { settlementView } from "@/lib/settlement-view";
 import { paymentsSinceClosing } from "@/lib/vestige-ledger";
 import type { CouponSale } from "@/lib/vestige-ledger";
@@ -30,8 +37,8 @@ export type SharedCard = {
   piecesOwed: number;
   piecesOwe: number;
   usd: Owings;
-  /** Mesos each side holds for the other, as the owner's card works it out. See heldMesos. */
-  held: { byOwner: number; byYou: number };
+  /** What a closing act settles, from your side: the owner's own figure, turned round. */
+  net: ClosingNet;
   detail: SharedDetail;
 };
 
@@ -158,7 +165,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     piecesOwed: row.piecesYouOwe,
     piecesOwe: row.pieces,
     usd: { owed: row.usd.owe, owe: row.usd.owed, net: -row.usd.net },
-    held: { byOwner: heldMesos(row).byYou, byYou: heldMesos(row).byThem },
+    net: flipNet(closingNet(row)),
     detail: {
       owe,
       oweTotal: owe.reduce((sum, part) => sum + part.mesos, 0),

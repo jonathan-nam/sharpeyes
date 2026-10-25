@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.SettlementDebt
@@ -43,6 +44,33 @@ internal fun sharedBookAt(
         .firstOrNull()
         ?.takeIf { it[Person.userId] != member }
         ?.let { SharedBook(it[Person.userId], personId) }
+
+/**
+ * Whether [member] may close every one of [shares] from their side of a book: each share must be
+ * theirs, or of a drop their own seat sold. The rule PUT payouts holds them to (payoutRefusal), so a
+ * close cannot settle a share between the owner and somebody else.
+ */
+internal fun memberMayClose(
+    member: String,
+    shares: List<Pair<Uuid, Uuid>>,
+): Boolean {
+    if (shares.isEmpty()) return true
+    val drops =
+        PartyLoot
+            .selectAll()
+            .where { PartyLoot.id inList shares.map { it.first }.distinct() }
+            .associate { it[PartyLoot.id] to (it[PartyLoot.partyId] to it[PartyLoot.sellerMemberId]) }
+    val seats =
+        drops.values
+            .map { it.first }
+            .distinct()
+            .associateWith { mySeatsIn(it, member) }
+    return shares.all { (lootId, seat) ->
+        val (partyId, seller) = drops[lootId] ?: (null to null)
+        val mine = partyId?.let { seats[it] }.orEmpty()
+        seat in mine || seller in mine
+    }
+}
 
 /**
  * Why [userId] may not file a row against [personId] in their OWN book, or null.

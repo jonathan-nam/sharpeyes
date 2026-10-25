@@ -25,6 +25,7 @@ const settlement = readFileSync(join(__dirname, "settlement.ts"), "utf8");
 const view = readFileSync(join(__dirname, "settlement-view.ts"), "utf8");
 // The Settlement tab's body and its writes, which moved out of the Drop Log page.
 const stage = readFileSync(join(__dirname, "..", "components", "settlement-stage.tsx"), "utf8");
+const acts = readFileSync(join(__dirname, "..", "components", "closing-acts.tsx"), "utf8");
 const writes = readFileSync(join(__dirname, "use-drop-log-writes.ts"), "utf8");
 const entry = readFileSync(join(__dirname, "..", "components", "add-settlement.tsx"), "utf8");
 
@@ -78,10 +79,10 @@ describe("what the card says a person owes", () => {
     // fact rather than as the act the button performs. Same subject-less fragment as the entry box
     // it replaced.
     expect(source).not.toContain("already sent");
-    // Mark sent's own button, which names both pots AND both units. It used to have to be pinned
-    // apart from the Settle line, which carried the same words after "also"; that button is gone
-    // now (see below), so this is the only line saying it.
-    expect(source).toContain("Mark ${movedBoth(owes, row.usd.owe)} Sent");
+    expect(acts).not.toContain("already sent");
+    // The one press's label says what it records, both units named apart. See closeLabel, and its
+    // cases in lib/closing-acts.test.ts.
+    expect(acts).toContain("`${sent} Sent`");
   });
   it("puts the nights behind the shares figure on hover, and marks that it has them", () => {
     // The same list sits under its own step further down, with two forms between the two, so the
@@ -133,13 +134,13 @@ describe("what the card says a person owes", () => {
     // The parts go on the wire as the card built them, `amount` and all, rather than being rebuilt
     // here: a second spelling of one figure is how the rows come to a different sum from the total.
     expect(stage).toContain(
-      'closeWrite("offset", { holder, note: `offset against ${name}`, parts, holding })',
+      'writes.closeWrite("offset", { holder, note: `offset against ${name}`, ...pots })',
     );
-    // Off the same parts the button quoted a total from, so the rows cannot come to a different sum.
-    expect(source).toContain(
-      "onOffsetAll(row.holder, row.name, offset.offered ? offset.parts : [], heldOrNone)",
-    );
-    expect(settlement).toContain("parts.reduce((sum, part) => sum + part.amount, 0)");
+    // Off the same net the button quoted its figure from, every share priced, so the rows cannot
+    // come to a different sum.
+    expect(source).toContain("const pots = closeBody(net, kind);");
+    expect(acts).toContain("refs(yours, offset)");
+    expect(acts).toContain("priced ? { lootId, memberId, amount } : { lootId, memberId }");
   });
 
   it("is ONE request, every list the act moves coming off the one answer", () => {
@@ -170,16 +171,9 @@ describe("what the card says a person owes", () => {
     // It used to say "clears", because the headline was the net and the two halves of an offset
     // cancelled in it: the button could not promise to take anything off a figure that did not move.
     // A share you owe is outside the net now, so it can.
-    expect(source).toContain("`Offset ${moved(offset.offered ? offset.amount : 0)}`");
-    // ONE figure, the Unsettled Amounts one: the shares you owe and their money you are holding,
-    // added. Naming the two pots on the button repeated the list under that heading.
-    expect(source).toContain(
-      "const moved = (shares: number) => formatMesos(shares + row.holding, true);",
-    );
-    // And the share figure it promises is the one the act writes: `parts` is what the request carries.
-    expect(settlement).toContain(
-      "const amount = parts.reduce((sum, part) => sum + part.amount, 0);",
-    );
+    // ONE figure, the net every pot comes to (closingNet), on both cards' buttons alike.
+    expect(acts).toContain("const amount = formatMesos(net.mesos, true);");
+    expect(acts).toContain("`Offset ${amount}`");
   });
 
   it("counts the held coupons off the sales the held figure is made of", () => {

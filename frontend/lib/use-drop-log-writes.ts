@@ -113,7 +113,12 @@ export function useDropLogWrites(
    * button walking one figure down in two steps. One answer, one `apply`, one repaint.
    */
   async function closeWrite(act: "offset" | "sent", body: CloseSettlementBody) {
-    if (body.parts.length === 0 && body.holding === undefined) return;
+    const empty =
+      body.parts.length === 0 &&
+      (body.received ?? []).length === 0 &&
+      body.holding === undefined &&
+      body.heldByThem === undefined;
+    if (empty) return;
     await track(async () => {
       const done = await call<OffsetShares>(`${DEBTS_KEY}/${act}`, {
         method: "POST",
