@@ -3,13 +3,13 @@ package com.sharpeyes.api.pages
 import com.sharpeyes.api.bosses.BossDropResponse
 import com.sharpeyes.api.bosses.BossResponse
 import com.sharpeyes.api.characters.CharacterResponse
-import com.sharpeyes.api.coupons.VestigePaymentResponse
-import com.sharpeyes.api.coupons.VestigeSettlementResponse
-import com.sharpeyes.api.coupons.VestigeTrancheResponse
+import com.sharpeyes.api.coupons.CouponSaleResponse
+import com.sharpeyes.api.coupons.CouponSettlementResponse
+import com.sharpeyes.api.coupons.PaymentResponse
 import com.sharpeyes.api.loot.PartyLootPoolResponse
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonResponse
-import com.sharpeyes.api.settlement.ProceedsDisposalResponse
+import com.sharpeyes.api.settlement.HeldMoneyResponse
 import com.sharpeyes.api.settlement.SettlementDebtResponse
 import kotlinx.serialization.Serializable
 
@@ -42,11 +42,11 @@ import kotlinx.serialization.Serializable
 data class DropLogPageResponse(
     val parties: List<PartyResponse>,
     val pools: List<PartyLootPoolResponse>,
-    val tranches: List<VestigeTrancheResponse>,
-    val payments: List<VestigePaymentResponse>,
-    val settlements: List<VestigeSettlementResponse>,
+    val tranches: List<CouponSaleResponse>,
+    val payments: List<PaymentResponse>,
+    val settlements: List<CouponSettlementResponse>,
     val debts: List<SettlementDebtResponse>,
-    val disposals: List<ProceedsDisposalResponse>,
+    val disposals: List<HeldMoneyResponse>,
     val bosses: List<BossResponse>,
     val drops: Map<String, List<BossDropResponse>>,
     val characters: List<CharacterResponse>,

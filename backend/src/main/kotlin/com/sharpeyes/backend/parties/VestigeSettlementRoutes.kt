@@ -1,8 +1,8 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.coupons.AddVestigeSettlementRequest
+import com.sharpeyes.api.coupons.AddCouponSettlementRequest
+import com.sharpeyes.api.coupons.CouponSettlementResponse
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.coupons.VestigeSettlementResponse
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.Person
@@ -65,7 +65,7 @@ private suspend fun RoutingContext.listSettlements() {
 
 private suspend fun RoutingContext.addSettlementRoute() {
     val (userId, email) = call.principalIdAndEmail()
-    val request = call.receive<AddVestigeSettlementRequest>()
+    val request = call.receive<AddCouponSettlementRequest>()
     // Which Settlement card this is, for the other side's screen. See tellLinkedOnWrite.
     call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
@@ -172,7 +172,7 @@ internal fun settlementRefusal(
  *
  * Must run inside a transaction.
  */
-internal fun settlementsFor(userId: String): List<VestigeSettlementResponse> {
+internal fun settlementsFor(userId: String): List<CouponSettlementResponse> {
     val rows =
         VestigeSettlement
             .selectAll()
@@ -196,7 +196,7 @@ internal fun settlementsFor(userId: String): List<VestigeSettlementResponse> {
                 personId = row[VestigeSettlement.personId]?.toString(),
                 characterName = row[VestigeSettlement.characterName],
             )
-        VestigeSettlementResponse(
+        CouponSettlementResponse(
             id = row[VestigeSettlement.id].toString(),
             holder = holder,
             lootIds = lootBySettlement[row[VestigeSettlement.id]].orEmpty(),

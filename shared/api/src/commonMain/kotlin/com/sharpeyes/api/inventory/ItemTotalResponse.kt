@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 // Mirrored by frontend's types/token-total.ts field-for-field.
 @Serializable
-data class TokenTotalResponse(
+data class ItemTotalResponse(
     val tokenCatalogId: String,
     val name: String,
     val iconUrl: String?,

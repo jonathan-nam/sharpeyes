@@ -2,7 +2,7 @@ package com.sharpeyes.backend.screenshots
 
 import com.sharpeyes.api.characters.CharacterResponse
 import com.sharpeyes.api.screenshots.DetectedBossClearResponse
-import com.sharpeyes.api.screenshots.DetectedTokenResponse
+import com.sharpeyes.api.screenshots.DetectedItemResponse
 import com.sharpeyes.api.screenshots.ScreenshotOutcome
 import com.sharpeyes.api.screenshots.ScreenshotResultResponse
 import com.sharpeyes.api.screenshots.UploadScreenshotRequest
@@ -209,11 +209,11 @@ private fun findCharacterIdByName(
 
 // Resolves the parser's keys to what a human should see. Done server-side, from
 // the catalog, because the display name is not derivable from the key.
-private fun describeTokens(tokens: List<DetectedToken>): List<DetectedTokenResponse> {
+private fun describeTokens(tokens: List<DetectedToken>): List<DetectedItemResponse> {
     val catalog = TokenCatalog.selectAll().associateBy { it[TokenCatalog.visionKey] }
     return tokens.map { token ->
         val row = catalog[token.tokenName]
-        DetectedTokenResponse(
+        DetectedItemResponse(
             tokenName = token.tokenName,
             displayName = row?.get(TokenCatalog.name) ?: token.tokenName,
             tokenCatalogId = row?.get(TokenCatalog.id)?.toString(),

@@ -58,5 +58,5 @@ data class OffsetSharesRequest(
 data class OffsetSharesResponse(
     val pools: List<PartyLootPoolResponse>,
     val debts: List<SettlementDebtResponse>,
-    val disposals: List<ProceedsDisposalResponse>,
+    val disposals: List<HeldMoneyResponse>,
 )

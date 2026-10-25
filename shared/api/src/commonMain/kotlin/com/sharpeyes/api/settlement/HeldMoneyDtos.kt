@@ -8,7 +8,7 @@ const val HELD_BY_YOU = "YOU"
 const val HELD_BY_THEM = "THEM"
 
 @Serializable
-data class ProceedsDisposalResponse(
+data class HeldMoneyResponse(
     val id: String,
     val holder: VestigeHolder,
     val amount: Long,
@@ -26,7 +26,7 @@ data class ProceedsDisposalResponse(
 )
 
 @Serializable
-data class AddProceedsDisposalRequest(
+data class AddHeldMoneyRequest(
     val holder: VestigeHolder,
     val amount: Long,
     val kind: String,

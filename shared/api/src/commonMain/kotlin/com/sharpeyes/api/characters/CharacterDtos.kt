@@ -20,7 +20,7 @@ data class CharacterResponse(
 
 // Mirrored by frontend's types/character-token.ts field-for-field.
 @Serializable
-data class CharacterTokenResponse(
+data class CharacterItemResponse(
     val tokenCatalogId: String,
     val name: String,
     val iconUrl: String?,
@@ -50,7 +50,7 @@ data class CharacterTokenResponse(
  * nobody has checked. Zero clears the row. See CharacterTokenWrites.kt.
  */
 @Serializable
-data class SetTokenCountRequest(
+data class SetItemCountRequest(
     val quantity: Int,
 )
 

@@ -40,7 +40,7 @@ export type DropLogPage = {
 
 /**
  * Somebody else's book, cut to what it says between them and you. Mirrors the backend's
- * SharedBookResponse. Read as its OWNER, so `person:<personId>` is your card in it.
+ * SharedPartiesResponse. Read as its OWNER, so `person:<personId>` is your card in it.
  */
 export type SharedBook = {
   ownerName: string;

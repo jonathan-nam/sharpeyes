@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.pages
 
 import com.sharpeyes.api.pages.DropLogPageResponse
-import com.sharpeyes.api.pages.SharedBookResponse
+import com.sharpeyes.api.pages.SharedPartiesResponse
 import com.sharpeyes.backend.plugins.addSpan
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
@@ -30,7 +30,7 @@ private val served = Json { encodeDefaults = true }
 /** The page and shared books as the money module reads them. Must be called inside a `transaction { }`. */
 private fun moneyInputsFor(userId: String): Pair<DropLogPage, List<SharedBook>> {
     val page = served.encodeToJsonElement(DropLogPageResponse.serializer(), dropLogPageFor(userId))
-    val books = served.encodeToJsonElement(ListSerializer(SharedBookResponse.serializer()), sharedBooksFor(userId))
+    val books = served.encodeToJsonElement(ListSerializer(SharedPartiesResponse.serializer()), sharedBooksFor(userId))
     return moneyJson.decodeFromJsonElement(DropLogPage.serializer(), page) to
         moneyJson.decodeFromJsonElement(ListSerializer(SharedBook.serializer()), books)
 }

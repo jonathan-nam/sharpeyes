@@ -1,7 +1,7 @@
 package com.sharpeyes.api.settlement
 
+import com.sharpeyes.api.coupons.CouponSaleShareRow
 import com.sharpeyes.api.coupons.SOLD
-import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -10,7 +10,7 @@ data class SharedTrancheRequest(
     val amount: Long? = null,
     val disposition: String = SOLD,
     /** Pieces of the sale that were somebody else's, in the owner's book's holder shape. */
-    val shares: List<VestigeTrancheShareRow> = emptyList(),
+    val shares: List<CouponSaleShareRow> = emptyList(),
 )
 
 @Serializable

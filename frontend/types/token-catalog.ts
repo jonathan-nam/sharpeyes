@@ -1,4 +1,4 @@
-// Mirrors backend's tokens/TokenRoutes.kt TokenCatalogResponse field-for-field.
+// Mirrors backend's tokens/TokenRoutes.kt ItemCatalogResponse field-for-field.
 //
 // Every item that EXISTS, which is not the same list as every item HELD. Deliberately without a
 // quantity or a capturedAt: inventing both to describe an item nobody holds would be two figures

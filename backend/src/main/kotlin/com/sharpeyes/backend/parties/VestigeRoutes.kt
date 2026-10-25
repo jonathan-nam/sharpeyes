@@ -1,12 +1,12 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.coupons.AddVestigeTrancheRequest
+import com.sharpeyes.api.coupons.AddCouponSaleRequest
 import com.sharpeyes.api.coupons.BOUGHT
+import com.sharpeyes.api.coupons.CouponSaleResponse
+import com.sharpeyes.api.coupons.CouponSaleShareRow
 import com.sharpeyes.api.coupons.KEPT
 import com.sharpeyes.api.coupons.SOLD
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.coupons.VestigeTrancheResponse
-import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.db.VestigeTranche
@@ -117,12 +117,12 @@ private suspend fun RoutingContext.listTranches() {
 
 private suspend fun RoutingContext.addTrancheRoute() {
     val (userId, email) = call.principalIdAndEmail()
-    val request = call.receive<AddVestigeTrancheRequest>()
+    val request = call.receive<AddCouponSaleRequest>()
     call.eventPerson(request.holder.personId)
     val holder = request.holder.normalised()
 
     val disposition = request.disposition.trim().uppercase()
-    val shares = request.shares.map { VestigeTrancheShareRow(it.holder.normalised(), it.pieces) }
+    val shares = request.shares.map { CouponSaleShareRow(it.holder.normalised(), it.pieces) }
     val refusal =
         trancheRefusal(holder, request.pieces, request.amount, disposition)
             ?: shareRefusal(holder, request.pieces, disposition, shares)
@@ -278,7 +278,7 @@ internal fun trancheRefusal(
 internal fun tranchesFor(
     userId: String,
     viewer: String = userId,
-): List<VestigeTrancheResponse> {
+): List<CouponSaleResponse> {
     val rows =
         VestigeTranche
             .selectAll()
@@ -302,7 +302,7 @@ internal fun tranchesFor(
                         personId = it[VestigeTrancheShare.personId]?.toString(),
                         characterName = it[VestigeTrancheShare.characterName],
                     )
-                VestigeTrancheShareRow(creditor, it[VestigeTrancheShare.pieces])
+                CouponSaleShareRow(creditor, it[VestigeTrancheShare.pieces])
             }
 
     val writer = { row: ResultRow -> row[VestigeTranche.recordedByUserId] ?: userId }
@@ -314,7 +314,7 @@ internal fun tranchesFor(
                 personId = it[VestigeTranche.personId]?.toString(),
                 characterName = it[VestigeTranche.characterName],
             )
-        VestigeTrancheResponse(
+        CouponSaleResponse(
             id = it[VestigeTranche.id].toString(),
             holder = holder,
             pieces = it[VestigeTranche.pieces],

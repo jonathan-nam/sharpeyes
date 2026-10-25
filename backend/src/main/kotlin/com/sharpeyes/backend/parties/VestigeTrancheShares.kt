@@ -1,7 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.CouponSaleShareRow
 import com.sharpeyes.api.coupons.VestigeHolder
-import com.sharpeyes.api.coupons.VestigeTrancheShareRow
 import kotlin.uuid.Uuid
 
 // Whose pieces a priced tranche was: the one place a coupon debt gets a price. See V56.
@@ -36,7 +36,7 @@ internal fun shareRefusal(
     holder: VestigeHolder,
     pieces: Double,
     disposition: String,
-    shares: List<VestigeTrancheShareRow>,
+    shares: List<CouponSaleShareRow>,
 ): String? {
     if (shares.isEmpty()) return null
     val bad = shares.firstOrNull { it.holder.kind !in setOf(PERSON, SELF, CHARACTER) }

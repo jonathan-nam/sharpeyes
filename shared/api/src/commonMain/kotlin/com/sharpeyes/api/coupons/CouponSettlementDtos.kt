@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 /** One act of closing a pile, and what it covered. */
 @Serializable
-data class VestigeSettlementResponse(
+data class CouponSettlementResponse(
     val id: String,
     val holder: VestigeHolder,
     val lootIds: List<String>,
@@ -14,7 +14,7 @@ data class VestigeSettlementResponse(
 )
 
 @Serializable
-data class AddVestigeSettlementRequest(
+data class AddCouponSettlementRequest(
     val holder: VestigeHolder,
     val lootIds: List<String>,
     val unpaid: Long = 0,

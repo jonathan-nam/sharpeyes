@@ -1,6 +1,6 @@
 package com.sharpeyes.backend.parties
 
-import com.sharpeyes.api.coupons.VestigeTrancheShareRow
+import com.sharpeyes.api.coupons.CouponSaleShareRow
 import com.sharpeyes.api.events.EventTarget
 import com.sharpeyes.api.settlement.OffsetSharesRequest
 import com.sharpeyes.api.settlement.SharedCloseRequest
@@ -26,7 +26,7 @@ import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 // /api/shared-books/{personId}/...: a member's writes into the owner's book, where {personId} is the
-// member's person row on the owner's account (SharedBookResponse.personId). Each answers with that
+// member's person row on the owner's account (SharedPartiesResponse.personId). Each answers with that
 // book re-read, from the member's side. See SharedBookWrites.kt.
 
 fun Route.sharedBookRoutes() {
@@ -114,7 +114,7 @@ private suspend fun RoutingContext.inBook(write: (SharedBook, String) -> String?
 private suspend fun RoutingContext.addTranche() {
     val request = call.receive<SharedTrancheRequest>()
     val disposition = request.disposition.trim().uppercase()
-    val shares = request.shares.map { VestigeTrancheShareRow(it.holder.normalised(), it.pieces) }
+    val shares = request.shares.map { CouponSaleShareRow(it.holder.normalised(), it.pieces) }
     inBook { book, writer ->
         trancheRefusal(book.holder, request.pieces, request.amount, disposition)
             ?: shareRefusal(book.holder, request.pieces, disposition, shares)

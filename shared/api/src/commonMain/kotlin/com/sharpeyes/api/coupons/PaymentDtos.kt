@@ -3,7 +3,7 @@ package com.sharpeyes.api.coupons
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class VestigePaymentResponse(
+data class PaymentResponse(
     val id: String,
     val holder: VestigeHolder,
     val amount: Long,
@@ -16,7 +16,7 @@ data class VestigePaymentResponse(
 )
 
 @Serializable
-data class AddVestigePaymentRequest(
+data class AddPaymentRequest(
     val holder: VestigeHolder,
     val amount: Long,
     val note: String? = null,

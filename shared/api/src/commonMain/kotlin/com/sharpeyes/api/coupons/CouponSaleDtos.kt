@@ -25,14 +25,14 @@ data class VestigeHolder(
  * derived share, which is what V40 exists to refuse.
  */
 @Serializable
-data class VestigeTrancheShareRow(
+data class CouponSaleShareRow(
     /** The CREDITOR, in the same holder shape the pile uses. Never the pile's own holder. */
     val holder: VestigeHolder,
     val pieces: Double,
 )
 
 @Serializable
-data class VestigeTrancheResponse(
+data class CouponSaleResponse(
     val id: String,
     val holder: VestigeHolder,
     val pieces: Double,
@@ -46,7 +46,7 @@ data class VestigeTrancheResponse(
     /** SOLD or KEPT. Carried out, so a client never infers a redemption from a missing amount. */
     val disposition: String,
     /** Whose pieces this sale was, where any of them were not the seller's. Empty is all their own. */
-    val shares: List<VestigeTrancheShareRow> = emptyList(),
+    val shares: List<CouponSaleShareRow> = emptyList(),
     val soldAt: String,
     /** The reader wrote it, which is what lets them take it back. See V88. */
     val recordedByYou: Boolean = true,
@@ -55,7 +55,7 @@ data class VestigeTrancheResponse(
 )
 
 @Serializable
-data class AddVestigeTrancheRequest(
+data class AddCouponSaleRequest(
     val holder: VestigeHolder,
     val pieces: Double,
     val amount: Long? = null,
@@ -65,5 +65,5 @@ data class AddVestigeTrancheRequest(
      * Pieces of this sale that were somebody else's. Absent is all the seller's own, which is every
      * tranche entered before V56.
      */
-    val shares: List<VestigeTrancheShareRow> = emptyList(),
+    val shares: List<CouponSaleShareRow> = emptyList(),
 )
