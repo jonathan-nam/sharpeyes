@@ -1,5 +1,6 @@
 package com.sharpeyes.api.bosses
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import kotlinx.serialization.Serializable
 
 // Mirrored by the frontend's types/boss.ts field-for-field.
@@ -19,6 +20,7 @@ data class BossResponse(
     // would be the one that misses the next boss.
     val difficulties: List<String> = emptyList(),
     // What one clear puts in one inventory, per mode and world. See V79__piece_sync.sql.
+    @AbsentOnCachedPayload
     val pieces: List<BossPieceResponse> = emptyList(),
 )
 

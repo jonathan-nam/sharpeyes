@@ -162,4 +162,7 @@ and included like `shared/money`, one package per feature (`com.sharpeyes.api.pa
 - **A new endpoint's body goes in `shared/api`**, never beside its route. Only what goes over the
   wire does: a database payload or a vision response stays in the backend.
 - **The server encodes with `apiJson`.** A client decoding with it reads exactly what was sent.
-- Until the TypeScript is generated from it, `frontend/types/` is a hand copy, so change both.
+- **The TypeScript is checked against it.** Changing a body means `UPDATE_API_TYPES=1 ./gradlew -p
+  ../shared/api jvmTest` (from backend/) to regenerate `frontend/types/generated/api.ts`, and the
+  matching change in `frontend/types/`, which `generated/parity.ts` holds to it at compile time.
+  Never edit `api.ts` by hand. A new field an older tab's cache can lack gets `@AbsentOnCachedPayload`.

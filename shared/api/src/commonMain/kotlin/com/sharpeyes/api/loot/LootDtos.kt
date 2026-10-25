@@ -1,5 +1,6 @@
 package com.sharpeyes.api.loot
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import kotlinx.serialization.Serializable
 
 // Mirrored by the frontend's types/loot.ts field-for-field.
@@ -56,6 +57,7 @@ data class LootResponse(
     val saleAmount: Long?,
     // What it fetched in real money, in cents. Set INSTEAD of saleAmount, never beside it, so a
     // reader that only knows about mesos sees an unpriced sale rather than a wrong price. See V76.
+    @AbsentOnCachedPayload
     val saleUsdCents: Long? = null,
     val amountBasis: String?,
     val splitMethod: String?,
@@ -67,11 +69,13 @@ data class LootResponse(
     // same time as a sale. Nothing is owed off it: the item cannot move again. See V49.
     val takenByMemberId: String? = null,
     // It fell on a run with nobody else. See V72.
+    @AbsentOnCachedPayload
     val solo: Boolean = false,
     val soldAt: String?,
     // When the drop was LOGGED, which is not droppedOn: that is a date the user picks, and this is a
     // timestamp nobody can set. A coupon sale can only have answered nights already on the books when
     // it was recorded, and a bare date cannot separate two acts on the same evening. See spendSales.
+    @AbsentOnCachedPayload
     val recordedAt: String,
     // Who is owed, as pinned when the drop sold. Empty until then.
     val payouts: List<LootPayoutResponse>,
@@ -85,6 +89,7 @@ data class LootResponse(
     // Carried beside the roster because it answers the other half of the same question: who ran, and
     // on what share. Without it a new deal re-divides every outstanding drop the moment it is
     // agreed, including weeks somebody was already shown a figure for. See V55.
+    @AbsentOnCachedPayload
     val sharesThatWeek: Map<String, Int> = emptyMap(),
     // How many equal stacks this drop fell in, for this boss and the party's difficulty. Null is
     // uncounted, NOT one: the ledger reads it to decide whether the drop could divide by looting at
@@ -94,8 +99,10 @@ data class LootResponse(
     // it having divided evenly, and is why the ledger can name a debt's size without its direction.
     val bundlesBy: List<LootBundleResponse> = emptyList(),
     // The caller logged it, which is what lets a member take it back off. See PartyAccess.kt.
+    @AbsentOnCachedPayload
     val recordedByYou: Boolean = true,
     // Who did, as the viewer calls them, when it was not the viewer. See loggerNames.
+    @AbsentOnCachedPayload
     val recordedByName: String? = null,
 )
 

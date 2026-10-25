@@ -1,5 +1,6 @@
 package com.sharpeyes.api.parties
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import com.sharpeyes.api.invites.PendingInviteView
 import kotlinx.serialization.Serializable
 
@@ -41,6 +42,7 @@ data class PartyMemberResponse(
     // take more. Only ever a DEFAULT: a sale pins its own counts, so this cannot rewrite one.
     val shares: Int = 1,
     // How this seat usually divides a pooled pile of Eternal pieces.
+    @AbsentOnCachedPayload
     val pieceShares: Int = 1,
 )
 
@@ -69,6 +71,7 @@ data class PartyResponse(
     val difficulty: String? = null,
     // The mode it ran at in the period being shown, when that was not `difficulty`. Null is the
     // usual one. Anything about one week reads this first; an edit of the config never writes it.
+    @AbsentOnCachedPayload
     val weekDifficulty: String? = null,
     // How long this party takes on this boss, door to door. Null is nobody having timed it, not
     // the flat estimate Run Order falls back to, so the two can be told apart on screen.
@@ -96,6 +99,7 @@ data class PartyResponse(
     // asked for, unlike `cleared` below, which always answers for now.
     val skippedThisPeriod: Boolean = false,
     // Somebody besides you ran it in the week shown. What the Individual View flags. See ranAsPartyIn.
+    @AbsentOnCachedPayload
     val ranAsParty: Boolean = false,
     // The pool at a glance: dropped but unsold, and sold with somebody still unpaid.
     val pendingLoot: Int = 0,
@@ -112,12 +116,16 @@ data class PartyResponse(
     val clearedByHand: Boolean = false,
     // False for a party somebody else keeps the book for, which you reach by holding a seat in it.
     // A member still logs drops and records sales, as their own seats. See PartyAccess.kt.
+    @AbsentOnCachedPayload
     val yours: Boolean = true,
     // The seats a member acts as, which is all a member may sell or keep as. Empty for the owner.
+    @AbsentOnCachedPayload
     val yourSeats: List<String> = emptyList(),
     // Every account the party reaches, owner first. Empty unless somebody besides you is linked.
+    @AbsentOnCachedPayload
     val accounts: List<PartyAccountResponse> = emptyList(),
     // Seats offered to friends and not yet answered. The owner's only. See PartyInvites.kt.
+    @AbsentOnCachedPayload
     val pendingInvites: List<PendingInviteView> = emptyList(),
     // On a save's answer only: the friends it invited, and those it did not because they are already
     // in a party for this boss.
@@ -160,10 +168,13 @@ data class PersonResponse(
      */
     val ownedCharacters: List<String> = emptyList(),
     /** The job of each of ownedCharacters, by name, where their account recorded one. */
+    @AbsentOnCachedPayload
     val ownedJobs: Map<String, String> = emptyMap(),
     /** The sprite proxy path of each of `characters` that Nexon has, by name. See IgnSprites.kt. */
+    @AbsentOnCachedPayload
     val sprites: Map<String, String> = emptyMap(),
     /** The job of each of `characters` that Nexon has, by name. See IgnSprites.kt. */
+    @AbsentOnCachedPayload
     val jobs: Map<String, String> = emptyMap(),
     /**
      * They sign in as an account of their own, having accepted a link (V70).
@@ -174,14 +185,17 @@ data class PersonResponse(
      */
     val linked: Boolean = false,
     /** Their account's Discord avatar, when linked and Discord had one. */
+    @AbsentOnCachedPayload
     val image: String? = null,
     /** Characters you filed under them that their own account does not hold. Theirs to explain. */
+    @AbsentOnCachedPayload
     val notOnAccount: List<String> = emptyList(),
     /** Characters of theirs that another account you are linked to also holds: nobody's, until fixed. */
     val contested: List<String> = emptyList(),
     /** Their Settlement Ledger card stays drawn with nothing outstanding. See V59. */
     val pinned: Boolean = false,
     /** A friend request naming this person, while it waits (V97). */
+    @AbsentOnCachedPayload
     val request: PendingLink? = null,
 )
 

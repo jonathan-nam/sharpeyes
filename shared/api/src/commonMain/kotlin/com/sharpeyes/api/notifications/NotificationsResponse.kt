@@ -1,5 +1,6 @@
 package com.sharpeyes.api.notifications
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -10,6 +11,7 @@ data class Actor(
     val username: String?,
     val spriteImgUrl: String?,
     /** Their current Discord avatar. See imagesOf. */
+    @AbsentOnCachedPayload
     val image: String? = null,
 )
 
