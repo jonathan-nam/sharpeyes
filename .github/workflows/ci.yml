@@ -101,6 +101,8 @@ jobs:
               - 'shared/api/**'
               - 'gradle/libs.versions.toml'
               - 'config/detekt/**'
+              # GeneratedTypesTest compares this to what shared/api renders, so a hand edit fails here.
+              - 'frontend/types/generated/api.ts'
             frontend:
               - *workflow
               - 'frontend/**'

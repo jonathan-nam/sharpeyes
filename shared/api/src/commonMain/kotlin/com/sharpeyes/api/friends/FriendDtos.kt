@@ -1,5 +1,6 @@
 package com.sharpeyes.api.friends
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -16,6 +17,7 @@ data class FriendView(
     val name: String?,
     val spriteImgUrl: String?,
     /** Their current Discord avatar. See imagesOf. */
+    @AbsentOnCachedPayload
     val image: String? = null,
 )
 
@@ -44,5 +46,6 @@ data class SocialResponse(
     val friends: List<FriendView>,
     val outgoing: List<FriendView>,
     /** Requests to you, so one cleared from the bell can still be answered. */
+    @AbsentOnCachedPayload
     val incoming: List<FriendView>,
 )

@@ -1,5 +1,6 @@
 package com.sharpeyes.api.settlement
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import com.sharpeyes.api.coupons.VestigeHolder
 import kotlinx.serialization.Serializable
 
@@ -20,8 +21,10 @@ data class SettlementDebtResponse(
     val payouts: List<SettlementDebtPayoutRow> = emptyList(),
     val incurredAt: String,
     /** The reader wrote it, which is what lets them take it back. See V88. */
+    @AbsentOnCachedPayload
     val recordedByYou: Boolean = true,
     /** Who did, as the reader calls them, when it was not the reader. */
+    @AbsentOnCachedPayload
     val recordedByName: String? = null,
 )
 

@@ -1,5 +1,6 @@
 package com.sharpeyes.api.combine
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import kotlinx.serialization.Serializable
 
 /** A seat as the page draws it: the character and its sprite proxy path. */
@@ -58,6 +59,7 @@ data class IncomingCombineResponse(
     val keepsYours: Int,
     val keepsTheirs: Int,
     /** Seats of yours it takes out, so nobody holds two parties for one boss. */
+    @AbsentOnCachedPayload
     val takesOut: List<SeatOutResponse> = emptyList(),
 )
 

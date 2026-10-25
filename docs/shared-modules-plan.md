@@ -49,26 +49,34 @@ field nullable. It matches the served JSON and keeps the golden fixtures byte-fo
 arithmetic onto the API types (`Int`/`Long`) is a separate decision, made once the TypeScript copy of
 a module is deleted.
 
-## Next: generate the TypeScript (PR 2)
+## The TypeScript is checked against it
 
-`frontend/types/*.ts` is still a hand copy. A survey of the 84 exported types found two request
-fields it had dropped (`LogDropBody.droppedOn`, `AddSettlementDebtBody.incurredAt`), fixed with this
-module. Nothing caught them.
+Before this, `frontend/types/*.ts` was a hand copy that had already dropped two request fields
+(`LogDropBody.droppedOn`, `AddSettlementDebtBody.incurredAt`) with nothing to catch it. Now:
 
-The plan: a Gradle task in `shared/api` that walks each class's `SerialDescriptor` and writes
-`frontend/types/generated/*.ts`, committed. CI runs it and fails on `git diff`. Vercel never needs a
-JVM.
+- **`frontend/types/generated/api.ts`** is rendered from shared/api by `GeneratedTypesTest` (its
+  jvmTest), which walks every class's `SerialDescriptor`. Committed, so Vercel never needs a JVM. The
+  test fails when the file differs; `UPDATE_API_TYPES=1 ./gradlew -p ../shared/api jvmTest` from
+  backend/ rewrites it. The backend's `test` runs it, so CI does too.
+- A default is optional (`?:`) only on a body the server decodes (`*Request`, the two beacons) and
+  its parts. Everywhere else it is sent, so it is required.
+- **`@AbsentOnCachedPayload`** marks a field the server always sends that a tab's cache can predate.
+  The generated type makes it optional, so the reader has to say what absent means. 31 fields carry
+  it, plus `recordedByYou`/`recordedByName` on four ledger rows.
+- **`frontend/types/generated/parity.ts`** makes tsc fail when a hand type drifts: a response must
+  match its generated type both ways, a request body only has to be accepted. The only differences
+  allowed are written there: unions the TypeScript narrows a `String` to (`WorldType`, `Holder.kind`,
+  dispositions, `heldBy`, `Payer`) and five always-sent fields that values built in the frontend
+  leave out. `lib/type-parity.test.ts` fails when a type in types/ has no line there.
 
-- `Long`, `Int`, `Double` become `number`; `JsonElement` becomes `unknown`; a map becomes `Record`.
-- 31 response fields are optional in the TypeScript only because a tab's cache can predate them
-  ("Absent on a cached payload"). Kotlin has them required or defaulted, so a plain generator would
-  make them required. A `@SerialInfo` annotation marks them, and the task emits `?:`.
-- The string unions only the TypeScript has (`worldType`, `disposition`, `heldBy`, `Holder.kind`)
-  become Kotlin enums, which the backend wants anyway.
-- The hand files become aliases (`export type Party = PartyResponse`), one file at a time.
+The hand files stay for now because they carry frontend notes the Kotlin does not ("resolve with
+spriteUrl()"). A file becomes pure aliases (`export type Boss = api.BossResponse`) once its notes
+are in the Kotlin's KDoc. Turning the narrowed `String`s into Kotlin enums would let those unions
+come from the generator too.
 
 Kotlin/JS export was rejected: it ships runtime classes rather than JSON shapes, and needs a JVM at
-build time or a committed bundle.
+build time or a committed bundle. OpenAPI would also type the routes, at the cost of annotating
+every one; worth it only once typed fetch calls are wanted.
 
 ## Next: rules that should be on the server, or shared
 

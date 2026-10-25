@@ -1,5 +1,6 @@
 package com.sharpeyes.api.settlement
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import com.sharpeyes.api.coupons.VestigeHolder
 import kotlinx.serialization.Serializable
 
@@ -19,9 +20,12 @@ data class HeldMoneyResponse(
     val kind: String,
     val decidedAt: String,
     /** YOU: your pile sold their coupons. THEM: their pile sold yours. See V91. */
+    @AbsentOnCachedPayload
     val heldBy: String = HELD_BY_YOU,
     /** Whether the viewer wrote it. See V88. */
+    @AbsentOnCachedPayload
     val recordedByYou: Boolean = true,
+    @AbsentOnCachedPayload
     val recordedByName: String? = null,
 )
 
