@@ -7664,11 +7664,26 @@ button.link:disabled {
 
 /* One act per line: the button, and what pressing it will record beside it. Unstyled, these were
    inline spans, so the sentence butted against the button's own border with nothing between them. */
+/* One line per act. A wrapping row drops its caption under the button before it shrinks anything,
+   so the row never wraps: the button and what sits after it keep their size, and the caption alone
+   gives way, cut with an ellipsis and whole on hover. */
 .ledger-settle {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
+  min-width: 0;
+}
+
+.ledger-settle > * {
+  flex: none;
+}
+
+.ledger-settle > .ledger-settle-detail {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* The act on a share line, wearing the Closing Actions buttons' face rather than the paid pill's.
