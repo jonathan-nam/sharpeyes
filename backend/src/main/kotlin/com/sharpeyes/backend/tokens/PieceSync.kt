@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.tokens
 
+import com.sharpeyes.api.inventory.PieceSyncGap
+import com.sharpeyes.api.inventory.PieceSyncGapResponse
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.characters.writeTokenCount
 import com.sharpeyes.backend.db.BossCatalog
@@ -13,7 +15,6 @@ import com.sharpeyes.backend.parties.difficultyIn
 import com.sharpeyes.backend.parties.runsInPeriod
 import com.sharpeyes.backend.users.inActiveWorld
 import kotlinx.datetime.LocalDate
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -35,25 +36,6 @@ import kotlin.uuid.Uuid
 // a wrongly ticked clear never added to, so the credit is then left alone for good.
 //
 // Inside a transaction, like the rest.
-
-/** Why a cleared boss's pieces were not added. Shown beside the setting. */
-enum class PieceSyncGap {
-    // No config names the mode this character runs the boss at.
-    NO_DIFFICULTY,
-
-    // Cleared in a week its standing party was taken off, so who ran it is not known.
-    PARTY_OFF,
-
-    // A pooled drop in a party whose pieces nobody has added yet. Never listed: Party View's Add
-    // button on the party is that message, where it can be acted on.
-    PARTY_LOOT,
-}
-
-/** The capture a clear arrived with. Its inventory read, if any, already includes the drop. */
-internal data class CaptureCounts(
-    val screenshotId: Uuid,
-    val inventoryComplete: Boolean,
-)
 
 private sealed interface Owed {
     data object None : Owed
@@ -301,16 +283,6 @@ private fun takeBack(
     }
     return true
 }
-
-/** A cleared boss whose pieces are not in the inventory, and why. */
-@Serializable
-data class PieceSyncGapResponse(
-    val characterId: String,
-    val characterName: String,
-    val bossKey: String,
-    val bossName: String,
-    val reason: PieceSyncGap,
-)
 
 /**
  * This period's cleared bosses, in the world being shown, whose pieces the sync cannot add and

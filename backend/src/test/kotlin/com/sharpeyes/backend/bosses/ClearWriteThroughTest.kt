@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.bosses
 
+import com.sharpeyes.api.parties.PersonRequest
+import com.sharpeyes.api.parties.SavePartyRequest
+import com.sharpeyes.api.parties.SavePeopleRequest
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.BossClear
@@ -9,9 +12,6 @@ import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.PartyWeekSeat
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.invites.seatInLinkedParties
-import com.sharpeyes.backend.parties.PersonRequest
-import com.sharpeyes.backend.parties.SavePartyRequest
-import com.sharpeyes.backend.parties.SavePeopleRequest
 import com.sharpeyes.backend.parties.bossIdForKey
 import com.sharpeyes.backend.parties.createParty
 import com.sharpeyes.backend.parties.findParty

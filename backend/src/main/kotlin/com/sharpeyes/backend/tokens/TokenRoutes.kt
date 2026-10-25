@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.tokens
 
+import com.sharpeyes.api.inventory.TokenCatalogResponse
+import com.sharpeyes.api.inventory.TokenTotalResponse
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.RedemptionRule
@@ -14,7 +16,6 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.get
 import io.ktor.server.routing.route
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.countDistinct
@@ -78,23 +79,6 @@ internal fun bossTokenCatalog(): List<TokenCatalogResponse> =
                 redeemSlots = it.getOrNull(RedemptionRule.slotGroup) ?: emptyList(),
             )
         }
-
-/**
- * One item, with no count attached.
- *
- * Deliberately NOT CharacterTokenResponse with a zero: that one carries a quantity and a capturedAt,
- * and inventing both to describe an item nobody holds is two figures nobody said.
- */
-@Serializable
-data class TokenCatalogResponse(
-    val tokenCatalogId: String,
-    val name: String,
-    val iconUrl: String?,
-    val itemGroup: String?,
-    val sourceBoss: String?,
-    val redeemThreshold: Int?,
-    val redeemSlots: List<String> = emptyList(),
-)
 
 private suspend fun RoutingContext.getTokenTotals() {
     val (userId, email) = call.principalIdAndEmail()

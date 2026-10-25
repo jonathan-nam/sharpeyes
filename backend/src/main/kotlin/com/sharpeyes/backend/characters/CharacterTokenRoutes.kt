@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.characters
 
+import com.sharpeyes.api.characters.CharacterTokenResponse
 import com.sharpeyes.backend.db.CharacterTokenCount
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.RedemptionRule

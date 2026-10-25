@@ -3,6 +3,7 @@
 *
 !backend/
 !shared/money/
+!shared/api/
 !gradle/libs.versions.toml
 !config/
 
@@ -10,6 +11,6 @@
 **/build
 **/.kotlin
 backend/*.md
-# The money module's tests and their fixtures are not part of the image.
-shared/money/src/commonTest
-shared/money/src/jvmTest
+# The shared modules' tests and their fixtures are not part of the image.
+shared/*/src/commonTest
+shared/*/src/jvmTest

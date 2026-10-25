@@ -1,12 +1,12 @@
 package com.sharpeyes.backend.users
 
+import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.Screenshots
 import com.sharpeyes.backend.db.Users
 import com.sharpeyes.backend.parties.LootedDrop
-import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.addLoot
 import com.sharpeyes.backend.parties.allLootFor
 import com.sharpeyes.backend.parties.bossIdForKey

@@ -71,7 +71,7 @@ import {
   type Grouping,
 } from "@/lib/drop-log";
 import { formatDropped } from "@/lib/loot";
-import { saleQueues } from "@/lib/lot-sale";
+import { saleQueues } from "@/lib/bulk-sale";
 import { useDropIcons } from "@/lib/drop-icons";
 import { useSeatSprites } from "@/lib/seat-sprites";
 import { useAccountSettings } from "@/lib/use-account-settings";
@@ -386,8 +386,8 @@ export default function DropLogPage() {
   // your own pools, and theirs arrive through the shared books.
   const saleWrites = {
     ...writes,
-    lotSale: async (body: Parameters<typeof writes.lotSale>[0]) => {
-      await writes.lotSale(body);
+    bulkSale: async (body: Parameters<typeof writes.bulkSale>[0]) => {
+      await writes.bulkSale(body);
       await load().catch(() => {});
     },
     rowSale: async (...args: Parameters<typeof writes.rowSale>) => {
@@ -581,14 +581,14 @@ export default function DropLogPage() {
   // Every pool you ran in, other owners' included, cut by who logged each drop: that is who sells it.
   // Yours go to the forms, the rest are listed. See lib/sale-logger.ts.
   const byLogger = splitByLogger(logPools);
-  const { lots, alone } = saleQueues(logParties, byLogger.yours, dropTables, SELF_KEY);
+  const { bulk, alone } = saleQueues(logParties, byLogger.yours, dropTables, SELF_KEY);
   const othersLog = saleQueues(logParties, byLogger.theirs, dropTables, SELF_KEY);
-  const loggedByOthers = [...othersLog.lots.flatMap((lot) => lot.queue), ...othersLog.alone];
+  const loggedByOthers = [...othersLog.bulk.flatMap((lot) => lot.queue), ...othersLog.alone];
   // The drops that price alone (an accessory, a hammer, a ring) come with them: yours for the same
   // reason a lot is, and one card each, because a queue of them could only guess which copy went.
   // Whether the sale boxes will draw anything, which decides with the coupon piles whether there is
   // an Outstanding Sales section at all. A heading over no cards is a heading over nothing.
-  const anythingToPrice = money && (lots.length > 0 || alone.length > 0);
+  const anythingToPrice = money && (bulk.length > 0 || alone.length > 0);
   const vestigeIcon = vestigeOf(dropTables)?.iconUrl ?? null;
   const coupon = { iconUrl: vestigeIcon, name: vestigeOf(dropTables)?.name ?? null };
 
@@ -714,7 +714,7 @@ export default function DropLogPage() {
     saleCards({
       unanswered: open.length,
       holders: drawn.length + sharedPiles.length + theirPiles.length,
-      lots: money ? lots.length : 0,
+      bulk: money ? bulk.length : 0,
       rows: money ? alone.length : 0,
     }) > 0;
 
@@ -856,7 +856,7 @@ export default function DropLogPage() {
             {shown === "sales" && (
               <>
                 {!hasSales && <p className="party-hint">No sales to record.</p>}
-                {/* One heading over every card that takes a sale, which is the lot boxes AND the coupon
+                {/* One heading over every card that takes a sale, which is the bulk sales AND the coupon
                   piles: both are "sold N for X". Titling only one of them said the other was a
                   statement rather than an entry. No rule under it either, because what follows is
                   more of the same thing and there is nothing there to divide. */}
@@ -874,7 +874,7 @@ export default function DropLogPage() {
                     {money && (
                       <SaleCards
                         page={{ parties: logParties, bosses, characters }}
-                        lots={lots}
+                        bulk={bulk}
                         alone={alone}
                         writes={saleWrites}
                       />

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.plugins
 
+import com.sharpeyes.api.system.PingResponse
 import com.sharpeyes.backend.bosses.bossRoutes
 import com.sharpeyes.backend.characters.characterRoutes
 import com.sharpeyes.backend.events.Topic

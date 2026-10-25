@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.bosses.WEEKLY_CADENCE
 import com.sharpeyes.backend.bosses.periodStartFor
 import com.sharpeyes.backend.bosses.weekOf
@@ -7,7 +8,6 @@ import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyLootPayout
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.PartyWeekSeat
-import com.sharpeyes.backend.plugins.Refusal
 import kotlinx.datetime.LocalDate
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq

@@ -12,7 +12,7 @@ import {
   stillAsking,
   worthDrawing,
 } from "@/lib/ledger-fates";
-import { saleQueues } from "@/lib/lot-sale";
+import { saleQueues } from "@/lib/bulk-sale";
 import { splitByLogger } from "@/lib/sale-logger";
 import {
   bossesOfSales,

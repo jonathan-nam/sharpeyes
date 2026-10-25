@@ -1,5 +1,11 @@
 package com.sharpeyes.backend.invites
 
+import com.sharpeyes.api.invites.AcceptInviteRequest
+import com.sharpeyes.api.invites.AcceptedInvite
+import com.sharpeyes.api.invites.CreateInviteRequest
+import com.sharpeyes.api.invites.InvitePartyLabel
+import com.sharpeyes.api.invites.InvitePreview
+import com.sharpeyes.api.invites.InviteResponse
 import com.sharpeyes.backend.db.AccountInvite
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
@@ -37,7 +43,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
-import com.sharpeyes.backend.plugins.Refusal as Shown
+import com.sharpeyes.api.system.Refusal as Shown
 
 // A link that starts somebody else's account from your side of the parties you share. Three
 // audiences, and they are not the same person: the sender makes links, anybody holding one can see

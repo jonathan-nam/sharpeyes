@@ -1,5 +1,6 @@
 package com.sharpeyes.money
 
+import com.sharpeyes.money.pieces.PlaceableNight
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull

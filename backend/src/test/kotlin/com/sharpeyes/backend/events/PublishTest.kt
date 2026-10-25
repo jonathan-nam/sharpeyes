@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.events
 
+import com.sharpeyes.api.events.EventTarget
 import com.sharpeyes.backend.config.Env
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.Database

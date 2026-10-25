@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.TakenRequest
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.parseUuidParam
@@ -18,7 +19,7 @@ import kotlin.uuid.Uuid
 
 // PUT /api/parties/{id}/loot/{lootId}/taken. Registered by LootRoutes.kt with the rest of the pool.
 //
-// In its own file the way LotSaleRoute.kt is: this is the whole of what a Heroic pool does, and the
+// In its own file the way BulkSaleRoute.kt is: this is the whole of what a Heroic pool does, and the
 // reasoning behind the refusal is longer than the handler.
 
 /**

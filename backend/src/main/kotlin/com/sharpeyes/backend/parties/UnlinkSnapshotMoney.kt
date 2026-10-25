@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.settlement.HELD_BY_THEM
+import com.sharpeyes.api.settlement.HELD_BY_YOU
 import com.sharpeyes.backend.db.SettlementDebt
 import com.sharpeyes.backend.db.VestigePayment
 import com.sharpeyes.backend.db.VestigeProceedsDisposal

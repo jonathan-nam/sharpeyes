@@ -13,7 +13,7 @@ export type BossDrop = {
   quantity: number;
   // Copies are interchangeable, so a pile of these sells as one lot at a going rate and the Drop
   // Log can price a queue of rows from one box. False for anything with its own potential lines and
-  // its own price, where a queue could only guess which copy went. See lib/lot-sale.ts.
+  // its own price, where a queue could only guess which copy went. See lib/bulk-sale.ts.
   fungible: boolean;
   // How many pieces this boss drops of it, keyed by WORLD and then by difficulty. Two keys because
   // the count really is per world and is not a restatement of perMember. Only the difficulties that

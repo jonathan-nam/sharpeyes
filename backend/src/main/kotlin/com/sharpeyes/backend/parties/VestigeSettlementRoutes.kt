@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.coupons.AddVestigeSettlementRequest
+import com.sharpeyes.api.coupons.VestigeHolder
+import com.sharpeyes.api.coupons.VestigeSettlementResponse
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.Person
@@ -19,7 +22,6 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -44,24 +46,6 @@ import kotlin.uuid.Uuid
 
 /** The most that can be written off in one act. A typo guard, matching the payment ceiling. */
 private const val MAX_UNPAID = 1_000_000_000_000L
-
-/** One act of closing a pile, and what it covered. */
-@Serializable
-data class VestigeSettlementResponse(
-    val id: String,
-    val holder: VestigeHolder,
-    val lootIds: List<String>,
-    /** Mesos still owed when the books closed. Zero is a pile that balanced. */
-    val unpaid: Long,
-    val settledAt: String,
-)
-
-@Serializable
-data class AddVestigeSettlementRequest(
-    val holder: VestigeHolder,
-    val lootIds: List<String>,
-    val unpaid: Long = 0,
-)
 
 fun Route.vestigeSettlementRoutes() {
     get { listSettlements() }
@@ -171,7 +155,7 @@ internal fun settlementRefusal(
             "a PERSON holder needs a personId, and nothing else does"
         (holder.kind == "CHARACTER") != (holder.characterName != null) ->
             "a CHARACTER holder needs a characterName, and nothing else does"
-        holder.personId != null && runCatching { Uuid.parse(holder.personId) }.isFailure ->
+        holder.personId?.let { runCatching { Uuid.parse(it) }.isFailure } == true ->
             "personId is not an id"
         // A settlement that names no drop closes nothing, and would sit there looking like it had.
         lootIds.isEmpty() -> "a settlement has to name the drops it closes"

@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.bosses
 
+import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.BossClear
@@ -7,7 +8,6 @@ import com.sharpeyes.backend.db.CharacterBossSkip
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.Screenshots
-import com.sharpeyes.backend.parties.SavePartyRequest
 import com.sharpeyes.backend.parties.createParty
 import com.sharpeyes.backend.services.DetectedBossClear
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE

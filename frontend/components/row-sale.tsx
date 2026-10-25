@@ -5,7 +5,7 @@ import { LootSaleForm } from "@/components/loot-sale-form";
 import { apiAssetUrl, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { formatDropped } from "@/lib/loot";
-import type { LotRow } from "@/lib/lot-sale";
+import type { SaleRow } from "@/lib/bulk-sale";
 import type { SellLootBody } from "@/types/loot";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
@@ -14,8 +14,8 @@ import { sellersOf } from "@/lib/sale-logger";
 
 // One card per unsold drop that prices ALONE, and the form that prices it.
 //
-// The other half of the Sale Ledger's lots. A drop whose copies are interchangeable is sold as a
-// pile and the rows are proposed; a drop with its own potential lines has its own price, so a queue
+// The other half of the Sale Ledger's bulk sales. A drop whose copies are interchangeable is sold
+// as a pile and the rows are proposed; a drop with its own potential lines has its own price, so a queue
 // could only guess which one went and the card names ONE row instead. See rowSales.
 //
 // The row is named in full, because these cards stand together across every party you keep: the
@@ -33,14 +33,14 @@ export function RowSale({
   busy,
   onSell,
 }: {
-  rows: LotRow[];
+  rows: SaleRow[];
   bossByKey: Map<string, Boss>;
   partyById: Map<string, Party>;
   characterById: Map<string, Character>;
   busy: boolean;
-  onSell: (row: LotRow, body: SellLootBody) => Promise<void>;
+  onSell: (row: SaleRow, body: SellLootBody) => Promise<void>;
 }) {
-  // Cards only. The "Outstanding Sales" heading covers these, the lots and the coupon piles, so it
+  // Cards only. The "Outstanding Sales" heading covers these, the bulk sales and the coupon piles, so it
   // belongs to whatever draws all three.
   if (rows.length === 0) return null;
   return (
@@ -68,12 +68,12 @@ function RowCard({
   busy,
   onSell,
 }: {
-  row: LotRow;
+  row: SaleRow;
   boss: Boss | null;
   party: Party | null;
   characterName: string | null;
   busy: boolean;
-  onSell: (row: LotRow, body: SellLootBody) => Promise<void>;
+  onSell: (row: SaleRow, body: SellLootBody) => Promise<void>;
 }) {
   const [refusal, setRefusal] = useState<string | null>(null);
 

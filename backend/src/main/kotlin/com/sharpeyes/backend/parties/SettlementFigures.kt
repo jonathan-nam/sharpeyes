@@ -1,11 +1,11 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.settlement.ReportedFigure
 import com.sharpeyes.backend.db.SettlementFigure
 import com.sharpeyes.backend.db.SettlementListing
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
 import com.sharpeyes.backend.notifications.resolve
-import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.neq
@@ -19,14 +19,6 @@ import kotlin.uuid.Uuid
 // SettlementListings.kt. Inside the caller's transaction.
 
 private val PAYERS = setOf(PAYER_OWNER, PAYER_MEMBER)
-
-@Serializable
-data class ReportedFigure(
-    val personId: String,
-    val payer: String,
-    /** Mesos the payer holds for the other side, as the reporter's screen works it out. */
-    val amount: Long,
-)
 
 /**
  * What [userId]'s screen says each card's payer holds. A listing for any other amount is deleted.

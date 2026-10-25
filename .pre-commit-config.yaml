@@ -15,10 +15,10 @@ repos:
     hooks:
       - id: ktlint-detekt
         name: ktlint + detekt (backend)
-        # The backend's checks reach the included shared/money build too (backend/build.gradle.kts).
+        # The backend's checks reach the included shared builds too (backend/build.gradle.kts).
         entry: bash -c 'cd backend && ./gradlew ktlintCheck detekt'
         language: system
-        files: ^(backend|shared/money)/.*\.kts?$
+        files: ^(backend|shared/money|shared/api)/.*\.kts?$
         pass_filenames: false
 
       # Neither eslint nor the build checks types, so this is the only thing that does. A type

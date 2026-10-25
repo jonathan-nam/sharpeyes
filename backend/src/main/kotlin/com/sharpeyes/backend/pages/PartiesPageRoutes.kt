@@ -1,5 +1,7 @@
 package com.sharpeyes.backend.pages
 
+import com.sharpeyes.api.pages.PartiesExtrasResponse
+import com.sharpeyes.api.pages.PartiesPageResponse
 import com.sharpeyes.backend.bosses.bossCatalog
 import com.sharpeyes.backend.bosses.clearsView
 import com.sharpeyes.backend.bosses.dropTables

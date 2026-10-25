@@ -1,7 +1,12 @@
 package com.sharpeyes.backend.screenshots
 
+import com.sharpeyes.api.characters.CharacterResponse
+import com.sharpeyes.api.screenshots.DetectedBossClearResponse
+import com.sharpeyes.api.screenshots.DetectedTokenResponse
+import com.sharpeyes.api.screenshots.ScreenshotOutcome
+import com.sharpeyes.api.screenshots.ScreenshotResultResponse
+import com.sharpeyes.api.screenshots.UploadScreenshotRequest
 import com.sharpeyes.backend.bosses.upsertBossClears
-import com.sharpeyes.backend.characters.CharacterResponse
 import com.sharpeyes.backend.characters.findOwnedCharacter
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.CharacterTokenCount

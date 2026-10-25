@@ -1,5 +1,8 @@
 package com.sharpeyes.backend.notifications
 
+import com.sharpeyes.api.notifications.Actor
+import com.sharpeyes.api.notifications.NotificationView
+import com.sharpeyes.api.notifications.NotificationsResponse
 import com.sharpeyes.backend.db.Notification
 import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publish

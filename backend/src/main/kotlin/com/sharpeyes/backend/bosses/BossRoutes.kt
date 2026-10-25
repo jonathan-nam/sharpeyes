@@ -1,6 +1,9 @@
 package com.sharpeyes.backend.bosses
 
-import com.sharpeyes.backend.plugins.Refusal
+import com.sharpeyes.api.bosses.BossClearsViewResponse
+import com.sharpeyes.api.bosses.SetBossClearRequest
+import com.sharpeyes.api.bosses.SetBossRoutineRequest
+import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.refuse

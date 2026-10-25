@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.events
 
+import com.sharpeyes.api.events.EventTarget
 import com.sharpeyes.backend.parties.audienceOf
 import com.sharpeyes.backend.parties.imageOf
 import kotlinx.serialization.Serializable
@@ -13,18 +14,6 @@ import kotlin.uuid.Uuid
 // (EventHub.kt), so it reaches a browser connected to either.
 
 internal const val CHANNEL = "sharpeyes_events"
-
-/**
- * What a change touched, as precisely as its writer knows: a party, one of its drops, or a person's
- * Settlement card (the owner's person row, which is the key of both sides' card). Nothing named is a
- * change the page reads again without pointing at anything.
- */
-@Serializable
-internal data class EventTarget(
-    val party: String? = null,
-    val loot: String? = null,
-    val person: String? = null,
-)
 
 @Serializable
 internal data class Event(
