@@ -16,13 +16,18 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import kotlin.time.Clock
 
-// /api/party-invites: the invites waiting on you, the invitee's answer, or the owner withdrawing one.
+// /api/party-invites: the invites waiting on you or sent by you, the invitee's answer, or the owner
+// withdrawing one.
 // See PartyInvites.kt.
 
 fun Route.partyInviteRoutes() {
     get {
         val (userId, email) = call.principalIdAndEmail()
         call.respond(dbQuery { ensureUser(userId, email).let { invitesWaitingOn(userId) } })
+    }
+    get("/sent") {
+        val (userId, email) = call.principalIdAndEmail()
+        call.respond(dbQuery { ensureUser(userId, email).let { invitesSentBy(userId) } })
     }
     post("/{id}/accept") { acceptRoute() }
     // Declined by the invitee, or withdrawn by the party's owner.
