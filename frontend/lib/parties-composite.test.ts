@@ -44,7 +44,7 @@ function kotlinFields(name: string): string[] {
 function tsFields(name: string): string[] {
   const body =
     pageType.match(new RegExp(`export type ${name} = \\{([\\s\\S]*?)\\n\\};`))?.[1] ?? "";
-  return [...body.matchAll(/^\s*(\w+):/gm)].map((m) => m[1] as string);
+  return [...body.matchAll(/^\s*(\w+)\??:/gm)].map((m) => m[1] as string);
 }
 
 describe("Party View reads its screen in two requests", () => {

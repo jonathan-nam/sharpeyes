@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.loot.PartyLootPoolResponse
 import com.sharpeyes.api.parties.SeatedPartyResponse
 import com.sharpeyes.backend.bosses.parseWeekParam
 import com.sharpeyes.backend.db.BossCatalog
@@ -182,6 +183,29 @@ internal suspend fun RoutingContext.listSeatedParties() {
             partiesSeatedIn(userId, week)
         }
     call.respond(parties)
+}
+
+/**
+ * The pools of the parties [userId] sits in, each read as GET /{id}/loot reads it for them. Apart
+ * from allLootFor, which is the account's own money and feeds every figure owed.
+ */
+internal fun seatedPoolsFor(
+    userId: String,
+    seated: List<SeatedPartyResponse> = partiesSeatedIn(userId),
+): List<PartyLootPoolResponse> =
+    seated.map { row ->
+        PartyLootPoolResponse(row.party.id, lootFor(Uuid.parse(row.party.id), userId))
+    }
+
+/** GET /api/parties/seated/loot. See seatedPoolsFor. */
+internal suspend fun RoutingContext.listSeatedPools() {
+    val (userId, email) = call.principalIdAndEmail()
+    val pools =
+        dbQuery {
+            ensureUser(userId, email)
+            seatedPoolsFor(userId)
+        }
+    call.respond(pools)
 }
 
 /**

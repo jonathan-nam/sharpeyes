@@ -25,6 +25,10 @@ describe("asYourRow", () => {
     expect(members.map((m) => m.characterId)).toEqual([null, "your-char"]);
   });
 
+  it("names the seats you act as, so a pool's controls offer only those", () => {
+    expect(asYourRow(seated()).yourSeats).toEqual(["s-you"]);
+  });
+
   it("is not yours to write, whatever the list said", () => {
     // The seated list leaves `yours` at its default of true. Run Order hides the owner's controls on it.
     expect(asYourRow({ ...seated(), party: { ...seated().party, yours: true } }).yours).toBe(false);

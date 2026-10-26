@@ -499,6 +499,7 @@ export type PartiesExtrasResponse = {
   pools: PartyLootPoolResponse[];
   settlements: CouponSettlementResponse[];
   seated: SeatedPartyResponse[];
+  seatedPools?: PartyLootPoolResponse[];
 };
 
 export type PartiesPageResponse = {

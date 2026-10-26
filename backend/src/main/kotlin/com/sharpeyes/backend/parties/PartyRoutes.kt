@@ -52,6 +52,8 @@ fun Route.partyRoutes(
     // than a flag on the list above, because it crosses accounts and that is worth being able to
     // point at. See SeatedParties.kt.
     get("/seated") { listSeatedParties() }
+    // Their pools, read as you. Constant, so ahead of /{id}.
+    get("/seated/loot") { listSeatedPools() }
     // Before /{id}, and matched ahead of it whatever the order: Ktor scores a constant segment
     // above a parameter. Every pool at once, for the wallet, and the wallet's one settle back.
     get("/loot") { listAllLoot() }

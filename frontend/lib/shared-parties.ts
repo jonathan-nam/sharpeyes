@@ -13,6 +13,8 @@ export function asYourRow({ party, mySeatIds, yourCharacterId }: SeatedParty): P
     ...party,
     // The list answer leaves this at its default, which is true. See PartyResponse.yours.
     yours: false,
+    // The seats a member's pool controls act as. See memberSeats.
+    yourSeats: mySeatIds,
     characterId: yourCharacterId,
     members: party.members.map((m) => ({
       ...m,

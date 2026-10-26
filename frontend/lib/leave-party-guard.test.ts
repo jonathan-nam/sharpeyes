@@ -53,14 +53,17 @@ describe("a pool somebody else keeps", () => {
     expect(row).toContain("{readOnly ? ( <span");
   });
 
-  it("lists a shared party with every config write, and the owner's pool and invites left out", () => {
+  it("lists a shared party with every config write, its pool read as a member, and no invites", () => {
     // Party View draws yours and a party you sit in from one builder. Any seat may tick the clear,
     // log a drop with its coupon blocks, set the split, edit the week, take it off and leave; the
     // pool, the pile and the invites are the owner's, so each of those is cut off for a shared row.
     const card = /function partyCard\([\s\S]*?\); \}/.exec(list)?.[0] ?? "";
     expect(card).toContain("const shared = sharedIds.has(party.id);");
     expect(card).toContain("stacks={stacksFor(party)}");
-    for (const prop of ["pool", "piecePile", "onWithdrawInvite"]) {
+    // Its pool is drawn as a member reads it, or a drop logged there never shows on the row.
+    expect(card).toContain(" pool={poolFor(party)}");
+    expect(list).toContain("readOnly: party.yours === false,");
+    for (const prop of ["piecePile", "onWithdrawInvite"]) {
       expect(card).toContain(` ${prop}={shared ? undefined :`);
     }
     // A joined row's roster is sent in the owner's shape, or saving it drops you from the week.

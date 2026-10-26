@@ -345,4 +345,17 @@ class PartyMemberWritesTest {
             assertFalse(answer.yours)
         }
     }
+
+    @Test
+    fun `a drop a member logs comes back in the pools of the parties they sit in`() {
+        transaction {
+            val party = shared()
+            val lootId = drop(party, by = member)
+            val pool = seatedPoolsFor(member).single { it.partyId == party.id }
+            assertTrue(pool.loot.single().id == lootId.toString())
+            assertTrue(pool.loot.single().recordedByYou)
+            ensureUser(stranger, "$stranger@example.com")
+            assertTrue(seatedPoolsFor(stranger).isEmpty())
+        }
+    }
 }

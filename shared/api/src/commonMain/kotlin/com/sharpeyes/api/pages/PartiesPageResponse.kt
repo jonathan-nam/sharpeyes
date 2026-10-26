@@ -1,5 +1,6 @@
 package com.sharpeyes.api.pages
 
+import com.sharpeyes.api.AbsentOnCachedPayload
 import com.sharpeyes.api.bosses.BossClearsViewResponse
 import com.sharpeyes.api.bosses.BossDropResponse
 import com.sharpeyes.api.bosses.BossResponse
@@ -54,4 +55,7 @@ data class PartiesExtrasResponse(
     val pools: List<PartyLootPoolResponse>,
     val settlements: List<CouponSettlementResponse>,
     val seated: List<SeatedPartyResponse>,
+    /** The pools of [seated], read as you. Apart from [pools], which every figure owed reads. */
+    @AbsentOnCachedPayload
+    val seatedPools: List<PartyLootPoolResponse> = emptyList(),
 )

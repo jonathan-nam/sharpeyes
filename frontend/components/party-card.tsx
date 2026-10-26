@@ -114,6 +114,8 @@ export function PartyCard({
   pool?: {
     /** THIS week's drops. Narrowed by dropsInWeek, which is where the rule lives. */
     loot: Loot[];
+    /** A party somebody else owns, where you act as your own seats. See LootRow.readOnly. */
+    readOnly?: boolean;
     dropTables: DropTables;
     bossByKey: Map<string, Boss>;
     /** What a coupon row says it is. See PieceStatus. */
@@ -468,6 +470,7 @@ export function PartyCard({
               // The stack is what the config under it is about, so removing it from here would take
               // the split and the week's pickup with it. The pool's own page still corrects one.
               couponRemovable={false}
+              readOnly={pool.readOnly}
               editing={editing}
               panel
               busy={busy}
