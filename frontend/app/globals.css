@@ -305,7 +305,7 @@ html:not(.has-session) .header-reserved {
 }
 
 /* Fills the 6px gap above the panel (plus its border), so a mouse moving down from the button never
-   leaves the menu and the close grace in use-hover-menu.ts can stay short. */
+   leaves the menu, which is what lets use-hover-menu.ts close it the moment the mouse leaves. */
 .section-menu-panel::before {
   content: "";
   position: absolute;
