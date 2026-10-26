@@ -142,13 +142,89 @@
   margin-left: auto;
 }
 
-/* Sections open from a hamburger at the far left of the header. The content itself stays on .page,
-   centred like every other page, so navigation and content no longer fight over the layout.
-   The auto margin is what puts everything after it on the right edge: the world toggle, then the
-   avatar. */
+/* The sections, just right of the brand: listed in the bar, or behind a hamburger where the bar is
+   too narrow to list them. The auto margin is what puts everything after it on the right edge: the
+   world toggle, then the avatar. */
+.sections {
+  display: flex;
+  align-items: center;
+  margin-right: auto;
+}
+
 .section-menu {
   position: relative;
-  margin-right: auto;
+}
+
+.section-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The listed sections need up to 983px of bar beside the world toggle and avatar (measured in
+   Chromium with the Maplestory face), so they give way to the hamburger with some room to spare.
+   MUST stay after `.section-nav`: at equal specificity its display:flex would win and draw both. */
+@media (width > 1040px) {
+  .section-menu {
+    display: none;
+  }
+}
+
+@media (width <= 1040px) {
+  .section-nav {
+    display: none;
+  }
+}
+
+.section-nav-group {
+  position: relative;
+}
+
+.section-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-lg);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.section-nav-link:hover,
+button.section-nav-link:hover,
+.section-nav-link[aria-expanded="true"] {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.section-nav-link.active {
+  color: var(--ink-strong);
+}
+
+.section-nav-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.section-nav-chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 140ms ease-out;
+}
+
+.section-nav-link[aria-expanded="true"] .section-nav-chevron {
+  transform: rotate(180deg);
+}
+
+/* The reserved copy holds the space and nothing else. */
+.header-reserved .section-nav-link {
+  pointer-events: none;
 }
 
 .section-menu-btn {
@@ -264,6 +340,10 @@ html:not(.has-session) .header-reserved {
   .section-menu-panel,
   .section-menu-panel > div {
     animation: none;
+  }
+
+  .section-nav-chevron {
+    transition: none;
   }
 }
 

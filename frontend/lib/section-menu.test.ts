@@ -72,13 +72,25 @@ describe("what the menu lists", () => {
     expect(HREFS.length).toBeGreaterThan(MENU_HREFS.length);
   });
 
+  it("lists the Drop Log on its own, not under Bossing", () => {
+    expect(SECTIONS.find((s) => s.items.some((i) => i.href === "/bosses/drops"))?.group).toBe(
+      undefined,
+    );
+    const bossing = SECTIONS.find((s) => s.group === "Bossing")!;
+    expect(bossing.items.filter((i) => !i.hidden).map((i) => i.label)).toEqual([
+      "Individual View",
+      "Party View",
+      "Run Order",
+    ]);
+  });
+
   it("lists the sections a person navigates between", () => {
     expect(MENU_HREFS).toEqual([
       "/characters",
       "/bosses",
       "/bosses/parties",
-      "/bosses/drops",
       "/bosses/order",
+      "/bosses/drops",
       "/inventory",
       "/bosses/planner",
       "/bosses/split",
@@ -141,9 +153,9 @@ describe("what an account with nothing to trade is offered", () => {
   });
 
   it("lists everything in a trading world, and while the answer is unknown", () => {
-    // Unknown draws the full menu on purpose. The panel does not mount until the hamburger is
-    // clicked, which is almost always after /api/settings has answered, and an entry that appears
-    // a moment later is better than one that flickers away.
+    // Unknown draws the full menu on purpose. The Drop Splitter's dropdown is almost never opened
+    // before /api/settings has answered, and an entry that appears a moment later is better than
+    // one that flickers away.
     expect(listedFor(true)).toEqual(MENU_HREFS);
     expect(listedFor(undefined)).toEqual(MENU_HREFS);
   });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NotificationBell } from "@/components/notification-bell";
 import { SectionMenu } from "@/components/section-menu";
+import { SectionNav } from "@/components/section-nav";
 import { UserAvatar } from "@/components/user-avatar";
 import { WorldToggle } from "@/components/world-toggle";
 import { isSetupPath } from "@/lib/setup-paths";
@@ -37,16 +38,24 @@ export function SiteHeader() {
           <span className="brand-name">SharpEyes</span>
         </Link>
 
-        {/* Sections open from a hamburger just right of the brand. Signed-in only: they are
-            account views. */}
+        {/* The sections, just right of the brand: listed, or behind a hamburger on a narrow
+            header. Signed-in only: they are account views. */}
         {!isLoaded && (
-          <div className="section-menu header-reserved" aria-hidden="true">
-            <div className="section-menu-btn is-reserved">
-              <span className="section-menu-icon" />
+          <div className="sections header-reserved" aria-hidden="true">
+            <SectionNav reserved />
+            <div className="section-menu">
+              <div className="section-menu-btn is-reserved">
+                <span className="section-menu-icon" />
+              </div>
             </div>
           </div>
         )}
-        {isSignedIn && <SectionMenu />}
+        {isSignedIn && (
+          <div className="sections">
+            <SectionNav />
+            <SectionMenu />
+          </div>
+        )}
 
         {/* Which world everything below is answering for. */}
         {isSignedIn && <WorldToggle />}

@@ -24,6 +24,26 @@ describe("section menu indentation survives the cascade", () => {
   });
 });
 
+describe("the header lists the sections or the hamburger, never both", () => {
+  it("hides the listed sections after the rule that shows them", () => {
+    // Shipped once with the hide first: `.section-nav { display: flex }` won and a narrow header
+    // drew the list and the hamburger side by side, overflowing the bar.
+    const shown = css.indexOf(".section-nav {");
+    const hidden = /@media \(width <= (\d+)px\) \{\s*\.section-nav \{\s*display: none;/.exec(css);
+    expect(shown).toBeGreaterThan(-1);
+    expect(hidden?.index).toBeGreaterThan(shown);
+  });
+
+  it("swaps them at the same width", () => {
+    const hide = /@media \(width <= (\d+)px\) \{\s*\.section-nav \{/.exec(css)?.[1];
+    const show = /@media \(width > (\d+)px\) \{\s*\.section-menu \{\s*display: none;/.exec(
+      css,
+    )?.[1];
+    expect(hide).toBeDefined();
+    expect(hide).toBe(show);
+  });
+});
+
 describe("the wait for a page that has been asked for", () => {
   // The delay is the design, not a tuning knob: a prefetched route commits in single-figure ms, so
   // without it every navigation would flash the bar and dim the page for a frame. Dropping it
