@@ -17,6 +17,7 @@ import {
   HistoryDialog,
   LedgerHead,
   ShareRows,
+  type ShareLine,
   UnsettledAmounts,
 } from "@/components/ledger-card";
 import { ArmedRemove } from "@/components/settlement-ledger";
@@ -131,7 +132,25 @@ function SharedCardView({
       : (coupon.name ?? "Coupons");
   const history =
     detail.owe.length > 0 || detail.paid.length > 0 || detail.theyOweEntered.length > 0;
-  const open = youHold > 0 || theyHold > 0 || detail.theyOwe.length > 0;
+  const open =
+    youHold > 0 ||
+    theyHold > 0 ||
+    detail.theyOwe.length > 0 ||
+    card.piecesOwe > 0 ||
+    card.piecesOwed > 0;
+  // Coupons in a side's hands, under that side and in the owner card's words. Money only up top: one
+  // line carrying two units read as though they could be added.
+  const couponsHeld = (pieces: number, words: string): ShareLine[] =>
+    pieces > 0
+      ? [
+          {
+            key: "coupons",
+            iconUrl: coupon.iconUrl,
+            name: coupon.name ?? "Coupons",
+            money: `${formatPieces(pieces)} ${words}`,
+          },
+        ]
+      : [];
 
   return (
     <section className="changed-by-anchor ledger-card" id={cardAnchor(card.personId)}>
@@ -148,12 +167,6 @@ function SharedCardView({
             {card.owe > 0 && <span>{`you owe ${formatMesos(card.owe, true)}`}</span>}
             {card.usd.owed > 0 && <span>{`${formatDollars(card.usd.owed)} owed`}</span>}
             {card.usd.owe > 0 && <span>{`you owe ${formatDollars(card.usd.owe)}`}</span>}
-            {card.piecesOwed > 0 && (
-              <span>{`${formatPieces(card.piecesOwed)} of your coupons`}</span>
-            )}
-            {card.piecesOwe > 0 && (
-              <span>{`${formatPieces(card.piecesOwe)} of their coupons`}</span>
-            )}
           </>
         }
       />
@@ -182,8 +195,9 @@ function SharedCardView({
 
       {open && (
         <UnsettledAmounts>
-          {(youHold > 0 || sendable.length > 0) && (
+          {(youHold > 0 || sendable.length > 0 || card.piecesOwe > 0) && (
             <HeldBy label="Held by You" mesos={youHold}>
+              <ShareRows lines={couponsHeld(card.piecesOwe, "to hand over")} />
               <ShareRows
                 lines={sendable.map((part) => ({
                   key: part.key,
@@ -199,8 +213,9 @@ function SharedCardView({
               />
             </HeldBy>
           )}
-          {(theyHold > 0 || detail.theyOwe.length > 0) && (
+          {(theyHold > 0 || detail.theyOwe.length > 0 || card.piecesOwed > 0) && (
             <HeldBy label={`Held by ${card.name}`} mesos={theyHold}>
+              <ShareRows lines={couponsHeld(card.piecesOwed, "owed")} />
               <ShareRows
                 lines={detail.theyOwe.map((line) => ({
                   key: `${line.lootId}:${line.theirsId}`,
