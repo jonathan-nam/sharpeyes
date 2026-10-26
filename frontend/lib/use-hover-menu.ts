@@ -3,9 +3,10 @@ import { type PointerEvent, type RefObject, useEffect, useRef, useState } from "
 import { useDismiss } from "@/lib/use-dismiss";
 
 // Hover opens after a short rest, so sweeping across the header does not flash every menu on the
-// way, and closes after a grace that covers the gap between the button and its panel.
+// way. The close grace only forgives an overshoot: the gap down to the panel is bridged in CSS
+// (`.section-menu-panel::before`). 250ms read as the menu lagging behind the mouse.
 const HOVER_OPEN_MS = 80;
-const HOVER_CLOSE_MS = 250;
+const HOVER_CLOSE_MS = 100;
 
 export type OpenedBy = "hover" | "click" | null;
 
