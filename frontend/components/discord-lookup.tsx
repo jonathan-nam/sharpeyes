@@ -22,7 +22,7 @@ export type DiscordLookupState = "idle" | "failed" | "none" | DiscordFound;
 const LOOKUP_DELAY_MS = 300;
 
 /**
- * Whose account [value] reaches, asked as it is typed. Social's Send Request and Edit People's Link
+ * Whose account [value] reaches, asked as it is typed. Social's Send Request and People's Link
  * Account share it, with the box below, so a request goes to the person meant.
  */
 export function useDiscordLookup(value: string): DiscordLookupState {

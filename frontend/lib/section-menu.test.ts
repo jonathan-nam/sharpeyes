@@ -1,10 +1,10 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { activeHref, HOME_ROWS, HREFS, MENU_HREFS, SECTIONS, sectionsFor } from "./section-menu";
+import { activeHref, HOME_ROWS, HREFS, SECTIONS, sectionsFor } from "./section-menu";
 
 const listedFor = (trades: boolean | undefined) =>
-  sectionsFor(trades).flatMap((s) => s.items.filter((i) => !i.hidden).map((i) => i.href));
+  sectionsFor(trades).flatMap((s) => s.items.map((i) => i.href));
 
 const labelFor = (pathname: string) =>
   SECTIONS.flatMap((s) => s.items).find((i) => i.href === activeHref(pathname))?.label;
@@ -46,12 +46,9 @@ describe("which section a path belongs to", () => {
     expect(labelFor("/bosses/drops")).not.toBe("Party View");
   });
 
-  it("does NOT light Individual View for People", () => {
-    // The trap this file is here for. People was dropped from the menu; without a hidden entry
-    // holding its path, the longest match falls back to /bosses and the hamburger claims you are
-    // on Individual View. Nothing errors, it just says something untrue.
-    expect(activeHref("/bosses/people")).toBe("/bosses/people");
-    expect(labelFor("/bosses/people")).not.toBe("Individual View");
+  it("lights nothing on Social, which is not a section", () => {
+    // Off the menu entirely, so no prefix of it may claim it either.
+    expect(activeHref("/social/people")).toBeUndefined();
   });
 
   it("has nothing to light for a path outside every section", () => {
@@ -62,18 +59,11 @@ describe("which section a path belongs to", () => {
 
 describe("what the menu lists", () => {
   it("leaves the pages reached from Party View off the list", () => {
-    expect(MENU_HREFS).not.toContain("/bosses/parties/edit");
-    expect(MENU_HREFS).not.toContain("/bosses/people");
-  });
-
-  it("still routes the hidden ones", () => {
-    // Listed and routed are different sets, and the hidden entry has to stay in the second.
-    expect(HREFS).toContain("/bosses/people");
-    expect(HREFS.length).toBeGreaterThan(MENU_HREFS.length);
+    expect(HREFS).not.toContain("/bosses/parties/edit");
   });
 
   it("lists the sections a person navigates between", () => {
-    expect(MENU_HREFS).toEqual([
+    expect(HREFS).toEqual([
       "/characters",
       "/bosses",
       "/bosses/parties",
@@ -118,10 +108,9 @@ describe("what the welcome-back screen offers", () => {
   });
 
   it("offers nothing the menu does not list", () => {
-    // A button to a hidden page would be the only door to it, which is not what this screen is.
     for (const row of HOME_ROWS) {
       for (const href of [row.href, ...row.items.map((i) => i.href)]) {
-        if (href) expect(MENU_HREFS).toContain(href);
+        if (href) expect(HREFS).toContain(href);
       }
     }
   });
@@ -144,8 +133,8 @@ describe("what an account with nothing to trade is offered", () => {
     // Unknown draws the full menu on purpose. The panel does not mount until the hamburger is
     // clicked, which is almost always after /api/settings has answered, and an entry that appears
     // a moment later is better than one that flickers away.
-    expect(listedFor(true)).toEqual(MENU_HREFS);
-    expect(listedFor(undefined)).toEqual(MENU_HREFS);
+    expect(listedFor(true)).toEqual(HREFS);
+    expect(listedFor(undefined)).toEqual(HREFS);
   });
 
   it("keeps the Bossing heading, which still has entries under it", () => {
@@ -164,37 +153,5 @@ describe("every destination can be shown before it has loaded", () => {
     const dir = join(__dirname, "..", "app", ...href.split("/").filter(Boolean));
     expect(existsSync(join(dir, "page.tsx"))).toBe(true);
     expect(existsSync(join(dir, "loading.tsx"))).toBe(true);
-  });
-});
-
-describe("every hidden entry has a way in", () => {
-  // A hidden entry is not on the hamburger, so a link on some other page is its ONLY door. Deleting
-  // that link breaks no build and fails no route test, it just leaves a page nothing reaches. The
-  // page's own files are excluded, or its back link would count as the way in.
-  const HIDDEN = HREFS.filter((href) => !MENU_HREFS.includes(href));
-
-  const tsxUnder = (dir: string): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) return tsxUnder(path);
-      return entry.name.endsWith(".tsx") ? [path] : [];
-    });
-
-  const sources = [join(__dirname, "..", "app"), join(__dirname, "..", "components")]
-    .flatMap(tsxUnder)
-    .map((path) => ({ path, text: readFileSync(path, "utf8") }));
-
-  it("has hidden entries to check", () => {
-    // The guard below passes trivially on an empty list, and the list is derived.
-    expect(HIDDEN.length).toBeGreaterThan(0);
-  });
-
-  it.each(HIDDEN)("is linked from another page: %s", (href) => {
-    const own = join(__dirname, "..", "app", ...href.split("/").filter(Boolean));
-    const linked = sources
-      .filter((file) => !file.path.startsWith(own))
-      .filter((file) => file.text.includes(`href="${href}"`))
-      .map((file) => file.path);
-    expect(linked).not.toEqual([]);
   });
 });

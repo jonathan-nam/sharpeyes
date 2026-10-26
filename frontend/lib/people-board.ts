@@ -202,12 +202,22 @@ export function contestedOffCard(row: PersonDraft): string[] {
  * The rows split by whether they sign in as an account of their own, each keeping its index in
  * [people], which is what every edit is addressed by. A section with nobody in it is left out.
  */
-export function sectionsOf(
-  people: PersonDraft[],
-): { title: "Verified" | "Unverified"; rows: { row: PersonDraft; index: number }[] }[] {
+export function sectionsOf(people: PersonDraft[]): {
+  id: "on-sharpeyes" | "not-on-sharpeyes";
+  title: string;
+  rows: { row: PersonDraft; index: number }[];
+}[] {
   const indexed = people.map((row, index) => ({ row, index }));
   return [
-    { title: "Verified" as const, rows: indexed.filter(({ row }) => row.linked) },
-    { title: "Unverified" as const, rows: indexed.filter(({ row }) => !row.linked) },
+    {
+      id: "on-sharpeyes" as const,
+      title: "On SharpEyes",
+      rows: indexed.filter(({ row }) => row.linked),
+    },
+    {
+      id: "not-on-sharpeyes" as const,
+      title: "Not on SharpEyes",
+      rows: indexed.filter(({ row }) => !row.linked),
+    },
   ].filter((section) => section.rows.length > 0);
 }

@@ -1632,6 +1632,89 @@ img.user-avatar-img {
   margin: 0 0 24px;
 }
 
+/* Social's pages, then each page's sections: a row above them, a sticky column beside them once
+   there is room. The scroll margin is section-nav.tsx's REACHED_PX. */
+.social-tabs {
+  margin-bottom: 20px;
+}
+
+.social-tabs > a {
+  text-decoration: none;
+}
+
+.social-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.social-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.social-toc a {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.social-toc a:hover,
+.social-toc a.active {
+  color: var(--ink-strong);
+}
+
+.social-toc a.active {
+  font-weight: 600;
+}
+
+.social-toc-count {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.social-body {
+  min-width: 0;
+}
+
+.social-section {
+  scroll-margin-top: 24px;
+}
+
+.social-section > h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (min-width: 900px) {
+  .social-layout {
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .social-toc {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+
+  .social-toc a {
+    padding: 5px 10px;
+    border-radius: var(--radius-md);
+  }
+
+  .social-toc a.active {
+    background: var(--surface);
+  }
+}
+
 .hero {
   margin: 48px auto;
   text-align: center;

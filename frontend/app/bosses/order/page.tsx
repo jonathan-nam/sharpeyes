@@ -763,10 +763,10 @@ export default function RunOrderPage() {
               standing in that row would read as one more person to toggle.
 
               The link sits with the roster rather than the page title because these are the names it
-              is about, and Edit People is the page that says whose each character is. */}
+              is about, and People is the page that says whose each character is. */}
           <div className="night-heading-row">
             <h2 className="night-heading">Party Members</h2>
-            <ButtonLink variant="secondary" href="/bosses/people">
+            <ButtonLink variant="secondary" href="/social/people">
               Edit People
             </ButtonLink>
           </div>
