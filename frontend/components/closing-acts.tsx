@@ -14,6 +14,8 @@ import type { SettlementListing } from "@/types/settlement-listing";
 //   the side owed gets Mark X Received and Post Listing, and Offset the other way round;
 //   an even pair gets Mark Settled;
 //   every one of them settles all four pots both ways, in one write.
+// And one that settles a single pot (2026-10-26): the side owed, holding the other's coupon money
+// while the other also owes it outside the pots, may keep that money as an Offset on its own.
 
 export type CloseKind = "OFFSET" | "PAID";
 
@@ -67,10 +69,22 @@ export type ClosingListings = {
   remove: () => void;
 };
 
+/** [net] cut to the coupon money you hold, which is all a keep settles. */
+export const heldOnly = (net: ClosingNet): ClosingNet => ({
+  ...net,
+  mesos: net.holding,
+  sharesYouOwe: [],
+  sharesTheyOwe: [],
+  heldByThem: 0,
+  usdYouOwe: 0,
+  usdTheyOwe: 0,
+});
+
 export function closingActs({
   net,
   name,
   detail,
+  heldDetail = null,
   close,
   listings,
 }: {
@@ -79,7 +93,10 @@ export function closingActs({
   name: string;
   /** The drops and coupons the press covers, one line. */
   detail: string | null;
-  close: (kind: CloseKind) => void;
+  /** The coupon money you hold, one line, for the act that keeps it. */
+  heldDetail?: string | null;
+  /** [scope] narrows what the press settles; every act but the keep settles the whole of [net]. */
+  close: (kind: CloseKind, scope?: ClosingNet) => void;
   listings?: ClosingListings;
 }): ClosingAct[] {
   if (!net.open) return [];
@@ -128,5 +145,21 @@ export function closingActs({
           onClick: listings.post,
         }
       : null;
-  return [...(offsetFits ? [offset] : []), press, ...(listing ? [listing] : [])];
+  // Their coupon money in your hands, kept and taken off what they owe you, while the rest still
+  // crosses. Where you owe net, the Offset above already takes it with everything else.
+  const keep: ClosingAct | null =
+    net.payer !== "YOU" && net.holding > 0 && net.enteredBalance > 0
+      ? {
+          key: "keep",
+          label: `Offset ${formatMesos(net.holding, true)}`,
+          detail: heldDetail,
+          onClick: () => close("OFFSET", heldOnly(net)),
+        }
+      : null;
+  return [
+    ...(offsetFits ? [offset] : []),
+    ...(keep ? [keep] : []),
+    press,
+    ...(listing ? [listing] : []),
+  ];
 }
