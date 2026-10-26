@@ -51,7 +51,7 @@ private suspend fun RoutingContext.listLoot() {
     val loot =
         dbQuery {
             ensureUser(userId, email)
-            if (!canReadParty(partyId, userId)) null else lootFor(partyId, userId)
+            if (!canReadParty(partyId, userId)) null else lootFor(partyId, userId).readBy(userId, partyId)
         }
     if (loot == null) call.respond(HttpStatusCode.NotFound) else call.respond(loot)
 }

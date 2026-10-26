@@ -58,6 +58,7 @@ internal suspend fun RoutingContext.logDropRoute() {
                     "send exactly one of dropKey or customName"
                 request.dropKey != null && dropId == null -> "unknown dropKey"
                 quantityRefusal(request.quantity) != null -> quantityRefusal(request.quantity)
+                joinedPartyRefusal(characterId, bossId) != null -> joinedPartyRefusal(characterId, bossId)
                 else -> {
                     val existing = partyIdFor(characterId, bossId)
                     // A character clears a boss once a period, so opening a solo pool for one it
@@ -89,6 +90,21 @@ internal suspend fun RoutingContext.logDropRoute() {
         }
     respondToLoot(outcome, HttpStatusCode.Created)
 }
+
+/**
+ * Why a drop on [characterId]'s [bossId] belongs on a party somebody else owns, or null. Filed there
+ * as a run with nobody else it would divide by THEIR character's seat (see ranWith), and a solo pool
+ * of your own would count the night twice, so it is logged on the party, where the seats are named.
+ */
+private fun joinedPartyRefusal(
+    characterId: Uuid,
+    bossId: Uuid,
+): String? =
+    if (partyIdFor(characterId, bossId) == null && seatedPartyFor(characterId, bossId) != null) {
+        "This boss is in a party you joined. Add the drop on that party."
+    } else {
+        null
+    }
 
 private fun addSoloDrop(
     partyId: Uuid,

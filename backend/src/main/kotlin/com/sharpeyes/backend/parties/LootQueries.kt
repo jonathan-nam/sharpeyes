@@ -163,8 +163,9 @@ internal fun lootFor(
     val ranByLoot = ranThatWeekFor(rows, weekRosters)
     val sharesByLoot = sharesThatWeekFor(rows, weekRosters)
     val bundlesByLoot = bundlesFor(rows.map { it[PartyLoot.id] })
-    val mine = ownSeatsIn(rows.map { it[PartyLoot.partyId] }.distinct())
     val owner = Party.selectAll().where { Party.id eq partyId }.single()[Party.userId]
+    // Whose side "paid out" is reckoned from: a member's own seats in a party they do not own.
+    val mine = readerSeatsIn(listOf(partyId), viewer ?: owner)
     val names = loggerNames(viewer ?: owner, rows.map { it[PartyLoot.recordedByUserId] ?: owner })
     return rows.map {
         it

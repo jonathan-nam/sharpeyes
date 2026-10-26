@@ -246,7 +246,9 @@ private suspend fun RoutingContext.savePartyRoute(
                 val (request, invitees) = typed.inviting(keeper, partyId)
                 // The row's kind, not the request's: oneOff is read at create only, so an edit
                 // leaves it as it was.
-                val problem = validateSavedParty(keeper, partyId, request, now, isOneOff(partyId))
+                val problem =
+                    memberInviteRefusal(userId, keeper, invitees)
+                        ?: validateSavedParty(keeper, partyId, request, now, isOneOff(partyId))
                 if (problem != null) {
                     problem
                 } else {
@@ -301,7 +303,8 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
             val asking = weekInvites(keeper, partyId, request.members)
             val named = asking.named
             val problem =
-                validateRosterWeek(partyId, week, thisWeek)
+                memberInviteRefusal(userId, keeper, asking.invitees)
+                    ?: validateRosterWeek(partyId, week, thisWeek)
                     ?: validateRosterClear(partyId, named)
                     ?: named?.let { members ->
                         validateMembers(members)

@@ -358,4 +358,33 @@ class PartyMemberWritesTest {
             assertTrue(seatedPoolsFor(stranger).isEmpty())
         }
     }
+
+    @Test
+    fun `a member reads a joined pool from when they were linked, and counts it from their own seats`() {
+        transaction {
+            val party = shared()
+            Person.update({ Person.userId eq owner }) { it[sharedFrom] = night.plus(1, DateTimeUnit.DAY) }
+            drop(party)
+            val after = drop(party, on = night.plus(7, DateTimeUnit.DAY), key = "grindstone-of-life")
+            assertTrue(seatedPoolsFor(member).single().loot.map { it.id } == listOf(after.toString()))
+            assertTrue(lootFor(id(party), member).readBy(member, id(party)).size == 1)
+            // The owner reads all of it.
+            assertTrue(lootFor(id(party), owner).readBy(owner, id(party)).size == 2)
+            assertTrue(readerSeatsIn(listOf(id(party)), member) == setOf(seatId(party, "Pinewick")))
+            assertTrue(readerSeatsIn(listOf(id(party)), owner) == setOf(seatId(party, "tidelark")))
+        }
+    }
+
+    @Test
+    fun `only the owner invites, and a member's Drop Log drop is sent to the party`() {
+        transaction {
+            val party = shared()
+            val friend = listOf(Invitee("Quillon", Uuid.random()))
+            assertNotNull(memberInviteRefusal(member, owner, friend))
+            assertNull(memberInviteRefusal(owner, owner, friend))
+            assertNull(memberInviteRefusal(member, owner, emptyList()))
+            val pinewick = Characters.selectAll().where { Characters.userId eq member }.single()[Characters.id]
+            assertTrue(seatedPartyFor(pinewick, bossIdForKey("kalos-the-guardian")!!) == id(party))
+        }
+    }
 }

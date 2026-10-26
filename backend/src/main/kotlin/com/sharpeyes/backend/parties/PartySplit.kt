@@ -19,8 +19,8 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-// The standing split, written by anybody in the party. It is a deal between the seats, so it is not
-// the owner's alone the way the roster is: PUT /{id} stays owner-only and this touches nothing else.
+// The standing split alone, written by anybody in the party. It is a deal between the seats; this
+// touches nothing else of the config.
 
 /** Why [shares] cannot be the split of a party whose standing seats take [standing], or null. */
 internal fun splitRefusal(
