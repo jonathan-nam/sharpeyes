@@ -30,6 +30,7 @@
 #
 # ./scripts/sync-prod-to-dev-test.sh proves the scoping keeps nobody else, on a throwaway database.
 set -euo pipefail
+shopt -s extglob
 
 MAX_ACCOUNTS=2
 CONFIRMED=no
@@ -162,6 +163,20 @@ for t in $TABLES; do DUMP_TABLES+=(-t "public.$t"); done
 scratch_psql -c "SELECT format('UPDATE users SET world_type = %L, main_character_id = %L WHERE id = %L;',
   world_type, main_character_id, id) FROM users" >"$WORK/settings.sql"
 
+# Every key in the copy, so dev's row with the same key is deleted first and prod's lands instead.
+for t in $TABLES; do
+  cols="$(scratch_psql -c "SELECT string_agg(quote_ident(a.attname), ',' ORDER BY k.ord)
+    FROM pg_index i CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(att, ord)
+    JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.att
+    WHERE i.indrelid = 'public.$t'::regclass AND i.indisprimary")"
+  if [ -z "$cols" ]; then
+    echo "$t has no primary key, so its rows cannot be matched against dev's." >&2
+    exit 1
+  fi
+  scratch_psql -c "SELECT 'DELETE FROM public.$t WHERE ($cols) IN ('
+    || string_agg(format('(${cols//+([^,])/%L})', $cols), ',') || ');' FROM public.$t HAVING count(*) > 0"
+done >"$WORK/collisions.sql"
+
 echo "==> loading into dev (one transaction)"
 {
   cat scripts/sync-prod-to-dev-sweep.sql
@@ -169,7 +184,9 @@ echo "==> loading into dev (one transaction)"
   echo "COPY sync_expected FROM STDIN;"
   cat "$WORK/expected.tsv"
   echo '\.'
-  sed -n '/^-- @expected$/,/^-- @data$/{/^-- @/!p}' scripts/sync-prod-to-dev-load.sql
+  sed -n '/^-- @expected$/,/^-- @collisions$/{/^-- @/!p}' scripts/sync-prod-to-dev-load.sql
+  cat "$WORK/collisions.sql"
+  sed -n '/^-- @collisions$/,/^-- @data$/{/^-- @/!p}' scripts/sync-prod-to-dev-load.sql
   cat "$WORK/data.sql"
   echo "SET search_path = public;"
   cat "$WORK/settings.sql"

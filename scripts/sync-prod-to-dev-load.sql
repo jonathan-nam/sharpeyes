@@ -52,6 +52,14 @@ BEGIN
         removed, pg_temp.sweep_orphans(true);
 END $$;
 
+-- Prod wins: a dev row with the same key as one in the copy, whoever holds it (an older copy of the
+-- same prod data, usually), is deleted here so the copy's row can land.
+-- @collisions
+DO $$
+BEGIN
+    RAISE NOTICE 'and % rows that hung off rows the copy replaces', pg_temp.sweep_orphans(true);
+END $$;
+
 CREATE TEMP TABLE sync_before AS SELECT tbl, 0::BIGINT AS n FROM sync_expected;
 DO $$
 DECLARE r RECORD; rows_now BIGINT;
