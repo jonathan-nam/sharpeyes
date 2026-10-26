@@ -7,15 +7,27 @@ import { useDismiss } from "@/lib/use-dismiss";
 const HOVER_OPEN_MS = 80;
 const HOVER_CLOSE_MS = 250;
 
+export type OpenedBy = "hover" | "click" | null;
+
 /**
- * A header menu that opens on a mouse resting on it, or on a click.
+ * What a menu is after each event.
  *
- * A hovered menu closes when the mouse leaves; a clicked one stays until dismissed. Clicking a menu
- * hover already opened pins it rather than closing what the user reached for. Touch is click only:
- * a tap fires pointerenter just before its click, which would open and then toggle.
+ * The mouse leaving closes it however it was opened. Clicked menus were once kept open, and since
+ * hover opens a menu before a click can land, nearly every mouse click pinned one that then never
+ * retracted. A click on a hovered menu keeps it open rather than closing what the user reached for.
+ */
+export function menuAfter(by: OpenedBy, event: "enter" | "leave" | "click"): OpenedBy {
+  if (event === "enter") return by ?? "hover";
+  if (event === "leave") return null;
+  return by === "click" ? null : "click";
+}
+
+/**
+ * A header menu that opens on a mouse resting on it, or on a click. Touch is click only: a tap
+ * fires pointerenter just before its click, which would open and then toggle.
  */
 export function useHoverMenu(ref: RefObject<HTMLElement | null>) {
-  const [openedBy, setOpenedBy] = useState<"hover" | "click" | null>(null);
+  const [openedBy, setOpenedBy] = useState<OpenedBy>(null);
   const open = openedBy !== null;
   const close = () => setOpenedBy(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -41,19 +53,23 @@ export function useHoverMenu(ref: RefObject<HTMLElement | null>) {
     close,
     toggle() {
       clearTimeout(timer.current);
-      setOpenedBy((by) => (by === "click" ? null : "click"));
+      setOpenedBy((by) => menuAfter(by, "click"));
     },
     hover: {
       onPointerEnter(e: PointerEvent) {
         if (e.pointerType !== "mouse") return;
         clearTimeout(timer.current);
-        if (!open) timer.current = setTimeout(() => setOpenedBy("hover"), HOVER_OPEN_MS);
+        if (!open)
+          timer.current = setTimeout(
+            () => setOpenedBy((by) => menuAfter(by, "enter")),
+            HOVER_OPEN_MS,
+          );
       },
       onPointerLeave(e: PointerEvent) {
         if (e.pointerType !== "mouse") return;
         clearTimeout(timer.current);
         timer.current = setTimeout(
-          () => setOpenedBy((by) => (by === "hover" ? null : by)),
+          () => setOpenedBy((by) => menuAfter(by, "leave")),
           HOVER_CLOSE_MS,
         );
       },
