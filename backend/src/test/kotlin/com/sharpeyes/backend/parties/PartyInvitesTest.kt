@@ -3,6 +3,7 @@ package com.sharpeyes.backend.parties
 import com.sharpeyes.api.parties.PersonRequest
 import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.api.parties.SavePeopleRequest
+import com.sharpeyes.backend.bosses.weekOf
 import com.sharpeyes.backend.config.Env
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Notification
@@ -106,7 +107,25 @@ class PartyInvitesTest {
         return createParty(userId, character, kalos, request, now)
     }
 
+    private fun oneOff(
+        userId: String,
+        character: Uuid,
+        members: List<String>,
+    ): Uuid {
+        val request = SavePartyRequest(character.toString(), "kalos-the-guardian", members, oneOff = true)
+        return createParty(userId, character, kalos, request, now)
+    }
+
     private fun invitesTo(partyId: Uuid) = pendingInvitesFor(listOf(partyId))[partyId].orEmpty()
+
+    private fun inviteAndAccept(
+        partyId: Uuid,
+        names: List<String>,
+    ) {
+        val (_, invitees) = splitInvitees(owner, partyId, names)
+        sendInvites(owner, partyId, invitees, now)
+        assertTrue(acceptInvite(member, Uuid.parse(invitesTo(partyId).single().id), now) is InviteAnswer.Joined)
+    }
 
     @Test
     fun `a friend's character is invited rather than seated, and seated on Accept`() {
@@ -133,6 +152,43 @@ class PartyInvitesTest {
             assertTrue(invitesTo(partyId).isEmpty())
             // In the party now, so naming them again seats rather than invites.
             assertTrue(splitInvitees(owner, partyId, listOf("Baldrix", "Pinewick")).second.isEmpty())
+        }
+    }
+
+    // A one-off's party is its night roster, so a friend seated only in the usual one did not run.
+    @Test
+    fun `a friend accepting a one-off runs its night`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            link(owner, "Chris", member)
+            val partyId = oneOff(owner, tide, listOf("Baldrix"))
+
+            inviteAndAccept(partyId, listOf("Baldrix", "Pinewick"))
+            assertEquals(1, PartyMember.selectAll().where { PartyMember.linkedCharacterId eq pine }.count())
+            assertEquals(
+                listOf("tidelark", "Baldrix", "Pinewick"),
+                rosterNamesFor(partyId, weekOf(todayIn(now))),
+            )
+        }
+    }
+
+    // A seat typed before the friendship, or unbound when the party was taken off the lists.
+    @Test
+    fun `accepting binds the seat the character already has`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            val partyId = oneOff(owner, tide, listOf("Pinewick"))
+            link(owner, "Chris", member)
+
+            inviteAndAccept(partyId, listOf("Pinewick"))
+            val seat =
+                PartyMember
+                    .selectAll()
+                    .where { (PartyMember.partyId eq partyId) and (PartyMember.name eq "Pinewick") }
+                    .single()
+            assertEquals(pine, seat[PartyMember.linkedCharacterId])
         }
     }
 
