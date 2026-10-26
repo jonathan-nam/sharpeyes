@@ -49,8 +49,10 @@ describe("a pool somebody else keeps", () => {
     expect(pool).toContain("{(!readOnly || memberSeats(party)) && ( <DropPicker");
   });
 
-  it("states a share as paid rather than offering to change it", () => {
-    expect(row).toContain("{readOnly ? ( <span");
+  it("offers a member Mark Paid only on a share through their own seats, and states the rest", () => {
+    // The server's rule: a share you are owed, or any share of a drop you sold (payoutRefusal). The
+    // party arrives from the member's side (fromYourSide), so crossesYou reads their seats.
+    expect(row).toContain("{readOnly && !crossesYou(share.memberId) ? ( <span");
   });
 
   it("lists a shared party with every config write, its pool read as a member, and no invites", () => {

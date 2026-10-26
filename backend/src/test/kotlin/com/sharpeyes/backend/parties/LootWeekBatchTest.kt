@@ -67,8 +67,10 @@ class LootWeekBatchTest {
             val parties = Party.selectAll().where { Party.userId eq userId }.map { it[Party.id] }
             parties.forEach { id -> PartyWeekSeat.deleteWhere { partyId eq id } }
             parties.forEach { id -> PartyMember.deleteWhere { partyId eq id } }
-            Party.deleteWhere { Party.userId eq userId }
-            Characters.deleteWhere { Characters.userId eq userId }
+            // A local, never the property: inside deleteWhere {} a bare `userId` is the table's column.
+            val owner = userId
+            Party.deleteWhere { Party.userId eq owner }
+            Characters.deleteWhere { Characters.userId eq owner }
         }
     }
 

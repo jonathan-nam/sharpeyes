@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import { announceInvites } from "@/lib/invite-notice";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
-import { asYourRow, ownersRoster } from "@/lib/shared-parties";
+import { asYourRow, ownersRoster } from "@/lib/parties/member-view";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { invalidate, peek, put, storedAt } from "@/lib/cache";
 import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
@@ -277,6 +277,7 @@ export default function PartiesPage() {
   useLive(["clears", "loot", "party"], () => {
     void loadWeek(week, { clearsOptional: true }).catch(() => {});
     void refetchPools().catch(() => {});
+    void refreshSeatedPools().catch(() => {});
   });
 
   async function selectWeek(target: string | null) {
@@ -448,7 +449,7 @@ export default function PartiesPage() {
         getToken,
       );
       if (party.yours === false) {
-        await loadWeek(null);
+        await Promise.all([loadWeek(null), refreshSeatedPools()]);
         return;
       }
       // Both lists: the shares are on the party, and every pool row's entitlement is read against
@@ -1022,7 +1023,8 @@ export default function PartiesPage() {
               <AddForWeek
                 characters={characters}
                 bosses={bosses}
-                parties={parties}
+                // With the ones you sit in, which hold that boss for the character too.
+                parties={[...parties, ...sharedRows]}
                 busy={isSaving(ADD_FOR_WEEK)}
                 error={addError}
                 onAdd={addOneOff}

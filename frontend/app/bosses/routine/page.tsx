@@ -12,12 +12,13 @@ import { nextSkips } from "@/lib/boss-clears";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { partiedBossKeys } from "@/lib/parties";
+import { asYourRow } from "@/lib/parties/member-view";
 import { preloadBossArt } from "@/lib/preload-boss-art";
 import { useRowWrites } from "@/lib/use-row-writes";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
-import type { Party, SoloDifficultyBody } from "@/types/party";
+import type { Party, SeatedParty, SoloDifficultyBody } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -30,6 +31,8 @@ const PARTIES_KEY = "/api/parties?solo=include";
 const DROPS_KEY = "/api/bosses/drops";
 const ROUTINE_KEY = "/api/bosses/routine";
 const SOLO_KEY = "/api/parties/solo";
+// Parties somebody else owns that your characters sit in. They hold a boss for the character too.
+const SEATED_KEY = "/api/parties/seated";
 
 // Which bosses each character runs, one character at a time.
 //
@@ -47,6 +50,7 @@ export default function BossRoutinePage() {
     peek<Character[]>(CHARACTERS_KEY) ?? [],
   );
   const [parties, setParties] = useState<Party[]>(peek<Party[]>(PARTIES_KEY) ?? []);
+  const [seated, setSeated] = useState<SeatedParty[]>(peek<SeatedParty[]>(SEATED_KEY) ?? []);
   const [dropTables, setDropTables] = useState<DropTables>(peek<DropTables>(DROPS_KEY) ?? {});
   const [view, setView] = useState<BossClearsView | null>(peek<BossClearsView>(CLEARS_KEY) ?? null);
   const [state, setState] = useState<LoadState>("loading");
@@ -74,9 +78,10 @@ export default function BossRoutinePage() {
           apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, withToken),
           apiFetch<BossClearsView>(CLEARS_KEY, { method: "GET" }, withToken),
           apiFetch<DropTables>(DROPS_KEY, { method: "GET" }, withToken),
+          apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, withToken).catch(() => null),
         ]);
       })
-      .then(([bossResult, characterResult, partyResult, viewResult, dropResult]) => {
+      .then(([bossResult, characterResult, partyResult, viewResult, dropResult, seatedResult]) => {
         setBosses(bossResult);
         setCharacters(characterResult);
         setParties(partyResult);
@@ -87,6 +92,11 @@ export default function BossRoutinePage() {
         put(PARTIES_KEY, partyResult);
         put(CLEARS_KEY, viewResult);
         put(DROPS_KEY, dropResult);
+        if (seatedResult) {
+          const present = seatedResult.filter((row) => row.party);
+          setSeated(present);
+          put(SEATED_KEY, present);
+        }
         // Open on the first character rather than on a prompt to choose one, like Edit parties.
         setSelected((current) => current ?? characterResult[0]?.id ?? null);
         setState("loaded");
@@ -165,9 +175,10 @@ export default function BossRoutinePage() {
   const character = characters.find((c) => c.id === selected) ?? null;
   // A party config for this character and boss already says they run it, so the box is locked
   // rather than refused after the fact. See partiedBossKeys and BossRoutineEditor.
-  const lockedBossKeys = partiedBossKeys(parties, selected ?? "");
+  const everyParty = [...parties, ...seated.map(asYourRow)];
+  const lockedBossKeys = partiedBossKeys(everyParty, selected ?? "");
   const difficultyByBoss = new Map(
-    parties.filter((p) => p.characterId === selected).map((p) => [p.bossKey, p.difficulty]),
+    everyParty.filter((p) => p.characterId === selected).map((p) => [p.bossKey, p.difficulty]),
   );
 
   return (
