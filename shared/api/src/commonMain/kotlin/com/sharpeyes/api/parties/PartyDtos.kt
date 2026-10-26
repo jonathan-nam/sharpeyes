@@ -267,6 +267,15 @@ data class SavePartyRequest(
 )
 
 /**
+ * PUT /api/parties/{id}/shares. The standing split alone, keyed by seat id, which any member may set.
+ * A seat left out keeps what it takes.
+ */
+@Serializable
+data class SaveSharesRequest(
+    val shares: Map<String, Int> = emptyMap(),
+)
+
+/**
  * The whole people list, every time.
  *
  * A full replace, because it is one screen you edit as a whole. A person absent from the payload

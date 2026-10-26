@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import { announceInvites } from "@/lib/invite-notice";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
-import { asYourRow } from "@/lib/shared-parties";
+import { asYourRow, ownersRoster } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { invalidate, peek, put, storedAt } from "@/lib/cache";
 import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
@@ -65,6 +65,7 @@ import type {
   Party,
   Person,
   SavePartyBody,
+  SaveSharesBody,
   SaveWeekRosterBody,
   SeatedParty,
   SetPartySkipBody,
@@ -419,43 +420,29 @@ export default function PartiesPage() {
   }
 
   /**
-   * Changes how this party splits its coupons, tonight's included.
+   * Changes how this party splits its coupons, tonight's included. Any member may, so a party you
+   * only sit in saves the same way as one of yours.
    *
-   * Through the party's own save, which is the one route that writes a standing share, so the
-   * server pins the weeks this is not the deal for before the new value lands: the ones that are
-   * over, and the ones a sale has already been paid on. See pinWeeksAlreadyWritten, which keys that
-   * off the BOSS's period and is the only thing that decides it. Without it, a new deal re-divides
-   * July's outstanding coupons and tells nobody.
-   *
-   * Keyed by NAME because that is what SavePartyBody takes, and it carries the party's existing
-   * difficulty, minutes and looter: the route writes all of them, so sending the shares alone would
-   * quietly clear the rest.
+   * The server pins the weeks this is not the deal for before the new value lands: the ones that are
+   * over, and the ones a sale has already been paid on. See pinWeeksAlreadyWritten. Without it, a new
+   * deal re-divides July's outstanding coupons and tells nobody.
    */
   async function saveShares(party: Party, shares: Map<string, number>) {
-    const byName = new Map(party.members.map((m) => [m.id, m.name]));
-    const named: Record<string, number> = {};
-    for (const [seatId, count] of shares) {
-      const name = byName.get(seatId);
-      if (name) named[name] = count;
-    }
     await write(party.id, async () => {
       await apiFetch<Party>(
-        `${PARTIES_KEY}/${party.id}`,
+        `${PARTIES_KEY}/${party.id}/shares`,
         {
           method: "PUT",
           body: JSON.stringify({
-            characterId: party.characterId,
-            bossKey: party.bossKey,
-            members: party.members
-              .filter((m) => m.characterId !== party.characterId)
-              .map((m) => m.name),
-            difficulty: party.difficulty,
-            minutes: party.minutes,
-            shares: named,
-          } satisfies SavePartyBody),
+            shares: Object.fromEntries(shares),
+          } satisfies SaveSharesBody),
         },
         getToken,
       );
+      if (party.yours === false) {
+        await loadWeek(null);
+        return;
+      }
       // Both lists: the shares are on the party, and every pool row's entitlement is read against
       // them, so a pool left stale would draw the old split under the new one.
       const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
@@ -483,9 +470,7 @@ export default function PartiesPage() {
         getToken,
       );
       announceInvites(saved);
-      const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
-      setEveryParty(refreshed);
-      put(PARTY_LIST_KEY, refreshed);
+      await refreshAfterConfig(party);
     });
   }
 
@@ -508,10 +493,19 @@ export default function PartiesPage() {
         { method: "PUT", body: JSON.stringify({ skipped: true } satisfies SetPartySkipBody) },
         getToken,
       );
-      const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
-      setEveryParty(refreshed);
-      put(PARTY_LIST_KEY, refreshed);
+      await refreshAfterConfig(party);
     });
+  }
+
+  /** The list a config write moved: yours, or the parties you sit in. Live view only. */
+  async function refreshAfterConfig(party: Party) {
+    if (party.yours === false) {
+      await loadWeek(null);
+      return;
+    }
+    const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
+    setEveryParty(refreshed);
+    put(PARTY_LIST_KEY, refreshed);
   }
 
   /**
@@ -798,7 +792,13 @@ export default function PartiesPage() {
   // Parties somebody else owns go through the same rules as your own, filed under your character in
   // them, so the tabs and the counts are one list's. See asYourRow.
   const sharedRows = seated.map(asYourRow);
-  const sharedIds = new Set(sharedRows.map((p) => p.id));
+  const seatedById = new Map(seated.map((row) => [row.party.id, row]));
+  const sharedIds = new Set(seatedById.keys());
+  /** A week's roster as typed on a row, in the shape its config's save reads. See ownersRoster. */
+  const rosterFor = (party: Party, members: string[] | null) => {
+    const row = seatedById.get(party.id);
+    return row && members ? ownersRoster(row, members) : members;
+  };
   const listed = sharedOnly ? sharedRows : [...parties, ...sharedRows];
   const weekly = history
     ? listed.filter((p) => bossByKey.get(p.bossKey)?.reset === WEEKLY_CADENCE)
@@ -871,24 +871,39 @@ export default function PartiesPage() {
   );
 
   /**
-   * A party somebody else owns, as a row among yours. It carries the clear (see toggleSharedClear)
-   * and Add Drop, the two things any seat may write. The pool and the roster are its owner's, so
-   * selling and settling stay on the party's own page. Coupons owed are reckoned over your own
-   * pools, which this is not one of, so the badge is absent rather than claiming none are out.
+   * One config as a row, yours or one you are seated in, so the two cannot offer different controls.
+   * A party somebody else owns leaves out its pool and pile, so selling and settling stay on the
+   * party's own page, and its invites, which are the owner's to send. Coupons owed are reckoned over
+   * your own pools, which it is not one of, so its badge is absent rather than claiming none are out.
    */
-  function sharedCard(party: Party, heading: ReactNode) {
+  function partyCard(party: Party, heading: ReactNode) {
+    const shared = sharedIds.has(party.id);
     return (
       <PartyCard
         key={party.id}
         party={party}
-        clear={clearOf(party)}
-        coupons={NOTHING_OUTSTANDING}
         heading={heading}
         busy={isSaving(party.id)}
-        onToggleClear={history ? undefined : (cleared) => toggleSharedClear(party, cleared)}
+        clear={clearOf(party)}
+        coupons={shared ? NOTHING_OUTSTANDING : (couponsOut.get(party.id) ?? NOTHING_OUTSTANDING)}
+        onToggleClear={
+          history
+            ? undefined
+            : (cleared) => (shared ? toggleSharedClear : toggleClear)(party, cleared)
+        }
         dropTable={dropTables[party.bossKey]}
-        onAddDrop={canAddDrops ? (body) => addSharedDrop(party, body) : undefined}
-        onLeave={history ? undefined : () => leaveShared(party)}
+        onAddDrop={
+          canAddDrops ? (body) => (shared ? addSharedDrop : addDrop)(party, body) : undefined
+        }
+        stacks={stacksFor(party)}
+        pool={shared ? undefined : poolFor(party)}
+        piecePile={shared ? undefined : piecePileFor(party)}
+        onSaveRoster={
+          history ? undefined : (members) => saveRoster(party, rosterFor(party, members))
+        }
+        onTakeOff={history ? undefined : () => takeOff(party)}
+        onWithdrawInvite={shared ? undefined : (inviteId) => withdrawInvite(party, inviteId)}
+        onLeave={shared && !history ? () => leaveShared(party) : undefined}
       />
     );
   }
@@ -902,67 +917,20 @@ export default function PartiesPage() {
    */
   function bossRow(party: Party) {
     const boss = bossByKey.get(party.bossKey);
-    const heading = (
+    return partyCard(
+      party,
       <>
         {boss?.iconUrl && <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />}
         <h3 className="party-row-name">
           {bossLabel(boss?.name ?? party.bossKey, modeThisWeek(party))}
         </h3>
-      </>
-    );
-    if (sharedIds.has(party.id)) return sharedCard(party, heading);
-    return (
-      <PartyCard
-        key={party.id}
-        party={party}
-        busy={isSaving(party.id)}
-        clear={clearOf(party)}
-        coupons={couponsOut.get(party.id) ?? NOTHING_OUTSTANDING}
-        onToggleClear={history ? undefined : (cleared) => toggleClear(party, cleared)}
-        dropTable={dropTables[party.bossKey]}
-        onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
-        pool={poolFor(party)}
-        stacks={stacksFor(party)}
-        piecePile={piecePileFor(party)}
-        onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
-        onTakeOff={history ? undefined : () => takeOff(party)}
-        onWithdrawInvite={(inviteId) => withdrawInvite(party, inviteId)}
-        heading={
-          <>
-            {boss?.iconUrl && (
-              <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />
-            )}
-            <h3 className="party-row-name">
-              {bossLabel(boss?.name ?? party.bossKey, modeThisWeek(party))}
-            </h3>
-          </>
-        }
-      />
+      </>,
     );
   }
 
   /** One config under a boss heading, named by its character, since a boss is the group here. */
   function bossGroupRow(party: Party) {
-    if (sharedIds.has(party.id)) return sharedCard(party, bossGroupHeading(party));
-    return (
-      <PartyCard
-        key={party.id}
-        party={party}
-        busy={isSaving(party.id)}
-        clear={clearOf(party)}
-        coupons={couponsOut.get(party.id) ?? NOTHING_OUTSTANDING}
-        onToggleClear={history ? undefined : (cleared) => toggleClear(party, cleared)}
-        dropTable={dropTables[party.bossKey]}
-        onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
-        pool={poolFor(party)}
-        stacks={stacksFor(party)}
-        piecePile={piecePileFor(party)}
-        onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
-        onTakeOff={history ? undefined : () => takeOff(party)}
-        onWithdrawInvite={(inviteId) => withdrawInvite(party, inviteId)}
-        heading={bossGroupHeading(party)}
-      />
-    );
+    return partyCard(party, bossGroupHeading(party));
   }
 
   /** The by-boss row's heading: the character, and its mode when two of them run the boss. */

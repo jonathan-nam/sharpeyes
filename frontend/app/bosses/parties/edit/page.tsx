@@ -19,11 +19,12 @@ import { useRowWrites } from "@/lib/use-row-writes";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
-import type { Party, Person, SavePartyBody } from "@/types/party";
+import type { Party, Person, SavePartyBody, SeatedParty } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
 const PARTIES_KEY = "/api/parties";
+const SEATED_KEY = "/api/parties/seated";
 const BOSSES_KEY = "/api/bosses";
 const CHARACTERS_KEY = "/api/characters";
 const PEOPLE_KEY = "/api/people";
@@ -43,6 +44,7 @@ export default function EditPartiesPage() {
   const { getToken, isLoaded } = useAuth();
 
   const [parties, setParties] = useState<Party[]>(peek<Party[]>(PARTIES_KEY) ?? []);
+  const [seated, setSeated] = useState<SeatedParty[]>(peek<SeatedParty[]>(SEATED_KEY) ?? []);
   const [bosses, setBosses] = useState<Boss[]>(peek<Boss[]>(BOSSES_KEY) ?? []);
   const [characters, setCharacters] = useState<Character[]>(
     peek<Character[]>(CHARACTERS_KEY) ?? [],
@@ -56,14 +58,18 @@ export default function EditPartiesPage() {
   const { isSaving, write } = useRowWrites();
   const [error, setError] = useState<string | null>(null);
 
+  // Yours and the ones you sit in, which this page edits alike.
   async function loadParties(token?: string | null) {
-    const result = await apiFetch<Party[]>(
-      PARTIES_KEY,
-      { method: "GET" },
-      token !== undefined ? () => Promise.resolve(token) : getToken,
-    );
+    const auth = token !== undefined ? () => Promise.resolve(token) : getToken;
+    const [result, seatedResult] = await Promise.all([
+      apiFetch<Party[]>(PARTIES_KEY, { method: "GET" }, auth),
+      apiFetch<SeatedParty[]>(SEATED_KEY, { method: "GET" }, auth),
+    ]);
     setParties(result);
     put(PARTIES_KEY, result);
+    const present = seatedResult.filter((row) => row.party);
+    setSeated(present);
+    put(SEATED_KEY, present);
   }
 
   useEffect(() => {
@@ -144,18 +150,19 @@ export default function EditPartiesPage() {
   }
 
   const character = characters.find((c) => c.id === selected) ?? null;
+  const everyParty = [...parties, ...seated.map((row) => row.party)];
   // Every character named anywhere: your roster, the people list, and whoever is already in a
   // party. Typing a name the app already knows should not mean typing it differently.
   const knownCharacters = Array.from(
     new Set([
       ...characters.map((c) => c.name),
       ...people.flatMap((p) => p.characters),
-      ...parties.flatMap((p) => p.members.map((m) => m.name)),
+      ...everyParty.flatMap((p) => p.members.map((m) => m.name)),
     ]),
   ).sort();
   // The same three sources, minus the people list, which holds names and no art. Built once for
   // the page rather than per row: a character in four parties is one lookup.
-  const sprites = spriteByName(characters, parties);
+  const sprites = spriteByName(characters, everyParty);
 
   return (
     <main className="page">
@@ -206,6 +213,9 @@ export default function EditPartiesPage() {
                     characterId={character.id}
                     characterName={character.name}
                     parties={parties.filter((p) => p.characterId === character.id)}
+                    joined={seated
+                      .filter((row) => row.yourCharacterId === character.id)
+                      .map((row) => row.party)}
                     bosses={bosses}
                     dropTables={dropTables}
                     knownCharacters={knownCharacters}

@@ -301,4 +301,48 @@ class PartyMemberWritesTest {
             assertFalse(mayDeleteLoot(id(party), member, loot(party, theirs)))
         }
     }
+
+    @Test
+    fun `a member sets the split, and nothing else of the party moves`() {
+        transaction {
+            val party = shared()
+            assertTrue(canEditParty(id(party), member))
+            assertFalse(canEditParty(id(party), stranger))
+            val mine = seatId(party, "Pinewick")
+            assertNull(saveSplit(id(party), mapOf(mine to 2), now))
+            assertTrue(seat(party, "Pinewick")!![PartyMember.shares] == 2)
+            // A seat left out keeps what it takes.
+            assertTrue(seat(party, "tidelark")!![PartyMember.shares] == 1)
+            assertTrue(findParty(id(party), owner)!!.members.map { it.name } == party.members.map { it.name })
+        }
+    }
+
+    @Test
+    fun `a split naming a stranger, a bad count or nobody at all is refused`() {
+        transaction {
+            val party = shared()
+            val everySeat = party.members.map { Uuid.parse(it.id) }
+            assertNotNull(saveSplit(id(party), mapOf(Uuid.random() to 1), now))
+            assertNotNull(saveSplit(id(party), mapOf(seatId(party, "Pinewick") to MAX_SHARES + 1), now))
+            assertNotNull(saveSplit(id(party), everySeat.associateWith { 0 }, now))
+            assertTrue(seat(party, "Pinewick")!![PartyMember.shares] == 1)
+        }
+    }
+
+    @Test
+    fun `a member edits the config as its owner, and reads the answer as themselves`() {
+        transaction {
+            val party = shared()
+            assertTrue(keeperOf(id(party), member) == owner)
+            assertTrue(keeperOf(id(party), owner) == owner)
+            assertNull(keeperOf(id(party), stranger))
+            val request = SavePartyRequest(party.characterId, party.bossKey, listOf("Pinewick", "Baldrix", "Quillon"))
+            saveParty(keeperOf(id(party), member)!!, id(party), request, now, emptyMap())
+            // Pinewick stays the member's linked seat rather than becoming one of the owner's characters.
+            assertNull(seat(party, "Pinewick")!![PartyMember.characterId])
+            assertNotNull(seat(party, "Quillon"))
+            val answer = findParty(id(party), owner).seenBy(id(party), member, owner) as PartyResponse
+            assertFalse(answer.yours)
+        }
+    }
 }
