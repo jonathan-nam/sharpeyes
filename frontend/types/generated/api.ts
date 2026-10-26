@@ -716,6 +716,10 @@ export type SaveSettingsRequest = {
   worldType: string;
 };
 
+export type SaveSharesRequest = {
+  shares?: Record<string, number>;
+};
+
 export type SaveWeekRosterRequest = {
   week?: string | null;
   members?: string[] | null;

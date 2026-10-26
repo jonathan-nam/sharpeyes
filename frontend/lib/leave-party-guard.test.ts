@@ -53,12 +53,19 @@ describe("a pool somebody else keeps", () => {
     expect(row).toContain("{readOnly ? ( <span");
   });
 
-  it("lists a shared party with the clear, Add Drop and Leave as its only writes", () => {
-    // The card a party somebody else owns is drawn with on Party View. Any seat may tick the
-    // party's clear, log a drop into its pool, and leave; selling and settling are done on its
-    // own page.
-    const card = /function sharedCard\([\s\S]*?\); \}/.exec(list)?.[0] ?? "";
-    expect(card).toContain("<PartyCard");
-    expect(card.match(/ on[A-Z]\w+=/g)).toEqual([" onToggleClear=", " onAddDrop=", " onLeave="]);
+  it("lists a shared party with the clear, Add Drop, its split and Leave as its only writes", () => {
+    // Party View draws yours and a party you sit in from one builder. Any seat may tick the clear,
+    // log a drop with its coupon blocks, set the split and leave; the pool, the roster and the pile
+    // are the owner's, so each of those is cut off for a shared row.
+    const card = /function partyCard\([\s\S]*?\); \}/.exec(list)?.[0] ?? "";
+    expect(card).toContain("const shared = sharedIds.has(party.id);");
+    expect(card).toContain("stacks={stacksFor(party)}");
+    for (const prop of ["pool", "piecePile", "onWithdrawInvite"]) {
+      expect(card).toContain(` ${prop}={shared ? undefined :`);
+    }
+    for (const prop of ["onSaveRoster", "onTakeOff"]) {
+      expect(card).toContain(` ${prop}={shared || history ? undefined :`);
+    }
+    expect(card).toContain("onLeave={shared && !history ?");
   });
 });

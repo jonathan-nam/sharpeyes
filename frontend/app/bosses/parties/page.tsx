@@ -65,6 +65,7 @@ import type {
   Party,
   Person,
   SavePartyBody,
+  SaveSharesBody,
   SaveWeekRosterBody,
   SeatedParty,
   SetPartySkipBody,
@@ -419,43 +420,29 @@ export default function PartiesPage() {
   }
 
   /**
-   * Changes how this party splits its coupons, tonight's included.
+   * Changes how this party splits its coupons, tonight's included. Any member may, so a party you
+   * only sit in saves the same way as one of yours.
    *
-   * Through the party's own save, which is the one route that writes a standing share, so the
-   * server pins the weeks this is not the deal for before the new value lands: the ones that are
-   * over, and the ones a sale has already been paid on. See pinWeeksAlreadyWritten, which keys that
-   * off the BOSS's period and is the only thing that decides it. Without it, a new deal re-divides
-   * July's outstanding coupons and tells nobody.
-   *
-   * Keyed by NAME because that is what SavePartyBody takes, and it carries the party's existing
-   * difficulty, minutes and looter: the route writes all of them, so sending the shares alone would
-   * quietly clear the rest.
+   * The server pins the weeks this is not the deal for before the new value lands: the ones that are
+   * over, and the ones a sale has already been paid on. See pinWeeksAlreadyWritten. Without it, a new
+   * deal re-divides July's outstanding coupons and tells nobody.
    */
   async function saveShares(party: Party, shares: Map<string, number>) {
-    const byName = new Map(party.members.map((m) => [m.id, m.name]));
-    const named: Record<string, number> = {};
-    for (const [seatId, count] of shares) {
-      const name = byName.get(seatId);
-      if (name) named[name] = count;
-    }
     await write(party.id, async () => {
       await apiFetch<Party>(
-        `${PARTIES_KEY}/${party.id}`,
+        `${PARTIES_KEY}/${party.id}/shares`,
         {
           method: "PUT",
           body: JSON.stringify({
-            characterId: party.characterId,
-            bossKey: party.bossKey,
-            members: party.members
-              .filter((m) => m.characterId !== party.characterId)
-              .map((m) => m.name),
-            difficulty: party.difficulty,
-            minutes: party.minutes,
-            shares: named,
-          } satisfies SavePartyBody),
+            shares: Object.fromEntries(shares),
+          } satisfies SaveSharesBody),
         },
         getToken,
       );
+      if (party.yours === false) {
+        await loadWeek(null);
+        return;
+      }
       // Both lists: the shares are on the party, and every pool row's entitlement is read against
       // them, so a pool left stale would draw the old split under the new one.
       const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
@@ -871,24 +858,37 @@ export default function PartiesPage() {
   );
 
   /**
-   * A party somebody else owns, as a row among yours. It carries the clear (see toggleSharedClear)
-   * and Add Drop, the two things any seat may write. The pool and the roster are its owner's, so
-   * selling and settling stay on the party's own page. Coupons owed are reckoned over your own
-   * pools, which this is not one of, so the badge is absent rather than claiming none are out.
+   * One config as a row, yours or one you are seated in, so the two cannot offer different controls
+   * for the same drop. A party somebody else owns leaves out its pool, roster and pile: those are the
+   * owner's, so selling and settling stay on the party's own page. Coupons owed are reckoned over
+   * your own pools, which it is not one of, so its badge is absent rather than claiming none are out.
    */
-  function sharedCard(party: Party, heading: ReactNode) {
+  function partyCard(party: Party, heading: ReactNode) {
+    const shared = sharedIds.has(party.id);
     return (
       <PartyCard
         key={party.id}
         party={party}
-        clear={clearOf(party)}
-        coupons={NOTHING_OUTSTANDING}
         heading={heading}
         busy={isSaving(party.id)}
-        onToggleClear={history ? undefined : (cleared) => toggleSharedClear(party, cleared)}
+        clear={clearOf(party)}
+        coupons={shared ? NOTHING_OUTSTANDING : (couponsOut.get(party.id) ?? NOTHING_OUTSTANDING)}
+        onToggleClear={
+          history
+            ? undefined
+            : (cleared) => (shared ? toggleSharedClear : toggleClear)(party, cleared)
+        }
         dropTable={dropTables[party.bossKey]}
-        onAddDrop={canAddDrops ? (body) => addSharedDrop(party, body) : undefined}
-        onLeave={history ? undefined : () => leaveShared(party)}
+        onAddDrop={
+          canAddDrops ? (body) => (shared ? addSharedDrop : addDrop)(party, body) : undefined
+        }
+        stacks={stacksFor(party)}
+        pool={shared ? undefined : poolFor(party)}
+        piecePile={shared ? undefined : piecePileFor(party)}
+        onSaveRoster={shared || history ? undefined : (members) => saveRoster(party, members)}
+        onTakeOff={shared || history ? undefined : () => takeOff(party)}
+        onWithdrawInvite={shared ? undefined : (inviteId) => withdrawInvite(party, inviteId)}
+        onLeave={shared && !history ? () => leaveShared(party) : undefined}
       />
     );
   }
@@ -902,67 +902,20 @@ export default function PartiesPage() {
    */
   function bossRow(party: Party) {
     const boss = bossByKey.get(party.bossKey);
-    const heading = (
+    return partyCard(
+      party,
       <>
         {boss?.iconUrl && <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />}
         <h3 className="party-row-name">
           {bossLabel(boss?.name ?? party.bossKey, modeThisWeek(party))}
         </h3>
-      </>
-    );
-    if (sharedIds.has(party.id)) return sharedCard(party, heading);
-    return (
-      <PartyCard
-        key={party.id}
-        party={party}
-        busy={isSaving(party.id)}
-        clear={clearOf(party)}
-        coupons={couponsOut.get(party.id) ?? NOTHING_OUTSTANDING}
-        onToggleClear={history ? undefined : (cleared) => toggleClear(party, cleared)}
-        dropTable={dropTables[party.bossKey]}
-        onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
-        pool={poolFor(party)}
-        stacks={stacksFor(party)}
-        piecePile={piecePileFor(party)}
-        onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
-        onTakeOff={history ? undefined : () => takeOff(party)}
-        onWithdrawInvite={(inviteId) => withdrawInvite(party, inviteId)}
-        heading={
-          <>
-            {boss?.iconUrl && (
-              <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />
-            )}
-            <h3 className="party-row-name">
-              {bossLabel(boss?.name ?? party.bossKey, modeThisWeek(party))}
-            </h3>
-          </>
-        }
-      />
+      </>,
     );
   }
 
   /** One config under a boss heading, named by its character, since a boss is the group here. */
   function bossGroupRow(party: Party) {
-    if (sharedIds.has(party.id)) return sharedCard(party, bossGroupHeading(party));
-    return (
-      <PartyCard
-        key={party.id}
-        party={party}
-        busy={isSaving(party.id)}
-        clear={clearOf(party)}
-        coupons={couponsOut.get(party.id) ?? NOTHING_OUTSTANDING}
-        onToggleClear={history ? undefined : (cleared) => toggleClear(party, cleared)}
-        dropTable={dropTables[party.bossKey]}
-        onAddDrop={canAddDrops ? (body) => addDrop(party, body) : undefined}
-        pool={poolFor(party)}
-        stacks={stacksFor(party)}
-        piecePile={piecePileFor(party)}
-        onSaveRoster={history ? undefined : (members) => saveRoster(party, members)}
-        onTakeOff={history ? undefined : () => takeOff(party)}
-        onWithdrawInvite={(inviteId) => withdrawInvite(party, inviteId)}
-        heading={bossGroupHeading(party)}
-      />
-    );
+    return partyCard(party, bossGroupHeading(party));
   }
 
   /** The by-boss row's heading: the character, and its mode when two of them run the boss. */

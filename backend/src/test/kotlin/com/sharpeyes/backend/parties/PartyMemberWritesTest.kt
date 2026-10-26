@@ -301,4 +301,31 @@ class PartyMemberWritesTest {
             assertFalse(mayDeleteLoot(id(party), member, loot(party, theirs)))
         }
     }
+
+    @Test
+    fun `a member sets the split, and nothing else of the party moves`() {
+        transaction {
+            val party = shared()
+            assertTrue(canEditParty(id(party), member))
+            assertFalse(canEditParty(id(party), stranger))
+            val mine = seatId(party, "Pinewick")
+            assertNull(saveSplit(id(party), mapOf(mine to 2), now))
+            assertTrue(seat(party, "Pinewick")!![PartyMember.shares] == 2)
+            // A seat left out keeps what it takes.
+            assertTrue(seat(party, "tidelark")!![PartyMember.shares] == 1)
+            assertTrue(findParty(id(party), owner)!!.members.map { it.name } == party.members.map { it.name })
+        }
+    }
+
+    @Test
+    fun `a split naming a stranger, a bad count or nobody at all is refused`() {
+        transaction {
+            val party = shared()
+            val everySeat = party.members.map { Uuid.parse(it.id) }
+            assertNotNull(saveSplit(id(party), mapOf(Uuid.random() to 1), now))
+            assertNotNull(saveSplit(id(party), mapOf(seatId(party, "Pinewick") to MAX_SHARES + 1), now))
+            assertNotNull(saveSplit(id(party), everySeat.associateWith { 0 }, now))
+            assertTrue(seat(party, "Pinewick")!![PartyMember.shares] == 1)
+        }
+    }
 }

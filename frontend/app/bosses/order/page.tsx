@@ -54,7 +54,7 @@ import { queryParam, replaceQuery, useQueryString } from "@/lib/url-state";
 import type { Boss, BossClearsView } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
-import type { Party, SavePartyBody, SeatedParty } from "@/types/party";
+import type { Party, SaveSharesBody, SeatedParty } from "@/types/party";
 import { asYourRow } from "@/lib/shared-parties";
 import { useLive } from "@/lib/use-live";
 import type { VestigeSettlement } from "@/types/vestige";
@@ -369,40 +369,26 @@ export default function RunOrderPage() {
   }
 
   /**
-   * The party's standing coupon split, saved from the run's own picker.
-   *
-   * The whole config goes back, because that is what PUT /api/parties/{id} takes, and every other
-   * field is passed through as it stands. Seats are named by CHARACTER NAME: the body names them
-   * that way, since a party being created has no seat ids yet.
+   * The party's standing coupon split, saved from the run's own picker. Any member may, so a party
+   * you only sit in saves it too.
    *
    * Not pinned into the night: a split is the standing deal and says nothing about whether the boss
    * was run. Throws on failure, which is what lets the boxes show the server's reason.
    */
   async function saveShares(party: Party, shares: Map<string, number>) {
-    const byName = new Map(party.members.map((member) => [member.id, member.name]));
-    const named: Record<string, number> = {};
-    for (const [seatId, count] of shares) {
-      const name = byName.get(seatId);
-      if (name) named[name] = count;
-    }
     await write(party.id, async () => {
       await apiFetch<Party>(
-        `${PARTIES_KEY}/${party.id}`,
+        `${PARTIES_KEY}/${party.id}/shares`,
         {
           method: "PUT",
-          body: JSON.stringify({
-            characterId: party.characterId,
-            bossKey: party.bossKey,
-            members: party.members
-              .filter((member) => member.characterId !== party.characterId)
-              .map((member) => member.name),
-            difficulty: party.difficulty,
-            minutes: party.minutes,
-            shares: named,
-          } satisfies SavePartyBody),
+          body: JSON.stringify({ shares: Object.fromEntries(shares) } satisfies SaveSharesBody),
         },
         getToken,
       );
+      if (party.yours === false) {
+        await refetchSeated();
+        return;
+      }
       // Both lists: the night's, which is what the plan is drawn from, and the ledger's, which the
       // stack boxes rotate against. A split saved here moves what each seat is entitled to, so a
       // ledger left stale would suggest the next pickup against the old deal.
@@ -693,11 +679,7 @@ export default function RunOrderPage() {
       behind,
       pickupTitle: "Looted this week",
       entitledTitle: "Entitled each week",
-      // The split is the owner's deal, so a party you are only in shows it without a Save.
-      onSaveShares:
-        party.yours === false
-          ? undefined
-          : (shares: Map<string, number>) => saveShares(party, shares),
+      onSaveShares: (shares: Map<string, number>) => saveShares(party, shares),
     };
   };
 

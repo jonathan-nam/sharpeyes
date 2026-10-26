@@ -74,13 +74,15 @@ fun Route.partyRoutes(
     get("/{id}") { getParty() }
     put("/{id}") { savePartyRoute(nexonLookupService, spriteCache) }
     put("/{id}/roster") { saveWeekRosterRoute(nexonLookupService, spriteCache) }
+    // The split alone, which a member may set too. See PartySplit.kt.
+    put("/{id}/shares") { saveSplitRoute() }
     put("/{id}/clear") { setClearRoute() }
     put("/{id}/skip") { setSkipRoute() }
     put("/{id}/pieces") { savePiecePileRoute() }
     delete("/{id}/pieces") { removePiecePileRoute() }
     delete("/{id}") { deletePartyRoute() }
-    // The one write here that is not the owner's: a member taking their own seat out of a party
-    // they are in but do not own. See LeaveParty.kt, which holds the route beside the rule.
+    // A member taking their own seat out of a party they are in but do not own. See LeaveParty.kt,
+    // which holds the route beside the rule.
     post("/{id}/leave") { leavePartyRoute() }
     // The owner taking a seat out, which is leaving done to somebody. See LeaveParty.kt.
     delete("/{id}/members/{memberId}") { removeMemberRoute() }

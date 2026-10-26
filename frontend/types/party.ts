@@ -212,6 +212,11 @@ export type SaveWeekRosterBody = {
   members: string[] | null;
 };
 
+/** What PUT /api/parties/{id}/shares takes: the standing split by seat id. Any member may send it. */
+export type SaveSharesBody = {
+  shares: Record<string, number>;
+};
+
 /**
  * What PUT /api/parties/{id}/skip takes: whether this boss is being run this period.
  *
