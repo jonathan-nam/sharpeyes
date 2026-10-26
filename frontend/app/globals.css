@@ -142,13 +142,89 @@
   margin-left: auto;
 }
 
-/* Sections open from a hamburger at the far left of the header. The content itself stays on .page,
-   centred like every other page, so navigation and content no longer fight over the layout.
-   The auto margin is what puts everything after it on the right edge: the world toggle, then the
-   avatar. */
+/* The sections, just right of the brand: listed in the bar, or behind a hamburger where the bar is
+   too narrow to list them. The auto margin is what puts everything after it on the right edge: the
+   world toggle, then the avatar. */
+.sections {
+  display: flex;
+  align-items: center;
+  margin-right: auto;
+}
+
 .section-menu {
   position: relative;
-  margin-right: auto;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* The listed sections need up to 983px of bar beside the world toggle and avatar (measured in
+   Chromium with the Maplestory face), so they give way to the hamburger with some room to spare.
+   MUST stay after `.header-nav`: at equal specificity its display:flex would win and draw both. */
+@media (width > 1040px) {
+  .section-menu {
+    display: none;
+  }
+}
+
+@media (width <= 1040px) {
+  .header-nav {
+    display: none;
+  }
+}
+
+.header-nav-group {
+  position: relative;
+}
+
+.header-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-lg);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.header-nav-link:hover,
+button.header-nav-link:hover,
+.header-nav-link[aria-expanded="true"] {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+
+.header-nav-link.active {
+  color: var(--ink-strong);
+}
+
+.header-nav-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.header-nav-chevron {
+  width: 12px;
+  height: 12px;
+  transition: transform 140ms ease-out;
+}
+
+.header-nav-link[aria-expanded="true"] .header-nav-chevron {
+  transform: rotate(180deg);
+}
+
+/* The reserved copy holds the space and nothing else. */
+.header-reserved .header-nav-link {
+  pointer-events: none;
 }
 
 .section-menu-btn {
@@ -224,6 +300,8 @@ html:not(.has-session) .header-reserved {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transform-origin: top left;
+  animation: section-menu-in 140ms ease-out;
 }
 
 /* Each group (and the ungrouped top-level block) is its own column, so the panel's own flex
@@ -231,6 +309,42 @@ html:not(.has-session) .header-reserved {
 .section-menu-panel > div {
   display: flex;
   flex-direction: column;
+  animation: section-menu-block-in 180ms ease-out both;
+}
+
+.section-menu-panel > div:nth-child(2) {
+  animation-delay: 30ms;
+}
+.section-menu-panel > div:nth-child(3) {
+  animation-delay: 60ms;
+}
+.section-menu-panel > div:nth-child(n + 4) {
+  animation-delay: 90ms;
+}
+
+@keyframes section-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.96);
+  }
+}
+
+@keyframes section-menu-block-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-menu-panel,
+  .section-menu-panel > div {
+    animation: none;
+  }
+
+  .header-nav-chevron {
+    transition: none;
+  }
 }
 
 /* A rule between blocks, on the block rather than on the group: Inventory sits after the Bossing
