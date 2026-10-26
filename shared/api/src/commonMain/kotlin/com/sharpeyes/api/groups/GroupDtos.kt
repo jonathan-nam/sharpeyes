@@ -33,12 +33,29 @@ data class GroupInviteeView(
     val member: GroupMemberView,
 )
 
+/** A friend of yours who is friends with every member, so may be invited. */
+@Serializable
+data class InvitableFriendView(
+    val personId: String,
+    val name: String,
+)
+
 @Serializable
 data class GroupView(
     val id: String,
     val name: String,
     val members: List<GroupMemberView>,
     val invited: List<GroupInviteeView>,
+    val invitable: List<InvitableFriendView>,
+)
+
+/** A new party's roster from a group: GET /api/groups/{id}/roster. */
+@Serializable
+data class GroupRosterResponse(
+    /** One character of each groupmate's, to seat beside yours. */
+    val members: List<String>,
+    /** Groupmates left out, as you call them: no character free for the boss, or not your friend. */
+    val missing: List<String>,
 )
 
 /** An invite to one of your accounts, waiting on you. */

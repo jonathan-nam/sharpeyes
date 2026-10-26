@@ -13,12 +13,19 @@ export type GroupMember = {
 
 export type GroupInvitee = { id: string; member: GroupMember };
 
+/** A friend who is friends with every member, so may be invited. */
+export type InvitableFriend = { personId: string; name: string };
+
 export type Group = {
   id: string;
   name: string;
   members: GroupMember[];
   invited: GroupInvitee[];
+  invitable: InvitableFriend[];
 };
+
+/** GET /api/groups/{id}/roster: one character per groupmate, and who it left out. */
+export type GroupRoster = { members: string[]; missing: string[] };
 
 export type IncomingGroupInvite = {
   id: string;

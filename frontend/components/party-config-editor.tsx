@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/button";
 import { DifficultySelect } from "@/components/difficulty-select";
 import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-characters";
 import { RosterInputs } from "@/components/roster-inputs";
-import { apiAssetUrl } from "@/lib/api";
+import { apiAssetUrl, failureText } from "@/lib/api";
 import { MAX_MINUTES, parseMinutes } from "@/lib/boss-minutes";
 import { bossesWithoutConfig, namedSeats, standingMembers, standingParties } from "@/lib/parties";
 import {
@@ -28,6 +28,7 @@ import {
 } from "@/lib/stacks";
 import type { Boss } from "@/types/boss";
 import type { BossDrop, DropTables } from "@/types/drop";
+import type { GroupRoster } from "@/types/groups";
 import type { Party, PartyMember, SavePartyBody } from "@/types/party";
 
 /** The one drop a party has to decide how to divide. See catalog/drops.yaml. */
@@ -54,6 +55,8 @@ export function PartyConfigEditor({
   notice,
   onSave,
   onDelete,
+  groups = [],
+  rosterFrom,
 }: {
   characterId: string;
   characterName: string;
@@ -83,6 +86,10 @@ export function PartyConfigEditor({
   notice?: ReactNode;
   onSave: (body: SavePartyBody, partyId?: string) => void;
   onDelete: (party: Party) => void;
+  /** Your groups, which a new party can take its roster from. */
+  groups?: { id: string; name: string }[];
+  /** A group's roster for this character on a boss. See lib/groups.ts. */
+  rosterFrom?: (groupId: string, bossKey: string) => Promise<GroupRoster>;
 }) {
   const [addingBoss, setAddingBoss] = useState("");
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
@@ -150,12 +157,16 @@ export function PartyConfigEditor({
         </select>
         <AddParty
           busy={adding || addingBoss === ""}
+          bossKey={addingBoss}
           difficulties={bossByKey.get(addingBoss)?.difficulties ?? []}
-          onAdd={(member, difficulty) => {
-            onSave({ characterId, bossKey: addingBoss, members: [member], difficulty });
+          onAdd={(members, difficulty) => {
+            onSave({ characterId, bossKey: addingBoss, members, difficulty });
             setAddingBoss("");
           }}
           knownCharacters={knownCharacters}
+          spriteFor={spriteFor}
+          groups={groups}
+          rosterFrom={rosterFrom}
         />
       </div>
     </section>
@@ -170,18 +181,66 @@ export function PartyConfigEditor({
  */
 function AddParty({
   busy,
+  bossKey,
   difficulties,
   onAdd,
   knownCharacters,
+  spriteFor,
+  groups,
+  rosterFrom,
 }: {
   busy: boolean;
+  bossKey: string;
   /** The chosen boss's modes, empty until a boss is chosen. */
   difficulties: string[];
-  onAdd: (member: string, difficulty: string | null) => void;
+  onAdd: (members: string[], difficulty: string | null) => void;
   knownCharacters: string[];
+  spriteFor: (name: string) => string | null;
+  groups: { id: string; name: string }[];
+  rosterFrom?: (groupId: string, bossKey: string) => Promise<GroupRoster>;
 }) {
   const [member, setMember] = useState("");
   const [difficulty, setDifficulty] = useState("");
+  const [groupId, setGroupId] = useState("");
+  // Who a group brings depends on the boss: a character already in a party for it stays home. So
+  // an answer is kept with the pair it was asked for, and one for another pair reads as nothing.
+  const asked = groupId && bossKey ? `${groupId}|${bossKey}` : null;
+  const [loaded, setLoaded] = useState<{
+    for: string;
+    roster: GroupRoster | null;
+    error: string | null;
+  } | null>(null);
+  const current = loaded?.for === asked ? loaded : null;
+  const roster = current?.roster ?? null;
+  const rosterError = current?.error ?? null;
+  const setRoster = (next: GroupRoster) =>
+    asked && setLoaded({ for: asked, roster: next, error: null });
+
+  useEffect(() => {
+    if (!asked || !rosterFrom) return;
+    let live = true;
+    rosterFrom(groupId, bossKey)
+      .then((r) => live && setLoaded({ for: asked, roster: r, error: null }))
+      .catch(
+        (e) =>
+          live &&
+          setLoaded({
+            for: asked,
+            roster: null,
+            error: failureText(e, "Couldn't load the group."),
+          }),
+      );
+    return () => {
+      live = false;
+    };
+    // rosterFrom is a new function every render; the pair asked is what it depends on.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asked]);
+
+  const members = groupId
+    ? (roster?.members ?? []).map((m) => m.trim()).filter((m) => m !== "")
+    : [member.trim()].filter((m) => m !== "");
+
   return (
     <>
       <DifficultySelect
@@ -191,26 +250,59 @@ function AddParty({
         disabled={busy}
         onChange={setDifficulty}
       />
-      <input
-        className="split-input"
-        value={member}
-        list={KNOWN_CHARACTERS_ID}
-        onChange={(e) => setMember(e.target.value)}
-        placeholder="with who?"
-        aria-label="First member of the new party"
-        maxLength={40}
-      />
+      {groups.length > 0 && (
+        <select
+          className="split-input"
+          value={groupId}
+          aria-label="Group for the new party"
+          onChange={(e) => setGroupId(e.target.value)}
+        >
+          <option value="">no group</option>
+          {groups.map((g) => (
+            <option key={g.id} value={g.id}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      )}
+      {groupId ? (
+        roster && (
+          <RosterInputs
+            members={roster.members}
+            onChange={(next) => setRoster({ ...roster, members: next })}
+            spriteFor={spriteFor}
+            disabled={busy}
+          />
+        )
+      ) : (
+        <input
+          className="split-input"
+          value={member}
+          list={KNOWN_CHARACTERS_ID}
+          onChange={(e) => setMember(e.target.value)}
+          placeholder="with who?"
+          aria-label="First member of the new party"
+          maxLength={40}
+        />
+      )}
       <Button
         variant="primary"
-        disabled={busy || member.trim() === ""}
+        disabled={busy || members.length === 0}
         onClick={() => {
-          onAdd(member.trim(), difficulty === "" ? null : difficulty);
+          onAdd(members, difficulty === "" ? null : difficulty);
           setMember("");
           setDifficulty("");
+          setGroupId("");
         }}
       >
         Add Party
       </Button>
+      {groupId && roster && roster.missing.length > 0 && (
+        <span className="party-hint" title="No character free for this boss">
+          {`Left out: ${roster.missing.join(", ")}`}
+        </span>
+      )}
+      {rosterError && <span className="split-error">{rosterError}</span>}
       <KnownCharacters names={knownCharacters} />
     </>
   );

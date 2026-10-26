@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { CharacterPicker } from "@/components/character-picker";
 import { PartyConfigEditor } from "@/components/party-config-editor";
 import { apiFetch, duplicatePartyIn, failureText } from "@/lib/api";
+import { GROUPS_KEY, groupRoster } from "@/lib/groups";
 import { announceInvites } from "@/lib/invite-notice";
 import { DuplicateParty } from "@/components/duplicate-party";
 import { peek, put } from "@/lib/cache";
@@ -19,6 +20,7 @@ import { useRowWrites } from "@/lib/use-row-writes";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
+import type { Group, Groups } from "@/types/groups";
 import type { Party, Person, SavePartyBody, SeatedParty } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
@@ -101,6 +103,16 @@ export default function EditPartiesPage() {
         reportDataReady();
       })
       .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  // Apart from the rest: without them the add form is the one it always was.
+  const [groups, setGroups] = useState<Group[]>([]);
+  useEffect(() => {
+    if (!isLoaded) return;
+    apiFetch<Groups>(GROUPS_KEY, { method: "GET" }, getToken)
+      .then((page) => setGroups(page.groups))
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
@@ -235,6 +247,10 @@ export default function EditPartiesPage() {
                     }
                     onSave={save}
                     onDelete={remove}
+                    groups={groups}
+                    rosterFrom={(groupId, bossKey) =>
+                      groupRoster(groupId, character.id, bossKey, getToken)
+                    }
                   />
                 )}
               </>

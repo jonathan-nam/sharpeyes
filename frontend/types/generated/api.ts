@@ -318,11 +318,17 @@ export type GroupMemberView = {
   friend: boolean;
 };
 
+export type GroupRosterResponse = {
+  members: string[];
+  missing: string[];
+};
+
 export type GroupView = {
   id: string;
   name: string;
   members: GroupMemberView[];
   invited: GroupInviteeView[];
+  invitable: InvitableFriendView[];
 };
 
 export type GroupsResponse = {
@@ -365,6 +371,11 @@ export type IncomingInviteView = {
   boss: string;
   difficulty: string | null;
   leader: string;
+};
+
+export type InvitableFriendView = {
+  personId: string;
+  name: string;
 };
 
 export type InviteOmission = {

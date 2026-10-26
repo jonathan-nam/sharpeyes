@@ -2,6 +2,7 @@ package com.sharpeyes.backend.groups
 
 import com.sharpeyes.api.groups.InviteToGroupRequest
 import com.sharpeyes.api.groups.SaveGroupRequest
+import com.sharpeyes.backend.parties.bossIdForKey
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.plugins.refuse
@@ -15,7 +16,6 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import io.ktor.server.routing.put
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -27,10 +27,7 @@ fun Route.groupRoutes() {
         val body = call.receive<SaveGroupRequest>()
         write { userId, _ -> createGroup(userId, body.name, Clock.System.now()) }
     }
-    put("/{id}") {
-        val body = call.receive<SaveGroupRequest>()
-        write("id") { userId, id -> renameGroup(userId, id!!, body.name) }
-    }
+    get("/{id}/roster") { rosterRoute() }
     delete("/{id}/membership") { write("id") { userId, id -> leaveGroup(userId, id!!) } }
     post("/{id}/invites") {
         val body = call.receive<InviteToGroupRequest>()
@@ -42,6 +39,25 @@ fun Route.groupRoutes() {
     post("/invites/{id}/accept") { write("id") { userId, id -> acceptGroupInvite(userId, id!!, Clock.System.now()) } }
     // Declined by the invitee, or withdrawn by a member.
     delete("/invites/{id}") { write("id") { userId, id -> dropGroupInvite(userId, id!!) } }
+}
+
+/** GET /api/groups/{id}/roster?characterId=&bossKey=. See groupRoster. */
+private suspend fun RoutingContext.rosterRoute() {
+    val (userId, email) = call.principalIdAndEmail()
+    val groupId = call.parameters["id"]?.let(Uuid::parseOrNull)
+    val characterId = call.request.queryParameters["characterId"]?.let(Uuid::parseOrNull)
+    val bossKey = call.request.queryParameters["bossKey"].orEmpty()
+    val roster =
+        dbQuery {
+            ensureUser(userId, email)
+            val bossId = bossIdForKey(bossKey)
+            if (groupId == null || characterId == null || bossId == null) {
+                null
+            } else {
+                groupRoster(userId, groupId, characterId, bossId)
+            }
+        }
+    if (roster == null) call.respond(HttpStatusCode.NotFound) else call.respond(roster)
 }
 
 /**

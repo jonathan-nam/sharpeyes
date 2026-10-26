@@ -3,6 +3,7 @@ package com.sharpeyes.backend.groups
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.backend.config.Env
+import com.sharpeyes.backend.db.CharacterBossSkip
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.FriendGroup
 import com.sharpeyes.backend.db.FriendGroupMember
@@ -10,6 +11,7 @@ import com.sharpeyes.backend.db.Notification
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
+import com.sharpeyes.backend.db.Users
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.parties.SeatContext
 import com.sharpeyes.backend.parties.bossIdForKey
@@ -34,6 +36,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -81,6 +84,7 @@ class GroupsTest {
             Notification.deleteWhere { Notification.userId inList accounts }
             Party.deleteWhere { Party.userId inList accounts }
             Person.deleteWhere { Person.userId inList accounts }
+            Users.update({ Users.id inList accounts }) { it[mainCharacterId] = null }
             Characters.deleteWhere { Characters.userId inList accounts }
         }
     }
@@ -88,6 +92,7 @@ class GroupsTest {
     private fun character(
         account: String,
         name: String,
+        level: Int? = null,
     ): Uuid {
         ensureUser(account, "$account@example.com")
         setActiveWorld(account, WORLD_INTERACTIVE)
@@ -97,6 +102,7 @@ class GroupsTest {
             it[Characters.userId] = account
             it[Characters.name] = name
             it[Characters.worldType] = WORLD_INTERACTIVE
+            it[Characters.level] = level
             it[createdAt] = now
             it[updatedAt] = now
             it[position] = 0
@@ -258,6 +264,66 @@ class GroupsTest {
             val split = splitInvitees(owner, null, listOf("Pinewick"), kalos)
             assertEquals(listOf("Pinewick"), split.invitees.map { it.name })
             assertTrue(split.seated.isEmpty())
+        }
+    }
+
+    // A friend of one member only would be a groupmate the others could not seat.
+    @Test
+    fun `only somebody friends with every member can be invited`() {
+        transaction {
+            character(owner, "tidelark")
+            character(mate, "Pinewick")
+            character(other, "Wrenfold")
+            val group = groupWithMate(link(owner, "Chris", mate))
+            val dana = link(owner, "Dana", other)
+
+            assertTrue(
+                groupsFor(owner)
+                    .groups
+                    .single()
+                    .invitable
+                    .isEmpty(),
+            )
+            assertIs<GroupAnswer.Refused>(inviteToGroup(owner, group, dana, now))
+
+            link(mate, "Dana", other)
+            assertEquals(
+                listOf("Dana"),
+                groupsFor(owner)
+                    .groups
+                    .single()
+                    .invitable
+                    .map { it.name },
+            )
+            assertEquals(GroupAnswer.Done, inviteToGroup(owner, group, dana, now))
+        }
+    }
+
+    @Test
+    fun `a group's roster brings each groupmate's main, else their highest level, and names who it cannot`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(mate, "Pinewick", level = 200)
+            character(mate, "Bramble", level = 250)
+            val wren = character(other, "Wrenfold")
+            val group = groupWithMate(link(owner, "Chris", mate))
+            val dana = link(owner, "Dana", other)
+            link(mate, "Dana", other)
+            inviteToGroup(owner, group, dana, now)
+            acceptGroupInvite(other, Uuid.parse(groupsFor(other).invites.single().id), now)
+            CharacterBossSkip.insert {
+                it[characterId] = wren
+                it[bossCatalogId] = kalos
+                it[createdAt] = now
+            }
+
+            val roster = groupRoster(owner, group, tide, kalos)!!
+            assertEquals(listOf("Bramble"), roster.members)
+            assertEquals(listOf("Dana"), roster.missing)
+
+            Users.update({ Users.id eq mate }) { it[mainCharacterId] = pine }
+            assertEquals(listOf("Pinewick"), groupRoster(owner, group, tide, kalos)!!.members)
+            assertNull(groupRoster(mate, group, tide, kalos))
         }
     }
 

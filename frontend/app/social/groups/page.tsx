@@ -8,34 +8,27 @@ import { PageSwap } from "@/components/page-swap";
 import { type NavSection, SectionNav } from "@/components/section-nav";
 import { SocialHead } from "@/components/social-head";
 import { apiFetch, failureText, spriteUrl } from "@/lib/api";
-import { invalidate } from "@/lib/cache";
-import { friendsChanged } from "@/lib/friends-changed";
+import { GROUPS_KEY } from "@/lib/groups";
 import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
 import type { Group, GroupMember, Groups } from "@/types/groups";
-import type { Social } from "@/types/social";
 
-const GROUPS_KEY = "/api/groups";
-const SOCIAL_KEY = "/api/friends";
 const MAX_NAME = 40;
 
 // Groups: people who add each other's characters to parties without an invite. Everybody else is
-// still invited. Joining is by invite, and only a friend can be invited. See backend Groups.kt.
+// still invited. Joining is by invite, and only somebody friends with every member can be invited,
+// so the picker lists only them. See backend Groups.kt.
 export default function GroupsPage() {
   const { getToken, isLoaded } = useAuth();
   const [page, setPage] = useState<Groups | null>(null);
-  const [social, setSocial] = useState<Social | null>(null);
   const [failed, setFailed] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function load() {
-    return Promise.all([
-      apiFetch<Groups>(GROUPS_KEY, { method: "GET" }, getToken).then(setPage),
-      apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken).then(setSocial),
-    ]);
+    return apiFetch<Groups>(GROUPS_KEY, { method: "GET" }, getToken).then(setPage);
   }
 
   useEffect(() => {
@@ -74,30 +67,8 @@ export default function GroupsPage() {
     if (made) setName("");
   }
 
-  /** A friend request to a groupmate who is not your friend yet. */
-  async function befriend(username: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      setSocial(
-        await apiFetch<Social>(
-          `${SOCIAL_KEY}/requests`,
-          { method: "POST", body: JSON.stringify({ username }) },
-          getToken,
-        ),
-      );
-      invalidate("/api/people");
-      friendsChanged();
-    } catch (e) {
-      setError(failureText(e, "Couldn't send that."));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const invite = (id: string) => `${GROUPS_KEY}/invites/${encodeURIComponent(id)}`;
   const group = (id: string) => `${GROUPS_KEY}/${encodeURIComponent(id)}`;
-  const requested = new Set((social?.outgoing ?? []).map((f) => f.username));
 
   const invites = page?.invites ?? [];
   const sections: NavSection[] = [
@@ -182,16 +153,7 @@ export default function GroupsPage() {
               <GroupSection
                 key={g.id}
                 group={g}
-                social={social}
                 busy={busy}
-                requested={requested}
-                onRename={(next) =>
-                  act(
-                    group(g.id),
-                    { method: "PUT", body: JSON.stringify({ name: next.trim() }) },
-                    "Couldn't rename the group.",
-                  )
-                }
                 onInvite={(personId) =>
                   void act(
                     `${group(g.id)}/invites`,
@@ -203,7 +165,6 @@ export default function GroupsPage() {
                 onLeave={() =>
                   void act(`${group(g.id)}/membership`, { method: "DELETE" }, "Couldn't leave.")
                 }
-                onBefriend={(username) => void befriend(username)}
               />
             ))}
           </SectionNav>
@@ -215,62 +176,64 @@ export default function GroupsPage() {
 
 function GroupSection({
   group,
-  social,
   busy,
-  requested,
-  onRename,
   onInvite,
   onCancel,
   onLeave,
-  onBefriend,
 }: {
   group: Group;
-  social: Social | null;
   busy: boolean;
-  /** Usernames you have already sent a friend request. */
-  requested: Set<string | null>;
-  onRename: (name: string) => Promise<boolean>;
   onInvite: (personId: string) => void;
   onCancel: (inviteId: string) => void;
   onLeave: () => void;
-  onBefriend: (username: string) => void;
 }) {
-  const [renaming, setRenaming] = useState<string | null>(null);
   const [chosen, setChosen] = useState("");
-  const inGroup = new Set(
-    [...group.members, ...group.invited.map((i) => i.member)].map((m) => m.username),
-  );
-  const invitable = (social?.friends ?? []).filter((f) => !inGroup.has(f.username));
 
   return (
     <Section id={`group-${group.id}`} title={group.name}>
-      <div className="add-character social-add">
-        {renaming === null ? (
-          <Button variant="secondary" disabled={busy} onClick={() => setRenaming(group.name)}>
-            Rename
-          </Button>
-        ) : (
+      <ul className="character-cards">
+        {group.members.map((m, i) => (
+          <MemberCard
+            key={`m${i}`}
+            member={m}
+            kind={m.you ? "You" : m.friend ? undefined : "Not friends"}
+          />
+        ))}
+        {group.invited.map((i) => (
+          <MemberCard key={i.id} member={i.member} kind="Invited">
+            <Button variant="secondary" disabled={busy} onClick={() => onCancel(i.id)}>
+              Cancel
+            </Button>
+          </MemberCard>
+        ))}
+      </ul>
+
+      <div className="add-character">
+        {group.invitable.length > 0 && (
           <form
             className="add-character"
             onSubmit={(e) => {
               e.preventDefault();
-              void onRename(renaming).then((ok) => ok && setRenaming(null));
+              if (chosen) onInvite(chosen);
+              setChosen("");
             }}
           >
-            <input
-              type="text"
+            <select
               className="split-input"
-              value={renaming}
-              maxLength={MAX_NAME}
-              aria-label="Group name"
+              value={chosen}
+              aria-label="Friend to invite"
               disabled={busy}
-              onChange={(e) => setRenaming(e.target.value)}
-            />
-            <Button variant="primary" type="submit" disabled={busy || !renaming.trim()}>
-              Save
-            </Button>
-            <Button variant="secondary" disabled={busy} onClick={() => setRenaming(null)}>
-              Cancel
+              onChange={(e) => setChosen(e.target.value)}
+            >
+              <option value="">Choose a friend</option>
+              {group.invitable.map((f) => (
+                <option key={f.personId} value={f.personId}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+            <Button variant="primary" type="submit" disabled={busy || !chosen}>
+              Invite
             </Button>
           </form>
         )}
@@ -282,58 +245,6 @@ function GroupSection({
           onConfirm={onLeave}
         />
       </div>
-
-      <ul className="character-cards">
-        {group.members.map((m, i) => (
-          <MemberCard key={`m${i}`} member={m} kind={m.you ? "You" : undefined}>
-            {!m.you && !m.friend && m.username && (
-              <Button
-                variant="secondary"
-                disabled={busy || requested.has(m.username)}
-                onClick={() => onBefriend(m.username!)}
-              >
-                {requested.has(m.username) ? "Request Sent" : "Add Friend"}
-              </Button>
-            )}
-          </MemberCard>
-        ))}
-        {group.invited.map((i) => (
-          <MemberCard key={i.id} member={i.member} kind="Invited">
-            <Button variant="secondary" disabled={busy} onClick={() => onCancel(i.id)}>
-              Cancel
-            </Button>
-          </MemberCard>
-        ))}
-      </ul>
-
-      {invitable.length > 0 && (
-        <form
-          className="add-character"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (chosen) onInvite(chosen);
-            setChosen("");
-          }}
-        >
-          <select
-            className="split-input"
-            value={chosen}
-            aria-label="Friend to invite"
-            disabled={busy}
-            onChange={(e) => setChosen(e.target.value)}
-          >
-            <option value="">Choose a friend</option>
-            {invitable.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name ?? f.username ?? "?"}
-              </option>
-            ))}
-          </select>
-          <Button variant="primary" type="submit" disabled={busy || !chosen}>
-            Invite
-          </Button>
-        </form>
-      )}
     </Section>
   );
 }

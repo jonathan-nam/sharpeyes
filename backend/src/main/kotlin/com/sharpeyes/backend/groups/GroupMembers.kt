@@ -2,6 +2,7 @@ package com.sharpeyes.backend.groups
 
 import com.sharpeyes.backend.db.FriendGroup
 import com.sharpeyes.backend.db.FriendGroupMember
+import com.sharpeyes.backend.friends.linkedTo
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
@@ -37,6 +38,12 @@ internal fun isMember(
     groupId: Uuid,
     userId: String,
 ) = userId in membersOf(groupId)
+
+/** Whether [account] is friends with every member of [groupId] but itself. */
+internal fun friendsWithEveryone(
+    account: String,
+    groupId: Uuid,
+): Boolean = membersOf(groupId).filter { it != account }.all { linkedTo(it, account) }
 
 internal fun groupName(groupId: Uuid): String =
     FriendGroup

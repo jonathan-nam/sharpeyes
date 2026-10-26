@@ -18,7 +18,6 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -68,29 +67,12 @@ internal fun createGroup(
     return GroupAnswer.Done
 }
 
-internal fun renameGroup(
-    userId: String,
-    groupId: Uuid,
-    name: String,
-): GroupAnswer {
-    val trimmed = name.trim()
-    val refusal = nameRefusal(trimmed)
-    return when {
-        !isMember(groupId, userId) -> GroupAnswer.NotFound
-        refusal != null -> GroupAnswer.Refused(refusal)
-        else -> {
-            FriendGroup.update({ FriendGroup.id eq groupId }) { it[FriendGroup.name] = trimmed }
-            publish(membersOf(groupId), Topic.FRIENDS)
-            GroupAnswer.Done
-        }
-    }
-}
-
 /**
  * Invites the account [userId] calls [personId] into [groupId].
  *
- * Only a friend: a group seats characters, and a character is only ever bound to a seat through a
- * friendship (person.linked_user_id).
+ * Only somebody who is friends with every member: a group seats characters, and a character is only
+ * ever bound to a seat through a friendship (person.linked_user_id). A friend of one member only
+ * would be a groupmate whose characters the others could not seat.
  */
 internal fun inviteToGroup(
     userId: String,
@@ -107,6 +89,7 @@ internal fun inviteToGroup(
     return when {
         friend == null || !isMember(groupId, userId) -> GroupAnswer.NotFound
         isMember(groupId, friend) -> GroupAnswer.Refused(Refusal("They're already in this group."))
+        !friendsWithEveryone(friend, groupId) -> GroupAnswer.Refused(NOT_FRIENDS_WITH_EVERYONE)
         else -> {
             sendGroupInvite(userId, groupId, friend, now)
             GroupAnswer.Done
@@ -142,26 +125,39 @@ private fun sendGroupInvite(
     publish(membersOf(groupId), Topic.FRIENDS)
 }
 
-/** Joins the group an invite to [userId] names. */
+private val NOT_FRIENDS_WITH_EVERYONE =
+    Refusal("They aren't friends with everyone in this group. Ask them to add the others first.")
+
+/**
+ * Joins the group an invite to [userId] names, if they are still friends with every member. The
+ * group can have changed since the invite was sent.
+ */
 internal fun acceptGroupInvite(
     userId: String,
     inviteId: Uuid,
     now: Instant,
 ): GroupAnswer {
-    val invite =
+    val groupId =
         FriendGroupInvite
             .selectAll()
             .where { (FriendGroupInvite.id eq inviteId) and (FriendGroupInvite.userId eq userId) }
-            .firstOrNull() ?: return GroupAnswer.NotFound
-    val groupId = invite[FriendGroupInvite.groupId]
-    dropInvite(inviteId)
-    FriendGroupMember.insertIgnore {
-        it[FriendGroupMember.groupId] = groupId
-        it[FriendGroupMember.userId] = userId
-        it[joinedAt] = now
+            .firstOrNull()
+            ?.get(FriendGroupInvite.groupId)
+    if (groupId != null) dropInvite(inviteId)
+    return when {
+        groupId == null -> GroupAnswer.NotFound
+        !friendsWithEveryone(userId, groupId) ->
+            GroupAnswer.Refused(Refusal("You aren't friends with everyone in this group. Ask for a new invite."))
+        else -> {
+            FriendGroupMember.insertIgnore {
+                it[FriendGroupMember.groupId] = groupId
+                it[FriendGroupMember.userId] = userId
+                it[joinedAt] = now
+            }
+            publish(membersOf(groupId), Topic.FRIENDS)
+            GroupAnswer.Done
+        }
     }
-    publish(membersOf(groupId), Topic.FRIENDS)
-    return GroupAnswer.Done
 }
 
 /** Declined by the invitee, or withdrawn by any member of the group. */
