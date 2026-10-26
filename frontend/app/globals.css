@@ -304,6 +304,17 @@ html:not(.has-session) .header-reserved {
   animation: section-menu-in 140ms ease-out;
 }
 
+/* Fills the 6px gap above the panel (plus its border), so a mouse moving down from the button never
+   leaves the menu and the close grace in use-hover-menu.ts can stay short. */
+.section-menu-panel::before {
+  content: "";
+  position: absolute;
+  top: -7px;
+  left: -1px;
+  right: -1px;
+  height: 7px;
+}
+
 /* Each group (and the ungrouped top-level block) is its own column, so the panel's own flex
    layout does not have to know whether an entry is nested. */
 .section-menu-panel > div {
