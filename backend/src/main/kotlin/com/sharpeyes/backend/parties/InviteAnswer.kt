@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.system.Refusal
 import com.sharpeyes.backend.bosses.clearSkipsOfSeats
+import com.sharpeyes.backend.bosses.weekOf
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
@@ -19,8 +20,11 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
@@ -81,7 +85,7 @@ private fun join(
         linkedCharactersFor(owner)[name.lowercase()] != characterId ->
             InviteAnswer.Refused(Refusal("You're no longer friends. Ask for a new invite."))
         else -> {
-            seat(partyId, party[Party.characterId], owner, name, now)
+            seat(partyId, party[Party.characterId], owner, name, characterId, now)
             publishToParty(partyId, Topic.PARTY)
             answered(owner, userId, partyId, name, accepted = true, now)
             InviteAnswer.Joined(partyId)
@@ -130,12 +134,13 @@ private fun dropInvite(inviteId: Uuid) {
     resolve(NotificationKind.PARTY_INVITE, listOf(inviteId))
 }
 
-/** The usual roster plus [name], every seat keeping its split. */
+/** The usual roster plus [name], every seat keeping its split, and a one-off's night as createParty writes it. */
 private fun seat(
     partyId: Uuid,
     ownCharacterId: Uuid,
     owner: String,
     name: String,
+    characterId: Uuid,
     now: Instant,
 ) {
     val own = ownSeatName(ownCharacterId).lowercase()
@@ -147,7 +152,22 @@ private fun seat(
             .toList()
     val others = seats.map { it[PartyMember.name] }.filterNot { it.lowercase() == own }
     val shares = seats.associate { it[PartyMember.name] to it[PartyMember.shares] }
-    writeMembers(partyId, ownCharacterId, others + name, SeatContext(owner, emptyMap(), now), shares)
+    // Read before writeMembers, which an unwritten night would otherwise read back through.
+    val night =
+        if (isOneOff(partyId)) {
+            rosterNamesFor(partyId, weekOf(todayIn(now))).filterNot { it.lowercase() in setOf(own, name.lowercase()) }
+        } else {
+            null
+        }
+    val context = SeatContext(owner, emptyMap(), now)
+    writeMembers(partyId, ownCharacterId, others + name, context, shares)
+    if (night != null) writeNightRoster(partyId, ownCharacterId, night + name, now, context)
+    // insertSeat binds only a seat it creates. One typed before the friendship, or unbound when the
+    // party was taken off the lists, is reused by name and would stay nobody's.
+    PartyMember.update({
+        (PartyMember.partyId eq partyId) and (PartyMember.name.lowerCase() eq name.lowercase()) and
+            PartyMember.characterId.isNull()
+    }) { it[linkedCharacterId] = characterId }
     syncPiecesForParty(partyId, now)
     clearSkipsOfSeats(partyId)
 }
