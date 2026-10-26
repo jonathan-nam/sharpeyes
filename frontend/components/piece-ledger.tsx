@@ -464,16 +464,28 @@ function HolderCard({
             for. See stillAsking. */}
         <span className="ledger-tranches">
           {shownTranches.map((tranche) => (
-            <span key={tranche.id} className="ledger-tranche">
+            // Focusable so a tap expands the total where there is no hover.
+            <span key={tranche.id} className="ledger-tranche" tabIndex={0}>
               {/* A redemption has no price, so it says what it is rather than dividing by a
                   missing amount. See V46. A purchase has one and is still not a sale, so it says
-                  which it is: two rows of "60 @ 25m" that settle differently would be one row
+                  which it is: two rows of "60 for 1.5b" that settle differently would be one row
                   repeated. See V50. */}
-              {tranche.amount === null
-                ? `${formatPieces(tranche.pieces)} kept`
-                : `${formatPieces(tranche.pieces)} @ ${shortMesos(tranche.amount / tranche.pieces)}${
+              {tranche.amount === null ? (
+                `${formatPieces(tranche.pieces)} kept`
+              ) : (
+                <>
+                  {`${formatPieces(tranche.pieces)} for `}
+                  {/* The total is what the Auction House shows to claim, so it leads. Exact on hover,
+                      since shortMesos rounds. */}
+                  <span className="ledger-tranche-total">
+                    <span className="is-short">{shortMesos(tranche.amount)}</span>
+                    <span className="is-full">{formatMesos(tranche.amount, true)}</span>
+                  </span>
+                  {`· ${shortMesos(tranche.amount / tranche.pieces)} ea${
                     tranche.disposition === "BOUGHT" ? " taken" : ""
                   }`}
+                </>
+              )}
               {/* Whose pieces it was, where it was not all the seller's. On the row rather than in
                   a total, because this is where a mistyped one is corrected: the ledger's figure for
                   that person moves the moment this row goes. */}
