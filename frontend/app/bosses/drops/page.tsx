@@ -370,6 +370,8 @@ export default function DropLogPage() {
         getToken,
       );
       setPools(await apiFetch<PartyLootPool[]>(POOLS_KEY, {}, getToken));
+      // A night in somebody else's party arrives through the shared books, read with the page.
+      if (!pools.some((pool) => pool.partyId === partyId)) await load();
     });
   }
 
@@ -514,7 +516,17 @@ export default function DropLogPage() {
   // tranche ledger or the view is every sale but the vestiges. See SettledTotals.pooled.
   const settledCounts = settledTotals(settledRows, couponMoney(tranches));
   const settledOrphans = orphansOf(whole.entries, [...settlements, ...shared.settlements]);
-  const open = unanswered(parties, counted, VESTIGE);
+  // With the nights you logged in somebody else's party: whoever logged a night arranges it (see
+  // stacksRefusal), and the shared books are where those arrive, from when you were linked.
+  const yoursToArrange = shared.pools.map((pool) => ({
+    ...pool,
+    loot: pool.loot.filter((loot) => loot.recordedByYou === true),
+  }));
+  const open = unanswered(
+    [...parties, ...shared.parties],
+    [...counted, ...yoursToArrange],
+    VESTIGE,
+  );
   // Only the drops still open tilt the rotation: a debt that has been closed was compensated, so it
   // has no business suggesting against the same person forever. See V52.
   const behind = runningBalance(stillOpen(settled, closures.closed));

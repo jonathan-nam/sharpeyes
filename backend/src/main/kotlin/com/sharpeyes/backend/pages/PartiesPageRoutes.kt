@@ -10,6 +10,7 @@ import com.sharpeyes.backend.parties.allLootFor
 import com.sharpeyes.backend.parties.partiesFor
 import com.sharpeyes.backend.parties.partiesSeatedIn
 import com.sharpeyes.backend.parties.peopleFor
+import com.sharpeyes.backend.parties.seatedPoolsFor
 import com.sharpeyes.backend.parties.settlementsFor
 import com.sharpeyes.backend.plugins.addSpan
 import com.sharpeyes.backend.plugins.dbQuery
@@ -91,13 +92,15 @@ internal fun partiesExtrasFor(
 
     val rest =
         measureTimedValue {
+            val seated = partiesSeatedIn(userId)
             PartiesExtrasResponse(
                 clears = clearsView(userId, week = null, now = now),
                 drops = dropTables(),
                 people = peopleFor(userId),
                 pools = pools.value,
                 settlements = settlementsFor(userId),
-                seated = partiesSeatedIn(userId),
+                seated = seated,
+                seatedPools = seatedPoolsFor(userId, seated),
             )
         }
     onStage("rest", rest.duration)

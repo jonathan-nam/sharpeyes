@@ -10,7 +10,7 @@ import { copyText, formatMoney } from "@/lib/money";
 import { sharesLabel } from "@/lib/shares";
 import { divides, formatDropped, saleMoney, splitOf, statusLabel } from "@/lib/loot";
 import { isMine } from "@/lib/wallet";
-import { memberSeats } from "@/lib/parties";
+import { memberSeats } from "@/lib/parties/member-view";
 import { canTrade, isPerMember } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Loot, SellLootBody } from "@/types/loot";
@@ -109,7 +109,8 @@ export function LootRow({
   const result = splitOf(loot, party.seats);
   // A share is yours to mark when it passes through one of your seats: you sold or bought it, or
   // you are owed it. One between two other members is theirs to settle, and the server refuses it.
-  // Owner-side only: in a read-only pool `isMine` names the owner's seats, not the reader's.
+  // In a pool you do not own the party arrives from your side (see fromYourSide), so `isMine`
+  // names your seats there too.
   const mySeats = new Set(party.seats.filter(isMine).map((m) => m.id));
   const crossesYou = (memberId: string) =>
     result !== null && (mySeats.has(result.seller.memberId) || mySeats.has(memberId));
@@ -353,7 +354,7 @@ export function LootRow({
                         by mistake was not discoverable at all: the one click anybody found flipped
                         it back. The x is this app's own undo mark, the same one a tranche row and an
                         entered debt carry. */}
-                    {readOnly ? (
+                    {readOnly && !crossesYou(share.memberId) ? (
                       <span className={share.paid ? "loot-paid is-paid" : "loot-paid"}>
                         {share.paid ? "Paid" : "Unpaid"}
                       </span>

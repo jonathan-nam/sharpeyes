@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import { announceInvites } from "@/lib/invite-notice";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
-import { asYourRow, ownersRoster } from "@/lib/shared-parties";
+import { asYourRow, ownersRoster } from "@/lib/parties/member-view";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { invalidate, peek, put, storedAt } from "@/lib/cache";
 import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
@@ -95,6 +95,9 @@ const PARTY_LIST_KEY = "/api/parties?solo=include&retired=include";
 const BOSSES_KEY = "/api/bosses";
 // The parties somebody ELSE owns that a character of yours sits in. See SeatedParties.kt.
 const SEATED_KEY = "/api/parties/seated";
+// The pools of the parties you sit in, read as you: loaded with the extras, refetched here after a
+// write. Kept apart from POOLS_KEY, which is your own money and feeds every figure owed.
+const SEATED_POOLS_KEY = "/api/parties/seated/loot";
 const CHARACTERS_KEY = "/api/characters";
 // Whose character is whose, for the roster editor's datalist. Same key as the edit page, so the
 // two share one cached copy and offer the same spellings.
@@ -150,6 +153,9 @@ export default function PartiesPage() {
   const [dropTables, setDropTables] = useState<DropTables>(peek<DropTables>(DROPS_KEY) ?? {});
   const [people, setPeople] = useState<Person[]>(peek<Person[]>(PEOPLE_KEY) ?? []);
   const [pools, setPools] = useState<PartyLootPool[]>(peek<PartyLootPool[]>(POOLS_KEY) ?? []);
+  const [seatedPools, setSeatedPools] = useState<PartyLootPool[]>(
+    peek<PartyLootPool[]>(SEATED_POOLS_KEY) ?? [],
+  );
   const [settlements, setSettlements] = useState<VestigeSettlement[]>(
     peek<VestigeSettlement[]>(SETTLEMENTS_KEY) ?? [],
   );
@@ -271,6 +277,7 @@ export default function PartiesPage() {
   useLive(["clears", "loot", "party"], () => {
     void loadWeek(week, { clearsOptional: true }).catch(() => {});
     void refetchPools().catch(() => {});
+    void refreshSeatedPools().catch(() => {});
   });
 
   async function selectWeek(target: string | null) {
@@ -365,6 +372,8 @@ export default function PartiesPage() {
           put(SETTLEMENTS_KEY, extras.settlements);
           setSeated(extras.seated);
           put(SEATED_KEY, extras.seated);
+          setSeatedPools(extras.seatedPools ?? []);
+          put(SEATED_POOLS_KEY, extras.seatedPools ?? []);
         }
         setState("loaded");
         reportDataReady();
@@ -440,7 +449,7 @@ export default function PartiesPage() {
         getToken,
       );
       if (party.yours === false) {
-        await loadWeek(null);
+        await Promise.all([loadWeek(null), refreshSeatedPools()]);
         return;
       }
       // Both lists: the shares are on the party, and every pool row's entitlement is read against
@@ -561,6 +570,12 @@ export default function PartiesPage() {
     put(POOLS_KEY, poolResult);
   }
 
+  async function refreshSeatedPools() {
+    const next = await apiFetch<PartyLootPool[]>(SEATED_POOLS_KEY, { method: "GET" }, getToken);
+    setSeatedPools(next);
+    put(SEATED_POOLS_KEY, next);
+  }
+
   /**
    * Logs a drop from the row, without leaving the list.
    *
@@ -589,7 +604,7 @@ export default function PartiesPage() {
         { method: "POST", body: JSON.stringify(body) },
         getToken,
       );
-      await readBack(() => loadWeek(null));
+      await readBack(() => Promise.all([loadWeek(null), refreshSeatedPools()]));
     });
   }
 
@@ -631,7 +646,7 @@ export default function PartiesPage() {
         );
         // Past the write, so the same reading the party's own page makes: a refetch that fails is
         // a stale panel, not a sale that did not save. See StaleAfterWrite.
-        await readBack(refreshPools);
+        await readBack(party.yours === false ? refreshSeatedPools : refreshPools);
       });
     } catch (e) {
       setPoolError({
@@ -673,7 +688,7 @@ export default function PartiesPage() {
   // Never on a past week: the server stamps a drop with today, so one added under last week's
   // label would land in a week this screen is not showing.
   const canAddDrops = !history && haveDropTables;
-  const lootByParty = new Map(pools.map((pool) => [pool.partyId, pool.loot]));
+  const lootByParty = new Map([...pools, ...seatedPools].map((pool) => [pool.partyId, pool.loot]));
 
   // How far ahead or behind each holder is across every night already answered, so the odd stack
   // rotates instead of landing on the same person every week. Only the drops still open count: a
@@ -756,6 +771,8 @@ export default function PartiesPage() {
     return canAddDrops
       ? {
           loot: dropsInWeek(lootByParty.get(party.id) ?? [], view?.currentWeekStart ?? null),
+          // A party you sit in: you act as your own seats only. See LootRow.readOnly.
+          readOnly: party.yours === false,
           dropTables,
           bossByKey,
           pieceStatus: pieceStatus.get(party.id),
@@ -872,9 +889,9 @@ export default function PartiesPage() {
 
   /**
    * One config as a row, yours or one you are seated in, so the two cannot offer different controls.
-   * A party somebody else owns leaves out its pool and pile, so selling and settling stay on the
-   * party's own page, and its invites, which are the owner's to send. Coupons owed are reckoned over
-   * your own pools, which it is not one of, so its badge is absent rather than claiming none are out.
+   * A party somebody else owns draws its pool as a member reads it, and leaves out its pile and
+   * invites, which are the owner's. Coupons owed are reckoned over your own pools, which it is not
+   * one of, so its badge is absent rather than claiming none are out.
    */
   function partyCard(party: Party, heading: ReactNode) {
     const shared = sharedIds.has(party.id);
@@ -896,7 +913,7 @@ export default function PartiesPage() {
           canAddDrops ? (body) => (shared ? addSharedDrop : addDrop)(party, body) : undefined
         }
         stacks={stacksFor(party)}
-        pool={shared ? undefined : poolFor(party)}
+        pool={poolFor(party)}
         piecePile={shared ? undefined : piecePileFor(party)}
         onSaveRoster={
           history ? undefined : (members) => saveRoster(party, rosterFor(party, members))
@@ -1006,7 +1023,8 @@ export default function PartiesPage() {
               <AddForWeek
                 characters={characters}
                 bosses={bosses}
-                parties={parties}
+                // With the ones you sit in, which hold that boss for the character too.
+                parties={[...parties, ...sharedRows]}
                 busy={isSaving(ADD_FOR_WEEK)}
                 error={addError}
                 onAdd={addOneOff}

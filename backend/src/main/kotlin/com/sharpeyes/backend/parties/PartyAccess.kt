@@ -27,9 +27,9 @@ internal fun canEditParty(
  * The account a config write on [partyId] runs as when [userId] makes it: the owner, whoever asks.
  * Null when [userId] is neither the owner nor a joined member.
  *
- * Any member edits the config, but it stays the owner's row: their characters are its seats, their
- * people are who a new name invites. Running as the caller would bind a member's own characters
- * into the owner's party.
+ * Any member edits the config, but it stays the owner's row: their characters are its seats.
+ * Running as the caller would bind a member's own characters into the owner's party. Inviting stays
+ * the owner's; see memberInviteRefusal.
  */
 internal fun keeperOf(
     partyId: Uuid,
@@ -43,6 +43,21 @@ internal fun keeperOf(
             .where { Party.id eq partyId }
             .firstOrNull()
             ?.get(Party.userId)
+    }
+
+/**
+ * Why [userId] cannot send [invitees], or null. Inviting is the owner's alone: a member's save that
+ * names somebody new would invite them in the owner's name.
+ */
+internal fun memberInviteRefusal(
+    userId: String,
+    keeper: String,
+    invitees: List<Invitee>,
+): String? =
+    if (keeper == userId || invitees.isEmpty()) {
+        null
+    } else {
+        "Only the party's owner can invite. Ask them to add ${invitees.joinToString(", ") { it.name }}."
     }
 
 /** [this], a config write's answer as the owner reads it, re-read for [userId] when that is a member. */

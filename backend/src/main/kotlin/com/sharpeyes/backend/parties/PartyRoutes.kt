@@ -52,6 +52,8 @@ fun Route.partyRoutes(
     // than a flag on the list above, because it crosses accounts and that is worth being able to
     // point at. See SeatedParties.kt.
     get("/seated") { listSeatedParties() }
+    // Their pools, read as you. Constant, so ahead of /{id}.
+    get("/seated/loot") { listSeatedPools() }
     // Before /{id}, and matched ahead of it whatever the order: Ktor scores a constant segment
     // above a parameter. Every pool at once, for the wallet, and the wallet's one settle back.
     get("/loot") { listAllLoot() }
@@ -244,7 +246,9 @@ private suspend fun RoutingContext.savePartyRoute(
                 val (request, invitees) = typed.inviting(keeper, partyId)
                 // The row's kind, not the request's: oneOff is read at create only, so an edit
                 // leaves it as it was.
-                val problem = validateSavedParty(keeper, partyId, request, now, isOneOff(partyId))
+                val problem =
+                    memberInviteRefusal(userId, keeper, invitees)
+                        ?: validateSavedParty(keeper, partyId, request, now, isOneOff(partyId))
                 if (problem != null) {
                     problem
                 } else {
@@ -299,7 +303,8 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
             val asking = weekInvites(keeper, partyId, request.members)
             val named = asking.named
             val problem =
-                validateRosterWeek(partyId, week, thisWeek)
+                memberInviteRefusal(userId, keeper, asking.invitees)
+                    ?: validateRosterWeek(partyId, week, thisWeek)
                     ?: validateRosterClear(partyId, named)
                     ?: named?.let { members ->
                         validateMembers(members)

@@ -55,7 +55,7 @@ import type { Boss, BossClearsView } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
 import type { Party, SaveSharesBody, SeatedParty } from "@/types/party";
-import { asYourRow } from "@/lib/shared-parties";
+import { asYourRow } from "@/lib/parties/member-view";
 import { useLive } from "@/lib/use-live";
 import type { VestigeSettlement } from "@/types/vestige";
 
@@ -700,7 +700,8 @@ export default function RunOrderPage() {
     onToggleClear: toggleClear,
     onAddDrop: haveDropTables ? addDrop : undefined,
     stacksOf: haveDropTables ? stacksFor : undefined,
-    pieceOf: piecePileFor,
+    // The pile is the owner's to write, so a run you only sit in offers none.
+    pieceOf: (party: Party) => (party.yours === false ? undefined : piecePileFor(party)),
   };
 
   const left = plan.runs.filter((planned) => partyById.get(planned.run.id)?.cleared !== true);

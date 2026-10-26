@@ -38,7 +38,8 @@ import { NOTHING_OUTSTANDING, poolLabel, summarize } from "@/lib/loot";
 import { assignableDrops } from "@/lib/vestige-pickup";
 import { shareConfig } from "@/lib/vestige-stacks";
 import { closedByHolder } from "@/lib/vestige-ledger";
-import { asSeenBy, ownMember, partySizeLabel } from "@/lib/parties";
+import { ownMember, partySizeLabel } from "@/lib/parties";
+import { asSeenBy } from "@/lib/parties/member-view";
 import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, PartyLootPool, SellLootBody } from "@/types/loot";
@@ -344,7 +345,10 @@ export default function PartyPage() {
     ? [{ partyId: party.id, loot }, ...pools.filter((pool) => pool.partyId !== party.id)]
     : pools;
   const everyParty = party ? [party, ...parties.filter((p) => p.id !== party.id)] : parties;
-  const log = party ? buildDropLog(everyParty, everyPool, dropTables, closed) : null;
+  // Not for a party you only sit in. Its nights are closed by settlements in its owner's book, which
+  // this account does not hold, so a debt already settled there would read as owed here. Prefer no
+  // figure to that one; Settlement reads the owner's book and has it right.
+  const log = party && !readOnly ? buildDropLog(everyParty, everyPool, dropTables, closed) : null;
   /** This party's own rows, which is what every figure below is about. */
   const mine = log?.entries.filter((entry) => entry.partyId === party?.id) ?? [];
   // What each coupon row says it is: a piece drop is PENDING for ever, because it never sells through
@@ -463,7 +467,7 @@ export default function PartyPage() {
                 />
               )}
               {[
-                ownMember(party)?.name,
+                ownMember(asSeenBy(party))?.name,
                 bossLabel(bossByKey.get(party.bossKey)?.name ?? party.bossKey, party.difficulty),
               ]
                 .filter((part): part is string => Boolean(part))
@@ -472,7 +476,7 @@ export default function PartyPage() {
             <div className="party-card-head">
               {/* Your own character among them, unlike the strips on Party View, which put it in the
                 header and list only the others. Here it is one of the shares. */}
-              <RosterStrip members={asSeenBy(party)} />
+              <RosterStrip members={asSeenBy(party).members} />
               {/* This config is off every list, so this page is the only one that can say so. It is
                 still reachable, and it has to be: an old drop is sold and paid out from here. What
                 the word is for is the picker below, which would otherwise divide tonight's drop by
@@ -490,7 +494,7 @@ export default function PartyPage() {
             {error && <p className="split-error">{error}</p>}
 
             <LootPool
-              party={party}
+              party={asSeenBy(party)}
               pieceStatus={pieceStatus}
               stacks={stacks}
               loot={loot}

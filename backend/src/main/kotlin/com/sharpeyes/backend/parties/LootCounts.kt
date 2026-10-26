@@ -61,7 +61,11 @@ private data class LootRow(
 internal fun lootCountsFor(
     partyIds: List<Uuid>,
     week: LocalDate?,
+    // Who is counting: a member counts only what they read, from their own seats. Null counts as
+    // each party's owner. See MemberReads.
+    reader: String? = null,
 ): Map<Uuid, LootCounts> {
+    val reads = reader?.let { dropsReadBy(it, partyIds) } ?: { _, _ -> true }
     val loot =
         if (partyIds.isEmpty()) {
             emptyList()
@@ -78,13 +82,13 @@ internal fun lootCountsFor(
                         it[PartyLoot.sellerMemberId],
                         it[PartyLoot.takenByMemberId] != null,
                     )
-                }
+                }.filter { reads(it.partyId, it.droppedOn) }
         }
     if (loot.isEmpty()) return emptyMap()
 
     // Only shares that pass through your own seats hold a drop open. One between two other members
     // is theirs to settle, and waiting on it left the drop awaiting payout with nothing to do.
-    val mine = ownSeatsIn(partyIds)
+    val mine = reader?.let { readerSeatsIn(partyIds, it) } ?: ownSeatsIn(partyIds)
     val sellerOf = loot.associate { it.id to it.sellerMemberId }
     val unpaidLootIds =
         PartyLootPayout

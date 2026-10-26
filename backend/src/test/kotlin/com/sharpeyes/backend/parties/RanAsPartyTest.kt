@@ -13,6 +13,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -60,10 +61,13 @@ class RanAsPartyTest {
 
     @AfterTest
     fun cleanUp() {
+        // A local, never the property: inside deleteWhere {} a bare `userId` is the table's own column,
+        // and `user_id = user_id` deleted every character and party in the database this ran against.
+        val owners = listOf(userId)
         transaction {
-            Party.deleteWhere { Party.userId eq userId }
-            Person.deleteWhere { Person.userId eq userId }
-            Characters.deleteWhere { Characters.userId eq userId }
+            Party.deleteWhere { Party.userId inList owners }
+            Person.deleteWhere { Person.userId inList owners }
+            Characters.deleteWhere { Characters.userId inList owners }
         }
     }
 

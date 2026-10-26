@@ -38,4 +38,6 @@ export type PartiesExtras = {
   pools: PartyLootPool[];
   settlements: VestigeSettlement[];
   seated: SeatedParty[];
+  // The pools of `seated`, read as you. Absent on a payload cached before it.
+  seatedPools?: PartyLootPool[];
 };

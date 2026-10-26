@@ -118,7 +118,7 @@ internal fun partiesFromRows(
     val partyIds = rows.map { it[Party.id] }
     val seatsByParty = seatsFor(partyIds, userId)
     val rosters = rostersFor(partyIds, shown)
-    val counts = lootCountsFor(partyIds, shown)
+    val counts = lootCountsFor(partyIds, shown, userId)
     val clears = clearStateFor(rows, asCharacter)
     val spelledOut = weeksSpelledOut(partyIds, shown)
     // Against the week being SHOWN, not against now, so stepping back says what was said about that
@@ -189,7 +189,7 @@ internal fun findParty(
                 seats = seats,
                 // All time, unlike the list's. This is the page that sells a drop and pays it out, so a
                 // week that hid an old one would put it beyond the only controls that can settle it.
-                loot = lootCountsFor(listOf(partyId), week = null)[partyId] ?: LootCounts(0, 0, 0),
+                loot = lootCountsFor(listOf(partyId), week = null, reader = userId)[partyId] ?: LootCounts(0, 0, 0),
                 clear = clears[partyId] ?: ClearState(null, false),
                 week = state,
             ).copy(accounts = accountsFor(listOf(partyId), userId)[partyId].orEmpty())

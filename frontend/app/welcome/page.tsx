@@ -14,7 +14,7 @@ import { apiAssetUrl, apiFetch, failureText, duplicatePartyIn } from "@/lib/api"
 import { bossLabel } from "@/lib/boss-difficulty";
 import { partyHref } from "@/lib/party-path";
 import { hardestFirst } from "@/lib/hardest-first";
-import { asYourRow } from "@/lib/shared-parties";
+import { asYourRow } from "@/lib/parties/member-view";
 import { saveMainCharacter, saveWorld, useAccountSettings } from "@/lib/use-account-settings";
 import { useAuth } from "@/lib/use-auth";
 import { WORLDS_IN } from "@/lib/world-names";
