@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { useDismiss } from "@/lib/use-dismiss";
 import { activeHref, MENU_HREFS, sectionsFor } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
@@ -11,8 +11,17 @@ import { useAccountSettings } from "@/lib/use-account-settings";
 // belongs to, are in lib/section-menu.ts, where they can be tested: the highlight rule fails
 // silently, by lighting the wrong word rather than by erroring.
 
+// Hover opens after a short rest, so sweeping across the header to the world toggle does not flash
+// it, and closes after a grace that covers the gap between the button and the panel.
+const HOVER_OPEN_MS = 80;
+const HOVER_CLOSE_MS = 250;
+
 export function SectionMenu() {
-  const [open, setOpen] = useState(false);
+  // A hovered menu closes when the mouse leaves it; a clicked one stays until dismissed.
+  const [openedBy, setOpenedBy] = useState<"hover" | "click" | null>(null);
+  const open = openedBy !== null;
+  const close = () => setOpenedBy(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pathname = usePathname();
 
   const active = activeHref(pathname);
@@ -44,20 +53,45 @@ export function SectionMenu() {
   const [pathShown, setPathShown] = useState(pathname);
   if (pathShown !== pathname) {
     setPathShown(pathname);
-    setOpen(false);
+    close();
   }
 
-  useDismiss(ref, open, () => setOpen(false));
+  useDismiss(ref, open, close);
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+  // Mouse only: a touch fires pointerenter just before its click, which would open and then toggle.
+  function onPointerEnter(e: PointerEvent) {
+    if (e.pointerType !== "mouse") return;
+    clearTimeout(hoverTimer.current);
+    if (!open) hoverTimer.current = setTimeout(() => setOpenedBy("hover"), HOVER_OPEN_MS);
+  }
+  function onPointerLeave(e: PointerEvent) {
+    if (e.pointerType !== "mouse") return;
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(
+      () => setOpenedBy((by) => (by === "hover" ? null : by)),
+      HOVER_CLOSE_MS,
+    );
+  }
 
   return (
-    <div className="section-menu" ref={ref}>
+    <div
+      className="section-menu"
+      ref={ref}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
+    >
       <button
         type="button"
         className="section-menu-btn"
         aria-label="Sections"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
+        // A click on a hovered menu keeps it open rather than closing what the user reached for.
+        onClick={() => {
+          clearTimeout(hoverTimer.current);
+          setOpenedBy((by) => (by === "click" ? null : "click"));
+        }}
       >
         <span className="section-menu-icon" aria-hidden="true" />
       </button>
@@ -80,7 +114,7 @@ export function SectionMenu() {
                     href={item.href}
                     role="menuitem"
                     className={active === item.href ? "active" : ""}
-                    onClick={() => setOpen(false)}
+                    onClick={close}
                   >
                     {item.label}
                     {item.inDevelopment ? <InDevelopmentMark /> : null}

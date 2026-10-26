@@ -224,6 +224,8 @@ html:not(.has-session) .header-reserved {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transform-origin: top left;
+  animation: section-menu-in 140ms ease-out;
 }
 
 /* Each group (and the ungrouped top-level block) is its own column, so the panel's own flex
@@ -231,6 +233,38 @@ html:not(.has-session) .header-reserved {
 .section-menu-panel > div {
   display: flex;
   flex-direction: column;
+  animation: section-menu-block-in 180ms ease-out both;
+}
+
+.section-menu-panel > div:nth-child(2) {
+  animation-delay: 30ms;
+}
+.section-menu-panel > div:nth-child(3) {
+  animation-delay: 60ms;
+}
+.section-menu-panel > div:nth-child(n + 4) {
+  animation-delay: 90ms;
+}
+
+@keyframes section-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.96);
+  }
+}
+
+@keyframes section-menu-block-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .section-menu-panel,
+  .section-menu-panel > div {
+    animation: none;
+  }
 }
 
 /* A rule between blocks, on the block rather than on the group: Inventory sits after the Bossing
