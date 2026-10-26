@@ -3,10 +3,9 @@ import { type PointerEvent, type RefObject, useEffect, useRef, useState } from "
 import { useDismiss } from "@/lib/use-dismiss";
 
 // Hover opens after a short rest, so sweeping across the header does not flash every menu on the
-// way. The close grace only forgives an overshoot: the gap down to the panel is bridged in CSS
-// (`.section-menu-panel::before`). 250ms read as the menu lagging behind the mouse.
+// way. Leaving closes at once: the gap down to the panel is bridged in CSS
+// (`.section-menu-panel::before`), and any close delay (250ms, then 100ms) read as lag.
 const HOVER_OPEN_MS = 80;
-const HOVER_CLOSE_MS = 100;
 
 export type OpenedBy = "hover" | "click" | null;
 
@@ -69,10 +68,7 @@ export function useHoverMenu(ref: RefObject<HTMLElement | null>) {
       onPointerLeave(e: PointerEvent) {
         if (e.pointerType !== "mouse") return;
         clearTimeout(timer.current);
-        timer.current = setTimeout(
-          () => setOpenedBy((by) => menuAfter(by, "leave")),
-          HOVER_CLOSE_MS,
-        );
+        setOpenedBy((by) => menuAfter(by, "leave"));
       },
     },
   };
