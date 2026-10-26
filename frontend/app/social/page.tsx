@@ -14,11 +14,12 @@ import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
 import { bossLabel } from "@/lib/boss-difficulty";
-import type { FriendView, IncomingInvite, Social } from "@/types/social";
+import type { FriendView, IncomingInvite, SentInvite, Social } from "@/types/social";
 import { DiscordAvatar } from "@/components/discord-avatar";
 
 const SOCIAL_KEY = "/api/friends";
 const INVITES_KEY = "/api/party-invites";
+const SENT_INVITES_KEY = `${INVITES_KEY}/sent`;
 
 // Friends: other accounts, found by Discord username. Requests to you and party invites are answered
 // here or from the bell, so clearing one from the bell does not lose it. Accepting links the two
@@ -28,6 +29,7 @@ export default function SocialPage() {
   const { getToken, isLoaded } = useAuth();
   const [social, setSocial] = useState<Social | null>(null);
   const [invites, setInvites] = useState<IncomingInvite[]>([]);
+  const [sentInvites, setSentInvites] = useState<SentInvite[]>([]);
   const [failed, setFailed] = useState(false);
   const [username, setUsername] = useState("");
   const lookup = useDiscordLookup(username);
@@ -38,7 +40,28 @@ export default function SocialPage() {
     return Promise.all([
       apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken).then(setSocial),
       apiFetch<IncomingInvite[]>(INVITES_KEY, { method: "GET" }, getToken).then(setInvites),
+      apiFetch<SentInvite[]>(SENT_INVITES_KEY, { method: "GET" }, getToken).then(setSentInvites),
     ]);
+  }
+
+  /** Withdraws an invite you sent, then reads yours back. */
+  async function cancelInvite(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiFetch<unknown>(
+        `${INVITES_KEY}/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+        getToken,
+      );
+      // Party cards list their pending invites too.
+      invalidate("/api/parties");
+      setSentInvites(await apiFetch<SentInvite[]>(SENT_INVITES_KEY, { method: "GET" }, getToken));
+    } catch (e) {
+      setError(failureText(e, "Couldn't cancel."));
+    } finally {
+      setBusy(false);
+    }
   }
 
   /** Accepts or declines a party invite, then reads the invites back. */
@@ -110,7 +133,7 @@ export default function SocialPage() {
 
   const incoming = social?.incoming ?? [];
   const outgoing = social?.outgoing ?? [];
-  const pending = incoming.length + invites.length + outgoing.length;
+  const pending = incoming.length + invites.length + outgoing.length + sentInvites.length;
   const sections: NavSection[] = [
     { id: "add", label: "Add Friend" },
     ...(pending > 0
@@ -221,6 +244,25 @@ export default function SocialPage() {
                         Cancel
                       </Button>
                     </FriendCard>
+                  ))}
+                  {sentInvites.map((invite) => (
+                    <li key={invite.id} className="character-card">
+                      <span className="tile-plate">
+                        <span className="tile-name">
+                          {`${invite.leader}'s ${bossLabel(invite.boss, invite.difficulty)}`}
+                        </span>
+                        <span className="tile-meta">{`Invite sent, to ${invite.character}`}</span>
+                      </span>
+                      <span className="character-card-actions">
+                        <Button
+                          variant="secondary"
+                          disabled={busy}
+                          onClick={() => void cancelInvite(invite.id)}
+                        >
+                          Cancel
+                        </Button>
+                      </span>
+                    </li>
                   ))}
                 </ul>
               </FriendGroup>
