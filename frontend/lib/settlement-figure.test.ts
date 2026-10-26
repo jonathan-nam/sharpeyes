@@ -138,7 +138,8 @@ describe("what the card says a person owes", () => {
     );
     // Off the same net the button quoted its figure from, every share priced, so the rows cannot
     // come to a different sum.
-    expect(source).toContain("const pots = closeBody(net, kind);");
+    expect(source).toContain("const pots = closeBody(scope, kind);");
+    expect(source).toContain("const close = (kind: CloseKind, scope: ClosingNet = net) => {");
     expect(acts).toContain("refs(yours, offset)");
     expect(acts).toContain("priced ? { lootId, memberId, amount } : { lootId, memberId }");
   });

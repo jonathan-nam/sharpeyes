@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { closeBody, closeLabel, closingActs } from "@/components/closing-acts";
+import { closeBody, closeLabel, closingActs, heldOnly } from "@/components/closing-acts";
 import { formatMesos } from "@/lib/drop-split";
 import { formatDollars } from "@/lib/money";
 import type { ClosingNet } from "@/lib/settlement";
@@ -109,6 +109,33 @@ describe("which acts each side is offered", () => {
   it("offers nothing on a card with nothing for a closing act to settle", () => {
     expect(keys(net({ open: false }), true)).toEqual([]);
   });
+  // The shape that asked for it: owed both ways round, and holding some of their coupon money.
+  const owedAndHolding = net({
+    payer: "THEM",
+    mesos: 2_000 * M,
+    sharesTheyOwe: [share("d", 2_300 * M)],
+    holding: 300 * M,
+    enteredBalance: 48_000 * M,
+  });
+
+  it("offers the payee an Offset of the coupon money it holds, where they also owe it", () => {
+    expect(keys(owedAndHolding, true)).toEqual([
+      `keep:Offset ${formatMesos(300 * M, true)}`,
+      `close:Mark ${formatMesos(2_000 * M, true)} Received`,
+      `listing:Post Listing for ${formatMesos(2_000 * M, true)}`,
+    ]);
+  });
+
+  it("offers no keep where they owe nothing outside the pots, or where you owe net", () => {
+    expect(keys(net({ ...owedAndHolding, enteredBalance: 0 }))).not.toContain(
+      `keep:Offset ${formatMesos(300 * M, true)}`,
+    );
+    expect(
+      keys(net({ ...owedAndHolding, payer: "YOU", enteredBalance: 48_000 * M })).some((key) =>
+        key.startsWith("keep:"),
+      ),
+    ).toBe(false);
+  });
 });
 
 describe("what one press sends", () => {
@@ -129,6 +156,16 @@ describe("what one press sends", () => {
       received: [{ lootId: "d", memberId: "seat-d" }],
       holding: undefined,
       heldByThem: 500 * M,
+    });
+  });
+
+  it("sends a keep as an Offset of the held money alone, every share left to cross", () => {
+    const held = net({ payer: "THEM", sharesTheyOwe: [share("d", 2_300 * M)], holding: 300 * M });
+    expect(closeBody(heldOnly(held), "OFFSET")).toEqual({
+      parts: [],
+      received: [],
+      holding: 300 * M,
+      heldByThem: undefined,
     });
   });
 

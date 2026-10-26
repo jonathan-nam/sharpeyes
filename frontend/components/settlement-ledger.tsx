@@ -37,6 +37,7 @@ import {
   undecidedSales,
   heldByThem,
   closingNet,
+  type ClosingNet,
   shareKey,
 } from "@/lib/settlement";
 import { type CloseKind, closeBody, closingActs } from "@/components/closing-acts";
@@ -575,8 +576,8 @@ function SettlementCard({
   const bothWays = theirNights.length > 0 && myNights.length > 0;
 
   /** One press, settling every pot closingNet names, both ways. See components/closing-acts.tsx. */
-  const close = (kind: CloseKind) => {
-    const pots = closeBody(net, kind);
+  const close = (kind: CloseKind, scope: ClosingNet = net) => {
+    const pots = closeBody(scope, kind);
     void write(onClose(row.holder, row.name, kind, pots), null);
   };
 
@@ -1227,6 +1228,7 @@ function SettlementCard({
           net,
           name: row.name,
           detail: closeFor,
+          heldDetail: coupons(held, row.holding),
           close,
           listings:
             kit && personId

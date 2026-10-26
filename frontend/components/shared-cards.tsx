@@ -8,7 +8,7 @@ import { type ListingKit, PostListingDialog } from "@/components/settlement-list
 import { liveListing, paysOn } from "@/lib/settlement-listings";
 import { cardAnchor } from "@/lib/drop-sections";
 import { type CloseKind, closeBody, closingActs } from "@/components/closing-acts";
-import { flipNet } from "@/lib/settlement";
+import { type ClosingNet, flipNet } from "@/lib/settlement";
 import type { ClosePots } from "@/types/vestige";
 import {
   ClosingActions,
@@ -102,8 +102,8 @@ function SharedCardView({
   const yourListing = listingFor("OWNER");
   const theirListing = listingFor("MEMBER");
   /** One press, sent in the owner's terms: the net turned back round. See closeShared. */
-  const close = (kind: CloseKind) =>
-    act(writes.close(card.personId, kind, closeBody(flipNet(card.net), kind)));
+  const close = (kind: CloseKind, scope: ClosingNet = card.net) =>
+    act(writes.close(card.personId, kind, closeBody(flipNet(scope), kind)));
   const [showHistory, setShowHistory] = useState(false);
   const closeHistory = useCallback(() => setShowHistory(false), []);
   const act = (action: Promise<void>) => {
@@ -245,6 +245,7 @@ function SharedCardView({
             ...detail.theyOwe.map((line) => line.name),
             ...(card.youHold > 0 ? [heldFor] : []),
           ]),
+          heldDetail: card.youHold > 0 ? heldFor : null,
           close,
           listings: listings
             ? {
