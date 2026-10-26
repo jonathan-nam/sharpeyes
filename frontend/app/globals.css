@@ -7760,6 +7760,21 @@ button.link:disabled {
   border-radius: var(--radius-sm);
 }
 
+/* A sale's total, short at rest and exact while the chip is hovered or focused. */
+.ledger-tranche-total {
+  color: var(--ink-strong);
+  font-weight: 600;
+}
+
+.ledger-tranche-total .is-full,
+.ledger-tranche:is(:hover, :focus-within) .ledger-tranche-total .is-short {
+  display: none;
+}
+
+.ledger-tranche:is(:hover, :focus-within) .ledger-tranche-total .is-full {
+  display: inline;
+}
+
 /* Element-qualified to beat button.link's own colour, which is an underlined accent: this one is
    a discard beside a figure, not somewhere to go. */
 button.ledger-drop-sale {
