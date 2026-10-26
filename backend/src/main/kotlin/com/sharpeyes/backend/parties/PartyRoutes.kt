@@ -236,19 +236,21 @@ private suspend fun RoutingContext.savePartyRoute(
     val outcome =
         dbQuery {
             val now = Clock.System.now()
-            if (!ownsParty(partyId, userId)) {
+            // A joined member saves it too, as its owner. See keeperOf.
+            val keeper = keeperOf(partyId, userId)
+            if (keeper == null) {
                 null
             } else {
-                val (request, invitees) = typed.inviting(userId, partyId)
+                val (request, invitees) = typed.inviting(keeper, partyId)
                 // The row's kind, not the request's: oneOff is read at create only, so an edit
                 // leaves it as it was.
-                val problem = validateSavedParty(userId, partyId, request, now, isOneOff(partyId))
+                val problem = validateSavedParty(keeper, partyId, request, now, isOneOff(partyId))
                 if (problem != null) {
                     problem
                 } else {
                     // Everyone else invited rather than removed: still a party, not a solo pool.
-                    saveParty(userId, partyId, request, now, sprites, keepParty = invitees.isNotEmpty())
-                    findParty(partyId, userId)!!.withInvites(userId, invitees, now)
+                    saveParty(keeper, partyId, request, now, sprites, keepParty = invitees.isNotEmpty())
+                    findParty(partyId, keeper)!!.withInvites(keeper, invitees, now).seenBy(partyId, userId, keeper)
                 }
             }
         }
@@ -286,13 +288,15 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
     val outcome =
         dbQuery {
             ensureUser(userId, email)
+            // A joined member sets the week too, as its owner. See keeperOf.
+            val keeper = keeperOf(partyId, userId) ?: return@dbQuery null
             val characterId = characterIdOfParty(partyId)
             val thisWeek = currentWeek()
             // Omitted means this week. Which week THIS is comes from the server's clock rather than
             // the payload, so a browser a day out cannot file a roster in the neighbouring week.
             val week = asked ?: thisWeek
             // A friend not yet in the party is invited to it, the same as from its own roster.
-            val asking = weekInvites(userId, partyId, request.members)
+            val asking = weekInvites(keeper, partyId, request.members)
             val named = asking.named
             val problem =
                 validateRosterWeek(partyId, week, thisWeek)
@@ -301,7 +305,7 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
                         validateMembers(members)
                             ?: bossIdOfParty(partyId)?.let { boss ->
                                 validateWeekRoster(
-                                    userId,
+                                    keeper,
                                     boss,
                                     exclude = partyId,
                                     week,
@@ -310,12 +314,14 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
                             }
                     }
             when {
-                !ownsParty(partyId, userId) || characterId == null -> null
+                characterId == null -> null
                 problem != null -> problem
                 else -> {
                     val now = Clock.System.now()
-                    if (asking.writes) writeWeek(partyId, characterId, week, named, SeatContext(userId, sprites, now))
-                    findParty(partyId, userId)!!.withInvites(userId, asking.invitees, now)
+                    if (asking.writes) writeWeek(partyId, characterId, week, named, SeatContext(keeper, sprites, now))
+                    findParty(partyId, keeper)!!
+                        .withInvites(keeper, asking.invitees, now)
+                        .seenBy(partyId, userId, keeper)
                 }
             }
         }

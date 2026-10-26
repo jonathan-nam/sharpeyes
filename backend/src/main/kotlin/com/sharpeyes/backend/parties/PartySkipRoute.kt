@@ -54,8 +54,10 @@ internal suspend fun RoutingContext.setSkipRoute() {
             val now = Clock.System.now()
             val bossId = bossIdOfParty(partyId)
             val reset = bossId?.let(::bossResetOf)
+            // A joined member takes it off too, as its owner. See keeperOf.
+            val keeper = keeperOf(partyId, userId)
             when {
-                !ownsParty(partyId, userId) || bossId == null || reset == null -> null
+                keeper == null || bossId == null || reset == null -> null
                 // Omitted means this week, which is also the only one allowed. Taken from the
                 // server's clock rather than the payload, so a browser a day out cannot take a boss
                 // off the neighbouring week.
@@ -71,7 +73,7 @@ internal suspend fun RoutingContext.setSkipRoute() {
                             null
                         } else {
                             validateBossRoster(
-                                userId,
+                                keeper,
                                 bossId,
                                 exclude = partyId,
                                 rosterNamesFor(partyId, currentWeek()),

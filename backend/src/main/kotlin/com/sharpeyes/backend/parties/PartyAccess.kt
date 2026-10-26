@@ -2,6 +2,7 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.backend.db.Characters
+import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
@@ -21,6 +22,40 @@ internal fun canEditParty(
     partyId: Uuid,
     userId: String,
 ): Boolean = ownsParty(partyId, userId) || isSeatedIn(partyId, userId)
+
+/**
+ * The account a config write on [partyId] runs as when [userId] makes it: the owner, whoever asks.
+ * Null when [userId] is neither the owner nor a joined member.
+ *
+ * Any member edits the config, but it stays the owner's row: their characters are its seats, their
+ * people are who a new name invites. Running as the caller would bind a member's own characters
+ * into the owner's party.
+ */
+internal fun keeperOf(
+    partyId: Uuid,
+    userId: String,
+): String? =
+    if (!canEditParty(partyId, userId)) {
+        null
+    } else {
+        Party
+            .selectAll()
+            .where { Party.id eq partyId }
+            .firstOrNull()
+            ?.get(Party.userId)
+    }
+
+/** [this], a config write's answer as the owner reads it, re-read for [userId] when that is a member. */
+internal fun Any?.seenBy(
+    partyId: Uuid,
+    userId: String,
+    keeper: String,
+): Any? =
+    if (this !is PartyResponse || keeper == userId) {
+        this
+    } else {
+        findParty(partyId, userId)?.copy(invited = invited, alreadyPartied = alreadyPartied)
+    }
 
 /** [userId]'s standing seats in somebody else's [partyId]: the only seats a member may act as. */
 internal fun mySeatsIn(

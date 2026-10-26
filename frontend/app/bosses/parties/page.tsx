@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import { announceInvites } from "@/lib/invite-notice";
 import { cellState, clearOfCell, indexClears } from "@/lib/boss-clears";
-import { asYourRow } from "@/lib/shared-parties";
+import { asYourRow, ownersRoster } from "@/lib/shared-parties";
 import { bossLabel, difficultyLabel } from "@/lib/boss-difficulty";
 import { invalidate, peek, put, storedAt } from "@/lib/cache";
 import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
@@ -470,9 +470,7 @@ export default function PartiesPage() {
         getToken,
       );
       announceInvites(saved);
-      const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
-      setEveryParty(refreshed);
-      put(PARTY_LIST_KEY, refreshed);
+      await refreshAfterConfig(party);
     });
   }
 
@@ -495,10 +493,19 @@ export default function PartiesPage() {
         { method: "PUT", body: JSON.stringify({ skipped: true } satisfies SetPartySkipBody) },
         getToken,
       );
-      const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
-      setEveryParty(refreshed);
-      put(PARTY_LIST_KEY, refreshed);
+      await refreshAfterConfig(party);
     });
+  }
+
+  /** The list a config write moved: yours, or the parties you sit in. Live view only. */
+  async function refreshAfterConfig(party: Party) {
+    if (party.yours === false) {
+      await loadWeek(null);
+      return;
+    }
+    const refreshed = await apiFetch<Party[]>(PARTY_LIST_KEY, { method: "GET" }, getToken);
+    setEveryParty(refreshed);
+    put(PARTY_LIST_KEY, refreshed);
   }
 
   /**
@@ -785,7 +792,13 @@ export default function PartiesPage() {
   // Parties somebody else owns go through the same rules as your own, filed under your character in
   // them, so the tabs and the counts are one list's. See asYourRow.
   const sharedRows = seated.map(asYourRow);
-  const sharedIds = new Set(sharedRows.map((p) => p.id));
+  const seatedById = new Map(seated.map((row) => [row.party.id, row]));
+  const sharedIds = new Set(seatedById.keys());
+  /** A week's roster as typed on a row, in the shape its config's save reads. See ownersRoster. */
+  const rosterFor = (party: Party, members: string[] | null) => {
+    const row = seatedById.get(party.id);
+    return row && members ? ownersRoster(row, members) : members;
+  };
   const listed = sharedOnly ? sharedRows : [...parties, ...sharedRows];
   const weekly = history
     ? listed.filter((p) => bossByKey.get(p.bossKey)?.reset === WEEKLY_CADENCE)
@@ -858,9 +871,9 @@ export default function PartiesPage() {
   );
 
   /**
-   * One config as a row, yours or one you are seated in, so the two cannot offer different controls
-   * for the same drop. A party somebody else owns leaves out its pool, roster and pile: those are the
-   * owner's, so selling and settling stay on the party's own page. Coupons owed are reckoned over
+   * One config as a row, yours or one you are seated in, so the two cannot offer different controls.
+   * A party somebody else owns leaves out its pool and pile, so selling and settling stay on the
+   * party's own page, and its invites, which are the owner's to send. Coupons owed are reckoned over
    * your own pools, which it is not one of, so its badge is absent rather than claiming none are out.
    */
   function partyCard(party: Party, heading: ReactNode) {
@@ -885,8 +898,10 @@ export default function PartiesPage() {
         stacks={stacksFor(party)}
         pool={shared ? undefined : poolFor(party)}
         piecePile={shared ? undefined : piecePileFor(party)}
-        onSaveRoster={shared || history ? undefined : (members) => saveRoster(party, members)}
-        onTakeOff={shared || history ? undefined : () => takeOff(party)}
+        onSaveRoster={
+          history ? undefined : (members) => saveRoster(party, rosterFor(party, members))
+        }
+        onTakeOff={history ? undefined : () => takeOff(party)}
         onWithdrawInvite={shared ? undefined : (inviteId) => withdrawInvite(party, inviteId)}
         onLeave={shared && !history ? () => leaveShared(party) : undefined}
       />

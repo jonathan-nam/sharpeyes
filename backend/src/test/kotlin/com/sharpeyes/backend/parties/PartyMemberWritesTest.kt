@@ -328,4 +328,21 @@ class PartyMemberWritesTest {
             assertTrue(seat(party, "Pinewick")!![PartyMember.shares] == 1)
         }
     }
+
+    @Test
+    fun `a member edits the config as its owner, and reads the answer as themselves`() {
+        transaction {
+            val party = shared()
+            assertTrue(keeperOf(id(party), member) == owner)
+            assertTrue(keeperOf(id(party), owner) == owner)
+            assertNull(keeperOf(id(party), stranger))
+            val request = SavePartyRequest(party.characterId, party.bossKey, listOf("Pinewick", "Baldrix", "Quillon"))
+            saveParty(keeperOf(id(party), member)!!, id(party), request, now, emptyMap())
+            // Pinewick stays the member's linked seat rather than becoming one of the owner's characters.
+            assertNull(seat(party, "Pinewick")!![PartyMember.characterId])
+            assertNotNull(seat(party, "Quillon"))
+            val answer = findParty(id(party), owner).seenBy(id(party), member, owner) as PartyResponse
+            assertFalse(answer.yours)
+        }
+    }
 }

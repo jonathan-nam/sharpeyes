@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asYourRow } from "./shared-parties";
+import { asYourRow, ownersRoster } from "./shared-parties";
 import type { Party, SeatedParty } from "@/types/party";
 
 const seated = (): SeatedParty => ({
@@ -28,5 +28,14 @@ describe("asYourRow", () => {
   it("is not yours to write, whatever the list said", () => {
     // The seated list leaves `yours` at its default of true. Run Order hides the owner's controls on it.
     expect(asYourRow({ ...seated(), party: { ...seated().party, yours: true } }).yours).toBe(false);
+  });
+});
+
+describe("ownersRoster", () => {
+  it("puts your seat back and takes the owner's out, which is what the owner's save reads", () => {
+    const others = asYourRow(seated())
+      .members.filter((m) => m.characterId !== "your-char")
+      .map((m) => m.name);
+    expect(ownersRoster(seated(), [...others, "Quillon"])).toEqual(["Moxie77Q", "Quillon"]);
   });
 });

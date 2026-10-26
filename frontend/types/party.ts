@@ -96,7 +96,8 @@ export type Party = {
    * False for a party somebody else keeps the book for, which you reach by holding a seat in it.
    *
    * Optional because a tab open across the deploy that added it holds payloads without the field,
-   * so read it as `yours !== false`. Every write on a pool is the owner's; see isSeatedIn.
+   * so read it as `yours !== false`. Members edit the config too; selling and invites stay the
+   * owner's. See keeperOf and canEditParty.
    */
   yours?: boolean;
   // The seats a member acts as. Empty for the owner. Absent on a payload cached from before it.

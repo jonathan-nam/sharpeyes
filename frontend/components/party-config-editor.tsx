@@ -43,6 +43,7 @@ export function PartyConfigEditor({
   characterId,
   characterName,
   parties,
+  joined = [],
   bosses,
   dropTables,
   knownCharacters,
@@ -57,6 +58,12 @@ export function PartyConfigEditor({
   characterId: string;
   characterName: string;
   parties: Party[];
+  /**
+   * Parties somebody else owns that this character sits in, as their owner reads them: the roster
+   * boxes leave out the config's own seat, which is the owner's here. Edited the same way, never
+   * removed, since leaving is its own act.
+   */
+  joined?: Party[];
   bosses: Boss[];
   /** Each boss's drop table, for the piece and stack counts an uneven split is measured in. */
   dropTables: DropTables;
@@ -83,13 +90,19 @@ export function PartyConfigEditor({
   // asking for one as a standing party takes over the config it already has, pool and all, which is
   // how a night that keeps happening becomes an arrangement. See takeOverParty.
   const standing = standingParties(parties);
-  const available = bossesWithoutConfig(standing, bosses, characterId);
+  const others = standingParties(joined);
+  const sitsIn = new Set(others.filter((p) => !p.skippedThisPeriod).map((p) => p.bossKey));
+  const available = bossesWithoutConfig(standing, bosses, characterId).filter(
+    (boss) => !sitsIn.has(boss.bossKey),
+  );
 
   return (
     <section className="configs">
-      {standing.length === 0 && <p className="party-hint">{characterName} has no parties yet.</p>}
+      {standing.length + others.length === 0 && (
+        <p className="party-hint">{characterName} has no parties yet.</p>
+      )}
 
-      {standing.map((party) => (
+      {[...standing, ...others].map((party) => (
         <ConfigRow
           key={party.id}
           party={party}
@@ -100,7 +113,7 @@ export function PartyConfigEditor({
           onSave={(members, difficulty, minutes, shares, pieceShares) =>
             onSave(
               {
-                characterId,
+                characterId: party.characterId,
                 bossKey: party.bossKey,
                 members,
                 difficulty,
@@ -111,7 +124,7 @@ export function PartyConfigEditor({
               party.id,
             )
           }
-          onDelete={() => onDelete(party)}
+          onDelete={others.includes(party) ? undefined : () => onDelete(party)}
         />
       ))}
 
@@ -269,7 +282,8 @@ function ConfigRow({
     shares: Record<string, number>,
     pieceShares: Record<string, number>,
   ) => void;
-  onDelete: () => void;
+  /** Absent on a party somebody else owns. */
+  onDelete?: () => void;
 }) {
   // The party itself, not the week being shown: a week already written into keeps the roster it
   // ran, so editing off that one would promote its guest and drop the member who sat it out.
@@ -390,9 +404,11 @@ function ConfigRow({
       <header className="config-head">
         {boss?.iconUrl && <img className="boss-portrait" src={apiAssetUrl(boss.iconUrl)} alt="" />}
         <h3 className="config-boss">{boss?.name ?? party.bossKey}</h3>
-        <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-          Remove
-        </button>
+        {onDelete && (
+          <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+            Remove
+          </button>
+        )}
       </header>
 
       {/* A row asks four things, so each block is headed with the one it asks. Unheaded, a select,
