@@ -7,6 +7,7 @@ import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyInvite
 import com.sharpeyes.backend.db.PartyMember
+import com.sharpeyes.backend.groups.groupmatesOf
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
 import kotlinx.serialization.json.buildJsonObject
@@ -14,15 +15,19 @@ import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 // Party invites, the in-game way: naming a friend's character in a roster offers them the seat, and
-// only their Accept writes it. A character already in a party for the boss is not invited at all,
-// and the owner is told. Inside a transaction, like the rest. See V92__party_invite.sql.
+// only their Accept writes it, unless the two of you share a group (V102), which seats it at once. A
+// character already in a party for the boss is neither, and the owner is told. Inside a transaction,
+// like the rest. See V92__party_invite.sql.
 
 /** A roster name that is a linked friend's character and not yet in this party. */
 internal data class Invitee(
@@ -36,75 +41,138 @@ internal data class InviteOutcome(
     val alreadyPartied: List<String>,
 )
 
+/** A roster, split by what happens to each friend's character it names. */
+internal data class RosterSplit(
+    /** The names the save writes, groupmates' characters among them. */
+    val kept: List<String>,
+    val invitees: List<Invitee>,
+    /** Groupmates' characters, seated by the save and bound to their accounts after it. */
+    val seated: List<Invitee> = emptyList(),
+    /** Groupmates' characters left out, being in a party for the boss already. */
+    val partied: List<String> = emptyList(),
+) {
+    /** Every name the save leaves out. */
+    val out get() = (invitees.map { it.name } + partied).map { it.lowercase() }.toSet()
+
+    /** Named no friend's character at all, so a save has nothing more to do. */
+    val none get() = out.isEmpty() && seated.isEmpty()
+}
+
 /**
  * Splits a roster into the names to seat now and the friends' characters to invite instead.
  *
  * A name already standing in [partyId] stays a seat, whoever it is: they are in the party. Anything
  * else that is a linked account's character becomes an invite, a retired seat included, since
- * leaving and being put back is joining again.
+ * leaving and being put back is joining again. Unless that account shares a group with [adder], who
+ * is the one naming them: joining the group was their consent, so they are seated (see V102).
  */
 internal fun splitInvitees(
     userId: String,
     partyId: Uuid?,
     members: List<String>,
-): Pair<List<String>, List<Invitee>> {
+    bossId: Uuid? = partyId?.let(::bossIdOfParty),
+    adder: String = userId,
+): RosterSplit {
     val linked = linkedCharactersFor(userId)
-    if (linked.isEmpty()) return members to emptyList()
+    if (linked.isEmpty()) return RosterSplit(members, emptyList())
     val standing =
         partyId
             ?.let { standingRosterOf(it) }
             .orEmpty()
             .map { it.lowercase() }
             .toSet()
-    val invitees =
+    val friends =
         members.mapNotNull { raw ->
             val name = raw.trim()
             linked[name.lowercase()]?.takeIf { name.lowercase() !in standing }?.let { Invitee(name, it) }
         }
-    val invited = invitees.map { it.name.lowercase() }.toSet()
-    return members.filterNot { it.trim().lowercase() in invited } to invitees
+    val mates = if (friends.isEmpty() || bossId == null) emptySet() else groupmatesOf(adder)
+    val (grouped, invitees) = friends.partition { userOf(it.characterId) in mates }
+    val (partied, seated) = grouped.partition { inPartyFor(it.characterId, bossId!!, partyId ?: Uuid.NIL) }
+    val split = RosterSplit(members, invitees, seated, partied.map { it.name })
+    return split.copy(kept = members.filterNot { it.trim().lowercase() in split.out })
 }
 
 /** A week's roster with its friends taken out, who are invited to the party itself. */
 internal data class WeekInvites(
     val named: List<String>?,
-    val invitees: List<Invitee>,
+    val split: RosterSplit,
 ) {
+    val invitees get() = split.invitees
+
     /** Nobody left to write once the friends are out: the week stays as it was. */
-    val writes get() = invitees.isEmpty() || !named.isNullOrEmpty()
+    val writes get() = split.out.isEmpty() || !named.isNullOrEmpty()
 }
 
 internal fun weekInvites(
     userId: String,
     partyId: Uuid,
     members: List<String>?,
+    adder: String = userId,
 ): WeekInvites {
-    val split = members?.let { splitInvitees(userId, partyId, it) }
-    return WeekInvites(split?.first, split?.second.orEmpty())
+    val split = members?.let { splitInvitees(userId, partyId, it, adder = adder) }
+    return WeekInvites(split?.kept, split ?: RosterSplit(emptyList(), emptyList()))
 }
 
-/** This save with its friends taken out, and who they were. Their splits go with them. */
+/** This save with its friends taken out, and what became of them. Their splits go with them. */
 internal fun SavePartyRequest.inviting(
     userId: String,
     partyId: Uuid?,
-): Pair<SavePartyRequest, List<Invitee>> {
-    val (kept, invitees) = splitInvitees(userId, partyId, members)
-    if (invitees.isEmpty()) return this to invitees
-    val out = invitees.map { it.name.lowercase() }.toSet()
-    val without = { by: Map<String, Int> -> by.filterKeys { it.trim().lowercase() !in out } }
-    return copy(members = kept, shares = without(shares), pieceShares = without(pieceShares)) to invitees
+    bossId: Uuid?,
+    adder: String = userId,
+): Pair<SavePartyRequest, RosterSplit> {
+    val split = splitInvitees(userId, partyId, members, bossId, adder)
+    if (split.out.isEmpty()) return this to split
+    val without = { by: Map<String, Int> -> by.filterKeys { it.trim().lowercase() !in split.out } }
+    return copy(members = split.kept, shares = without(shares), pieceShares = without(pieceShares)) to split
 }
 
-/** A save's answer, with the invites it made sent and said. Anything but a saved party passes through. */
+/**
+ * A save's answer, with its groupmates bound and told, and its invites sent and said. Anything but a
+ * saved party passes through.
+ */
 internal fun Any?.withInvites(
     ownerId: String,
-    invitees: List<Invitee>,
+    split: RosterSplit,
     now: Instant,
+    adder: String = ownerId,
 ): Any? {
-    if (this !is PartyResponse || invitees.isEmpty()) return this
+    if (this !is PartyResponse || split.none) return this
     val partyId = Uuid.parse(id)
-    val outcome = sendInvites(ownerId, partyId, invitees, now)
-    return findParty(partyId, ownerId)!!.copy(invited = outcome.invited, alreadyPartied = outcome.alreadyPartied)
+    seatGroupmates(partyId, split.seated, adder, now)
+    val outcome = sendInvites(ownerId, partyId, split.invitees, now)
+    return findParty(partyId, ownerId)!!.copy(
+        invited = outcome.invited,
+        alreadyPartied = outcome.alreadyPartied + split.partied,
+    )
+}
+
+/**
+ * Binds each groupmate's seat to their character, and tells them.
+ *
+ * insertSeat binds only a seat it creates, so a name the party already had (a guest, or one typed
+ * before the friendship) is bound here. Never one of the owner's own characters, which V75 forbids.
+ */
+private fun seatGroupmates(
+    partyId: Uuid,
+    seated: List<Invitee>,
+    adder: String,
+    now: Instant,
+) {
+    if (seated.isEmpty()) return
+    val facts = partyFacts(partyId)
+    for (mate in seated) {
+        PartyMember.update({
+            (PartyMember.partyId eq partyId) and (PartyMember.name.lowerCase() eq mate.name.lowercase()) and
+                PartyMember.characterId.isNull()
+        }) { it[linkedCharacterId] = mate.characterId }
+        val payload =
+            buildJsonObject {
+                facts.forEach { (k, v) -> put(k, v) }
+                put("character", mate.name)
+            }
+        notify(userOf(mate.characterId), NotificationKind.PARTY_ADDED, now, partyId, adder, payload)
+    }
 }
 
 /**

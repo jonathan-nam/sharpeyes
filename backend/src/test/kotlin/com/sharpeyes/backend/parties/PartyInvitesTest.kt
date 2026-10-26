@@ -151,7 +151,7 @@ class PartyInvitesTest {
             assertEquals(true, seat[PartyMember.standing])
             assertTrue(invitesTo(partyId).isEmpty())
             // In the party now, so naming them again seats rather than invites.
-            assertTrue(splitInvitees(owner, partyId, listOf("Baldrix", "Pinewick")).second.isEmpty())
+            assertTrue(splitInvitees(owner, partyId, listOf("Baldrix", "Pinewick")).invitees.isEmpty())
         }
     }
 

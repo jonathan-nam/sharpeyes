@@ -1,9 +1,10 @@
 import Link from "next/link";
 
-export type SocialTab = "friends" | "people" | "combine";
+export type SocialTab = "friends" | "groups" | "people" | "combine";
 
 const TABS: { key: SocialTab; href: string; label: string }[] = [
   { key: "friends", href: "/social", label: "Friends" },
+  { key: "groups", href: "/social/groups", label: "Groups" },
   { key: "people", href: "/social/people", label: "People" },
   { key: "combine", href: "/social/combine", label: "Combine Parties" },
 ];

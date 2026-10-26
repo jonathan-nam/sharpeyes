@@ -71,6 +71,15 @@ import type {
 import type { SaveMainCharacterBody, SaveSettingsBody, Settings } from "@/types/settings";
 import type { Payer, SettlementListing } from "@/types/settlement-listing";
 import type { FriendView, IncomingInvite, SentInvite, Social } from "@/types/social";
+import type {
+  Group,
+  GroupInvitee,
+  GroupMember,
+  Groups,
+  IncomingGroupInvite,
+  InviteToGroupBody,
+  SaveGroupBody,
+} from "@/types/groups";
 import type { TokenCatalogItem } from "@/types/token-catalog";
 import type {
   AddProceedsDisposalBody,
@@ -175,6 +184,11 @@ export type ResponseParity = [
   Is<Same<Social, api.SocialResponse>>,
   Is<Same<IncomingInvite, api.IncomingInviteView>>,
   Is<Same<SentInvite, api.SentInviteView>>,
+  Is<Same<GroupMember, api.GroupMemberView>>,
+  Is<Same<GroupInvitee, api.GroupInviteeView>>,
+  Is<Same<Group, api.GroupView>>,
+  Is<Same<IncomingGroupInvite, api.IncomingGroupInviteView>>,
+  Is<Same<Groups, api.GroupsResponse>>,
   Is<Same<VestigeTrancheShare, ShareRow>>,
   Is<Same<VestigeTranche, Tranche>>,
   Is<Same<VestigePayment, Payment>>,
@@ -237,4 +251,6 @@ export type RequestParity = [
   Is<Accepted<AddSettlementDebtBody, api.AddSettlementDebtRequest>>,
   Is<Accepted<CloseSettlementBody, api.OffsetSharesRequest>>,
   Is<Accepted<AddProceedsDisposalBody, api.AddHeldMoneyRequest>>,
+  Is<Accepted<SaveGroupBody, api.SaveGroupRequest>>,
+  Is<Accepted<InviteToGroupBody, api.InviteToGroupRequest>>,
 ];

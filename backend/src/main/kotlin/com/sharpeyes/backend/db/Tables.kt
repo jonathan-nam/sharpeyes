@@ -791,6 +791,33 @@ object PartyInvite : Table("party_invite") {
     override val primaryKey = PrimaryKey(id)
 }
 
+// People who seat each other's characters without an invite. See V102.
+object FriendGroup : Table("friend_group") {
+    val id = uuid("id")
+    val name = text("name")
+    val createdAt = timestamp("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
+object FriendGroupMember : Table("friend_group_member") {
+    val groupId = reference("group_id", FriendGroup.id)
+    val userId = reference("user_id", Users.id)
+    val joinedAt = timestamp("joined_at")
+
+    override val primaryKey = PrimaryKey(groupId, userId)
+}
+
+object FriendGroupInvite : Table("friend_group_invite") {
+    val id = uuid("id")
+    val groupId = reference("group_id", FriendGroup.id)
+    val userId = reference("user_id", Users.id)
+    val invitedBy = reference("invited_by", Users.id)
+    val createdAt = timestamp("created_at")
+
+    override val primaryKey = PrimaryKey(id)
+}
+
 object FriendRequest : Table("friend_request") {
     val id = uuid("id")
     val fromUserId = reference("from_user_id", Users.id)

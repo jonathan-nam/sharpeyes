@@ -8,6 +8,7 @@ import com.sharpeyes.backend.events.eventRoutes
 import com.sharpeyes.backend.events.rememberActor
 import com.sharpeyes.backend.events.tellLinkedOnWrite
 import com.sharpeyes.backend.friends.friendRoutes
+import com.sharpeyes.backend.groups.groupRoutes
 import com.sharpeyes.backend.invites.inviteRoutes
 import com.sharpeyes.backend.invites.joinRoutes
 import com.sharpeyes.backend.notifications.notificationRoutes
@@ -194,6 +195,8 @@ private fun Route.socialRoutes() {
         friendRoutes()
     }
     route("/api/notifications") { notificationRoutes() }
+    // Each write publishes to the group's members itself. See Groups.kt.
+    route("/api/groups") { groupRoutes() }
     route("/api/party-invites") {
         // The party gains a seat, so its members' screens move. See TellLinked.kt.
         tellLinkedOnWrite(Topic.PARTY)

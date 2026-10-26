@@ -304,6 +304,32 @@ export type FriendView = {
   image?: string | null;
 };
 
+export type GroupInviteeView = {
+  id: string;
+  member: GroupMemberView;
+};
+
+export type GroupMemberView = {
+  username: string | null;
+  name: string | null;
+  spriteImgUrl: string | null;
+  image: string | null;
+  you: boolean;
+  friend: boolean;
+};
+
+export type GroupView = {
+  id: string;
+  name: string;
+  members: GroupMemberView[];
+  invited: GroupInviteeView[];
+};
+
+export type GroupsResponse = {
+  groups: GroupView[];
+  invites: IncomingGroupInviteView[];
+};
+
 export type HeldMoneyResponse = {
   id: string;
   holder: VestigeHolder;
@@ -323,6 +349,13 @@ export type IncomingCombineResponse = {
   keepsYours: number;
   keepsTheirs: number;
   takesOut?: SeatOutResponse[];
+};
+
+export type IncomingGroupInviteView = {
+  id: string;
+  group: string;
+  from: string | null;
+  members: number;
 };
 
 export type IncomingInviteView = {
@@ -367,6 +400,10 @@ export type InviteResponse = {
   characterCount: number;
   partyCount: number;
   omitted: InviteOmission[];
+};
+
+export type InviteToGroupRequest = {
+  personId: string;
 };
 
 export type ItemCatalogResponse = {
@@ -677,6 +714,10 @@ export type ReportedFigure = {
 
 export type ResolveScreenshotRequest = {
   characterId: string;
+};
+
+export type SaveGroupRequest = {
+  name: string;
 };
 
 export type SaveMainCharacterRequest = {

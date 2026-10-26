@@ -18,6 +18,12 @@ object NotificationKind {
     /** Your invite was accepted or declined (payload `accepted`). No subject. */
     const val PARTY_INVITE_ANSWERED = "PARTY_INVITE_ANSWERED"
 
+    /** A groupmate seated a character of yours without an invite. Subject: the party. */
+    const val PARTY_ADDED = "PARTY_ADDED"
+
+    /** Somebody asked you into a group. Subject: the friend_group_invite, which answering clears. */
+    const val GROUP_INVITE = "GROUP_INVITE"
+
     /** A linked owner asked to combine their party with yours. Subject: the party_combine. */
     const val PARTY_COMBINE = "PARTY_COMBINE"
 

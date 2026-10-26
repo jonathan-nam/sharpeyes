@@ -93,6 +93,14 @@ const KINDS: Record<string, Kind> = {
       href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
     },
   },
+  PARTY_ADDED: {
+    text: (p, who) => `${who} added ${str(p.character)} to ${partyOf(p)}`,
+    go: { label: () => "View Party", href: partyPage },
+  },
+  GROUP_INVITE: {
+    text: (p, who) => `${who} invited you to ${str(p.group) || "a group"}`,
+    actions: GroupInviteActions,
+  },
   PARTY_COMBINE: {
     text: (_, who) => `${who} has requested to combine parties.`,
     go: { label: () => "Review", href: () => "/social/combine" },
@@ -140,6 +148,30 @@ function PartyInviteActions({ notification, busy, run }: KindActions) {
     <>
       <Button variant="primary" disabled={busy} onClick={() => answer(true)}>
         Accept
+      </Button>
+      <Button variant="secondary" disabled={busy} onClick={() => answer(false)}>
+        Decline
+      </Button>
+    </>
+  );
+}
+
+function GroupInviteActions({ notification, busy, run }: KindActions) {
+  const path = `/api/groups/invites/${encodeURIComponent(notification.subjectId ?? "")}`;
+  const answer = (accept: boolean) =>
+    run(
+      (getToken) =>
+        apiFetch<unknown>(
+          accept ? `${path}/accept` : path,
+          { method: accept ? "POST" : "DELETE" },
+          getToken,
+        ),
+      accept ? "Couldn't join." : "Couldn't decline.",
+    );
+  return (
+    <>
+      <Button variant="primary" disabled={busy} onClick={() => answer(true)}>
+        Join
       </Button>
       <Button variant="secondary" disabled={busy} onClick={() => answer(false)}>
         Decline
