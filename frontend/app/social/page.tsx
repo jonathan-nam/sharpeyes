@@ -2,10 +2,11 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import { Button } from "@/components/button";
-import { CombineParties } from "@/components/combine-parties";
 import { ConfirmAct } from "@/components/confirm-act";
 import { DiscordLookup, mayAsk, useDiscordLookup } from "@/components/discord-lookup";
 import { PageSwap } from "@/components/page-swap";
+import { type NavSection, SectionNav } from "@/components/section-nav";
+import { SocialHead } from "@/components/social-head";
 import { apiFetch, failureText, spriteUrl } from "@/lib/api";
 import { invalidate } from "@/lib/cache";
 import { friendsChanged, onFriendsChanged } from "@/lib/friends-changed";
@@ -13,12 +14,11 @@ import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
 import { bossLabel } from "@/lib/boss-difficulty";
-import type { FriendView, IncomingInvite, SentInvite, Social } from "@/types/social";
+import type { FriendView, IncomingInvite, Social } from "@/types/social";
 import { DiscordAvatar } from "@/components/discord-avatar";
 
 const SOCIAL_KEY = "/api/friends";
 const INVITES_KEY = "/api/party-invites";
-const SENT_INVITES_KEY = `${INVITES_KEY}/sent`;
 
 // Friends: other accounts, found by Discord username. Requests to you and party invites are answered
 // here or from the bell, so clearing one from the bell does not lose it. Accepting links the two
@@ -28,7 +28,6 @@ export default function SocialPage() {
   const { getToken, isLoaded } = useAuth();
   const [social, setSocial] = useState<Social | null>(null);
   const [invites, setInvites] = useState<IncomingInvite[]>([]);
-  const [sentInvites, setSentInvites] = useState<SentInvite[]>([]);
   const [failed, setFailed] = useState(false);
   const [username, setUsername] = useState("");
   const lookup = useDiscordLookup(username);
@@ -39,28 +38,7 @@ export default function SocialPage() {
     return Promise.all([
       apiFetch<Social>(SOCIAL_KEY, { method: "GET" }, getToken).then(setSocial),
       apiFetch<IncomingInvite[]>(INVITES_KEY, { method: "GET" }, getToken).then(setInvites),
-      apiFetch<SentInvite[]>(SENT_INVITES_KEY, { method: "GET" }, getToken).then(setSentInvites),
     ]);
-  }
-
-  /** Withdraws an invite you sent, then reads yours back. */
-  async function cancelInvite(id: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiFetch<unknown>(
-        `${INVITES_KEY}/${encodeURIComponent(id)}`,
-        { method: "DELETE" },
-        getToken,
-      );
-      // Party cards list their pending invites too.
-      invalidate("/api/parties");
-      setSentInvites(await apiFetch<SentInvite[]>(SENT_INVITES_KEY, { method: "GET" }, getToken));
-    } catch (e) {
-      setError(failureText(e, "Couldn't cancel."));
-    } finally {
-      setBusy(false);
-    }
   }
 
   /** Accepts or declines a party invite, then reads the invites back. */
@@ -130,176 +108,175 @@ export default function SocialPage() {
 
   const request = (id: string) => `${SOCIAL_KEY}/requests/${encodeURIComponent(id)}`;
 
+  const incoming = social?.incoming ?? [];
+  const outgoing = social?.outgoing ?? [];
+  const pending = incoming.length + invites.length + outgoing.length;
+  const sections: NavSection[] = [
+    { id: "add", label: "Add Friend" },
+    ...(pending > 0
+      ? [{ id: "pending", label: "Pending", count: incoming.length + invites.length }]
+      : []),
+    { id: "friends", label: "Friends" },
+  ];
+
   return (
     <main className="page">
-      <div className="settings-section-head">
-        <h1 className="page-title">Social</h1>
-        {social?.username && <span className="party-hint">You are @{social.username}</span>}
-      </div>
+      <SocialHead current="friends" />
 
       {failed && !social && <p>Couldn&apos;t load your friends. Reload to try again.</p>}
       <PageSwap waiting={!social && !failed} placeholder={<p className="party-hint">Loading...</p>}>
         {social && (
-          <>
-            <form
-              className="add-character social-add"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void send();
-              }}
-            >
-              <DiscordLookup
-                value={username}
-                state={lookup}
-                onChange={setUsername}
-                disabled={busy}
-              />
-              <Button variant="primary" type="submit" disabled={busy || !mayAsk(username, lookup)}>
-                Send Request
-              </Button>
-            </form>
-            {error && <p className="routine-error">{error}</p>}
+          <SectionNav sections={sections}>
+            <FriendGroup id="add" title="Add Friend">
+              {social.username && <p className="party-hint">You are @{social.username}</p>}
+              <form
+                className="add-character social-add"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void send();
+                }}
+              >
+                <DiscordLookup
+                  value={username}
+                  state={lookup}
+                  onChange={setUsername}
+                  disabled={busy}
+                />
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={busy || !mayAsk(username, lookup)}
+                >
+                  Send Request
+                </Button>
+              </form>
+              {error && <p className="routine-error">{error}</p>}
+            </FriendGroup>
 
-            <CombineParties />
-
-            {(social.incoming ?? []).length > 0 && (
-              <FriendGroup title="Requests">
-                {(social.incoming ?? []).map((f) => (
-                  <FriendCard key={f.id} friend={f}>
-                    <Button
-                      variant="primary"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(`${request(f.id)}/accept`, { method: "POST" }, "Couldn't accept.")
-                      }
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(request(f.id), { method: "DELETE" }, "Couldn't reject.")
-                      }
-                    >
-                      Reject
-                    </Button>
-                  </FriendCard>
-                ))}
-              </FriendGroup>
-            )}
-
-            {invites.length > 0 && (
-              <FriendGroup title="Party Invites">
-                {invites.map((invite) => (
-                  <li key={invite.id} className="character-card">
-                    <span className="tile-plate">
-                      <span className="tile-name">
-                        {`${invite.leader}'s ${bossLabel(invite.boss, invite.difficulty)}`}
-                      </span>
-                      <span className="tile-meta">{`as ${invite.character}`}</span>
-                    </span>
-                    <span className="character-card-actions">
+            {pending > 0 && (
+              // What waits on you first, then what waits on them.
+              <FriendGroup id="pending" title="Pending">
+                <ul className="character-cards">
+                  {incoming.map((f) => (
+                    <FriendCard key={f.id} friend={f} kind="Friend request">
                       <Button
                         variant="primary"
                         disabled={busy}
-                        onClick={() => void answerInvite(invite.id, true)}
+                        onClick={() =>
+                          void act(
+                            `${request(f.id)}/accept`,
+                            { method: "POST" },
+                            "Couldn't accept.",
+                          )
+                        }
                       >
                         Accept
                       </Button>
                       <Button
                         variant="secondary"
                         disabled={busy}
-                        onClick={() => void answerInvite(invite.id, false)}
+                        onClick={() =>
+                          void act(request(f.id), { method: "DELETE" }, "Couldn't reject.")
+                        }
                       >
-                        Decline
+                        Reject
                       </Button>
-                    </span>
-                  </li>
-                ))}
-              </FriendGroup>
-            )}
-
-            {sentInvites.length > 0 && (
-              <FriendGroup title="Sent Invites">
-                {sentInvites.map((invite) => (
-                  <li key={invite.id} className="character-card">
-                    <span className="tile-plate">
-                      <span className="tile-name">
-                        {`${invite.leader}'s ${bossLabel(invite.boss, invite.difficulty)}`}
+                    </FriendCard>
+                  ))}
+                  {invites.map((invite) => (
+                    <li key={invite.id} className="character-card">
+                      <span className="tile-plate">
+                        <span className="tile-name">
+                          {`${invite.leader}'s ${bossLabel(invite.boss, invite.difficulty)}`}
+                        </span>
+                        <span className="tile-meta">{`Party invite, as ${invite.character}`}</span>
                       </span>
-                      <span className="tile-meta">{`to ${invite.character}`}</span>
-                    </span>
-                    <span className="character-card-actions">
+                      <span className="character-card-actions">
+                        <Button
+                          variant="primary"
+                          disabled={busy}
+                          onClick={() => void answerInvite(invite.id, true)}
+                        >
+                          Accept
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={busy}
+                          onClick={() => void answerInvite(invite.id, false)}
+                        >
+                          Decline
+                        </Button>
+                      </span>
+                    </li>
+                  ))}
+                  {outgoing.map((f) => (
+                    <FriendCard key={f.id} friend={f} kind="Sent">
                       <Button
                         variant="secondary"
                         disabled={busy}
-                        onClick={() => void cancelInvite(invite.id)}
+                        onClick={() =>
+                          void act(request(f.id), { method: "DELETE" }, "Couldn't cancel.")
+                        }
                       >
                         Cancel
                       </Button>
-                    </span>
-                  </li>
-                ))}
+                    </FriendCard>
+                  ))}
+                </ul>
               </FriendGroup>
             )}
 
-            {social.outgoing.length > 0 && (
-              <FriendGroup title="Sent">
-                {social.outgoing.map((f) => (
+            <FriendGroup id="friends" title="Friends">
+              {social.friends.length === 0 && <p className="finder-empty">No friends yet.</p>}
+              <ul className="character-cards">
+                {social.friends.map((f) => (
                   <FriendCard key={f.id} friend={f}>
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(request(f.id), { method: "DELETE" }, "Couldn't cancel.")
+                    <ConfirmAct
+                      label="Remove"
+                      question="Remove Friend"
+                      keep="Keep"
+                      busy={busy}
+                      onConfirm={() =>
+                        void act(
+                          `${SOCIAL_KEY}/${encodeURIComponent(f.id)}`,
+                          { method: "DELETE" },
+                          "Couldn't remove them.",
+                        )
                       }
-                    >
-                      Cancel
-                    </Button>
+                    />
                   </FriendCard>
                 ))}
-              </FriendGroup>
-            )}
-
-            <FriendGroup title="Friends">
-              {social.friends.length === 0 && <p className="finder-empty">No friends yet.</p>}
-              {social.friends.map((f) => (
-                <FriendCard key={f.id} friend={f}>
-                  <ConfirmAct
-                    label="Remove"
-                    question="Remove Friend"
-                    keep="Keep"
-                    busy={busy}
-                    onConfirm={() =>
-                      void act(
-                        `${SOCIAL_KEY}/${encodeURIComponent(f.id)}`,
-                        { method: "DELETE" },
-                        "Couldn't remove them.",
-                      )
-                    }
-                  />
-                </FriendCard>
-              ))}
+              </ul>
             </FriendGroup>
-          </>
+          </SectionNav>
         )}
       </PageSwap>
     </main>
   );
 }
 
-function FriendGroup({ title, children }: { title: string; children: ReactNode }) {
+function FriendGroup({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section className="character-group">
-      <h2 className="character-world">{title}</h2>
-      <ul className="character-cards">{children}</ul>
+    <section id={id} className="character-group social-section">
+      <h2 className="character-world">
+        <a href={`#${id}`}>{title}</a>
+      </h2>
+      {children}
     </section>
   );
 }
 
 /** Their main character's sprite, as a character card draws one, with the actions under it. */
-function FriendCard({ friend, children }: { friend: FriendView; children: ReactNode }) {
+function FriendCard({
+  friend,
+  kind,
+  children,
+}: {
+  friend: FriendView;
+  /** What a pending card is waiting on. */
+  kind?: string;
+  children: ReactNode;
+}) {
   return (
     <li className="character-card">
       {friend.spriteImgUrl ? (
@@ -313,6 +290,7 @@ function FriendCard({ friend, children }: { friend: FriendView; children: ReactN
           {friend.name ?? friend.username ?? "?"}
         </span>
         {friend.username && <span className="tile-meta">@{friend.username}</span>}
+        {kind && <span className="tile-meta">{kind}</span>}
       </span>
       <span className="character-card-actions">{children}</span>
     </li>

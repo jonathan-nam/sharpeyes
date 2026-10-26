@@ -2,7 +2,7 @@ import { apiFetch } from "@/lib/api";
 import type { Invite } from "@/types/invite";
 import type { Person, SavePeopleBody } from "@/types/party";
 
-// The People list's writes, shared by Edit People and a party's own Access section.
+// The People list's writes, shared by Social's People page and a party's own Access section.
 
 type GetToken = () => Promise<string | null>;
 

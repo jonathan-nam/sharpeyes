@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useDismiss } from "@/lib/use-dismiss";
-import { activeHref, MENU_HREFS, sectionsFor } from "@/lib/section-menu";
+import { activeHref, HREFS, sectionsFor } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 
 // Account sections live behind a hamburger beside the brand. What it lists, and which entry a path
@@ -30,7 +30,7 @@ export function SectionMenu() {
   //
   // Every section, deduped by the router cache. No effect under `next dev`, which never prefetches.
   useEffect(() => {
-    for (const href of MENU_HREFS) router.prefetch(href);
+    for (const href of HREFS) router.prefetch(href);
   }, [router]);
 
   // Closed by the route arriving. The wait itself is NOT drawn here: it is NavPending, in the
@@ -72,20 +72,18 @@ export function SectionMenu() {
               aria-label={section.group}
             >
               {section.group ? <p className="section-menu-group-label">{section.group}</p> : null}
-              {section.items
-                .filter((item) => !item.hidden)
-                .map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    role="menuitem"
-                    className={active === item.href ? "active" : ""}
-                    onClick={() => setOpen(false)}
-                  >
-                    {item.label}
-                    {item.inDevelopment ? <InDevelopmentMark /> : null}
-                  </Link>
-                ))}
+              {section.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  role="menuitem"
+                  className={active === item.href ? "active" : ""}
+                  onClick={() => setOpen(false)}
+                >
+                  {item.label}
+                  {item.inDevelopment ? <InDevelopmentMark /> : null}
+                </Link>
+              ))}
             </div>
           ))}
         </nav>

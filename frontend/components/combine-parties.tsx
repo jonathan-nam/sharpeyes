@@ -8,19 +8,22 @@ import { difficultyLabel } from "@/lib/boss-difficulty";
 import { invalidate } from "@/lib/cache";
 import { onFriendsChanged } from "@/lib/friends-changed";
 import { formatDropped } from "@/lib/loot";
+import { reportDataReady } from "@/lib/rum";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
+import { type NavSection, SectionNav } from "@/components/section-nav";
 import type {
   CombineConflict,
   CombinePage,
   CombineSide,
   CombineWith,
+  IncomingCombine,
   SeatClash,
 } from "@/types/combine";
 
 const COMBINE_KEY = "/api/party-combines";
 
-// Social's Combine Parties. A combine is a merge: the sender settles the conflicts, matching pairs
+// Social's Combine Parties page. A combine is a merge: the sender settles the conflicts, matching pairs
 // settle themselves, and the friend accepts or declines the whole request. Drops before the shared
 // date stay in each owner's own book. See backend CombineParties.kt.
 export function CombineParties() {
@@ -29,11 +32,15 @@ export function CombineParties() {
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   function load() {
     return apiFetch<CombinePage>(COMBINE_KEY, { method: "GET" }, getToken)
-      .then(setPage)
-      .catch(() => {});
+      .then((loaded) => {
+        setPage(loaded);
+        reportDataReady();
+      })
+      .catch(() => setFailed(true));
   }
 
   useEffect(() => {
@@ -65,118 +72,150 @@ export function CombineParties() {
 
   const request = (id: string) => `${COMBINE_KEY}/${encodeURIComponent(id)}`;
 
-  if (!page || (page.friends.length === 0 && page.incoming.length === 0)) return null;
+  if (!page) {
+    return failed ? (
+      <p>Couldn&apos;t load your friends&apos; parties. Reload to try again.</p>
+    ) : (
+      <p className="party-hint">Loading...</p>
+    );
+  }
+  if (page.friends.length === 0 && page.incoming.length === 0) {
+    return <p className="finder-empty">Nothing to combine.</p>;
+  }
+
+  const incomingRow = (r: IncomingCombine) => (
+    <div key={r.id} className="combine-row">
+      <span className="combine-who">
+        <DiscordAvatar image={r.friendImage} size="sm" />
+        {r.friend} wants to combine {r.total} {r.total === 1 ? "party" : "parties"}
+      </span>
+      <span className="party-hint">
+        {keeps([
+          [`${r.friend}'s`, r.keepsTheirs],
+          ["yours", r.keepsYours],
+        ])}
+      </span>
+      {(r.takesOut ?? []).map((s) => (
+        <span key={`${s.name}:${s.leader}`} className="party-hint combine-takes">
+          Takes {s.name} out of your {s.boss} ({s.leader})
+        </span>
+      ))}
+      <span className="combine-actions">
+        <Button
+          variant="primary"
+          disabled={busy}
+          onClick={() =>
+            void act(`${request(r.id)}/accept`, { method: "POST" }, "Couldn't combine them.")
+          }
+        >
+          Combine
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={busy}
+          onClick={() => void act(request(r.id), { method: "DELETE" }, "Couldn't decline.")}
+        >
+          Decline
+        </Button>
+      </span>
+    </div>
+  );
+
+  const friendRow = (f: CombineWith) => (
+    <div key={f.personId} className="combine-row">
+      <span className="combine-who">
+        <DiscordAvatar image={f.friendImage} size="sm" />
+        {f.friend}
+      </span>
+      <span className="party-hint">
+        {f.matched} matching {f.matched === 1 ? "party" : "parties"}
+        {f.conflicts.length > 0 && ` · ${f.conflicts.length} to resolve`}
+      </span>
+      <span className="combine-actions">
+        {f.sentRequestId ? (
+          <>
+            <span className="party-hint">Waiting for {f.friend}</span>
+            <Button
+              variant="secondary"
+              disabled={busy}
+              onClick={() =>
+                void act(request(f.sentRequestId!), { method: "DELETE" }, "Couldn't cancel it.")
+              }
+            >
+              Cancel Request
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="primary"
+            disabled={busy}
+            aria-expanded={open === f.personId}
+            onClick={() => setOpen(open === f.personId ? null : f.personId)}
+          >
+            Combine Parties
+          </Button>
+        )}
+      </span>
+      {open === f.personId && !f.sentRequestId && (
+        <Merge
+          key={f.personId}
+          friend={f}
+          busy={busy}
+          preview={(choices) =>
+            apiFetch<{ clashes: SeatClash[] }>(
+              `${COMBINE_KEY}/preview`,
+              { method: "POST", body: JSON.stringify({ personId: f.personId, choices }) },
+              getToken,
+            ).then((r) => r.clashes)
+          }
+          onSend={async (choices, seats) => {
+            const sent = await act(
+              COMBINE_KEY,
+              {
+                method: "POST",
+                body: JSON.stringify({ personId: f.personId, choices, seats }),
+              },
+              "Couldn't send that. Try again.",
+            );
+            if (sent) setOpen(null);
+          }}
+        />
+      )}
+    </div>
+  );
+
+  // What waits on you, then what waits on them. A friend with a request out is in the second.
+  const waiting = page.friends.filter((f) => f.sentRequestId);
+  const startable = page.friends.filter((f) => !f.sentRequestId);
+  const pending = page.incoming.length + waiting.length > 0;
+  const sections: NavSection[] = [
+    ...(pending ? [{ id: "pending", label: "Pending", count: page.incoming.length }] : []),
+    ...(startable.length > 0 ? [{ id: "with-friends", label: "With Friends" }] : []),
+  ];
 
   return (
-    <section className="character-group">
-      <h2 className="character-world">Combine Parties</h2>
+    <SectionNav sections={sections}>
       {error && <p className="routine-error">{error}</p>}
-      <div className="combine-list">
-        {page.incoming.map((r) => (
-          <div key={r.id} className="combine-row">
-            <span className="combine-who">
-              <DiscordAvatar image={r.friendImage} size="sm" />
-              {r.friend} wants to combine {r.total} {r.total === 1 ? "party" : "parties"}
-            </span>
-            <span className="party-hint">
-              {keeps([
-                [`${r.friend}'s`, r.keepsTheirs],
-                ["yours", r.keepsYours],
-              ])}
-            </span>
-            {(r.takesOut ?? []).map((s) => (
-              <span key={`${s.name}:${s.leader}`} className="party-hint combine-takes">
-                Takes {s.name} out of your {s.boss} ({s.leader})
-              </span>
-            ))}
-            <span className="combine-actions">
-              <Button
-                variant="primary"
-                disabled={busy}
-                onClick={() =>
-                  void act(`${request(r.id)}/accept`, { method: "POST" }, "Couldn't combine them.")
-                }
-              >
-                Combine
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => void act(request(r.id), { method: "DELETE" }, "Couldn't decline.")}
-              >
-                Decline
-              </Button>
-            </span>
+      {pending && (
+        <section id="pending" className="character-group social-section">
+          <h2 className="character-world">
+            <a href="#pending">Pending</a>
+          </h2>
+          <div className="combine-list">
+            {page.incoming.map(incomingRow)}
+            {waiting.map(friendRow)}
           </div>
-        ))}
-        {page.friends.map((f) => (
-          <div key={f.personId} className="combine-row">
-            <span className="combine-who">
-              <DiscordAvatar image={f.friendImage} size="sm" />
-              {f.friend}
-            </span>
-            <span className="party-hint">
-              {f.matched} matching {f.matched === 1 ? "party" : "parties"}
-              {f.conflicts.length > 0 && ` · ${f.conflicts.length} to resolve`}
-            </span>
-            <span className="combine-actions">
-              {f.sentRequestId ? (
-                <>
-                  <span className="party-hint">Waiting for {f.friend}</span>
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() =>
-                      void act(
-                        request(f.sentRequestId!),
-                        { method: "DELETE" },
-                        "Couldn't cancel it.",
-                      )
-                    }
-                  >
-                    Cancel Request
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="primary"
-                  disabled={busy}
-                  aria-expanded={open === f.personId}
-                  onClick={() => setOpen(open === f.personId ? null : f.personId)}
-                >
-                  Combine Parties
-                </Button>
-              )}
-            </span>
-            {open === f.personId && !f.sentRequestId && (
-              <Merge
-                key={f.personId}
-                friend={f}
-                busy={busy}
-                preview={(choices) =>
-                  apiFetch<{ clashes: SeatClash[] }>(
-                    `${COMBINE_KEY}/preview`,
-                    { method: "POST", body: JSON.stringify({ personId: f.personId, choices }) },
-                    getToken,
-                  ).then((r) => r.clashes)
-                }
-                onSend={async (choices, seats) => {
-                  const sent = await act(
-                    COMBINE_KEY,
-                    {
-                      method: "POST",
-                      body: JSON.stringify({ personId: f.personId, choices, seats }),
-                    },
-                    "Couldn't send that. Try again.",
-                  );
-                  if (sent) setOpen(null);
-                }}
-              />
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
+        </section>
+      )}
+      {startable.length > 0 && (
+        <section id="with-friends" className="character-group social-section">
+          <h2 className="character-world">
+            <a href="#with-friends">With Friends</a>
+          </h2>
+          <div className="combine-list">{startable.map(friendRow)}</div>
+        </section>
+      )}
+    </SectionNav>
   );
 }
 

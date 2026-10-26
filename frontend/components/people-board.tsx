@@ -5,7 +5,6 @@ import { CarouselFrame } from "@/components/carousel-frame";
 import { KNOWN_CHARACTERS_ID, KnownCharacters } from "@/components/known-characters";
 import { spriteUrl } from "@/lib/api";
 import { useCarousel } from "@/lib/use-carousel";
-import { ConfirmAct } from "@/components/confirm-act";
 import { DiscordAvatar } from "@/components/discord-avatar";
 import { LinkAccount } from "@/components/link-account";
 import { Tooltip } from "@/components/tooltip";
@@ -47,7 +46,6 @@ export function PeopleBoard({
   onInvite,
   onLink,
   onCancelLink,
-  onUnlink,
 }: {
   people: PersonDraft[];
   unassigned: string[];
@@ -71,8 +69,6 @@ export function PeopleBoard({
   /** Asks an existing account to be this person. Resolves to why it was refused, or null once sent. */
   onLink: (personId: string, username: string) => Promise<string | null>;
   onCancelLink: (requestId: string) => void;
-  /** Takes the account off a person, and their seats in your parties with it. */
-  onUnlink: (personId: string) => void;
 }) {
   // The character being moved by clicks. Drags carry their own name on the dataTransfer, so this
   // stays null throughout one and the "give it to" buttons never appear mid-drag.
@@ -129,8 +125,10 @@ export function PeopleBoard({
       <KnownCharacters names={knownCharacters} />
 
       {sectionsOf(people).map((section) => (
-        <section key={section.title}>
-          <h2 className="night-heading people-pool-title">{section.title}</h2>
+        <section key={section.id} id={section.id} className="social-section">
+          <h2 className="night-heading people-pool-title">
+            <a href={`#${section.id}`}>{section.title}</a>
+          </h2>
           <div className="people-list">
             {section.rows.map(({ row, index }) => (
               // A saved person keys on their id; a new row has only its slot.
@@ -152,56 +150,46 @@ export function PeopleBoard({
                       />
                     </span>
                   </label>
-                  <div className="person-meta-actions">
-                    {/* Only a saved person can be sent one: the link is made from their row in the
+                  {/* A linked row has nothing here: it is a friend, removed from Friends. */}
+                  {!row.linked && (
+                    <div className="person-meta-actions">
+                      {/* Only a saved person can be sent one: the link is made from their row in the
                     database, and a row that is not there yet has no id to make it from. */}
-                    {row.id != null && (
-                      <Tooltip text={unsaved ? "Save first" : undefined}>
-                        <button
-                          type="button"
-                          className="person-invite"
-                          disabled={busy || unsaved || inviting !== null}
-                          onClick={() => onInvite(row.id as string)}
-                        >
-                          {/* The wait is here rather than in the dialog, which does not open until there
+                      {row.id != null && (
+                        <Tooltip text={unsaved ? "Save first" : undefined}>
+                          <button
+                            type="button"
+                            className="person-invite"
+                            disabled={busy || unsaved || inviting !== null}
+                            onClick={() => onInvite(row.id as string)}
+                          >
+                            {/* The wait is here rather than in the dialog, which does not open until there
                           is a link to put in it. The button carries no state beyond that: a link
                           lasts five minutes, so the answer to pressing it again is another link. */}
-                          {inviting === row.id ? "Generating..." : "Generate Invite Link"}
-                        </button>
-                      </Tooltip>
-                    )}
-                    {!row.linked && row.id != null && (
-                      <LinkAccount
-                        person={row.name}
-                        request={row.request ?? null}
-                        busy={busy}
-                        unsaved={unsaved}
-                        onSend={(username) => onLink(row.id as string, username)}
-                        onCancel={onCancelLink}
-                      />
-                    )}
-                    {/* Only where there is an account to take off. A link is a bearer token, so one
-                    that reached the wrong person is taken back here rather than being permanent. */}
-                    {/* Asks first: it ends the link on both sides at once, and only a new invite
-                        undoes it. */}
-                    {row.linked && row.id != null && (
-                      <ConfirmAct
-                        label="Unlink"
-                        question={`Unlink ${row.name}?`}
-                        keep="Keep"
-                        busy={busy}
-                        onConfirm={() => onUnlink(row.id as string)}
-                      />
-                    )}
-                    <button
-                      type="button"
-                      className="party-delete"
-                      disabled={busy}
-                      onClick={() => onRemove(index)}
-                    >
-                      Remove
-                    </button>
-                  </div>
+                            {inviting === row.id ? "Generating..." : "Generate Invite Link"}
+                          </button>
+                        </Tooltip>
+                      )}
+                      {row.id != null && (
+                        <LinkAccount
+                          person={row.name}
+                          request={row.request ?? null}
+                          busy={busy}
+                          unsaved={unsaved}
+                          onSend={(username) => onLink(row.id as string, username)}
+                          onCancel={onCancelLink}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        className="party-delete"
+                        disabled={busy}
+                        onClick={() => onRemove(index)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <TileStrip
                   zone={zoneProps(index)}
@@ -256,22 +244,26 @@ export function PeopleBoard({
         </section>
       ))}
 
-      <h2 className="night-heading people-pool-title">Unassigned Party Members</h2>
-      <TileStrip zone={zoneProps(null)} deps={[unassigned, picked]}>
-        {unassigned.map((name) => (
-          <Chip
-            key={name}
-            name={name}
-            sprite={spriteFor(name)}
-            picked={picked === name}
-            busy={busy}
-            onPick={() => pick(name)}
-          />
-        ))}
-        {picked !== null && !unassigned.includes(picked) && (
-          <Target label="Unassign" description={`Take ${picked} off everybody`} />
-        )}
-      </TileStrip>
+      <section id="unassigned" className="social-section">
+        <h2 className="night-heading people-pool-title">
+          <a href="#unassigned">Unassigned Party Members</a>
+        </h2>
+        <TileStrip zone={zoneProps(null)} deps={[unassigned, picked]}>
+          {unassigned.map((name) => (
+            <Chip
+              key={name}
+              name={name}
+              sprite={spriteFor(name)}
+              picked={picked === name}
+              busy={busy}
+              onPick={() => pick(name)}
+            />
+          ))}
+          {picked !== null && !unassigned.includes(picked) && (
+            <Target label="Unassign" description={`Take ${picked} off everybody`} />
+          )}
+        </TileStrip>
+      </section>
     </div>
   );
 }

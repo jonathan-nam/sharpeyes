@@ -85,8 +85,12 @@ const nextConfig: NextConfig = {
 
   // The Drop Log came out from under Party View when it started holding drops from bosses that
   // have no party. Permanent, since the old path is nobody's page any more.
+  // People moved onto Social. Old links and bookmarks still land.
   async redirects() {
-    return [{ source: "/bosses/parties/drops", destination: "/bosses/drops", permanent: true }];
+    return [
+      { source: "/bosses/parties/drops", destination: "/bosses/drops", permanent: true },
+      { source: "/bosses/people", destination: "/social/people", permanent: true },
+    ];
   },
 };
 

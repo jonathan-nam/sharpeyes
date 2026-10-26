@@ -166,15 +166,15 @@ export default function EditPartiesPage() {
 
   return (
     <main className="page">
-      {/* People is not in the hamburger any more: naming whose character is which is part of
-          setting a party up, so it is reached from here. It sits where Party View carries its way
-          here, so the two pages point at each other from the same corner. */}
+      {/* People lives on Social, but naming whose character is which is part of setting a party
+          up, so it is reached from here too. It sits where Party View carries its way here, so the
+          two pages point at each other from the same corner. */}
       <div className="page-head">
         <p className="loot-back">
           <Link href="/bosses/parties">&larr; Party View</Link>
         </p>
         <span className="page-head-links">
-          <ButtonLink variant="secondary" href="/bosses/people">
+          <ButtonLink variant="secondary" href="/social/people">
             Edit People
           </ButtonLink>
         </span>
