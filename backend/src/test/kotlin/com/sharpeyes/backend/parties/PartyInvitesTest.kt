@@ -224,6 +224,27 @@ class PartyInvitesTest {
         }
     }
 
+    // A solo pool has no card to withdraw it from, so Social lists what you sent.
+    @Test
+    fun `the owner sees an invite from a solo pool and can withdraw it`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            link(owner, "Chris", member)
+            val partyId = createSoloParty(owner, tide, kalos, now)
+            sendInvites(owner, partyId, listOf(Invitee("Pinewick", pine)), now)
+
+            val sent = invitesSentBy(owner).single()
+            assertEquals("Pinewick", sent.character)
+            assertEquals("tidelark", sent.leader)
+            assertTrue(invitesSentBy(member).isEmpty())
+
+            assertTrue(dropInviteAs(owner, Uuid.parse(sent.id), now))
+            assertTrue(invitesSentBy(owner).isEmpty())
+            assertTrue(invitesWaitingOn(member).isEmpty())
+        }
+    }
+
     // Social lists them, so an invite cleared from the bell can still be answered.
     @Test
     fun `an invite waits on the invitee, named the way the bell names it, and on nobody else`() {
