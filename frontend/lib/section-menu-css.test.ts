@@ -26,16 +26,16 @@ describe("section menu indentation survives the cascade", () => {
 
 describe("the header lists the sections or the hamburger, never both", () => {
   it("hides the listed sections after the rule that shows them", () => {
-    // Shipped once with the hide first: `.section-nav { display: flex }` won and a narrow header
+    // Shipped once with the hide first: `.header-nav { display: flex }` won and a narrow header
     // drew the list and the hamburger side by side, overflowing the bar.
-    const shown = css.indexOf(".section-nav {");
-    const hidden = /@media \(width <= (\d+)px\) \{\s*\.section-nav \{\s*display: none;/.exec(css);
+    const shown = css.indexOf(".header-nav {");
+    const hidden = /@media \(width <= (\d+)px\) \{\s*\.header-nav \{\s*display: none;/.exec(css);
     expect(shown).toBeGreaterThan(-1);
     expect(hidden?.index).toBeGreaterThan(shown);
   });
 
   it("swaps them at the same width", () => {
-    const hide = /@media \(width <= (\d+)px\) \{\s*\.section-nav \{/.exec(css)?.[1];
+    const hide = /@media \(width <= (\d+)px\) \{\s*\.header-nav \{/.exec(css)?.[1];
     const show = /@media \(width > (\d+)px\) \{\s*\.section-menu \{\s*display: none;/.exec(
       css,
     )?.[1];

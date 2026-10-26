@@ -95,7 +95,7 @@ const KINDS: Record<string, Kind> = {
   },
   PARTY_COMBINE: {
     text: (_, who) => `${who} has requested to combine parties.`,
-    go: { label: () => "Review", href: () => "/social" },
+    go: { label: () => "Review", href: () => "/social/combine" },
   },
   PARTY_COMBINED: {
     text: (p, who) => `${who} combined ${partiesCount(p)}`,

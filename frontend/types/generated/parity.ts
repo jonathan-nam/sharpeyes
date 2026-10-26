@@ -70,7 +70,7 @@ import type {
 } from "@/types/screenshot";
 import type { SaveMainCharacterBody, SaveSettingsBody, Settings } from "@/types/settings";
 import type { Payer, SettlementListing } from "@/types/settlement-listing";
-import type { FriendView, IncomingInvite, Social } from "@/types/social";
+import type { FriendView, IncomingInvite, SentInvite, Social } from "@/types/social";
 import type { TokenCatalogItem } from "@/types/token-catalog";
 import type {
   AddProceedsDisposalBody,
@@ -174,6 +174,7 @@ export type ResponseParity = [
   Is<Same<FriendView, api.FriendView>>,
   Is<Same<Social, api.SocialResponse>>,
   Is<Same<IncomingInvite, api.IncomingInviteView>>,
+  Is<Same<SentInvite, api.SentInviteView>>,
   Is<Same<VestigeTrancheShare, ShareRow>>,
   Is<Same<VestigeTranche, Tranche>>,
   Is<Same<VestigePayment, Payment>>,

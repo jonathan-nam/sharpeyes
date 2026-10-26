@@ -5,15 +5,16 @@ import { PageSwap } from "@/components/page-swap";
 import { InviteLink } from "@/components/invite-link";
 import { PEOPLE_KEY, createInvite, savePeople } from "@/lib/people-writes";
 import { PeopleBoard } from "@/components/people-board";
+import { SectionNav } from "@/components/section-nav";
+import { SocialHead } from "@/components/social-head";
 import { useAuth } from "@/lib/use-auth";
 import { useLive } from "@/lib/use-live";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { apiFetch, failureText } from "@/lib/api";
 import { invalidate, peek, put } from "@/lib/cache";
 import { friendsChanged } from "@/lib/friends-changed";
 import { reportDataReady } from "@/lib/rum";
-import { type PersonDraft, peopleBody, toDraft, unclaimed } from "@/lib/people-board";
+import { type PersonDraft, peopleBody, sectionsOf, toDraft, unclaimed } from "@/lib/people-board";
 import { useCharacterSprites } from "@/lib/ign-sprites";
 import { knownSprite, spriteByName } from "@/lib/sprite-by-name";
 import type { Character } from "@/types/character";
@@ -100,34 +101,6 @@ export default function PeoplePage() {
       })
       .catch(() => {});
   });
-
-  /**
-   * Takes the account off a person, on both sides, and the seats each holds of the other with it.
-   *
-   * The server answers with the whole people list, so the row redraws from what is now true rather
-   * than from an assumption about what the press did. Their seats stop being theirs at the same
-   * moment: see UnlinkPerson.kt, where the revoking is the half that matters.
-   */
-  async function unlinkPerson(personId: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      const saved = await apiFetch<Person[]>(
-        `${PEOPLE_KEY}/${encodeURIComponent(personId)}/link`,
-        { method: "DELETE" },
-        getToken,
-      );
-      setPeople(saved);
-      setDraft(toDraft(saved));
-      put(PEOPLE_KEY, saved);
-      // Every party read carries whose seat is whose, and one of them just stopped being theirs.
-      invalidate("/api/parties");
-    } catch {
-      setError("Couldn't unlink them.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   /** Sends a friend request naming this person. Why it was refused, said in its dialog, or null. */
   async function linkPerson(personId: string, username: string): Promise<string | null> {
@@ -232,10 +205,7 @@ export default function PeoplePage() {
 
   return (
     <main className="page">
-      <p className="loot-back">
-        <Link href="/bosses/parties/edit">&larr; Edit Parties</Link>
-      </p>
-      <h1 className="page-title">Edit People</h1>
+      <SocialHead current="people" />
 
       {state === "error" && <p>Couldn&apos;t load your people. Reload to try again.</p>}
       <PageSwap
@@ -243,7 +213,12 @@ export default function PeoplePage() {
         placeholder={<p className="party-hint">Loading...</p>}
       >
         {state === "loaded" && (
-          <>
+          <SectionNav
+            sections={[
+              ...sectionsOf(draft).map((s) => ({ id: s.id, label: s.title })),
+              { id: "unassigned", label: "Unassigned" },
+            ]}
+          >
             <PeopleBoard
               people={draft}
               unassigned={unassigned}
@@ -260,7 +235,6 @@ export default function PeoplePage() {
               onInvite={invitePerson}
               onLink={linkPerson}
               onCancelLink={cancelLink}
-              onUnlink={unlinkPerson}
             />
 
             {invite !== null && (
@@ -285,7 +259,7 @@ export default function PeoplePage() {
               {error && <span className="split-error">{error}</span>}
               {inviteError && <span className="split-error">{inviteError}</span>}
             </div>
-          </>
+          </SectionNav>
         )}
       </PageSwap>
     </main>

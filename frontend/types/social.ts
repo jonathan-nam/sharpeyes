@@ -30,3 +30,6 @@ export type IncomingInvite = {
   difficulty: string | null;
   leader: string;
 };
+
+/** GET /api/party-invites/sent: a seat you offered and nobody has answered. */
+export type SentInvite = IncomingInvite;

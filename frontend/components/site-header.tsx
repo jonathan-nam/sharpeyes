@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { HeaderNav } from "@/components/header-nav";
 import { NotificationBell } from "@/components/notification-bell";
 import { SectionMenu } from "@/components/section-menu";
-import { SectionNav } from "@/components/section-nav";
 import { UserAvatar } from "@/components/user-avatar";
 import { WorldToggle } from "@/components/world-toggle";
 import { isSetupPath } from "@/lib/setup-paths";
@@ -42,7 +42,7 @@ export function SiteHeader() {
             header. Signed-in only: they are account views. */}
         {!isLoaded && (
           <div className="sections header-reserved" aria-hidden="true">
-            <SectionNav reserved />
+            <HeaderNav reserved />
             <div className="section-menu">
               <div className="section-menu-btn is-reserved">
                 <span className="section-menu-icon" />
@@ -52,7 +52,7 @@ export function SiteHeader() {
         )}
         {isSignedIn && (
           <div className="sections">
-            <SectionNav />
+            <HeaderNav />
             <SectionMenu />
           </div>
         )}

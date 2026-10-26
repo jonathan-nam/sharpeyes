@@ -1,123 +1,70 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useRef } from "react";
-import { InDevelopmentMark } from "@/components/section-menu";
-import { activeHref, SECTIONS, type SectionItem, sectionsFor } from "@/lib/section-menu";
-import { useAccountSettings } from "@/lib/use-account-settings";
-import { useHoverMenu } from "@/lib/use-hover-menu";
+import { type ReactNode, useEffect, useState } from "react";
+
+export type NavSection = {
+  id: string;
+  label: string;
+  /** Waiting on you. Not drawn at zero. */
+  count?: number;
+};
+
+// How far below the viewport's top a section's heading counts as reached. Matches the sections'
+// scroll-margin-top in globals.css, so a click on a link lights that link.
+const REACHED_PX = 24;
 
 /**
- * The sections, listed in the header: a link per page and a dropdown per group. A narrow header
- * swaps this for SectionMenu's hamburger, in CSS.
- *
- * `reserved` draws the same labels inert, to hold their space until the session resolves (see
- * SiteHeader). The labels are the same for every account, so drawing them is not a guess.
+ * A page's sections, as a sticky column of links beside them, or a row above them on a narrow page.
+ * The link lit is the last section whose heading has scrolled past the top, or the last section
+ * once the page cannot scroll further, since a short one at the bottom may never reach the top.
  */
-export function SectionNav({ reserved = false }: { reserved?: boolean }) {
-  const active = activeHref(usePathname());
-  const trades = useAccountSettings()?.trades;
-  const sections = reserved ? SECTIONS : sectionsFor(trades);
-
-  return (
-    <nav className="section-nav" aria-label={reserved ? undefined : "Sections"}>
-      {sections.map((section) => {
-        const listed = section.items.filter((item) => !item.hidden);
-        if (reserved) {
-          return (
-            <span key={section.group ?? listed[0]?.href} className="section-nav-link">
-              {section.group ?? listed[0]?.label}
-              {section.group ? <Chevron /> : null}
-            </span>
-          );
-        }
-        if (section.group) {
-          return (
-            <NavGroup
-              key={section.group}
-              label={section.group}
-              items={listed}
-              active={active}
-              // A hidden page (Edit People) still lights the group it sits in.
-              current={section.items.some((item) => item.href === active)}
-            />
-          );
-        }
-        return listed.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={active === item.href ? "section-nav-link active" : "section-nav-link"}
-            aria-current={active === item.href ? "page" : undefined}
-          >
-            {item.label}
-          </Link>
-        ));
-      })}
-    </nav>
-  );
-}
-
-function NavGroup({
-  label,
-  items,
-  active,
-  current,
+export function SectionNav({
+  sections,
+  children,
 }: {
-  label: string;
-  items: SectionItem[];
-  active: string | undefined;
-  current: boolean;
+  sections: NavSection[];
+  children: ReactNode;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const menu = useHoverMenu(ref);
+  const [active, setActive] = useState<string | undefined>(sections[0]?.id);
+  const ids = sections.map((s) => s.id).join(" ");
+
+  useEffect(() => {
+    const list = ids.split(" ").filter(Boolean);
+    function update() {
+      const atBottom =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      let current = list[0];
+      for (const id of list) {
+        const top = document.getElementById(id)?.getBoundingClientRect().top;
+        if (top !== undefined && top <= REACHED_PX + 1) current = id;
+      }
+      setActive(atBottom && window.scrollY > 0 ? list[list.length - 1] : current);
+    }
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [ids]);
 
   return (
-    <div className="section-nav-group" ref={ref} {...menu.hover}>
-      <button
-        type="button"
-        className={current ? "section-nav-link active" : "section-nav-link"}
-        aria-haspopup="menu"
-        aria-expanded={menu.open}
-        onClick={menu.toggle}
-      >
-        {label}
-        <Chevron />
-      </button>
-      {menu.open ? (
-        <div className="section-menu-panel" role="menu" aria-label={label}>
-          {items.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              role="menuitem"
-              className={active === item.href ? "active" : ""}
-              onClick={menu.close}
-            >
-              {item.label}
-              {item.inDevelopment ? <InDevelopmentMark /> : null}
-            </Link>
-          ))}
-        </div>
-      ) : null}
+    <div className="social-layout">
+      <nav className="social-toc" aria-label="Sections">
+        {sections.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className={s.id === active ? "active" : undefined}
+            aria-current={s.id === active ? "location" : undefined}
+          >
+            {s.label}
+            {s.count ? <span className="social-toc-count">{s.count}</span> : null}
+          </a>
+        ))}
+      </nav>
+      <div className="social-body">{children}</div>
     </div>
-  );
-}
-
-function Chevron() {
-  return (
-    <svg
-      className="section-nav-chevron"
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m6 9 6 6 6-6" />
-    </svg>
   );
 }

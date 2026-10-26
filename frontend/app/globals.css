@@ -155,7 +155,7 @@
   position: relative;
 }
 
-.section-nav {
+.header-nav {
   display: flex;
   align-items: center;
   gap: 2px;
@@ -163,7 +163,7 @@
 
 /* The listed sections need up to 983px of bar beside the world toggle and avatar (measured in
    Chromium with the Maplestory face), so they give way to the hamburger with some room to spare.
-   MUST stay after `.section-nav`: at equal specificity its display:flex would win and draw both. */
+   MUST stay after `.header-nav`: at equal specificity its display:flex would win and draw both. */
 @media (width > 1040px) {
   .section-menu {
     display: none;
@@ -171,16 +171,16 @@
 }
 
 @media (width <= 1040px) {
-  .section-nav {
+  .header-nav {
     display: none;
   }
 }
 
-.section-nav-group {
+.header-nav-group {
   position: relative;
 }
 
-.section-nav-link {
+.header-nav-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -196,34 +196,34 @@
   cursor: pointer;
 }
 
-a.section-nav-link:hover,
-button.section-nav-link:hover,
-.section-nav-link[aria-expanded="true"] {
+a.header-nav-link:hover,
+button.header-nav-link:hover,
+.header-nav-link[aria-expanded="true"] {
   color: var(--ink);
   background: var(--surface-2);
 }
 
-.section-nav-link.active {
+.header-nav-link.active {
   color: var(--ink-strong);
 }
 
-.section-nav-link:focus-visible {
+.header-nav-link:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-.section-nav-chevron {
+.header-nav-chevron {
   width: 12px;
   height: 12px;
   transition: transform 140ms ease-out;
 }
 
-.section-nav-link[aria-expanded="true"] .section-nav-chevron {
+.header-nav-link[aria-expanded="true"] .header-nav-chevron {
   transform: rotate(180deg);
 }
 
 /* The reserved copy holds the space and nothing else. */
-.header-reserved .section-nav-link {
+.header-reserved .header-nav-link {
   pointer-events: none;
 }
 
@@ -342,7 +342,7 @@ html:not(.has-session) .header-reserved {
     animation: none;
   }
 
-  .section-nav-chevron {
+  .header-nav-chevron {
     transition: none;
   }
 }
@@ -1744,6 +1744,89 @@ img.user-avatar-img {
 .social-add {
   align-items: flex-start;
   margin: 0 0 24px;
+}
+
+/* Social's pages, then each page's sections: a row above them, a sticky column beside them once
+   there is room. The scroll margin is section-nav.tsx's REACHED_PX. */
+.social-tabs {
+  margin-bottom: 20px;
+}
+
+.social-tabs > a {
+  text-decoration: none;
+}
+
+.social-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 20px;
+}
+
+.social-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.social-toc a {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.social-toc a:hover,
+.social-toc a.active {
+  color: var(--ink-strong);
+}
+
+.social-toc a.active {
+  font-weight: 600;
+}
+
+.social-toc-count {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.social-body {
+  min-width: 0;
+}
+
+.social-section {
+  scroll-margin-top: 24px;
+}
+
+.social-section > h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (min-width: 900px) {
+  .social-layout {
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .social-toc {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+
+  .social-toc a {
+    padding: 5px 10px;
+    border-radius: var(--radius-md);
+  }
+
+  .social-toc a.active {
+    background: var(--surface);
+  }
 }
 
 .hero {

@@ -801,6 +801,15 @@ export type SendFriendRequest = {
   username: string;
 };
 
+export type SentInviteView = {
+  id: string;
+  partyId: string;
+  character: string;
+  boss: string;
+  difficulty: string | null;
+  leader: string;
+};
+
 export type SetBossClearRequest = {
   characterId: string;
   bossKey: string;

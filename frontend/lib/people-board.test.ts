@@ -311,21 +311,21 @@ describe("what a linked person's row says about a character", () => {
 
 describe("sectionsOf", () => {
   const row = (name: string, linked: boolean) => ({ name, characters: [], owned: [], linked });
-  it("splits verified from unverified, keeping each row's own index", () => {
+  it("splits linked from unlinked, keeping each row's own index", () => {
     const sections = sectionsOf([row("Owen", true), row("Felix", false), row("Tide", true)]);
-    expect(sections.map((s) => [s.title, s.rows.map((r) => [r.row.name, r.index])])).toEqual([
+    expect(sections.map((s) => [s.id, s.rows.map((r) => [r.row.name, r.index])])).toEqual([
       [
-        "Verified",
+        "on-sharpeyes",
         [
           ["Owen", 0],
           ["Tide", 2],
         ],
       ],
-      ["Unverified", [["Felix", 1]]],
+      ["not-on-sharpeyes", [["Felix", 1]]],
     ]);
   });
-  it("leaves out a section with nobody in it, and files a new row as unverified", () => {
+  it("leaves out a section with nobody in it, and files a new row as unlinked", () => {
     const sections = sectionsOf([{ name: "", characters: [], owned: [] }]);
-    expect(sections.map((s) => s.title)).toEqual(["Unverified"]);
+    expect(sections.map((s) => s.id)).toEqual(["not-on-sharpeyes"]);
   });
 });

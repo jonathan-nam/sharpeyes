@@ -14,15 +14,6 @@ export type SectionItem = {
    * the tool anyway is the app explaining a control that cannot be used from here.
    */
   interactiveOnly?: boolean;
-  /**
-   * In the menu's routing but not on its list.
-   *
-   * A page reached from inside another section rather than from the header. It still has to be
-   * MATCHED, or the longest-match rule below falls back to a shorter href and lights up a section
-   * the page is not in: /bosses/people would otherwise resolve to /bosses and read as
-   * "Individual View".
-   */
-  hidden?: boolean;
   /** Listed, and marked as unfinished. */
   inDevelopment?: boolean;
 };
@@ -33,9 +24,10 @@ export type SectionItem = {
  *
  * /characters redirects to /inventory (see next.config), so old links keep working.
  *
- * The Wallet and People are deliberately absent from the list. They are reached from the pages that
- * name the thing they edit, which is where you already are when you want them, and six entries
- * under one heading had stopped being a menu and started being a list of every page.
+ * The Wallet is deliberately absent from the list. It is reached from the page that names the thing
+ * it edits, which is where you already are when you want it, and six entries under one heading had
+ * stopped being a menu and started being a list of every page. People is on Social, reached from
+ * the avatar menu.
  *
  * The Drop Log is its own section, not a Bossing view: it holds what fell on bosses that have no
  * party, and it is where those are logged and sold. Same order as the welcome-back rows.
@@ -48,11 +40,9 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
     group: "Bossing",
     items: [
       { href: "/bosses", label: "Individual View" },
+      // The Wallet sits under /bosses/parties and so already resolves to Party View, which is the
+      // section it is part of.
       { href: "/bosses/parties", label: "Party View" },
-      // Reached from the party editor and from Run Order, so it needs matching but not listing.
-      // The Wallet needs neither: it sits under /bosses/parties and so already resolves to Party
-      // View, which is the section it is part of.
-      { href: "/bosses/people", label: "Edit People", hidden: true },
       { href: "/bosses/order", label: "Run Order" },
     ],
   },
@@ -110,13 +100,8 @@ export const HOME_ROWS: HomeRow[] = [
   { ...menuItem("/inventory"), items: [] },
 ];
 
-/** Every href the menu routes, hidden ones included. Not narrowed by world: routing is not listing. */
+/** Every href the menu routes. Not narrowed by world: routing is not listing. */
 export const HREFS = SECTIONS.flatMap((s) => s.items.map((i) => i.href));
-
-/** Only what is on the list. Prefetching a page the menu cannot reach would warm nothing. */
-export const MENU_HREFS = SECTIONS.flatMap((s) =>
-  s.items.filter((i) => !i.hidden).map((i) => i.href),
-);
 
 /**
  * What to draw for the world being shown, or everything while the answer is not known yet.
@@ -137,8 +122,7 @@ export function sectionsFor(trades: boolean | undefined) {
  * Which entry to light up for this path, or undefined for none.
  *
  * Longest match wins, so /bosses/split lights "Drop Splitter" alone: a plain startsWith would
- * light "Individual View" too, since one section nests under the other. A hidden href can win,
- * and then nothing is highlighted, which is the point of it winning.
+ * light "Individual View" too, since one section nests under the other.
  */
 export function activeHref(pathname: string): string | undefined {
   return HREFS.filter((href) => pathname === href || pathname.startsWith(`${href}/`)).sort(

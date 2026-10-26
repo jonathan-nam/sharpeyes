@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { activeHref, MENU_HREFS, sectionsFor } from "@/lib/section-menu";
+import { activeHref, HREFS, sectionsFor } from "@/lib/section-menu";
 import { useAccountSettings } from "@/lib/use-account-settings";
 import { useHoverMenu } from "@/lib/use-hover-menu";
 
-// The sections behind a hamburger, for a header too narrow to list them (SectionNav lists them
+// The sections behind a hamburger, for a header too narrow to list them (HeaderNav lists them
 // otherwise). What it lists, and which entry a path belongs to, are in lib/section-menu.ts, where
 // they can be tested: the highlight rule fails silently, by lighting the wrong word rather than by
 // erroring.
@@ -30,7 +30,7 @@ export function SectionMenu() {
   //
   // Every section, deduped by the router cache. No effect under `next dev`, which never prefetches.
   useEffect(() => {
-    for (const href of MENU_HREFS) router.prefetch(href);
+    for (const href of HREFS) router.prefetch(href);
   }, [router]);
 
   // The wait for a clicked route is NOT drawn here: it is NavPending, in the layout, so every link
@@ -59,20 +59,18 @@ export function SectionMenu() {
               aria-label={section.group}
             >
               {section.group ? <p className="section-menu-group-label">{section.group}</p> : null}
-              {section.items
-                .filter((item) => !item.hidden)
-                .map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    role="menuitem"
-                    className={active === item.href ? "active" : ""}
-                    onClick={menu.close}
-                  >
-                    {item.label}
-                    {item.inDevelopment ? <InDevelopmentMark /> : null}
-                  </Link>
-                ))}
+              {section.items.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  role="menuitem"
+                  className={active === item.href ? "active" : ""}
+                  onClick={menu.close}
+                >
+                  {item.label}
+                  {item.inDevelopment ? <InDevelopmentMark /> : null}
+                </Link>
+              ))}
             </div>
           ))}
         </nav>
