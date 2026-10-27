@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/button";
 import { DropPicker } from "@/components/drop-picker";
 import { LootList, type StackAssignment } from "@/components/loot-list";
-import { StackAssign } from "@/components/stack-assign";
 import { nightLabel, poolNights, ranAtThisMode } from "@/lib/pool-nights";
 import { isDropHistory, type PieceStatus } from "@/lib/drop-log";
 import { takenTally } from "@/lib/loot";
@@ -141,9 +140,7 @@ export function LootPool({
             bossByKey={bossByKey}
             pieceStatus={pieceStatus}
             stacks={stacks}
-            // The deal is the PARTY's, not a night's, so it is drawn once below rather than restated
-            // under every night that happens to hold coupons. Same reason LootGroup draws it on the
-            // last row only.
+            // The deal is the PARTY's, not a night's. Its editor states it, not this pool.
             splitElsewhere
             editSplits
             isSaving={isSaving}
@@ -156,13 +153,6 @@ export function LootPool({
           />
         </div>
       ))}
-
-      {stacks && (here.length > 0 || past.length > 0) && (
-        <div className="loot-config-card">
-          <h3 className="loot-group-title is-config">{stacks.entitledTitle}</h3>
-          <StackAssign config={stacks.config} editing={false} busy={false} onSave={stacks.onSave} />
-        </div>
-      )}
 
       {/* Said, not silently dropped: a screen may narrow what it draws, and may not lose rows
           without saying so. Openable because some of them can still be acted on and a pool row is
