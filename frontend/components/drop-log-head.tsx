@@ -1,48 +1,75 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/button";
-import { SectionMark } from "@/components/section-mark";
 import {
-  type DropSection,
-  type DropSectionKey,
+  dropSections,
+  sectionFromPath,
   sectionHref,
   sectionSteps,
+  shownSection,
 } from "@/lib/drop-sections";
+import { useAccountSettings } from "@/lib/use-account-settings";
 
 /**
- * A stage's heading, with the stages either side of it. The way forward is top right; with a way
- * back as well, both go on a line of their own under the heading.
+ * A stage's title, and a row under it with the stage before on the left and the one after on the
+ * right. Read off the path and the world rather than passed in, so the route boundary draws the
+ * same one as the page.
  */
-export function DropLogHead({
-  section,
-  sections,
-}: {
-  section: DropSectionKey;
-  sections: DropSection[];
-}) {
+export function DropLogHead() {
+  const sections = dropSections(useAccountSettings()?.trades);
+  const section = shownSection(sectionFromPath(usePathname()) ?? "drops", sections);
   const { back, next } = sectionSteps(section, sections);
   const label = sections.find((s) => s.key === section)?.label;
-  const forward = next && (
-    <ButtonLink variant="secondary" className="droplog-head-next" href={sectionHref(next.key)}>
-      {next.key === "settled" ? <>View {next.label}</> : <>{next.label} &rarr;</>}
-    </ButtonLink>
-  );
 
   return (
-    <div className="droplog-head">
-      <div className="droplog-head-row">
-        <h2 className="droplog-head-title">
-          <SectionMark section={section} />
-          {label}
-        </h2>
-        {!back && forward}
-      </div>
-      {back && (
-        <div className="droplog-head-row">
-          <ButtonLink variant="secondary" href={sectionHref(back.key)}>
-            &larr; {back.label}
-          </ButtonLink>
-          {forward}
+    <>
+      <h1 className="page-title">{label}</h1>
+      {(back || next) && (
+        <div className="droplog-steps">
+          {back && (
+            <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(back.key)}>
+              <Arrow back />
+              {back.label}
+            </ButtonLink>
+          )}
+          {next && (
+            <ButtonLink
+              variant="secondary"
+              className="droplog-step droplog-step-next"
+              href={sectionHref(next.key)}
+            >
+              {next.key === "settled" ? (
+                <>View {next.label}</>
+              ) : (
+                <>
+                  {next.label}
+                  <Arrow />
+                </>
+              )}
+            </ButtonLink>
+          )}
         </div>
       )}
-    </div>
+    </>
+  );
+}
+
+// Drawn, not typed: Maplestory's arrow glyph is a hairline beside its letters. After Lucide's
+// arrow-left and arrow-right (ISC).
+function Arrow({ back = false }: { back?: boolean }) {
+  return (
+    <svg
+      className="droplog-step-arrow"
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {back ? <path d="m12 19-7-7 7-7M19 12H5" /> : <path d="M5 12h14m-7-7 7 7-7 7" />}
+    </svg>
   );
 }

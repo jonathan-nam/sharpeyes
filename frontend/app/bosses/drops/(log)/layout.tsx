@@ -705,15 +705,13 @@ export default function DropLog({ children }: { children: ReactNode }) {
 
   return (
     <main className="page">
-      <h1 className="page-title">Drop Log</h1>
+      <DropLogHead />
 
       {state === "error" && <p>Couldn&apos;t load your drops. Reload to try again.</p>}
       {/* The page's own shape, not a line of text where a page will be. See DropLogSkeleton. */}
       <PageSwap waiting={state === "loading"} placeholder={<DropLogSkeleton />} shaped>
         {state === "loaded" && (
           <>
-            {sections.length > 1 && <DropLogHead section={shown} sections={sections} />}
-
             {shown === "drops" && (
               <>
                 {/* First on the tab, because it is what the tab is for. Nothing to log against with
