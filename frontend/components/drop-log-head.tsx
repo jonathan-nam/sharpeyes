@@ -22,7 +22,7 @@ export function DropLogHead() {
   const label = sections.find((s) => s.key === section)?.label;
 
   return (
-    <div className="page-head">
+    <div className="page-head droplog-head">
       <h1 className="page-title">{label}</h1>
       {(back || next) && (
         <span className="page-head-links">

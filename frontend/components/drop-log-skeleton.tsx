@@ -51,7 +51,7 @@ function Row() {
 // boundary alike.
 export function DropLogSkeleton() {
   return (
-    <div role="status" aria-label="Loading your drops">
+    <div className="droplog-skeleton" role="status" aria-label="Loading your drops">
       {/* The real Add Drop panel, down to the disabled controls and their labels, so its height is
           its own and not a number copied out of it. The labels are half of that height now. */}
       <section className="loot-pool add-section" aria-hidden="true">

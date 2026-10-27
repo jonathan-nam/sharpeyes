@@ -6723,6 +6723,22 @@ button.link:disabled {
   font-variant-numeric: tabular-nums;
 }
 
+/* The heading owns the gap under it. Left to the title's margin and the first panel's, the two
+   added up to 48px. The skeleton's first panel sits one level down. */
+.droplog-head {
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.droplog-head .page-title {
+  margin-bottom: 0;
+}
+
+.droplog-head + *,
+.droplog-head + .droplog-skeleton > :first-child {
+  margin-top: 0;
+}
+
 .droplog-step {
   display: inline-flex;
   align-items: center;
