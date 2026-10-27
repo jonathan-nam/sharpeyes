@@ -41,8 +41,9 @@ import kotlin.uuid.Uuid
  * point. A seat that merely names your character gets you nothing until your accounts are linked,
  * and not then in a party duplicating one of your own. See V75 and seatInLinkedParties.
  *
- * Narrowed to the world being shown, like every account-wide read, and to standing seats: a seat
- * you have been retired out of is a party you have left.
+ * Narrowed to the world being shown, like every account-wide read, and to seats in the party that
+ * week (seatedFor): a seat you have been retired out of is a party you have left, while a one-off's
+ * night and a guest's week are parties you are in.
  *
  * [week] is partiesFor's: the week-scoped fields (roster, skippedThisPeriod) answer for it.
  */
@@ -67,7 +68,7 @@ internal fun partiesSeatedIn(
                 .selectAll()
                 .where {
                     (PartyMember.linkedCharacterId inList myCharacters) and
-                        (PartyMember.standing eq true) and
+                        seatedFor(week ?: currentWeek()) and
                         // Never your own. Those are partiesFor's, with their pool and their money,
                         // and returning them here too would be two answers to one party.
                         (Party.userId neq userId)
@@ -126,7 +127,7 @@ internal fun canReadParty(
 ): Boolean = ownsParty(partyId, userId) || isSeatedIn(partyId, userId)
 
 /**
- * True when one of this account's characters holds a standing seat in [partyId].
+ * True when one of this account's characters is in [partyId] this week (seatedFor).
  *
  * The same rule partiesSeatedIn is built on, asked about one party: you reach a party by owning a
  * character whose seat states so as a foreign key. It says what may be READ; what may be written is
@@ -158,7 +159,7 @@ internal fun seatedCharacterIn(
         .selectAll()
         .where {
             (PartyMember.partyId eq partyId) and
-                (PartyMember.standing eq true) and
+                seatedFor(currentWeek()) and
                 (theirCharacter[Characters.userId] eq userId)
         }.orderBy(PartyMember.position)
         .firstOrNull()
@@ -194,7 +195,7 @@ internal fun seatedPartyFor(
         .innerJoin(Party)
         .selectAll()
         .where {
-            (PartyMember.linkedCharacterId eq characterId) and (PartyMember.standing eq true) and
+            (PartyMember.linkedCharacterId eq characterId) and seatedFor(currentWeek()) and
                 (Party.bossCatalogId eq bossCatalogId) and (Party.standing eq true) and (Party.solo eq false)
         }.firstOrNull()
         ?.get(Party.id)

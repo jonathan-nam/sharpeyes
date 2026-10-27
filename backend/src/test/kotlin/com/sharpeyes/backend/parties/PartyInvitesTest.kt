@@ -222,6 +222,22 @@ class PartyInvitesTest {
         .single()
 
     @Test
+    fun `a friend in a one-off's night sees the party, and its face is on it`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            character(member, "Pinewick")
+            link(owner, "Chris", member)
+            // A one-off keeps every seat but the owner's out of the usual roster: only the night names it.
+            val partyId = oneOff(owner, tide, listOf("Pinewick"))
+
+            // The owner and the friend, which is what draws the friend's Discord face on the party.
+            assertEquals(listOf(true, false), accountsFor(listOf(partyId), owner)[partyId]!!.map { it.you })
+            assertEquals(listOf(partyId.toString()), partiesSeatedIn(member).map { it.party.id })
+            assertTrue(member in audienceOf(partyId))
+        }
+    }
+
+    @Test
     fun `a friend's character is seated and bound at once, and told`() {
         transaction {
             val tide = character(owner, "tidelark")

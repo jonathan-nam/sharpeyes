@@ -17,7 +17,7 @@ import kotlin.uuid.Uuid
 // keeps a debt from being recorded in somebody else's name. Members are not split into roles on
 // purpose: V85 dropped the Viewer/Editor table. All inside a transaction, like the rest.
 
-/** True when [userId] may write into [partyId]'s pool: its owner, or a member with a standing seat. */
+/** True when [userId] may write into [partyId]'s pool: its owner, or a member in it this week. */
 internal fun canEditParty(
     partyId: Uuid,
     userId: String,
@@ -57,7 +57,7 @@ internal fun Any?.seenBy(
         findParty(partyId, userId)?.copy(invited = invited, alreadyPartied = alreadyPartied)
     }
 
-/** [userId]'s standing seats in somebody else's [partyId]: the only seats a member may act as. */
+/** [userId]'s seats in somebody else's [partyId] this week (seatedFor): the only seats a member may act as. */
 internal fun mySeatsIn(
     partyId: Uuid,
     userId: String,
@@ -67,7 +67,7 @@ internal fun mySeatsIn(
         .selectAll()
         .where {
             (PartyMember.partyId eq partyId) and
-                (PartyMember.standing eq true) and
+                seatedFor(currentWeek()) and
                 (Characters.userId eq userId)
         }.map { it[PartyMember.id] }
         .toSet()
