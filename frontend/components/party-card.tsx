@@ -9,6 +9,7 @@ import { LootList, type StackAssignment } from "@/components/loot-list";
 import { PiecePileEditor } from "@/components/piece-pile";
 import { RosterInputs } from "@/components/roster-inputs";
 import { RosterStrip } from "@/components/roster-strip";
+import { SaveGroup, useSaveGroup } from "@/components/save-group";
 import { SAVED_BUT_STALE, StaleAfterWrite, failureText, isDuplicateDrop } from "@/lib/api";
 import { clearClass, clearStateLabel, nextClear } from "@/lib/boss-clears";
 import type { PieceStatus } from "@/lib/drop-log";
@@ -166,6 +167,8 @@ export function PartyCard({
   const [draft, setDraft] = useState<string[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [offError, setOffError] = useState<string | null>(null);
+  const [panelError, setPanelError] = useState<string | null>(null);
+  const group = useSaveGroup();
   // The badge, named as the party page names it: `pool` is the pool itself here.
   const poolLine = poolLabel(party, coupons);
   const panelId = `party-panel-${party.id}`;
@@ -196,6 +199,24 @@ export function PartyCard({
       setEditing(false);
     } catch (e) {
       setSaveError(failureText(e, "That didn't save. Try again."));
+    }
+  }
+
+  function close() {
+    setEditing(false);
+    setSaveError(null);
+    setPanelError(null);
+  }
+
+  /** The panel's one Save: every pickup and split that changed, then closed. */
+  async function saveAndClose() {
+    setPanelError(null);
+    try {
+      await group.saveAll();
+      close();
+    } catch (e) {
+      if (e instanceof StaleAfterWrite) close();
+      setPanelError(failureText(e, "That didn't save. Try again."));
     }
   }
 
@@ -230,6 +251,7 @@ export function PartyCard({
               setEditing(false);
               setSaveError(null);
               setOffError(null);
+              setPanelError(null);
             }}
           >
             <span className="party-row-chevron" aria-hidden="true" />
@@ -309,8 +331,7 @@ export function PartyCard({
               <RosterInputs members={draft} onChange={setDraft} />
               <div className="loot-actions">
                 {/* The label carries the scope, so nothing else has to explain it. Saving here
-                    changes the week, not the party. Named among three Saves in one open panel,
-                    which is why the other two say what they are for too. */}
+                    changes the week, not the party, and it is one of two Saves in an open panel. */}
                 <Button
                   variant="primary"
                   disabled={busy || !dirty || cleaned.length === 0}
@@ -454,28 +475,30 @@ export function PartyCard({
               header is counting, item by item, with the same controls on each. */}
           {pool?.error && <p className="split-error">{pool.error}</p>}
           {pool && (
-            <LootList
-              party={party}
-              loot={pool.loot}
-              dropTables={pool.dropTables}
-              bossByKey={pool.bossByKey}
-              pieceStatus={pool.pieceStatus}
-              stacks={stacks}
-              splitElsewhere={Boolean(stacks) && picked === stacks?.dropKey}
-              // The stack is what the config under it is about, so removing it from here would take
-              // the split and the week's pickup with it. The pool's own page still corrects one.
-              couponRemovable={false}
-              readOnly={pool.readOnly}
-              editing={editing}
-              panel
-              busy={busy}
-              isSaving={pool.isSaving}
-              onSell={pool.onSell}
-              onUnsell={pool.onUnsell}
-              onSetTaken={pool.onSetTaken}
-              onSetPaid={pool.onSetPaid}
-              onDelete={pool.onDelete}
-            />
+            <SaveGroup group={group}>
+              <LootList
+                party={party}
+                loot={pool.loot}
+                dropTables={pool.dropTables}
+                bossByKey={pool.bossByKey}
+                pieceStatus={pool.pieceStatus}
+                stacks={stacks}
+                splitElsewhere={Boolean(stacks) && picked === stacks?.dropKey}
+                // The stack is what the config under it is about, so removing it from here would
+                // take the split and the week's pickup with it. The pool's own page still corrects one.
+                couponRemovable={false}
+                readOnly={pool.readOnly}
+                editing={editing}
+                panel
+                busy={busy}
+                isSaving={pool.isSaving}
+                onSell={pool.onSell}
+                onUnsell={pool.onUnsell}
+                onSetTaken={pool.onSetTaken}
+                onSetPaid={pool.onSetPaid}
+                onDelete={pool.onDelete}
+              />
+            </SaveGroup>
           )}
           {/* The week's pile of Eternal pieces, once added from the Add Drop list. Never part of the
               pool above: pieces cannot be sold, so they stay out of the Drop Log, sales and
@@ -493,22 +516,23 @@ export function PartyCard({
           {/* One press opens the roster, the night's pickup and the split, so one press has to
               close them: the way out used to be the roster's own Cancel, which is off the top of
               the screen by the time you are in the config. Last in the panel, where the block you
-              are answering is. Each Save is its own write and stands, so this only drops boxes
-              nobody saved. */}
+              are answering is. Save writes the pickup and the split; the roster keeps its own,
+              since saving it changes which seats those boxes are for. */}
           {editing && (
             <div className="loot-actions">
               <Button
-                variant="secondary"
-                disabled={busy}
-                onClick={() => {
-                  setEditing(false);
-                  setSaveError(null);
-                }}
+                variant="primary"
+                disabled={busy || group.saving || (group.changed && !group.ready)}
+                onClick={() => void saveAndClose()}
               >
-                Done
+                Save
+              </Button>
+              <Button variant="secondary" disabled={busy || group.saving} onClick={close}>
+                Cancel
               </Button>
             </div>
           )}
+          {panelError && <p className="split-error">{panelError}</p>}
         </div>
       )}
     </article>

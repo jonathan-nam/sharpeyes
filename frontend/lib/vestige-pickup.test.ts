@@ -3,6 +3,7 @@ import {
   assignableDrops,
   assignedStacks,
   openingCounts,
+  pickupChanged,
   pieceTallies,
   stacksToSave,
 } from "./vestige-pickup";
@@ -166,6 +167,33 @@ describe("where the boxes open", () => {
 
   it("otherwise opens balanced, a stack each", () => {
     expect(openingCounts(drop())).toEqual({ m1: 1, m2: 1, m3: 1 });
+  });
+});
+
+describe("what the panel's Save writes", () => {
+  const drop = (over: Partial<Loot> = {}) =>
+    assignableDrops(party(trio()), [coupon(over)], asCoupon())[0]!;
+  const saved = () =>
+    drop({
+      bundlesBy: [
+        { memberId: "m1", bundles: 2 },
+        { memberId: "m2", bundles: 1 },
+      ],
+    });
+
+  it("never an unanswered night nobody typed in, though its boxes hold a guess", () => {
+    const night = drop();
+    expect(pickupChanged(night, openingCounts(night), false)).toBe(false);
+  });
+
+  it("an unanswered night once typed in, even if it agrees with the guess", () => {
+    const night = drop();
+    expect(pickupChanged(night, openingCounts(night), true)).toBe(true);
+  });
+
+  it("a recorded night only where the boxes moved", () => {
+    expect(pickupChanged(saved(), { m1: 2, m2: 1, m3: 0 }, true)).toBe(false);
+    expect(pickupChanged(saved(), { m1: 1, m2: 1, m3: 1 }, true)).toBe(true);
   });
 });
 

@@ -216,6 +216,21 @@ export function draftDrop(
   };
 }
 
+/**
+ * Whether a night's boxes hold an answer for the panel's Save to write.
+ *
+ * Never an untouched night: an unanswered one opens on a guess (openingCounts), and a Save pressed
+ * for the split would otherwise record it as what happened.
+ */
+export function pickupChanged(
+  drop: StackDrop,
+  counts: Record<string, number | null>,
+  touched: boolean,
+): boolean {
+  if (!touched) return false;
+  return !drop.recorded || drop.seats.some((s) => counts[s.id] !== (drop.counts[s.id] ?? 0));
+}
+
 /** Nothing has been said about this night, which is a drop logged exactly as it always was. */
 export function draftUnanswered(drop: StackDrop, boxes: Record<string, string>): boolean {
   return drop.seats.every((seat) => (boxes[seat.id] ?? "").trim() === "");
