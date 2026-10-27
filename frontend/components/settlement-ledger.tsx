@@ -25,6 +25,7 @@ import { bossLabel } from "@/lib/boss-difficulty";
 import {
   type Discharge,
   type HeldOfYours,
+  nightsOwing,
   type Settlement,
   type OffsetShare,
   moneyRows,
@@ -278,8 +279,6 @@ function SettlementCard({
   // The week the offsets are narrowed to, by the week the drop FELL in, never the week it sold or
   // was offset. "" is every week.
   const [week, setWeek] = useState("");
-  // The same filter over the coupon nights, kept apart: the two lists are different acts.
-  const [nightWeek, setNightWeek] = useState("");
 
   // What they are paying to keep the coupons of yours they hold. Above zero, matching the server: a
   // stack handed over for nothing is not a purchase at a price of nought, it is a handover.
@@ -560,24 +559,13 @@ function SettlementCard({
   const theirNights = row.drops.filter((drop) => drop.pieces > 0);
   const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);
   const yourKeeps = keptRows.filter((tranche) => tranche.recordedByYou !== false);
+  // One list, the side the net runs. Both sides drawn showed 20 you held under a net of 360 owed,
+  // cancelled by 20 they held off the same day (2026-10-27).
+  const nights = nightsOwing(theirNights, myNights);
 
-  /**
-   * Whether there is a coupon debt to draw, which the section's gate and its step both ask.
-   *
-   * Zero net is not drawn: the coupon relationship is a running balance and a balance at zero is
-   * nothing to close. See the step for the rest.
-   */
-  const nightWeeks = [...new Set([...theirNights, ...myNights].map((d) => d.weekStart))]
-    .sort()
-    .reverse();
-  const nightWeekShown = nightWeeks.includes(nightWeek) ? nightWeek : "";
-  const inNightWeek = (drops: HeldOfYours[]) =>
-    nightWeekShown ? drops.filter((d) => d.weekStart === nightWeekShown) : drops;
-  const theirShown = inNightWeek(theirNights);
-  const myShown = inNightWeek(myNights);
-  const couponsOpen = row.piecesNet !== 0 && (theirNights.length > 0 || myNights.length > 0);
-  // Whether the coupon lists need telling apart. See the note where they are drawn.
-  const bothWays = theirNights.length > 0 && myNights.length > 0;
+  // Zero net is not drawn: the coupon relationship is a running balance and a balance at zero is
+  // nothing to close.
+  const couponsOpen = row.piecesNet !== 0 && nights.length > 0;
 
   /** One press, settling every pot closingNet names, both ways. See components/closing-acts.tsx. */
   const close = (kind: CloseKind, scope: ClosingNet = net) => {
@@ -1079,8 +1067,7 @@ function SettlementCard({
               hands, and which way it runs is in the words because "pieces" alone said nothing
               about direction.
 
-              The lists are the nights still owing, each saying what it owed and what a sale took
-              off it, and the two sides are not cancelled against each other. Only the step is netted, and a net of zero is settled, so it is not drawn. */}
+              The list is the nights the net runs on, so it comes to the figure on the step. */}
           {couponsOpen && (
             <>
               <div className="ledger-step-line">
@@ -1097,10 +1084,7 @@ function SettlementCard({
                 >
                   <span className="party-row-chevron" aria-hidden="true" />
                   <span className="visually-hidden">
-                    {`${showNights ? "Hide" : "Show"} the ${plural(
-                      theirNights.length + myNights.length,
-                      "night",
-                    )} behind it`}
+                    {`${showNights ? "Hide" : "Show"} the ${plural(nights.length, "night")} behind it`}
                   </span>
                 </button>
                 <span className="ledger-amount">
@@ -1109,48 +1093,13 @@ function SettlementCard({
               </div>
               {showNights && (
                 <div className="ledger-offsets-panel" id={`nights-${row.key}`}>
-                  {nightWeeks.length > 1 && (
-                    <div className="ledger-filter">
-                      <span className="ledger-step">Filter By</span>
-                      <WeekFilter
-                        weeks={nightWeeks}
-                        shown={nightWeekShown}
-                        onSelect={setNightWeek}
-                      />
-                    </div>
-                  )}
-                  {/* Whose inventory, and ONLY where that is a question.
-
-                      With nights on one side the step above has already said it: a pile of theirs
-                      you hold is "to hand over" and a pile of yours they hold is "owed", and the
-                      net cannot disagree with the only list making it. A label under that was the
-                      direction a second time.
-
-                      With both, it is the whole question. Nothing on a night's own row says which
-                      inventory it sits in, so two unlabelled lists would run together into one
-                      list that reads as all pointing the same way. */}
-                  {theirShown.length > 0 && (
-                    <>
-                      {bothWays && <span className="ledger-step">{`${row.name} is holding`}</span>}
-                      <PieceNights
-                        drops={theirShown}
-                        bossByKey={bossByKey}
-                        partyById={partyById}
-                        iconUrl={iconUrl}
-                      />
-                    </>
-                  )}
-                  {myShown.length > 0 && (
-                    <>
-                      {bothWays && <span className="ledger-step">I am holding</span>}
-                      <PieceNights
-                        drops={myShown}
-                        bossByKey={bossByKey}
-                        partyById={partyById}
-                        iconUrl={iconUrl}
-                      />
-                    </>
-                  )}
+                  {/* The step above says which way they run, so the list carries no direction. */}
+                  <PieceNights
+                    drops={nights}
+                    bossByKey={bossByKey}
+                    partyById={partyById}
+                    iconUrl={iconUrl}
+                  />
 
                   {/* No count of the nights the closing act will not reach. Each of those rows says
                       so itself, in the list right here: see the marker in PieceNights. The count
