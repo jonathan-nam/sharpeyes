@@ -6723,15 +6723,6 @@ button.link:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-/* The stages either side of this one, under its title: back on the left, next on the right. */
-.droplog-steps {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
 .droplog-step {
   display: inline-flex;
   align-items: center;

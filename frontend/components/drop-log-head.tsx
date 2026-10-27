@@ -12,8 +12,8 @@ import {
 import { useAccountSettings } from "@/lib/use-account-settings";
 
 /**
- * A stage's title, and a row under it with the stage before and then the one after. Read off the
- * path and the world rather than passed in, so the route boundary draws the same one as the page.
+ * A stage's title, with the stage before and the one after on the same line at the right. Read off
+ * the path and the world rather than passed in, so the route boundary draws the same one as the page.
  */
 export function DropLogHead() {
   const sections = dropSections(useAccountSettings()?.trades);
@@ -22,10 +22,10 @@ export function DropLogHead() {
   const label = sections.find((s) => s.key === section)?.label;
 
   return (
-    <>
+    <div className="page-head">
       <h1 className="page-title">{label}</h1>
       {(back || next) && (
-        <div className="droplog-steps">
+        <span className="page-head-links">
           {back && (
             <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(back.key)}>
               <Arrow back />
@@ -44,9 +44,9 @@ export function DropLogHead() {
               )}
             </ButtonLink>
           )}
-        </div>
+        </span>
       )}
-    </>
+    </div>
   );
 }
 

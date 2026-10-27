@@ -60,17 +60,6 @@ describe("the fully-settled state", () => {
   });
 });
 
-// Side by side from the left, so Drops, with no way back, starts its way forward at the edge.
-describe("the links either side of a stage", () => {
-  it("sit in a flex row", () => {
-    expect(css.match(/^\.droplog-steps \{([^}]*)\}/m)?.[1]).toContain("display: flex");
-  });
-
-  it("start from the left", () => {
-    expect(css).not.toMatch(/\.droplog-step[^{]*\{[^}]*margin-left: auto/);
-  });
-});
-
 // A drop row names who it was run with, so its meta line grew by up to three names. The row is a
 // nowrap flex, and a column that sizes to its content does not give any of it back: the status chip
 // went off the right rather than the text getting narrower. Three rules, none of which works alone.
