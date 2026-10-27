@@ -190,7 +190,7 @@ export default function PartiesPage() {
   // with the server's. A seeded view arrived with the request that cached it, not now: see
   // storedAt in lib/cache.ts, and lib/reset-countdown.ts.
   const [receivedAt, setReceivedAt] = useState<number>(() => storedAt(CLEARS_KEY) ?? Date.now());
-  // null is the live view. Anything else is a past week, read-only.
+  // null is the live view. Anything else is a past week, where only drops and the roster are edited.
   const [week, setWeek] = useState<string | null>(null);
   const [stepping, setStepping] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -462,24 +462,24 @@ export default function PartiesPage() {
   }
 
   /**
-   * Sets who ran THIS week, or puts the week back to the usual party with null.
+   * Sets who ran the week on screen, or puts it back to the usual party with null.
    *
    * Not the config's own roster: that is the edit page's, and changing it here would rewrite every
-   * week rather than the one on screen. The week is left off the body on purpose, so the server's
-   * clock decides which one this is.
+   * week rather than the one on screen. The live view leaves the week off the body, so the server's
+   * clock decides which one this is. A past week names itself, and the server refuses one whose
+   * drops are paid out (validateRosterWeek).
    *
-   * Live view only, so PARTY_LIST_KEY is the right list to refetch. Throws on failure, which is what
-   * lets the row show the server's reason.
+   * Throws on failure, which is what lets the row show the server's reason.
    */
   async function saveRoster(party: Party, members: string[] | null) {
     await write(party.id, async () => {
       const saved = await apiFetch<Party>(
         `${PARTIES_KEY}/${party.id}/roster`,
-        { method: "PUT", body: JSON.stringify({ members } satisfies SaveWeekRosterBody) },
+        { method: "PUT", body: JSON.stringify({ week, members } satisfies SaveWeekRosterBody) },
         getToken,
       );
       announceInvites(saved);
-      await refreshAfterConfig(party);
+      await (week === null ? refreshAfterConfig(party) : loadWeek(week));
     });
   }
 
@@ -577,6 +577,15 @@ export default function PartiesPage() {
   }
 
   /**
+   * The read-back after a write to one of your own pools. On a past week, that week's lists:
+   * refreshPools reads the live party list, which would draw this week's rows under its label.
+   */
+  async function refreshOwnPools() {
+    if (week === null) return refreshPools();
+    await Promise.all([loadWeek(week), refetchPools()]);
+  }
+
+  /**
    * Logs a drop from the row, without leaving the list.
    *
    * The pool it lands in is the party page's, the same POST that page makes, so a drop added here
@@ -592,7 +601,7 @@ export default function PartiesPage() {
         { method: "POST", body: JSON.stringify(body) },
         getToken,
       );
-      await readBack(refreshPools);
+      await readBack(refreshOwnPools);
     });
   }
 
@@ -604,7 +613,7 @@ export default function PartiesPage() {
         { method: "POST", body: JSON.stringify(body) },
         getToken,
       );
-      await readBack(() => Promise.all([loadWeek(null), refreshSeatedPools()]));
+      await readBack(() => Promise.all([loadWeek(week), refreshSeatedPools()]));
     });
   }
 
@@ -650,7 +659,7 @@ export default function PartiesPage() {
       );
       // Past the write, so the same reading the party's own page makes: a refetch that fails is
       // a stale panel, not a sale that did not save. See StaleAfterWrite.
-      await readBack(party.yours === false ? refreshSeatedPools : refreshPools);
+      await readBack(party.yours === false ? refreshSeatedPools : refreshOwnPools);
     });
   }
 
@@ -695,9 +704,14 @@ export default function PartiesPage() {
   // list as "no drop table recorded for this boss", which is a statement about the catalog we
   // would not be in a position to make. The link into the party is still there either way.
   const haveDropTables = Object.keys(dropTables).length > 0;
-  // Never on a past week: the server stamps a drop with today, so one added under last week's
-  // label would land in a week this screen is not showing.
-  const canAddDrops = !history && haveDropTables;
+  // On a past week too, dated that week's first day (see addTo). Only weekly bosses are listed
+  // there, so that day is in the same period the row is about.
+  const canAddDrops = haveDropTables;
+  // The week on screen. currentWeekStart alone is the live one.
+  const shownWeek = view ? (view.weekStart ?? view.currentWeekStart) : null;
+  /** A drop added under the week on screen. Undated, the server files it under today. */
+  const addTo = (body: AddLootBody): AddLootBody =>
+    week === null ? body : { ...body, droppedOn: week };
   const lootByParty = new Map([...pools, ...seatedPools].map((pool) => [pool.partyId, pool.loot]));
 
   // How far ahead or behind each holder is across every night already answered, so the odd stack
@@ -716,8 +730,8 @@ export default function PartiesPage() {
    * split can be agreed before the week's coupons have fallen and stays on screen in a week nobody
    * ran it.
    *
-   * The live view only, the same rule the pool and the roster follow. A past week is shown and not
-   * edited, and its share is now pinned anyway: see pinWeeksAlreadyWritten.
+   * The live view only, the same rule the roster follows. A past week's share is pinned: see
+   * pinWeeksAlreadyWritten.
    */
   const stacksFor = (party: Party) => {
     if (history) return undefined;
@@ -780,7 +794,7 @@ export default function PartiesPage() {
   const poolFor = (party: Party) => {
     return canAddDrops
       ? {
-          loot: dropsInWeek(lootByParty.get(party.id) ?? [], view?.currentWeekStart ?? null),
+          loot: dropsInWeek(lootByParty.get(party.id) ?? [], shownWeek),
           // A party you sit in: you act as your own seats only. See LootRow.readOnly.
           readOnly: party.yours === false,
           dropTables,
@@ -920,14 +934,13 @@ export default function PartiesPage() {
         }
         dropTable={dropTables[party.bossKey]}
         onAddDrop={
-          canAddDrops ? (body) => (shared ? addSharedDrop : addDrop)(party, body) : undefined
+          canAddDrops ? (body) => (shared ? addSharedDrop : addDrop)(party, addTo(body)) : undefined
         }
         stacks={stacksFor(party)}
         pool={poolFor(party)}
         piecePile={shared ? undefined : piecePileFor(party)}
-        onSaveRoster={
-          history ? undefined : (members) => saveRoster(party, rosterFor(party, members))
-        }
+        onSaveRoster={(members) => saveRoster(party, rosterFor(party, members))}
+        past={history}
         onTakeOff={history ? undefined : () => takeOff(party)}
         onWithdrawInvite={shared ? undefined : (inviteId) => withdrawInvite(party, inviteId)}
         onLeave={shared && !history ? () => leaveShared(party) : undefined}
