@@ -4974,9 +4974,17 @@ button.link:disabled {
   gap: 8px;
 }
 
-.loot-remove {
+/* The card's foot: what acts on the drop to the left, Remove to the right. */
+.loot-foot {
   display: flex;
-  justify-content: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.loot-foot > .party-delete {
+  margin-left: auto;
 }
 
 .loot-parsed {

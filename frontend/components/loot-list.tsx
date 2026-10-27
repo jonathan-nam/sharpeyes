@@ -1,10 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { type ReactNode, useState } from "react";
 
+import { Button } from "@/components/button";
 import { LootRow } from "@/components/loot-row";
+import { SaveGroup, useSaveGroup } from "@/components/save-group";
 import { StackAssign } from "@/components/stack-assign";
 import { StackPickup } from "@/components/stack-pickup";
+import { StaleAfterWrite, failureText } from "@/lib/api";
 import { isPieceDrop, type PieceStatus } from "@/lib/drop-log";
 import type { StackDrop } from "@/lib/vestige-pickup";
 import type { ShareConfig } from "@/lib/vestige-stacks";
@@ -81,6 +85,7 @@ export function LootList({
   splitElsewhere,
   couponRemovable,
   editing,
+  editSplits = false,
   readOnly = false,
   panel,
   busy,
@@ -120,6 +125,8 @@ export function LootList({
    * inputs, so one press opens everything on the row that can be answered.
    */
   editing?: boolean;
+  /** Each coupon card opens its own splits with an Edit Splits of its own, instead of `editing`. */
+  editSplits?: boolean;
   /** Somebody else's pool: every row reads, none of them offer a write. See LootRow.readOnly. */
   readOnly?: boolean;
   /**
@@ -186,6 +193,7 @@ export function LootList({
         stacks={stacks}
         splitElsewhere={splitElsewhere}
         editing={editing}
+        editSplits={editSplits}
         busy={busy}
         isSaving={isSaving}
         readOnly={readOnly}
@@ -232,6 +240,7 @@ function LootGroup({
   splitElsewhere,
   couponRemovable,
   editing,
+  editSplits = false,
   readOnly = false,
   busy,
   pieces,
@@ -257,6 +266,8 @@ function LootGroup({
   couponRemovable?: boolean;
   /** Whether those boxes take typing. See LootList. */
   editing?: boolean;
+  /** See LootList. */
+  editSplits?: boolean;
   readOnly?: boolean;
   /** Whether the row's own write is in flight. */
   busy?: boolean;
@@ -269,6 +280,8 @@ function LootGroup({
   onSetPaid: (lootId: string, memberId: string, paid: boolean) => void;
   onDelete: (lootId: string) => void;
 }) {
+  // The one card whose splits are open, under editSplits.
+  const [splitting, setSplitting] = useState<string | null>(null);
   // A list of what fell, so an empty one draws nothing. The split it is read against is the party's
   // and stands in a week nobody ran, which is why that block is LootList's and not this group's.
   if (rows.length === 0) return null;
@@ -290,71 +303,170 @@ function LootGroup({
           // Boxes only where there is a write to take them and the night is not history. A settled
           // night is history whatever the pool is doing: see NightPickup.locked.
           // In somebody else's pool, only a night you logged: see setBundlesRoute.
-          const answerable = Boolean(
+          const editable = Boolean(
             night &&
-            (editing ?? false) &&
             pickup?.onSave &&
             !pickup.locked?.has(item.id) &&
             item.settled !== true &&
             (!readOnly || item.recordedByYou === true),
           );
+          const open = editSplits && splitting === item.id;
+          const answerable = editable && ((editing ?? false) || open);
           return (
-            <LootRow
+            <CardSplits
               key={item.id}
-              loot={item}
-              party={party}
-              boss={item.bossKey ? (bossByKey.get(item.bossKey) ?? null) : null}
-              status={statusOf?.get(item.id)?.status ?? null}
-              yours={statusOf?.get(item.id)?.yours ?? null}
-              pieces={pieces}
-              couponRemovable={couponRemovable}
-              readOnly={readOnly}
-              busy={isSaving(item.id)}
-              onSell={(body) => onSell(item.id, body)}
-              onUnsell={() => onUnsell(item.id)}
-              onSetTaken={(memberId) => onSetTaken(item.id, memberId)}
-              onSetPaid={(memberId, paid) => onSetPaid(item.id, memberId, paid)}
-              onDelete={() => onDelete(item.id)}
+              enabled={editSplits}
+              open={open}
+              editable={editable}
+              onOpen={() => setSplitting(item.id)}
+              onClose={() => setSplitting(null)}
             >
-              {night && pickup && (
-                <>
-                  {/* Named, because it is a different fact from the row it is in and from the deal
+              {(actions) => (
+                <LootRow
+                  loot={item}
+                  actions={actions}
+                  editingSplits={open}
+                  party={party}
+                  boss={item.bossKey ? (bossByKey.get(item.bossKey) ?? null) : null}
+                  status={statusOf?.get(item.id)?.status ?? null}
+                  yours={statusOf?.get(item.id)?.yours ?? null}
+                  pieces={pieces}
+                  couponRemovable={couponRemovable}
+                  readOnly={readOnly}
+                  busy={isSaving(item.id)}
+                  onSell={(body) => onSell(item.id, body)}
+                  onUnsell={() => onUnsell(item.id)}
+                  onSetTaken={(memberId) => onSetTaken(item.id, memberId)}
+                  onSetPaid={(memberId, paid) => onSetPaid(item.id, memberId, paid)}
+                  onDelete={() => onDelete(item.id)}
+                >
+                  {night && pickup && (
+                    <>
+                      {/* Named, because it is a different fact from the row it is in and from the deal
                       below: this is what the night actually went like. */}
-                  <h4 className="loot-group-title is-config">{pickup.title}</h4>
-                  <div className="config-vestige">
-                    <StackPickup
-                      drop={night}
-                      editing={answerable}
-                      // The panel hands down its row's flag. A pool that is the page has one write
-                      // per drop instead, so the night being saved is the night that dims.
-                      busy={busy ?? isSaving(item.id)}
-                      onSave={pickup.onSave}
-                    />
-                  </div>
-                </>
-              )}
-              {/* The deal this night is read against, INSIDE the drop it is about, which is what a
+                      <h4 className="loot-group-title is-config">{pickup.title}</h4>
+                      <div className="config-vestige">
+                        <StackPickup
+                          drop={night}
+                          editing={answerable}
+                          // The panel hands down its row's flag. A pool that is the page has one write
+                          // per drop instead, so the night being saved is the night that dims.
+                          busy={busy ?? isSaving(item.id)}
+                          onSave={pickup.onSave}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {/* The deal this night is read against, INSIDE the drop it is about, which is what a
                   listing of one coupon stack is: what fell, who picked it up, and what each was
                   entitled to. Both blocks used to follow the row as siblings, so the row's frame
                   closed above them and they read as two loose things in the panel.
 
                   On the LAST row only. The split is the PARTY's, so a week that dropped twice would
                   otherwise state the same deal in each of them. */}
-              {stacks && !splitElsewhere && item.id === rows[rows.length - 1]?.id && (
-                <>
-                  <h4 className="loot-group-title is-config">{stacks.entitledTitle}</h4>
-                  <StackAssign
-                    config={stacks.config}
-                    editing={editing ?? false}
-                    busy={busy ?? false}
-                    onSave={stacks.onSave}
-                  />
-                </>
+                  {stacks && !splitElsewhere && item.id === rows[rows.length - 1]?.id && (
+                    <>
+                      <h4 className="loot-group-title is-config">{stacks.entitledTitle}</h4>
+                      <StackAssign
+                        config={stacks.config}
+                        editing={editing ?? false}
+                        busy={busy ?? false}
+                        onSave={stacks.onSave}
+                      />
+                    </>
+                  )}
+                  {/* Open splits edit the entitled split too, here in the card, where the page draws it
+                  once elsewhere. */}
+                  {open && stacks?.onSave && splitElsewhere && (
+                    <>
+                      <h4 className="loot-group-title is-config">{stacks.entitledTitle}</h4>
+                      <StackAssign
+                        config={stacks.config}
+                        editing
+                        busy={false}
+                        onSave={stacks.onSave}
+                      />
+                    </>
+                  )}
+                </LootRow>
               )}
-            </LootRow>
+            </CardSplits>
           );
         })}
       </div>
     </>
   );
+}
+
+/**
+ * A coupon card's own Edit Splits: one save group per card, so Save writes this night's pickup and
+ * the entitled split and nothing else on the page. [children] draws the card around the buttons.
+ */
+function CardSplits({
+  enabled,
+  open,
+  editable,
+  onOpen,
+  onClose,
+  children,
+}: {
+  enabled: boolean;
+  open: boolean;
+  editable: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  children: (actions: ReactNode) => ReactNode;
+}) {
+  const group = useSaveGroup();
+  const [error, setError] = useState<string | null>(null);
+  if (!enabled) return <>{children(null)}</>;
+
+  async function save() {
+    setError(null);
+    try {
+      await group.saveAll();
+      onClose();
+    } catch (e) {
+      if (e instanceof StaleAfterWrite) onClose();
+      setError(failureText(e, "That didn't save. Try again."));
+    }
+  }
+
+  const actions = editable ? (
+    <>
+      {open ? (
+        <>
+          <Button
+            variant="primary"
+            disabled={group.saving || !group.changed || !group.ready}
+            onClick={() => void save()}
+          >
+            Save
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={group.saving}
+            onClick={() => {
+              setError(null);
+              onClose();
+            }}
+          >
+            Cancel
+          </Button>
+        </>
+      ) : (
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setError(null);
+            onOpen();
+          }}
+        >
+          Edit Splits
+        </Button>
+      )}
+      {error && <span className="split-error">{error}</span>}
+    </>
+  ) : null;
+  return <SaveGroup group={group}>{children(actions)}</SaveGroup>;
 }
