@@ -447,6 +447,31 @@ class PartyPeriodSkipTest {
     }
 
     @Test
+    fun `adding a standing party deleted this week brings it back as it stood`() {
+        transaction {
+            val character = mine()
+            val party = partyOn(character, "limbo", members = listOf("Steve", "Bob"))
+            val id = Uuid.parse(party.id)
+            val again = SavePartyRequest(character.toString(), "limbo", listOf("Cara"))
+            val now = Clock.System.now()
+            val limbo = bossIdForKey("limbo")!!
+            val asked = { request: SavePartyRequest -> deletedThisPeriod(userId, id, character, limbo, request, now) }
+
+            assertNull(asked(again))
+            takeOff(party)
+            assertEquals(id, asked(again))
+            // A night is putBackForWeek's, which files that night's roster.
+            assertNull(asked(again.copy(oneOff = true)))
+
+            assertNull(putBackOn(id, now))
+            val back = findParty(id, userId)!!
+            assertFalse(back.skippedThisPeriod)
+            assertEquals(listOf("Rune", "Steve", "Bob"), back.members.map { it.name })
+            assertEquals(1, partiesFor(userId).count { it.bossKey == "limbo" })
+        }
+    }
+
+    @Test
     fun `putting a standing party back at another difficulty is that week's mode alone`() {
         transaction {
             val character = mine()
