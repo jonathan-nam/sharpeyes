@@ -409,6 +409,9 @@ internal fun writeMembers(
             }
         }
     }
+    // A retired seat kept the position it had, which the roster above may have just handed out.
+    val seated = seatIdsByName(partyId)
+    seatOthersAfter(partyId, names.mapNotNull { seated[it.lowercase()] })
 }
 
 /**

@@ -267,7 +267,7 @@ internal fun saveWeekRoster(
     val existing = seatIdsByName(partyId)
     // After every seat the party already has, so a guest does not take a usual member's place in
     // the order and shuffle the roster strip on the weeks they are not in.
-    var nextPosition = existing.size
+    var nextPosition = nextSeatPosition(partyId)
     val mine = ownCharacterIds(context.userId)
 
     // Null members is the week back on the usual roster, which the delete above already says.
