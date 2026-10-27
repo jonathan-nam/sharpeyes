@@ -41,6 +41,7 @@ jobs:
             backend/*.gradle*
             shared/money/*.gradle*
             shared/api/*.gradle*
+            shared/planning/*.gradle*
             gradle/libs.versions.toml
 
       - name: ktlint + detekt + test

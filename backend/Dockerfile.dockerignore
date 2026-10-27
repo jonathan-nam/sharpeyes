@@ -4,6 +4,7 @@
 !backend/
 !shared/money/
 !shared/api/
+!shared/planning/
 !gradle/libs.versions.toml
 !config/
 

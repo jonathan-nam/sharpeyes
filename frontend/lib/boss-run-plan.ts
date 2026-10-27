@@ -1,5 +1,8 @@
 // Ordering a night of bosses so people stay on one character and nobody sits about.
 //
+// Ported to shared/planning for the apps. A change here changes the port in the same PR, with the
+// fixtures rewritten by boss-run-plan.golden.test.ts (UPDATE_GOLDEN=1).
+//
 // The hard part of a bossing night is not what time to meet, it is what to run and in what order.
 // Every person has several characters, and each boss is run with a particular one of them. Put the
 // runs in a careless order and everybody relogs between every boss.

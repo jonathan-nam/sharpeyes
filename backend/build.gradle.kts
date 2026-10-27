@@ -73,7 +73,7 @@ ktlint {
 
 // The shared builds are included, not subprojects, so their checks run only when asked for by name.
 // These keep CI's `./gradlew ktlintCheck detekt test` and the pre-commit hook covering them.
-val shared = listOf("money", "api").map { gradle.includedBuild(it) }
+val shared = listOf("money", "api", "planning").map { gradle.includedBuild(it) }
 
 tasks.test {
     useJUnitPlatform()
