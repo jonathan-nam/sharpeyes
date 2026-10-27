@@ -609,8 +609,11 @@ export function couponsOutstandingByParty(
   return out;
 }
 
-/** What a coupon row says it is, and how much of it is yours, by loot id. */
-export type PieceStatus = Map<string, { status: string; yours: number }>;
+/**
+ * What a coupon row says it is, and how much of it is yours, by loot id. `done` is a night closed,
+ * or one where nobody owes anybody.
+ */
+export type PieceStatus = Map<string, { status: string; yours: number; done: boolean }>;
 
 /**
  * What each COUPON row says it is, per party, for the pools a screen draws.
@@ -626,10 +629,20 @@ export function pieceStatusByParty(entries: DropEntry[]): Map<string, PieceStatu
   for (const entry of entries) {
     if (!entry.pieces) continue;
     const forParty = out.get(entry.partyId) ?? new Map();
-    forParty.set(entry.lootId, { status: dropStatusLabel(entry), yours: entry.yours });
+    forParty.set(entry.lootId, {
+      status: dropStatusLabel(entry),
+      yours: entry.yours,
+      done: entry.closed || (entry.owedToYou === 0 && entry.owedByYou === 0),
+    });
     out.set(entry.partyId, forParty);
   }
   return out;
+}
+
+/** A drop with nothing left to do on it, which a pool files under its Drop History. */
+export function isDropHistory(loot: Loot, pieces?: PieceStatus): boolean {
+  if (loot.settled === true || loot.status === "TAKEN" || loot.status === "PAID_OUT") return true;
+  return pieces?.get(loot.id)?.done === true;
 }
 
 /** The log narrowed to one character, or all of it. Totals are recomputed, never scaled. */

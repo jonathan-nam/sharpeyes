@@ -27,14 +27,8 @@ import { preloadBossArt } from "@/lib/preload-boss-art";
 import { useRowWrites } from "@/lib/use-row-writes";
 import { invalidate, peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
-import {
-  buildDropLog,
-  couponsOutstandingByParty,
-  isOutstanding,
-  pieceStatusByParty,
-} from "@/lib/drop-log";
+import { buildDropLog, pieceStatusByParty } from "@/lib/drop-log";
 import { useDropIcons } from "@/lib/drop-icons";
-import { NOTHING_OUTSTANDING, poolLabel, summarize } from "@/lib/loot";
 import { assignableDrops } from "@/lib/vestige-pickup";
 import { shareConfig } from "@/lib/vestige-stacks";
 import { closedByHolder } from "@/lib/vestige-ledger";
@@ -329,12 +323,6 @@ export default function PartyPage() {
   }
 
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
-  // Counted from the rows on screen rather than from the party's stored counters, which were read
-  // one request earlier and go stale the moment something here is marked paid.
-  //
-  // Through the Drop Log's own reading of them, the same as the card that links here. Counting
-  // every PENDING row instead made this page disagree with that card about the same party: a
-  // coupon row never sells, so it was pending for ever here while the card left it out.
   const closed = closedByHolder(settlements).closed;
   // Built over every party, not just this one. A tranche answers a person rather than a night, so
   // what is left of it for this party's nights is only knowable against all of them: reading this
@@ -407,22 +395,6 @@ export default function PartyPage() {
     };
   })();
 
-  const summary = summarize(loot);
-  const poolLine = poolLabel(
-    {
-      // The log's own reading, which leaves out a coupon drop already in the right inventories.
-      // summarize still answers for the other two: it splits sold from paid out, which the log's
-      // totals do not.
-      //
-      // Counted off THIS party's rows. `log.totals` is the whole account now that the log is built
-      // over every party, and putting that on this page would say the account's pool is this one's.
-      pendingLoot: log ? mine.filter(isOutstanding).length : summary.pending,
-      awaitingPayout: summary.awaitingPayout,
-      settledLoot: summary.settled,
-    },
-    (party && couponsOutstandingByParty(mine).get(party.id)) || NOTHING_OUTSTANDING,
-  );
-
   return (
     <main className="page">
       {/* Back where this page was reached from. A solo pool is not on Party View, so sending it
@@ -485,12 +457,6 @@ export default function PartyPage() {
               {party.retired && <span className="party-card-retired">Retired</span>}
               <span className="party-card-size">{partySizeLabel(party.members.length)}</span>
             </div>
-
-            {poolLine && (
-              <p className={poolLine.done ? "party-loot-summary is-done" : "party-loot-summary"}>
-                {poolLine.text}
-              </p>
-            )}
 
             {error && <p className="split-error">{error}</p>}
 

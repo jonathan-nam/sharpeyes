@@ -295,6 +295,7 @@ function LootGroup({
             (editing ?? false) &&
             pickup?.onSave &&
             !pickup.locked?.has(item.id) &&
+            item.settled !== true &&
             (!readOnly || item.recordedByYou === true),
           );
           return (

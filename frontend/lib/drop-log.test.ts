@@ -15,11 +15,12 @@ import {
   isCouponDrop,
   isPieceDrop,
   monthLabel,
+  isDropHistory,
   pieceStatusByParty,
   removable,
   weekLabel,
 } from "./drop-log";
-import type { DropEntry } from "./drop-log";
+import type { DropEntry, PieceStatus } from "./drop-log";
 import { SELF_KEY, closedByHolder, closureKeyOf, holderOf } from "./vestige-ledger";
 import { splitOf } from "./loot";
 import type { Loot, PartyLootPool } from "@/types/loot";
@@ -830,7 +831,7 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     );
     const forParty = pieceStatusByParty(log.entries).get("pa")!;
 
-    expect(forParty.get("l1")).toEqual({ status: "Owed", yours: 20 });
+    expect(forParty.get("l1")).toEqual({ status: "Owed", yours: 20, done: false });
     // Yours out of what fell, which is the pair of numbers the row shows.
     expect(log.entries.find((e) => e.lootId === "l1")!.quantity).toBe(60);
     // An ordinary drop is absent, not given a second reading of a status it already carries.
@@ -841,6 +842,20 @@ describe("a piece drop counts YOUR share, not what fell", () => {
     const log = buildDropLog([duo()], [pool("pa", [drop()])], tables);
 
     expect(pieceStatusByParty(log.entries).has("pa")).toBe(false);
+  });
+
+  it("files a drop with nothing left to do under Drop History", () => {
+    const night = (done: boolean): PieceStatus =>
+      new Map([["l1", { status: done ? "Yours" : "Owed", yours: 30, done }]]);
+
+    expect(isDropHistory(drop())).toBe(false);
+    expect(isDropHistory(drop({ status: "SOLD" }))).toBe(false);
+    expect(isDropHistory(drop({ status: "PAID_OUT" }))).toBe(true);
+    expect(isDropHistory(drop({ status: "TAKEN" }))).toBe(true);
+    // The server's lock, which a coupon night carries while its status stays PENDING.
+    expect(isDropHistory(drop({ settled: true }))).toBe(true);
+    expect(isDropHistory(drop(), night(false))).toBe(false);
+    expect(isDropHistory(drop(), night(true))).toBe(true);
   });
 
   // The night's own arrangement. Two seats on 60 in 3 stacks: 30 each, 20 to a stack. The same shape as an Extreme Kalos duo, in this table's numbers.

@@ -29,7 +29,7 @@ describe("a piece drop cannot be sold through its own row", () => {
   });
 
   it("still offers Remove on the pool's own page, so a mis-logged stack can be corrected", () => {
-    expect(row).toContain('loot.status === "PENDING" && canSell && pieces && couponRemovable &&');
+    expect(row).toContain("if (pieces) return mayRemove && couponRemovable;");
     // The pool page says nothing about the flag, and the row defaults it on: that page is the one
     // place a coupon stack can still be taken back off.
     expect(row).toContain("couponRemovable = true");

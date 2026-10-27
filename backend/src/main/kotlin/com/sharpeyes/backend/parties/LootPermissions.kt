@@ -10,7 +10,7 @@ import kotlin.uuid.Uuid
 
 /**
  * Selling as [sellerId], or correcting a sale already on [loot]: only a drop you logged (see
- * loggerRefusal), and a member only as their own seat.
+ * loggerRefusal), never a settled one (settledRefusal), and a member only as their own seat.
  */
 internal fun sellRefusal(
     partyId: Uuid,
@@ -21,6 +21,7 @@ internal fun sellRefusal(
     val theirs = loot.sellerMemberId?.let(Uuid::parse)
     val allowed = mayActAs(partyId, userId, sellerId) && (theirs == null || mayActAs(partyId, userId, theirs))
     return loggerRefusal(loot)
+        ?: settledRefusal(loot)
         ?: if (allowed) null else Refusal("You can only record your own sales. Pick yourself as the seller.")
 }
 
@@ -85,14 +86,15 @@ internal fun payoutRefusal(
     }
 
 /**
- * Deleting [loot] once it is sold and every share is paid: nobody, owner included. Its payout rows
- * are the record that money moved, so the sale is undone first.
+ * Changing [loot] at all once it is settled (LootResponse.settled): nobody, owner included. A paid
+ * sale's payout rows are the record that money moved, and a coupon night a sale reached moves that
+ * sale onto other nights if it goes.
  */
 internal fun settledRefusal(loot: LootResponse): Refusal? =
-    if (loot.soldAt != null && loot.payouts.all { it.paid }) {
-        Refusal("This drop is sold and settled. Undo the sale to remove it.")
-    } else {
-        null
+    when {
+        !loot.settled -> null
+        loot.soldAt != null -> Refusal("This drop is sold and settled. Mark a share unpaid to change it.")
+        else -> Refusal("A coupon sale covers this drop. Remove that sale to change it.")
     }
 
 /** Deleting [loot]: the owner, or a member taking back a drop they logged that nobody has sold or kept. */

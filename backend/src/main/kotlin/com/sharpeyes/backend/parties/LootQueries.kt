@@ -167,19 +167,21 @@ internal fun lootFor(
     // Whose side "paid out" is reckoned from: a member's own seats in a party they do not own.
     val mine = readerSeatsIn(listOf(partyId), viewer ?: owner)
     val names = loggerNames(viewer ?: owner, rows.map { it[PartyLoot.recordedByUserId] ?: owner })
-    return rows.map {
-        it
-            .toLootResponse(
-                payoutsByLoot[it[PartyLoot.id]].orEmpty(),
-                ranByLoot[it[PartyLoot.id]].orEmpty(),
-                sharesByLoot[it[PartyLoot.id]].orEmpty(),
-                bundlesByLoot[it[PartyLoot.id]].orEmpty(),
-                mine,
-            ).let { loot ->
-                val logger = it[PartyLoot.recordedByUserId] ?: owner
-                loot.copy(recordedByYou = viewer == null || logger == viewer, recordedByName = names[logger])
-            }
-    }
+    val loot =
+        rows.map {
+            it
+                .toLootResponse(
+                    payoutsByLoot[it[PartyLoot.id]].orEmpty(),
+                    ranByLoot[it[PartyLoot.id]].orEmpty(),
+                    sharesByLoot[it[PartyLoot.id]].orEmpty(),
+                    bundlesByLoot[it[PartyLoot.id]].orEmpty(),
+                    mine,
+                ).let { loot ->
+                    val logger = it[PartyLoot.recordedByUserId] ?: owner
+                    loot.copy(recordedByYou = viewer == null || logger == viewer, recordedByName = names[logger])
+                }
+        }
+    return loot.withAnsweredNights(owner)
 }
 
 /**
@@ -190,10 +192,12 @@ internal fun lootFor(
  * shape for the same drop is a second thing to keep in step.
  *
  * `recordedByYou` is answered for [viewer], the owner unless said: a shared book asks as the member.
+ * [answered] false leaves coupon nights unlocked, for the read answeredNightsFor itself makes.
  */
 internal fun allLootFor(
     userId: String,
     viewer: String = userId,
+    answered: Boolean = true,
 ): List<PartyLootPoolResponse> {
     val rows =
         lootWithCatalog()
@@ -233,11 +237,13 @@ internal fun allLootFor(
             }
     }
     // groupBy keeps the order rows arrived in, so each pool stays newest-first.
-    return rows
-        .groupBy { it[PartyLoot.partyId] }
-        .map { (partyId, pool) ->
-            PartyLootPoolResponse(partyId = partyId.toString(), loot = pool.map(response))
-        }
+    val pools =
+        rows
+            .groupBy { it[PartyLoot.partyId] }
+            .map { (partyId, pool) ->
+                PartyLootPoolResponse(partyId = partyId.toString(), loot = pool.map(response))
+            }
+    return if (answered) pools.withAnsweredNights(userId) else pools
 }
 
 internal fun findLoot(
@@ -330,5 +336,6 @@ private fun ResultRow.toLootResponse(
         sharesThatWeek = sharesThatWeek,
         bundles = this.getOrNull(BossDropAmount.bundles),
         bundlesBy = bundlesBy,
+        settled = sold && payouts.all { it.paid },
     )
 }

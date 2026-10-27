@@ -4974,6 +4974,11 @@ button.link:disabled {
   gap: 8px;
 }
 
+.loot-remove {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .loot-parsed {
   color: var(--muted);
   font-size: var(--text-base);

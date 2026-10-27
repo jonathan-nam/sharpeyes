@@ -27,11 +27,17 @@ import kotlin.time.measureTimedValue
 /** How the page payloads are written for the money module: every field present, as served. */
 private val served = Json { encodeDefaults = true }
 
+/** [page] as the money module reads it. */
+internal fun moneyPageOf(page: DropLogPageResponse): DropLogPage =
+    moneyJson.decodeFromJsonElement(
+        DropLogPage.serializer(),
+        served.encodeToJsonElement(DropLogPageResponse.serializer(), page),
+    )
+
 /** The page and shared books as the money module reads them. Must be called inside a `transaction { }`. */
 private fun moneyInputsFor(userId: String): Pair<DropLogPage, List<SharedBook>> {
-    val page = served.encodeToJsonElement(DropLogPageResponse.serializer(), dropLogPageFor(userId))
     val books = served.encodeToJsonElement(ListSerializer(SharedPartiesResponse.serializer()), sharedBooksFor(userId))
-    return moneyJson.decodeFromJsonElement(DropLogPage.serializer(), page) to
+    return moneyPageOf(dropLogPageFor(userId, answered = false)) to
         moneyJson.decodeFromJsonElement(ListSerializer(SharedBook.serializer()), books)
 }
 
