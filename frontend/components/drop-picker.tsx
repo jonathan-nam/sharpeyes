@@ -170,6 +170,39 @@ export function DropPicker({
         },
       ]
     : drops;
+
+  /** The count and the stack boxes, from the catalog, for what is picked. */
+  function fill(picked: string) {
+    const count = defaultQuantity(
+      drops.find((d) => d.dropKey === picked),
+      difficulty,
+      worldType,
+    );
+    setQuantity(count);
+    // The stack boxes open on the same suggestion the recorded ones do, and clear with any other
+    // drop. A suggestion, not an answer: emptying them logs the night unanswered.
+    const opening =
+      draft && picked === draft.dropKey
+        ? draftDrop(draft.config, Number(count) || 0, draft.behind)
+        : null;
+    setBoxes(opening ? draftBoxes(opening) : {});
+  }
+
+  // The Drop Log's boss and character can change under a picked drop. Its count was filled for the
+  // old boss, mode or world, so it is filled again, typed or not, and a drop the new table lacks is
+  // unpicked. "Something else" was typed by hand and is left alone.
+  const basis = `${bossKey}|${difficulty ?? ""}|${worldType}`;
+  const [filledFor, setFilledFor] = useState(basis);
+  if (filledFor !== basis) {
+    setFilledFor(basis);
+    setDuplicate(null);
+    if (dropKey !== "" && dropKey !== OTHER) {
+      const kept = offered.some((d) => d.dropKey === dropKey) ? dropKey : "";
+      setDropKey(kept);
+      fill(kept);
+    }
+  }
+
   // A boss with no table has only "something else" to offer, so it starts there.
   const noTable = (table?.length ?? 0) === 0 && bossKey !== "";
   const chosen = noTable && dropKey === "" ? OTHER : dropKey;
@@ -253,21 +286,9 @@ export function DropPicker({
             setDropKey(picked);
             onPick?.(picked);
             // Filled from the catalog on every change of drop, including back to nothing, so the
-            // count belongs to what is currently picked. Typing over it stands: nothing refills a
-            // box after this, which is what makes it a default rather than a value.
-            const count = defaultQuantity(
-              drops.find((d) => d.dropKey === picked),
-              difficulty,
-              worldType,
-            );
-            setQuantity(count);
-            // The stack boxes open on the same suggestion the recorded ones do, and clear with any
-            // other drop. A suggestion, not an answer: emptying them logs the night unanswered.
-            const opening =
-              draft && picked === draft.dropKey
-                ? draftDrop(draft.config, Number(count) || 0, draft.behind)
-                : null;
-            setBoxes(opening ? draftBoxes(opening) : {});
+            // count belongs to what is currently picked. Typing over it stands until the drop or
+            // the boss under it changes, which is what makes it a default rather than a value.
+            fill(picked);
           }}
         />
       </Field>
