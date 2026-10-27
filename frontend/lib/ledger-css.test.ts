@@ -64,12 +64,12 @@ describe("the fully-settled state", () => {
 // flex row with free space to push into.
 describe("the next stage's link", () => {
   it("sits in a flex row", () => {
-    const rule = css.match(/^\.droplog-head-row \{([^}]*)\}/m);
+    const rule = css.match(/^\.droplog-steps \{([^}]*)\}/m);
     expect(rule?.[1]).toContain("display: flex");
   });
 
   it("is pushed to the far end", () => {
-    const rule = css.match(/^\.droplog-head-next \{([^}]*)\}/m);
+    const rule = css.match(/^\.droplog-step-next \{([^}]*)\}/m);
     expect(rule?.[1]).toContain("margin-left: auto");
   });
 });

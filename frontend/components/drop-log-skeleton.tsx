@@ -1,10 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { Button } from "@/components/button";
-import { DropLogHead } from "@/components/drop-log-head";
-import { dropSections, sectionFromPath, shownSection } from "@/lib/drop-sections";
-import { useAccountSettings } from "@/lib/use-account-settings";
 
 // The Drop Log's loading state: the page's own chrome, not a line of text where a page will be.
 //
@@ -14,8 +10,8 @@ import { useAccountSettings } from "@/lib/use-account-settings";
 //
 // Built from the real classes rather than hand-measured shapes, for the reason app/bosses/loading.tsx
 // gives: a skeleton that restates the metrics by hand is what put the inventory window 30px out of
-// place (#77). The heading and the form ARE the real markup, the form disabled. Only the figures
-// are shimmer, because those are the one thing that must never be guessed at.
+// place (#77). The form IS the real markup, disabled. Only the figures are shimmer, because those
+// are the one thing that must never be guessed at.
 
 // Enough rows to fill the fold at 900px without pretending to know how many there are. The list is
 // the one part whose length is genuinely unknown, so it fades rather than claiming a count.
@@ -51,19 +47,11 @@ function Row() {
   );
 }
 
+// The title and the links either side are DropLogHead's, drawn above this by the page and the route
+// boundary alike.
 export function DropLogSkeleton() {
-  // Read here rather than passed in, because app/bosses/drops/loading.tsx has nothing to pass: the
-  // route boundary and the page have to draw the same strip or a cold route flashes a shape the
-  // loaded page does not have. The store is warm on any navigation from inside the app.
-  const sections = dropSections(useAccountSettings()?.trades);
-  const section = shownSection(sectionFromPath(usePathname()) ?? "drops", sections);
-
   return (
     <div role="status" aria-label="Loading your drops">
-      {/* The real heading, drawn on the same condition as the page's, so a Heroic world holds no
-          height for one it will not get. */}
-      {sections.length > 1 && <DropLogHead section={section} sections={sections} />}
-
       {/* The real Add Drop panel, down to the disabled controls and their labels, so its height is
           its own and not a number copied out of it. The labels are half of that height now. */}
       <section className="loot-pool add-section" aria-hidden="true">

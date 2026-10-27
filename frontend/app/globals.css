@@ -6723,32 +6723,30 @@ button.link:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-/* A stage's heading and the links to the stages either side. See DropLogHead. */
-.droplog-head {
-  display: grid;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.droplog-head-row {
+/* The stages either side of this one, under its title: back on the left, next on the right. */
+.droplog-steps {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  margin-bottom: 16px;
 }
 
-.droplog-head-title {
-  display: flex;
+.droplog-step {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin: 0;
-  font-size: var(--text-lg);
-  color: var(--ink-strong);
+  gap: 6px;
 }
 
-/* Auto rather than space-between, so it stays right on the line it wraps onto. */
-.droplog-head-next {
+/* Auto rather than space-between, so it stays right on a page with no way back. */
+.droplog-step-next {
   margin-left: auto;
+}
+
+.droplog-step-arrow {
+  width: 1em;
+  height: 1em;
+  flex: none;
 }
 
 .droplog-filter {

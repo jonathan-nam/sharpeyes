@@ -1,4 +1,5 @@
 import { RouteLoading } from "@/components/route-loading";
+import { DropLogHead } from "@/components/drop-log-head";
 import { DropLogSkeleton } from "@/components/drop-log-skeleton";
 
 // See app/inventory/loading.tsx for why these boundaries exist. The same skeleton the page shows for
@@ -6,7 +7,7 @@ import { DropLogSkeleton } from "@/components/drop-log-skeleton";
 export default function Loading() {
   return (
     <RouteLoading shaped>
-      <h1 className="page-title">Drop Log</h1>
+      <DropLogHead />
       <DropLogSkeleton />
     </RouteLoading>
   );

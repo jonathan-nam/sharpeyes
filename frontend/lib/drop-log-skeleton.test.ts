@@ -21,10 +21,10 @@ const page = readFileSync(join(root, "app", "bosses", "drops", "(log)", "layout.
 // its absence now, below, because a placeholder for a row the page does not draw jumps exactly as
 // far as a missing one, in the other direction.
 describe("the Drop Log's loading state is the page's shape", () => {
-  // Split by who renders it. The page draws the heading and the list itself; the Add Drop panel is
+  // Split by who renders it. The page draws the toolbar and the list itself; the Add Drop panel is
   // LogDrop's and its row of controls is DropPicker's. Asserting all of them against page.tsx
   // passed nothing and only proved the test had not been run.
-  const OWN = ["DropLogHead", "party-toolbar", "droplog-list"];
+  const OWN = ["party-toolbar", "droplog-list"];
   const BORROWED = [
     ["add-section", join("components", "log-drop.tsx")],
     ["add-card", join("components", "drop-picker.tsx")],
@@ -46,25 +46,17 @@ describe("the Drop Log's loading state is the page's shape", () => {
     expect(skeleton, `the skeleton is missing ${cls}`).toContain(cls);
   });
 
-  // The heading is the one part with real words on it, and they are a constant, so it can read them
-  // rather than restate them. Hardcoding the labels is how it ends up a rename behind.
-  it("takes its heading from dropSections rather than spelling it out", () => {
-    expect(skeleton).toContain("dropSections");
+  // The title and the links either side are one component, which reads the stage and the world
+  // itself, so the route boundary cannot draw a different heading from the page.
+  it("shares its heading with the page", () => {
+    const boundary = readFileSync(join(root, "app", "bosses", "drops", "loading.tsx"), "utf8");
+    expect(boundary).toContain("<DropLogHead />");
+    expect(page).toContain("<DropLogHead />");
+    const drawn = skeleton.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(drawn, "the skeleton draws a second heading").not.toContain("DropLogHead");
     for (const section of dropSections(true)) {
       expect(skeleton, `${section.label} is hardcoded`).not.toContain(`>${section.label}<`);
     }
-  });
-
-  // A Heroic world gets one section, so the page draws no heading for it. A skeleton that held one
-  // would jump by its whole height the moment the drops landed.
-  it("draws the heading on the same condition the page does", () => {
-    for (const [file, source] of [
-      ["the page", page],
-      ["the skeleton", skeleton],
-    ] as const) {
-      expect(source, `${file} draws the heading unconditionally`).toContain("sections.length > 1");
-    }
-    expect(skeleton, "the skeleton cannot know the world").toContain("useAccountSettings");
   });
 
   // Every figure on this page is somebody's money. A placeholder that says "Total Sales" to an account
