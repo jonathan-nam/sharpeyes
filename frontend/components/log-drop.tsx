@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { DropPicker } from "@/components/drop-picker";
+import { DropPicker, type StackDraft } from "@/components/drop-picker";
 import { configFor, modeThisWeek } from "@/lib/parties";
+import { VESTIGE } from "@/lib/settlement-view";
+import { shareConfig } from "@/lib/vestige-stacks";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
-import type { LogDropBody } from "@/types/loot";
+import type { AddLootBody, LogDropBody } from "@/types/loot";
 import type { Party } from "@/types/party";
 
 // The Drop Log's own form: whose character, which boss, what fell.
@@ -29,14 +31,21 @@ import type { Party } from "@/types/party";
 // so the drop lands in it and divides by the roster it had when it came off the lists. That is a
 // party you were told you no longer run, splitting a drop with people who may not have been there,
 // and it is the one thing this form has to say out loud.
+//
+// Every drop logged here is a run with nobody else (see logDropRoute), with one exception: a coupon
+// night on a party running this week. That form carries the party's Looted and Entitled blocks, and
+// the night goes to the party's own pool with its pickup, as it would from Party View.
 
 export function LogDrop({
   characters,
   bosses,
   parties,
   dropTables,
+  behind,
   busy,
   onLog,
+  onLogToParty,
+  onSaveShares,
 }: {
   characters: Character[];
   bosses: Boss[];
@@ -45,9 +54,14 @@ export function LogDrop({
    */
   parties: Party[];
   dropTables: DropTables;
+  /** Each holder's position across the coupon nights already recorded. See StackDraft. */
+  behind: Map<string, number>;
   busy: boolean;
   /** Rejecting keeps the picked drop on screen, so a refusal can be retried without re-picking. */
   onLog: (body: LogDropBody) => void | Promise<void>;
+  /** A coupon night logged with its split on screen. Rejects as `onLog` does. */
+  onLogToParty: (party: Party, body: AddLootBody) => Promise<void>;
+  onSaveShares: (party: Party, shares: Map<string, number>) => Promise<void>;
 }) {
   const [characterId, setCharacterId] = useState(characters[0]?.id ?? "");
   const [bossKey, setBossKey] = useState("");
@@ -60,6 +74,24 @@ export function LogDrop({
 
   const chosen = bosses.some((b) => b.bossKey === bossKey) ? bossKey : "";
   const pool = configFor(parties, character.id, chosen);
+  // A party running this week. A solo pool, a retired config and a one-off whose week has passed
+  // have nobody to split with now.
+  const party = pool && !pool.solo && !pool.retired && !pool.skippedThisPeriod ? pool : undefined;
+  const config =
+    party &&
+    shareConfig(dropTables[chosen], modeThisWeek(party), party.worldType, VESTIGE, party.members);
+  const draft: StackDraft | undefined =
+    party && config
+      ? {
+          dropKey: VESTIGE,
+          config,
+          party,
+          behind,
+          pickupTitle: "Looted this week",
+          entitledTitle: "Entitled each week",
+          onSaveShares: (shares) => onSaveShares(party, shares),
+        }
+      : undefined;
 
   return (
     <section className="loot-pool add-section">
@@ -72,6 +104,7 @@ export function LogDrop({
         difficulty={pool ? modeThisWeek(pool) : undefined}
         busy={busy}
         card
+        draft={draft}
         lead={
           <>
             {characters.length > 1 && (
@@ -108,14 +141,16 @@ export function LogDrop({
           </>
         }
         onAdd={(body) =>
-          onLog({
-            characterId: character.id,
-            // Non-null by the time the picker submits: it refuses a body with no boss.
-            bossKey: body.bossKey!,
-            dropKey: body.dropKey,
-            customName: body.customName,
-            quantity: body.quantity,
-          })
+          draft && body.dropKey === draft.dropKey
+            ? onLogToParty(draft.party, body)
+            : onLog({
+                characterId: character.id,
+                // Non-null by the time the picker submits: it refuses a body with no boss.
+                bossKey: body.bossKey!,
+                dropKey: body.dropKey,
+                customName: body.customName,
+                quantity: body.quantity,
+              })
         }
       />
     </section>
