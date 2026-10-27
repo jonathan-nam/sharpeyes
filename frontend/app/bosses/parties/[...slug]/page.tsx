@@ -39,7 +39,7 @@ import type { DropTables } from "@/types/drop";
 import type { AddLootBody, Loot, PartyLootPool, SellLootBody } from "@/types/loot";
 import type { VestigeSettlement } from "@/types/vestige";
 import type { Invite } from "@/types/invite";
-import type { Party, PartyMember, Person } from "@/types/party";
+import type { Party, PartyMember, Person, SaveSharesBody } from "@/types/party";
 
 type LoadState = "loading" | "loaded" | "error";
 
@@ -59,6 +59,8 @@ const VESTIGE = "vestige-of-erion";
 const ADD_DROP = "add-drop";
 // Not a row either, and the only write on this page that is a member's. See leave().
 const LEAVE = "leave";
+// The party's entitled split, which is not a row's either. See setShares.
+const SHARES = "shares";
 
 export default function PartyPage() {
   // Before anything is fetched: see lib/preload-boss-art.ts.
@@ -221,6 +223,24 @@ export default function PartyPage() {
       method: "PUT",
       body: JSON.stringify({ bundles }),
     });
+  // The party's entitled split, by the route Party View writes. Every row's entitlement reads it, so
+  // the party and the pool are both read back. Rejects, like setBundles.
+  const setShares = (shares: Map<string, number>) =>
+    write(SHARES, async () => {
+      await apiFetch<Party>(
+        `/api/parties/${party!.id}/shares`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ shares: Object.fromEntries(shares) } satisfies SaveSharesBody),
+        },
+        getToken,
+      );
+      invalidate("/api/parties");
+      await readBack(async () => {
+        setParty(await apiFetch<Party>(partyUrl, { method: "GET" }, getToken));
+        await loadLoot(party!.id);
+      });
+    });
 
   // A party somebody else keeps the book for. The screen is the same one; what it does not carry
   // is anything that would write into their pool. See PartyResponse.yours.
@@ -372,6 +392,8 @@ export default function PartyPage() {
       dropKey: VESTIGE,
       config,
       entitledTitle: "Entitled each week",
+      // Edited under a coupon card's Edit Splits. See LootList.
+      onSave: setShares,
       // See the pickup's own note: this page reckons a night against nothing rather than against
       // the account-wide balance Party View has in hand.
       behind: new Map<string, number>(),
