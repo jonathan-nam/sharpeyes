@@ -40,6 +40,7 @@ data class DescribedPlan(
 data class NightOutput(
     val byCount: List<DescribedPlan>,
     val shown: List<DescribedPlan>,
+    val shownFrom: List<Int>,
     val tradeOffs: List<DescribedPlan>,
 )
 
@@ -81,16 +82,19 @@ private fun planned(input: NightInput): NightOutput {
             available = input.available,
             prefer = input.prefer,
         )
-    val full = input.seed?.let { shuffledNight(input.runs, options, it) } ?: planNight(input.runs, options)
-    val shown =
-        withoutRunsByCount(
-            full.byCount,
+    val plain = planNight(input.runs, options).byCount
+    val byCount = input.seed?.let { seed -> plain.map { shuffledPlan(it, options, seed) } } ?: plain
+    val sources =
+        sourcesByCount(
+            byCount,
             input.hidden.toSet(),
             PlanOptions(minutes = input.shownMinutes ?: Double.POSITIVE_INFINITY, available = input.available),
         )
+    val shown = sources.map { it.shown }
     return NightOutput(
-        byCount = full.byCount.map { it.described() },
+        byCount = byCount.map { it.described() },
         shown = shown.map { it.described() },
+        shownFrom = sources.map { it.from },
         tradeOffs = tradeOffs(shown).map { it.described() },
     )
 }

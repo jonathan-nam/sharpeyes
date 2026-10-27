@@ -7,9 +7,9 @@ import {
   planNight,
   screenRuns,
   shuffledIds,
-  shuffledNight,
+  shuffledPlan,
+  sourcesByCount,
   tradeOffs,
-  withoutRunsByCount,
 } from "@/lib/boss-run-plan";
 import { committedGolden, goldenCases, goldenText, seeded } from "@/lib/golden";
 
@@ -17,7 +17,7 @@ import { committedGolden, goldenCases, goldenText, seeded } from "@/lib/golden";
 
 const SOURCE = "frontend/lib/boss-run-plan.golden.test.ts";
 
-/** One night as Run Order searches it: everything planNight, shuffledNight and the restrictions read. */
+/** One night as Run Order searches it: everything planNight, shuffledPlan and the restrictions read. */
 type NightInput = {
   runs: EligibleRun[];
   /** Null is Infinity, which JSON cannot carry: a night not run to the clock. */
@@ -59,17 +59,21 @@ function planned(input: NightInput) {
     ...(input.prefer ? { prefer: input.prefer } : {}),
     ...(input.beamWidth ? { beamWidth: input.beamWidth } : {}),
   };
-  const full =
-    input.seed === undefined
-      ? planNight(input.runs, options)
-      : shuffledNight(input.runs, options, input.seed);
-  const shown = withoutRunsByCount(full.byCount, new Set(input.hidden), {
+  // Every length reordered, where the page reorders only the one on screen, so the port is held to
+  // shuffledPlan on all of them.
+  const { seed } = input;
+  const plain = planNight(input.runs, options).byCount;
+  const byCount =
+    seed === undefined ? plain : plain.map((plan) => shuffledPlan(plan, options, seed));
+  const sources = sourcesByCount(byCount, new Set(input.hidden), {
     minutes: infinite(input.shownMinutes),
     available: input.available,
   });
+  const shown = sources.map((source) => source.shown);
   return {
-    byCount: full.byCount.map(described),
+    byCount: byCount.map(described),
     shown: shown.map(described),
+    shownFrom: sources.map((source) => source.from),
     tradeOffs: tradeOffs(shown).map(described),
   };
 }

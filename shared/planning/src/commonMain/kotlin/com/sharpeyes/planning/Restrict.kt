@@ -50,13 +50,26 @@ fun withoutRunsByCount(
     byCount: List<Plan>,
     hidden: Set<String>,
     options: PlanOptions,
-): List<Plan> {
-    val byLength = LinkedHashMap<Int, Plan>()
-    for (plan in byCount.asReversed()) {
-        val kept = withoutRuns(plan, hidden, options)
-        if (kept.runs.isNotEmpty() && kept.runs.size !in byLength) byLength[kept.runs.size] = kept
+): List<Plan> = sourcesByCount(byCount, hidden, options).map { it.shown }
+
+/** A plan with runs hidden, and the index into `byCount` it came from. */
+data class ShownPlan(
+    val shown: Plan,
+    val from: Int,
+)
+
+/** [withoutRunsByCount], with the index each plan came from. */
+fun sourcesByCount(
+    byCount: List<Plan>,
+    hidden: Set<String>,
+    options: PlanOptions,
+): List<ShownPlan> {
+    val byLength = LinkedHashMap<Int, ShownPlan>()
+    for (i in byCount.indices.reversed()) {
+        val shown = withoutRuns(byCount[i], hidden, options)
+        if (shown.runs.isNotEmpty() && shown.runs.size !in byLength) byLength[shown.runs.size] = ShownPlan(shown, i)
     }
-    return byLength.values.sortedBy { it.runs.size }
+    return byLength.values.sortedBy { it.shown.runs.size }
 }
 
 /**

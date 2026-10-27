@@ -2,7 +2,7 @@ package com.sharpeyes.planning
 
 import kotlin.math.floor
 
-// Run Order's Shuffle, ported from frontend/lib/boss-run-plan.ts shuffledNight.
+// Run Order's Shuffle, ported from frontend/lib/boss-run-plan.ts shuffledPlan.
 
 private const val MULBERRY_STEP = 0x6d2b79f5
 private const val SHIFT_A = 15
@@ -67,30 +67,28 @@ fun comparePlans(
 }
 
 /**
- * planNight with its ties broken by [seed] instead of by run id.
+ * [plan]'s own runs reordered with their ties broken by [seed], for Run Order's Shuffle.
  *
- * The tie-break also decides which states the beam keeps, so both searches run and the shuffled plan
- * is kept at each length only where it scores at least as well. A `prefer` still comes first.
+ * Never other bosses, and only an order that scores exactly as well, so a tab's switch count still
+ * holds. Where the reordered search ends anywhere else, [plan] comes back as it was.
  */
-fun shuffledNight(
-    runs: List<EligibleRun>,
+fun shuffledPlan(
+    plan: Plan,
     options: PlanOptions,
     seed: Int,
-): NightPlans {
-    val plain = planNight(runs, options)
+): Plan {
+    val picked = plan.runs.map { it.run }
     val named = options.prefer.orEmpty().toSet()
-    val rest = runs.map { it.id }.filterNot { it in named }
-    val shuffled = planNight(runs, options.copy(prefer = options.prefer.orEmpty() + shuffledIds(rest, seed)))
-
-    val byCount =
-        (0 until maxOf(plain.byCount.size, shuffled.byCount.size)).map { i ->
-            val mine = shuffled.byCount.getOrNull(i)
-            val theirs = plain.byCount.getOrNull(i)
-            when {
-                mine == null -> requireNotNull(theirs)
-                theirs == null || comparePlans(mine, theirs) <= 0 -> mine
-                else -> theirs
-            }
-        }
-    return NightPlans(byCount.lastOrNull() ?: EMPTY_PLAN, byCount)
+    val rest = picked.map { it.id }.filterNot { it in named }
+    val prefer = options.prefer.orEmpty() + shuffledIds(rest, seed)
+    val beamWidth = minOf(options.beamWidth, SHUFFLE_BEAM)
+    val mine =
+        planNight(
+            picked,
+            options.copy(prefer = prefer, beamWidth = beamWidth),
+        ).byCount.getOrNull(picked.size - 1)
+    return if (mine != null && comparePlans(mine, plan) == 0) mine else plan
 }
+
+// Narrow, because a press has to answer at once. Measured in frontend/lib/boss-run-plan.ts.
+private const val SHUFFLE_BEAM = 200
