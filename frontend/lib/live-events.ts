@@ -77,3 +77,57 @@ export function onLive(topic: Topic, listener: (event: LiveEvent) => void): () =
 export function backoffMs(failures: number): number {
   return Math.min(30_000, 2_000 * 2 ** Math.max(0, failures - 1));
 }
+
+/**
+ * How long a burst of events waits to become one re-read. One drop sends three (party, loot and
+ * settlement from tellLinkedOnWrite), four on a party's page (loot again from poolChanged), and the
+ * writer's own tab hears them all on top of its read-back.
+ */
+export const COALESCE_MS = 100;
+
+/**
+ * Runs [run] once for any number of triggers within [waitMs], and never twice at once. A trigger
+ * while [run]'s promise is pending runs it once more after it settles, so the last write is read.
+ */
+export function coalesce(
+  run: () => void | Promise<unknown>,
+  waitMs = COALESCE_MS,
+): { trigger: () => void; cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let running = false;
+  let again = false;
+  let cancelled = false;
+
+  async function fire() {
+    timer = null;
+    running = true;
+    try {
+      await run();
+    } catch {
+      // The handler reports its own failure. A later event must still run.
+    } finally {
+      running = false;
+    }
+    if (again) {
+      again = false;
+      trigger();
+    }
+  }
+
+  function trigger() {
+    if (cancelled) return;
+    if (running) {
+      again = true;
+      return;
+    }
+    timer ??= setTimeout(() => void fire(), waitMs);
+  }
+
+  return {
+    trigger,
+    cancel: () => {
+      cancelled = true;
+      if (timer !== null) clearTimeout(timer);
+    },
+  };
+}

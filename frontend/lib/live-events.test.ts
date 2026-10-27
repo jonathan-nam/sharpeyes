@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { backoffMs, eventsIn } from "./live-events";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { backoffMs, COALESCE_MS, coalesce, eventsIn } from "./live-events";
 
 describe("reading the live event stream", () => {
   it("takes the topic of each complete event and keeps the one still arriving", () => {
@@ -31,5 +31,55 @@ describe("reading the live event stream", () => {
 
   it("backs off to a ceiling", () => {
     expect([1, 2, 3, 4, 5, 6].map(backoffMs)).toEqual([2000, 4000, 8000, 16000, 30000, 30000]);
+  });
+});
+
+describe("coalescing a burst of events", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
+
+  it("runs once for the topics one write sends", async () => {
+    const run = vi.fn();
+    const burst = coalesce(run);
+    burst.trigger();
+    burst.trigger();
+    burst.trigger();
+    await vi.advanceTimersByTimeAsync(COALESCE_MS);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs once more after a pending run, never alongside it", async () => {
+    let finish = () => {};
+    const run = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    const burst = coalesce(run);
+    burst.trigger();
+    await vi.advanceTimersByTimeAsync(COALESCE_MS);
+    burst.trigger();
+    burst.trigger();
+    await vi.advanceTimersByTimeAsync(COALESCE_MS);
+    expect(run).toHaveBeenCalledTimes(1);
+    finish();
+    await vi.advanceTimersByTimeAsync(COALESCE_MS);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps running after a run fails", async () => {
+    const run = vi.fn().mockRejectedValueOnce(new Error("offline"));
+    const burst = coalesce(run);
+    burst.trigger();
+    await vi.advanceTimersByTimeAsync(COALESCE_MS);
+    burst.trigger();
+    await vi.advanceTimersByTimeAsync(COALESCE_MS);
+    expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  it("runs nothing once cancelled", async () => {
+    const run = vi.fn();
+    const burst = coalesce(run);
+    burst.trigger();
+    burst.cancel();
+    burst.trigger();
+    await vi.advanceTimersByTimeAsync(COALESCE_MS);
+    expect(run).not.toHaveBeenCalled();
   });
 });

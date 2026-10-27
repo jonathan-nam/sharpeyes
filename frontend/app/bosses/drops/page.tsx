@@ -389,7 +389,7 @@ export default function DropLogPage() {
     },
   };
   // A drop logged or sold by anybody in a party of yours, on screen without a reload.
-  useLive(["loot", "settlement", "party"], () => void load().catch(() => {}));
+  useLive(["loot", "settlement", "party"], () => load().catch(() => {}));
 
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
   const characterById = new Map(characters.map((c) => [c.id, c]));
