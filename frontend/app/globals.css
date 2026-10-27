@@ -1361,8 +1361,8 @@ html.switching-world .world-veil {
   display: flex;
   position: fixed;
   inset: 0;
-  /* Above everything, the header included: the toggle you just clicked is part of what is being
-     replaced, so leaving it live would offer a second switch mid-switch. */
+  /* Above everything, the header included: the page you just switched on is being replaced, and
+     leaving the toggle live would offer a second switch mid-switch. */
   z-index: 100;
   align-items: center;
   justify-content: center;
@@ -1757,7 +1757,7 @@ img.user-avatar-img {
   margin: 0 0 24px;
 }
 
-/* Social's pages, then each page's sections: a row above them, a sticky column beside them once
+/* Social's and Settings' pages, then each page's sections: a row above them, a sticky column beside them once
    there is room. The scroll margin is section-nav.tsx's REACHED_PX. */
 .social-tabs {
   margin-bottom: 20px;

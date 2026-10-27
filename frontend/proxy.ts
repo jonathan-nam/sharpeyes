@@ -8,6 +8,7 @@ const PROTECTED = [
   /^\/characters(\/|$)/,
   /^\/upload(\/|$)/,
   /^\/social(\/|$)/,
+  /^\/settings(\/|$)/,
 ];
 
 // The session cookie is set by the auth service on the API host, and scoped to the parent domain,
