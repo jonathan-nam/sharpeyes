@@ -140,21 +140,19 @@ describe("the pool page can show the nights behind a coupon debt", () => {
     expect(page).not.toContain("dropsInWeek");
   });
 
-  it("lets the night be corrected and leaves the standing split alone", () => {
+  it("lets the night and the party's split both be corrected under Edit Splits", () => {
     expect(page).toContain("stacks={stacks}");
     expect(pool).toContain("stacks={stacks}");
 
-    const built = page.slice(
-      page.indexOf("const stacks = (() =>"),
-      page.indexOf("const summary = summarize(loot);"),
-    );
-    expect(built.length).toBeGreaterThan(0);
-    // Who bent down is a fact about this pool's night, so it is answered here.
+    const start = page.indexOf("const stacks = (() =>");
+    const built = page.slice(start, page.indexOf("})();", start));
+    expect(start).toBeGreaterThan(0);
+    // Who bent down is a fact about this pool's night.
     expect(built).toContain("onSave: setBundles");
-    // The ratio is the PARTY's and belongs to its editor. Exactly one onSave in the block, so the
-    // split cannot pick one up without this failing.
-    expect(built.match(/onSave/g)).toHaveLength(1);
+    // The ratio is the PARTY's, written by the same route Party View writes.
+    expect(built).toContain("onSave: setShares");
     expect(page).toContain("/bundles");
+    expect(page).toContain("/shares`");
   });
 
   it("refuses to reopen a night whose books are closed", () => {

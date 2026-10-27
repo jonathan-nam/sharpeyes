@@ -375,8 +375,7 @@ function LootGroup({
                       />
                     </>
                   )}
-                  {/* Open splits edit the entitled split too, here in the card, where the page draws it
-                  once elsewhere. */}
+                  {/* Open splits edit the party's entitled split too, in the card. */}
                   {open && stacks?.onSave && splitElsewhere && (
                     <>
                       <h4 className="loot-group-title is-config">{stacks.entitledTitle}</h4>
