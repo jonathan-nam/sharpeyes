@@ -144,6 +144,16 @@ export function LootRow({
   const corrected = loot.recordedByYou !== false ? saleBodyOf(loot) : null;
   // The server's call (LootResponse.settled), which it also refuses every change against.
   const settled = loot.settled === true;
+  // Remove, drawn once at the foot of the card whatever state the drop is in. A piece row is withheld
+  // where it heads a config, which would go with it (see couponRemovable).
+  const offersRemove = (() => {
+    if (settled || selling) return false;
+    if (loot.status !== "PENDING") return !readOnly;
+    if (!canSell) return mayRemove;
+    if (pieces) return mayRemove && couponRemovable;
+    return mayRemove && loot.recordedByYou !== false && (!readOnly || sellers.length > 0);
+  })();
+  const takers = divides(ran) && !instanced ? sellers : [];
 
   return (
     <article className={`changed-by-anchor loot-row status-${loot.status.toLowerCase()}`}>
@@ -194,46 +204,18 @@ export function LootRow({
       {/* Where nothing sells, the question is who takes it. That is the whole of a Heroic pool's
           product: the item cannot move again, so which seat ends up with it is the only lever the
           party has, and one button per seat is the shortest way to pull it. Not offered on a solo
-          pool, which has nobody to take turns with. */}
-      {/* A piece row has no sale, so Remove is all it has: the pieces are priced on the Drop Log and
-          everything else here would act on a pot that does not exist. Withheld where the row heads a
-          config, which would go with it. See couponRemovable. */}
-      {loot.status === "PENDING" &&
-        canSell &&
-        pieces &&
-        couponRemovable &&
-        mayRemove &&
-        !settled && (
-          <div className="loot-actions">
-            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-              Remove
-            </button>
-          </div>
-        )}
+          pool, which has nobody to take turns with.
 
-      {loot.status === "PENDING" && !canSell && (!readOnly || member) && (
+          Nobody takes an instanced drop: it is already in every inventory that ran, so naming a
+          seat would hand the party's one copy to somebody when there was never one copy. divides()
+          reads the seats that RAN rather than the config's solo flag. */}
+      {loot.status === "PENDING" && !canSell && takers.length > 0 && (
         <div className="loot-actions">
-          {/* Nobody takes an instanced drop: it is already in every inventory that ran, so naming
-              a seat would hand the party's one copy to somebody when there was never one copy.
-              divides() is master's better test for the other half of it, reading the seats that
-              RAN rather than the config's solo flag. */}
-          {divides(ran) &&
-            !instanced &&
-            sellers.map((m) => (
-              <Button
-                key={m.id}
-                variant="secondary"
-                onClick={() => onSetTaken(m.id)}
-                disabled={busy}
-              >
-                {m.name} took it
-              </Button>
-            ))}
-          {mayRemove && (
-            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-              Remove
-            </button>
-          )}
+          {takers.map((m) => (
+            <Button key={m.id} variant="secondary" onClick={() => onSetTaken(m.id)} disabled={busy}>
+              {m.name} took it
+            </Button>
+          ))}
         </div>
       )}
 
@@ -249,11 +231,6 @@ export function LootRow({
             <Button variant="secondary" onClick={() => onSetTaken(null)} disabled={busy}>
               Put Back
             </Button>
-          )}
-          {!readOnly && (
-            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-              Remove
-            </button>
           )}
         </div>
       )}
@@ -291,11 +268,6 @@ export function LootRow({
                 {keepers.length === 1 ? "Keep" : `${m.name} kept it`}
               </Button>
             ))}
-            {mayRemove && (
-              <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-                Remove
-              </button>
-            )}
           </div>
         ))}
 
@@ -413,11 +385,6 @@ export function LootRow({
               <Button variant="secondary" onClick={onUnsell} disabled={busy}>
                 Undo Sale
               </Button>
-              {!readOnly && (
-                <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-                  Remove
-                </button>
-              )}
             </div>
           )}
         </>
@@ -425,6 +392,14 @@ export function LootRow({
 
       {/* Last, under everything the row says about itself. */}
       {children}
+
+      {offersRemove && (
+        <div className="loot-remove">
+          <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+            Remove
+          </button>
+        </div>
+      )}
     </article>
   );
 }
