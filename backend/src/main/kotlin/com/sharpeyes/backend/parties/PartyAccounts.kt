@@ -7,7 +7,6 @@ import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.and
-import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -27,7 +26,8 @@ internal fun accountsFor(
             .selectAll()
             .where { Party.id inList partyIds }
             .associate { it[Party.id] to it[Party.userId] }
-    // Standing seats only, which is who audienceOf tells: a member who left is not in it any more.
+    // Seats in the party this week, which is who audienceOf tells: a member who left is not in it any
+    // more, and a one-off's guests are. See seatedFor.
     val linked =
         PartyMember
             .join(Characters, JoinType.INNER, PartyMember.linkedCharacterId, Characters.id)
@@ -35,7 +35,7 @@ internal fun accountsFor(
             .where {
                 (PartyMember.partyId inList partyIds) and
                     PartyMember.linkedCharacterId.isNotNull() and
-                    (PartyMember.standing eq true)
+                    seatedFor(currentWeek())
             }.groupBy({ it[PartyMember.partyId] }, { it[Characters.userId] })
     val accounts =
         partyIds
