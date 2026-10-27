@@ -1,9 +1,5 @@
-// Turning what the account knows into a night the planner can order.
-//
-// Two ways in, one shape out. Signed in, the runs come from your party configs: a config already
-// IS "this character, this boss, with these people", which is exactly a candidate run. Signed out,
-// you type the same thing by hand. Both land on CandidateRun, so the ordering has one
-// implementation and the standalone tool is not a lesser copy of the real one.
+// Turning what the account knows into a night the planner can order. A party config already IS
+// "this character, this boss, with these people", which is exactly a candidate run.
 //
 // See boss-run-plan.ts for what is then done with them.
 
@@ -134,60 +130,6 @@ export function runsFromParties(
  */
 export function stillToRun(parties: Party[], tickedHere: ReadonlySet<string>): Party[] {
   return parties.filter((party) => !isCleared(party) || tickedHere.has(party.id));
-}
-
-// --- The standalone side -------------------------------------------------------------------
-
-/** A run typed in by hand. People are identified by the name you type, because there is no account. */
-export type DraftRun = {
-  id: string;
-  bossKey: string;
-  bossName: string;
-  minutes: number;
-  seats: { character: string; person: string }[];
-};
-
-/** Case and padding are typing, not identity: "Chris" and "chris " are one person. */
-export function personKey(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-/**
- * Hand-typed runs as candidates.
- *
- * A seat with no person named is left unattributed rather than guessed at, so it is refused for
- * the same reason a real unattributed seat is. A seat with no character named is dropped:
- * it is a half-filled row of a form, not a claim about the night.
- */
-export function runsFromDrafts(drafts: DraftRun[]): CandidateRun[] {
-  return drafts.map((draft) => ({
-    id: draft.id,
-    bossKey: draft.bossKey,
-    bossName: draft.bossName,
-    // A hand-typed run has no config behind it, so there is nothing to say. Not guessed at.
-    difficulty: null,
-    minutes: draft.minutes,
-    seats: draft.seats
-      .filter((seat) => seat.character.trim() !== "")
-      .map((seat) => ({
-        character: seat.character.trim(),
-        personId: seat.person.trim() === "" ? null : personKey(seat.person),
-      })),
-  }));
-}
-
-/** Everyone named across hand-typed runs, in the spelling they were first given. */
-export function rosterFromDrafts(drafts: DraftRun[]): NightPerson[] {
-  const people = new Map<string, string>();
-  for (const draft of drafts) {
-    for (const seat of draft.seats) {
-      const name = seat.person.trim();
-      if (name !== "" && !people.has(personKey(name))) people.set(personKey(name), name);
-    }
-  }
-  return [...people.entries()]
-    .map(([id, name]) => ({ id, name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 // --- Saying it out loud --------------------------------------------------------------------
