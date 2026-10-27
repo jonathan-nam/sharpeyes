@@ -1,14 +1,18 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.parties.PartyResponse
+import com.sharpeyes.api.parties.RosterNameOutcome
+import com.sharpeyes.api.parties.RosterResult
 import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.backend.db.BossCatalog
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Party
+import com.sharpeyes.backend.db.PartyInvite
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.friends.linkedTo
 import com.sharpeyes.backend.notifications.NotificationKind
 import com.sharpeyes.backend.notifications.notify
+import kotlinx.datetime.LocalDate
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.jetbrains.exposed.v1.core.JoinType
@@ -16,52 +20,76 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.lowerCase
-import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
-// A friend's character named in a roster: seated and bound to their account at once, and they are
-// told. Anybody else's name is a seat that binds to nobody. A character already in a party for the
-// boss is left out, and the owner is told. Inside a transaction, like the rest.
+// A friend's character named in a roster. Anybody else's name is a seat that binds to nobody, so only
+// a friendship links accounts. Inside a transaction, like the rest.
 //
-// V92 sent an invite instead and seated nobody until Accept. That was friction for parties that
-// already exist in the game, so no invite is sent any more; one still pending is answered as before
-// (InviteAnswer.kt).
+// In no other party for the boss, it is seated and bound at once. In another regular party, it is
+// never moved by somebody else: its player is asked (a party_invite, V92), and only their answer
+// moves it (PartyMoves.kt). A week-only roster seats it for that week and leaves its party alone.
 
-/** A roster name that is a friend's character and not yet standing in this party. */
+/** A roster write: the usual roster, or who ran one week (a week's roster, or a one-off's night). */
+internal sealed interface RosterWrite {
+    data object Standing : RosterWrite
+
+    data class Week(
+        val week: LocalDate,
+    ) : RosterWrite
+}
+
+/** The regular party holding a character for a boss. [own] when the character IS that party's config. */
+internal data class Holder(
+    val partyId: Uuid,
+    val own: Boolean,
+)
+
+/** A friend's character a roster names, not already standing in this party, and what becomes of it. */
 internal data class FriendSeat(
     val name: String,
     val characterId: Uuid,
+    val result: RosterResult,
+    /** The regular party holding it for the boss, when there is one. */
+    val holder: Uuid? = null,
     /** Already bound in this party before the save (a guest seat from another week), so not news. */
     val bound: Boolean = false,
+    /** What the saver is told, when anything. Never names a party the saver is not a friend of. */
+    val text: String? = null,
 )
 
 /** A roster, split by what happens to the friends' characters it names. */
 internal data class RosterSplit(
-    /** The names the save writes, friends' characters among them. */
+    /** The names the save writes. */
     val kept: List<String>,
-    /** Friends' characters, seated by the save and bound after it. */
-    val seated: List<FriendSeat> = emptyList(),
-    /** Friends' characters left out, being in a party for the boss already. */
-    val partied: List<String> = emptyList(),
+    val friends: List<FriendSeat> = emptyList(),
 ) {
-    val out get() = partied.map { it.lowercase() }.toSet()
+    /** Bound after the save: seated for good, or for the week. */
+    val seated get() = friends.filter { it.result == RosterResult.SEATED || it.result == RosterResult.GUEST }
+
+    /** Every name the save leaves out: asked, or left out. */
+    val out get() =
+        friends
+            .filter { it.result == RosterResult.ASKED || it.result == RosterResult.LEFT_OUT }
+            .map { it.name.lowercase() }
+            .toSet()
 }
 
 /**
- * Splits a roster into what the save writes and the friends' characters it cannot seat.
+ * Splits a roster into what the save writes and what becomes of each friend's character it names.
  *
- * A name already standing in [partyId] stays a seat, whoever it is: they are in the party. Anything
- * else that is a linked account's character is a friend to seat, unless it is in another party for
- * [bossId] (one per boss, V100).
+ * A name already standing in [partyId] stays a seat, whoever it is: they are in the party.
  */
 internal fun splitFriends(
     userId: String,
     partyId: Uuid?,
     members: List<String>,
     bossId: Uuid? = partyId?.let(::bossIdOfParty),
+    write: RosterWrite = RosterWrite.Standing,
+    now: Instant,
 ): RosterSplit {
     val linked = linkedCharactersFor(userId)
     if (linked.isEmpty() || bossId == null) return RosterSplit(members)
@@ -76,70 +104,104 @@ internal fun splitFriends(
             ?.let { id ->
                 PartyMember
                     .selectAll()
-                    .where { PartyMember.partyId eq id }
-                    .mapNotNull { it[PartyMember.linkedCharacterId] }
+                    .where {
+                        PartyMember.partyId eq id
+                    }.mapNotNull { it[PartyMember.linkedCharacterId] }
             }.orEmpty()
             .toSet()
+    val boss = BossCatalog.selectAll().where { BossCatalog.id eq bossId }.first()[BossCatalog.name]
     val friends =
         members.mapNotNull { raw ->
             val name = raw.trim()
-            linked[name.lowercase()]?.takeIf { name.lowercase() !in standing }?.let {
-                FriendSeat(
-                    name,
-                    it,
-                    it in bound,
-                )
-            }
+            linked[name.lowercase()]
+                ?.takeIf { name.lowercase() !in standing }
+                ?.let { classify(name, it, it in bound, Claim(partyId, bossId, boss, write), now) }
         }
-    val (partied, seated) = friends.partition { inPartyFor(it.characterId, bossId, partyId ?: Uuid.NIL) }
-    val out = partied.map { it.name.lowercase() }.toSet()
-    return RosterSplit(members.filterNot { it.trim().lowercase() in out }, seated, partied.map { it.name })
+    val split = RosterSplit(members, friends)
+    return split.copy(kept = members.filterNot { it.trim().lowercase() in split.out })
 }
 
-/** A week's roster with its already-partied friends taken out. */
+/** Where a roster write is claiming a character: which party, for which boss, and for how long. */
+private data class Claim(
+    val partyId: Uuid?,
+    val bossId: Uuid,
+    val boss: String,
+    val write: RosterWrite,
+)
+
+private fun classify(
+    name: String,
+    characterId: Uuid,
+    bound: Boolean,
+    claim: Claim,
+    now: Instant,
+): FriendSeat {
+    val holder = holderOf(characterId, claim.bossId, claim.partyId ?: Uuid.NIL)
+    val seat = FriendSeat(name, characterId, RosterResult.SEATED, holder?.partyId, bound)
+    val write = claim.write
+    return when {
+        holder == null -> seat
+        holder.own -> seat.copy(result = RosterResult.LEFT_OUT, text = "$name already has its own ${claim.boss} party.")
+        write is RosterWrite.Week && recordedIn(holder.partyId, characterId, write.week, now) ->
+            seat.copy(
+                result = RosterResult.LEFT_OUT,
+                text = "$name already ran ${claim.boss} ${if (write.week == currentWeek()) "this" else "that"} week.",
+            )
+        write is RosterWrite.Week -> seat.copy(result = RosterResult.GUEST)
+        else -> seat.copy(result = RosterResult.ASKED, text = "Asked $name's player to move $name here.")
+    }
+}
+
+/** A week's roster with the friends it cannot seat taken out. */
 internal data class WeekSplit(
     val named: List<String>?,
     val split: RosterSplit,
 ) {
     /** Nobody left to write once they are out: the week stays as it was. */
-    val writes get() = split.partied.isEmpty() || !named.isNullOrEmpty()
+    val writes get() = split.out.isEmpty() || !named.isNullOrEmpty()
 }
 
 internal fun weekSplit(
     userId: String,
     partyId: Uuid,
     members: List<String>?,
+    week: LocalDate,
+    now: Instant,
 ): WeekSplit {
-    val split = members?.let { splitFriends(userId, partyId, it) }
+    val split = members?.let { splitFriends(userId, partyId, it, write = RosterWrite.Week(week), now = now) }
     return WeekSplit(split?.kept, split ?: RosterSplit(emptyList()))
 }
 
-/** This save with its already-partied friends taken out, and what became of the rest. */
+/** This save with the friends it cannot seat taken out, and what became of each. Their splits go too. */
 internal fun SavePartyRequest.seatingFriends(
     userId: String,
     partyId: Uuid?,
     bossId: Uuid?,
+    oneOff: Boolean,
+    now: Instant,
 ): Pair<SavePartyRequest, RosterSplit> {
-    val split = splitFriends(userId, partyId, members, bossId)
+    val write = if (oneOff) RosterWrite.Week(currentWeek()) else RosterWrite.Standing
+    val split = splitFriends(userId, partyId, members, bossId, write, now)
     if (split.out.isEmpty()) return this to split
     val without = { by: Map<String, Int> -> by.filterKeys { it.trim().lowercase() !in split.out } }
     return copy(members = split.kept, shares = without(shares), pieceShares = without(pieceShares)) to split
 }
 
 /**
- * Why [userId], a joined member saving [keeper]'s party, cannot seat these friends, or null.
+ * Why [userId], a joined member saving [keeper]'s party, cannot name these friends, or null.
  *
- * A friend's character binds through the owner's friendship, so a member could otherwise link a
- * stranger of theirs into the party. They may seat only characters of their own friends (or their own).
+ * A friend's character binds, or its player is asked, through the owner's friendship, so a member
+ * could otherwise reach a stranger of theirs. They may name only their own friends' characters, or
+ * their own.
  */
 internal fun memberSeatRefusal(
     userId: String,
     keeper: String,
-    seated: List<FriendSeat>,
+    friends: List<FriendSeat>,
 ): String? {
     if (keeper == userId) return null
     val strangers =
-        seated.filter { seat ->
+        friends.filter { seat ->
             val account = userOf(seat.characterId)
             account != userId && !linkedTo(userId, account)
         }
@@ -152,19 +214,27 @@ internal fun memberSeatRefusal(
 }
 
 /**
- * A save's answer, with its friends bound and told, and the ones it left out said. Anything but a
- * saved party passes through.
+ * A save's answer, with its friends bound and told, its asks sent, its guests' other parties given
+ * the week, and each friend's outcome said. Anything but a saved party passes through.
  */
 internal fun Any?.withFriendSeats(
     ownerId: String,
     split: RosterSplit,
     now: Instant,
     adder: String = ownerId,
+    week: LocalDate = currentWeek(),
 ): Any? {
-    if (this !is PartyResponse || (split.seated.isEmpty() && split.partied.isEmpty())) return this
+    if (this !is PartyResponse || split.friends.isEmpty()) return this
     val partyId = Uuid.parse(id)
     bindFriends(partyId, split.seated, adder, now)
-    return findParty(partyId, ownerId)!!.copy(alreadyPartied = split.partied)
+    split.friends.filter { it.result == RosterResult.GUEST }.forEach { lendForWeek(it, week, now) }
+    val asked = split.friends.filter { it.result == RosterResult.ASKED }
+    asked.forEach { askToMove(ownerId, partyId, it, now) }
+    return findParty(partyId, ownerId)!!.copy(
+        invited = asked.map { it.name },
+        alreadyPartied = split.friends.filter { it.result == RosterResult.LEFT_OUT }.map { it.name },
+        outcome = split.friends.map { RosterNameOutcome(it.name, it.result, it.text) },
+    )
 }
 
 /**
@@ -193,6 +263,7 @@ private fun bindFriends(
                 buildJsonObject {
                     facts.forEach { (k, v) -> put(k, v) }
                     put("character", seat.name)
+                    put("week", seat.result == RosterResult.GUEST)
                 }
             notify(account, NotificationKind.PARTY_ADDED, now, partyId, adder, payload)
         }
@@ -200,32 +271,35 @@ private fun bindFriends(
 }
 
 /**
- * Whether [characterId] is already in a party for [bossId] other than [except]: one of its own, or a
- * seat in somebody else's. A solo pool is not a party.
+ * Asks [seat]'s player to move it from its party into [partyId]. A party_invite, so it is answered,
+ * listed and withdrawn the way every invite is. Asking twice is one ask.
  */
-internal fun inPartyFor(
-    characterId: Uuid,
-    bossId: Uuid,
-    except: Uuid,
-): Boolean {
-    val own =
-        Party
-            .selectAll()
-            .where {
-                (Party.characterId eq characterId) and (Party.bossCatalogId eq bossId) and
-                    (Party.standing eq true) and (Party.solo eq false) and (Party.id neq except)
-            }.empty()
-            .not()
-    val seated =
-        PartyMember
-            .join(Party, JoinType.INNER, PartyMember.partyId, Party.id)
-            .selectAll()
-            .where {
-                (PartyMember.linkedCharacterId eq characterId) and (PartyMember.standing eq true) and
-                    (Party.bossCatalogId eq bossId) and (Party.standing eq true) and (Party.id neq except)
-            }.empty()
-            .not()
-    return own || seated
+private fun askToMove(
+    ownerId: String,
+    partyId: Uuid,
+    seat: FriendSeat,
+    now: Instant,
+) {
+    val id = Uuid.random()
+    val inserted =
+        PartyInvite
+            .insertIgnore {
+                it[PartyInvite.id] = id
+                it[PartyInvite.partyId] = partyId
+                it[characterId] = seat.characterId
+                it[invitedBy] = ownerId
+                it[createdAt] = now
+            }.insertedCount > 0
+    if (!inserted) return
+    // The player is a friend of both owners, so both parties are named to them.
+    val from = seat.holder?.let(::partyFacts)
+    val payload =
+        buildJsonObject {
+            partyFacts(partyId).forEach { (k, v) -> put(k, v) }
+            put("character", seat.name)
+            from?.let { put("fromLeader", it["leader"]) }
+        }
+    notify(userOf(seat.characterId), NotificationKind.PARTY_INVITE, now, id, ownerId, payload)
 }
 
 /** How the bell names a party: its boss, mode and the owner's character. */
@@ -245,7 +319,7 @@ internal fun partyFacts(partyId: Uuid): Map<String, String?> {
     )
 }
 
-private fun userOf(characterId: Uuid): String =
+internal fun userOf(characterId: Uuid): String =
     Characters
         .selectAll()
         .where { Characters.id eq characterId }

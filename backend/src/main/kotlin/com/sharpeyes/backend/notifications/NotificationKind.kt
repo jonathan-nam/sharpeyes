@@ -13,13 +13,20 @@ object NotificationKind {
     const val FRIEND_ACCEPTED = "FRIEND_ACCEPTED"
 
     /**
-     * A seat in somebody's party offered to a character of yours. Subject: the party_invite. No longer
-     * sent (a friend's character is seated at once, PARTY_ADDED); kept for the ones still pending.
+     * A seat in somebody's party offered to a character of yours. Subject: the party_invite. Sent now
+     * only to ask you to move a character out of another party for the boss (payload `fromLeader`);
+     * one with no other party is seated at once (PARTY_ADDED).
      */
     const val PARTY_INVITE = "PARTY_INVITE"
 
-    /** A friend seated a character of yours in their party. Subject: the party. */
+    /** A friend seated a character of yours in their party (payload `week` for one week). Subject: the party. */
     const val PARTY_ADDED = "PARTY_ADDED"
+
+    /** A character left your party for another, its player moving it. Never says where. Subject: the party. */
+    const val CHARACTER_LEFT = "CHARACTER_LEFT"
+
+    /** A character of your party ran its boss elsewhere this week. Never says where. Subject: the party. */
+    const val CHARACTER_AWAY = "CHARACTER_AWAY"
 
     /** Your invite was accepted or declined (payload `accepted`). No subject. */
     const val PARTY_INVITE_ANSWERED = "PARTY_INVITE_ANSWERED"

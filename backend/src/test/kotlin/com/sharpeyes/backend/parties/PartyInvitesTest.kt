@@ -2,10 +2,12 @@ package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonRequest
+import com.sharpeyes.api.parties.RosterResult
 import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.api.parties.SavePeopleRequest
 import com.sharpeyes.backend.bosses.weekOf
 import com.sharpeyes.backend.config.Env
+import com.sharpeyes.backend.db.BossClear
 import com.sharpeyes.backend.db.Characters
 import com.sharpeyes.backend.db.Notification
 import com.sharpeyes.backend.db.Party
@@ -13,9 +15,13 @@ import com.sharpeyes.backend.db.PartyInvite
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.db.Person
 import com.sharpeyes.backend.notifications.NotificationKind
+import com.sharpeyes.backend.notifications.notificationsFor
 import com.sharpeyes.backend.users.WORLD_INTERACTIVE
 import com.sharpeyes.backend.users.ensureUser
 import com.sharpeyes.backend.users.setActiveWorld
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -32,13 +38,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 
 /** A friend's character is offered a seat, and only their Accept writes it. */
 class PartyInvitesTest {
     private val owner = "user_test_invites_owner"
     private val member = "user_test_invites_member"
-    private val everyone = listOf(owner, member)
+    private val other = "user_test_invites_other"
+    private val everyone = listOf(owner, member, other)
     private val now = Clock.System.now()
 
     @BeforeTest
@@ -60,6 +68,9 @@ class PartyInvitesTest {
     @AfterTest
     fun cleanUp() {
         transaction {
+            val accounts = everyone
+            val theirs = Characters.selectAll().where { Characters.userId inList accounts }.map { it[Characters.id] }
+            BossClear.deleteWhere { BossClear.characterId inList theirs }
             Notification.deleteWhere { Notification.userId inList everyone }
             Party.deleteWhere { Party.userId inList everyone }
             Person.deleteWhere { Person.userId inList everyone }
@@ -141,16 +152,66 @@ class PartyInvitesTest {
         assertTrue(acceptInvite(member, Uuid.parse(invitesTo(partyId).single().id), now) is InviteAnswer.Joined)
     }
 
-    /** What POST /api/parties does: split the roster, save what is kept, then bind and tell. */
+    /** What POST /api/parties does: split the roster, save what is kept, then bind, ask and tell. */
     private fun create(
         character: Uuid,
         members: List<String>,
+        account: String = owner,
+        bossKey: String = "kalos-the-guardian",
     ): PartyResponse {
-        val typed = SavePartyRequest(character.toString(), "kalos-the-guardian", members)
-        val (request, split) = typed.seatingFriends(owner, null, kalos)
-        val id = createParty(owner, character, kalos, request, now)
-        return findParty(id, owner)!!.withFriendSeats(owner, split, now) as PartyResponse
+        val boss = bossIdForKey(bossKey)!!
+        val typed = SavePartyRequest(character.toString(), bossKey, members)
+        val (request, split) = typed.seatingFriends(account, null, boss, oneOff = false, now = now)
+        val id = createParty(account, character, boss, request, now)
+        return findParty(id, account)!!.withFriendSeats(account, split, now) as PartyResponse
     }
+
+    /** What POST /api/parties/{id}/week does for this week. */
+    private fun guestThisWeek(
+        partyId: Uuid,
+        character: Uuid,
+        members: List<String>,
+    ): PartyResponse {
+        val asking = weekSplit(owner, partyId, members, currentWeek(), now)
+        if (asking.writes) {
+            writeWeek(
+                partyId,
+                character,
+                currentWeek(),
+                asking.named,
+                SeatContext(owner, emptyMap(), now),
+            )
+        }
+        return findParty(partyId, owner).withFriendSeats(owner, asking.split, now) as PartyResponse
+    }
+
+    /**
+     * Pinewick sitting in [other]'s regular Kalos party, a friend of everybody's: the party nobody
+     * disbanded. Started two weeks ago, so it has weeks behind it.
+     */
+    private fun pinewickInOthersParty(): Triple<Uuid, Uuid, Uuid> {
+        val wren = character(other, "Wrenfold")
+        val pine = character(member, "Pinewick")
+        link(other, "Chris", member)
+        val held = Uuid.parse(create(wren, listOf("Pinewick"), account = other).id)
+        Party.update({ Party.id eq held }) { it[partySince] = now - 14.days }
+        return Triple(held, wren, pine)
+    }
+
+    private fun ranThisWeek(character: Uuid) {
+        BossClear.insert {
+            it[characterId] = character
+            it[bossCatalogId] = kalos
+            it[periodStart] = currentWeek()
+            it[cleared] = true
+            it[capturedAt] = now
+        }
+    }
+
+    private fun notesTo(account: String) = Notification.selectAll().where { Notification.userId eq account }.toList()
+
+    /** What [account]'s bell shows, as the server writes it. */
+    private fun bell(account: String) = notificationsFor(account).notifications
 
     private fun seatOf(
         partyId: Uuid,
@@ -175,7 +236,10 @@ class PartyInvitesTest {
             assertEquals(NotificationKind.PARTY_ADDED, told[Notification.kind])
 
             // Saved again, nothing is new, so nobody is told twice.
-            findParty(partyId, owner).withFriendSeats(owner, splitFriends(owner, partyId, listOf("Pinewick")), now)
+            findParty(
+                partyId,
+                owner,
+            ).withFriendSeats(owner, splitFriends(owner, partyId, listOf("Pinewick"), now = now), now)
             assertEquals(1, Notification.selectAll().where { Notification.userId eq member }.count())
         }
     }
@@ -193,8 +257,9 @@ class PartyInvitesTest {
         }
     }
 
+    // The character IS that party, so there is nothing to move it out of.
     @Test
-    fun `a friend already in a party for the boss is left out and said`() {
+    fun `a friend's character with its own party for the boss is left out and said`() {
         transaction {
             val tide = character(owner, "tidelark")
             val pine = character(member, "Pinewick")
@@ -203,6 +268,7 @@ class PartyInvitesTest {
 
             val party = create(tide, listOf("Pinewick", "Baldrix"))
             assertEquals(listOf("Pinewick"), party.alreadyPartied)
+            assertEquals(RosterResult.LEFT_OUT, party.outcome.single().result)
             assertTrue(
                 PartyMember
                     .selectAll()
@@ -221,10 +287,136 @@ class PartyInvitesTest {
             val partyId = oneOff(owner, tide, listOf("Pinewick"))
             link(owner, "Chris", member)
 
-            val asking = weekSplit(owner, partyId, listOf("Pinewick"))
-            writeWeek(partyId, tide, currentWeek(), asking.named, SeatContext(owner, emptyMap(), now))
-            findParty(partyId, owner).withFriendSeats(owner, asking.split, now)
+            guestThisWeek(partyId, tide, listOf("Pinewick"))
             assertEquals(pine, seatOf(partyId, "Pinewick")[PartyMember.linkedCharacterId])
+        }
+    }
+
+    // A party nobody disbanded holds the character, and only its player moves it.
+    @Test
+    fun `a friend in another party is asked, and Move takes it out of that party`() {
+        transaction {
+            val (held, _, pine) = pinewickInOthersParty()
+            val tide = character(owner, "tidelark")
+            link(owner, "Chris", member)
+
+            val party = create(tide, listOf("Pinewick"))
+            val partyId = Uuid.parse(party.id)
+            assertEquals(RosterResult.ASKED, party.outcome.single().result)
+            assertEquals(listOf("Pinewick"), party.invited)
+            assertTrue(
+                PartyMember
+                    .selectAll()
+                    .where {
+                        (PartyMember.partyId eq partyId) and
+                            (PartyMember.name eq "Pinewick")
+                    }.empty(),
+            )
+            val ask = notesTo(member).single { it[Notification.kind] == NotificationKind.PARTY_INVITE }
+            assertEquals(
+                listOf("Move", "Stay"),
+                bell(member)
+                    .single {
+                        it.kind == NotificationKind.PARTY_INVITE
+                    }.actions
+                    .map { it.label },
+            )
+
+            assertTrue(acceptInvite(member, ask[Notification.subjectId]!!, now) is InviteAnswer.Joined)
+            assertEquals(pine, seatOf(partyId, "Pinewick")[PartyMember.linkedCharacterId])
+            val left = seatOf(held, "Pinewick")
+            assertEquals(false, left[PartyMember.standing])
+            assertEquals(null, left[PartyMember.linkedCharacterId])
+            // The weeks it ran there keep it, so a drop logged late still splits with it.
+            assertTrue("Pinewick" in rosterNamesFor(held, currentWeek().minus(1, DateTimeUnit.WEEK)))
+            assertTrue("Pinewick" !in rosterNamesFor(held, currentWeek()))
+        }
+    }
+
+    // The owner left behind need not be a friend of the party it went to, so is told nothing of it.
+    @Test
+    fun `the owner it left is told only that it left`() {
+        transaction {
+            pinewickInOthersParty()
+            val tide = character(owner, "tidelark")
+            link(owner, "Chris", member)
+            create(tide, listOf("Pinewick"))
+            val ask = notesTo(member).single { it[Notification.kind] == NotificationKind.PARTY_INVITE }
+            acceptInvite(member, ask[Notification.subjectId]!!, now)
+
+            val note = bell(other).single()
+            assertEquals(NotificationKind.CHARACTER_LEFT, note.kind)
+            assertEquals("Pinewick has left Kalos the Guardian.", note.text)
+            assertTrue("tidelark" !in note.payload.toString())
+        }
+    }
+
+    // It ran with its old party this week, so this week is that party's and the move counts from the next.
+    @Test
+    fun `a move from a party that ran this week counts from next week`() {
+        transaction {
+            val (held, wren, _) = pinewickInOthersParty()
+            ranThisWeek(wren)
+            val tide = character(owner, "tidelark")
+            link(owner, "Chris", member)
+            val partyId = Uuid.parse(create(tide, listOf("Baldrix", "Pinewick")).id)
+            val ask = notesTo(member).single { it[Notification.kind] == NotificationKind.PARTY_INVITE }
+            acceptInvite(member, ask[Notification.subjectId]!!, now)
+
+            assertTrue("Pinewick" in rosterNamesFor(held, currentWeek()))
+            assertTrue("Pinewick" !in rosterNamesFor(partyId, currentWeek()))
+            assertTrue("Pinewick" in rosterNamesFor(partyId, currentWeek().plus(1, DateTimeUnit.WEEK)))
+        }
+    }
+
+    @Test
+    fun `a friend named for one week runs it as a guest and its party keeps it`() {
+        transaction {
+            val (held, _, pine) = pinewickInOthersParty()
+            val tide = character(owner, "tidelark")
+            link(owner, "Chris", member)
+            val partyId = party(owner, tide, listOf("Baldrix"))
+
+            val saved = guestThisWeek(partyId, tide, listOf("Baldrix", "Pinewick"))
+            assertEquals(RosterResult.GUEST, saved.outcome.single().result)
+            assertEquals(pine, seatOf(partyId, "Pinewick")[PartyMember.linkedCharacterId])
+            assertEquals(true, seatOf(held, "Pinewick")[PartyMember.standing])
+            assertTrue("Pinewick" !in rosterNamesFor(held, currentWeek()))
+            assertEquals("Pinewick is running Kalos the Guardian elsewhere this week.", bell(other).single().text)
+        }
+    }
+
+    // A character clears a weekly boss once a week, so one of the two would be wrong.
+    @Test
+    fun `a player switching several bosses at once leaves the old owner one note`() {
+        transaction {
+            val (_, wren, _) = pinewickInOthersParty()
+            create(wren, listOf("Pinewick"), account = other, bossKey = "lotus")
+            val tide = character(owner, "tidelark")
+            link(owner, "Chris", member)
+            create(tide, listOf("Pinewick"))
+            create(tide, listOf("Pinewick"), bossKey = "lotus")
+            notesTo(member)
+                .filter { it[Notification.kind] == NotificationKind.PARTY_INVITE }
+                .forEach { acceptInvite(member, it[Notification.subjectId]!!, now) }
+
+            assertEquals("Pinewick has left Kalos the Guardian and 1 other boss.", bell(other).single().text)
+        }
+    }
+
+    @Test
+    fun `a friend that already ran the boss this week elsewhere is left out`() {
+        transaction {
+            val (_, wren, _) = pinewickInOthersParty()
+            ranThisWeek(wren)
+            val tide = character(owner, "tidelark")
+            link(owner, "Chris", member)
+            val partyId = party(owner, tide, listOf("Baldrix"))
+
+            val saved = guestThisWeek(partyId, tide, listOf("Baldrix", "Pinewick"))
+            val outcome = saved.outcome.single()
+            assertEquals(RosterResult.LEFT_OUT, outcome.result)
+            assertEquals("Pinewick already ran Kalos the Guardian this week.", outcome.text)
         }
     }
 

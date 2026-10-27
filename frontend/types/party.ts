@@ -107,12 +107,20 @@ export type Party = {
   accounts?: PartyAccount[];
   // Seats offered to friends and not yet answered, the owner's only. Absent on a cached payload.
   pendingInvites?: { id: string; name: string }[];
-  // On a save's answer only: friends it invited, and those already in a party for this boss.
+  // On a save's answer only: friends whose player was asked to move them here, and those left out.
   invited?: string[];
   alreadyPartied?: string[];
+  // On a save's answer only: each friend's character it named, with the sentence to show. Absent
+  // from a server before it. See lib/invite-notice.ts.
+  outcome?: RosterNameOutcome[];
   createdAt: string;
   updatedAt: string;
 };
+
+/** What a roster save did with a friend's character. See PartyDtos.kt. */
+export type RosterResult = "SEATED" | "ASKED" | "GUEST" | "LEFT_OUT";
+
+export type RosterNameOutcome = { name: string; result: RosterResult; text: string | null };
 
 /** One account in a party. Mirrors the backend's PartyAccountResponse. */
 export type PartyAccount = {

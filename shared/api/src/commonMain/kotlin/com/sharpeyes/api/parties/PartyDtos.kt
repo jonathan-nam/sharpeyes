@@ -127,12 +127,39 @@ data class PartyResponse(
     // Seats offered to friends and not yet answered. The owner's only. See PartyInvites.kt.
     @AbsentOnCachedPayload
     val pendingInvites: List<PendingInviteView> = emptyList(),
-    // On a save's answer only: the friends it invited, and those it did not because they are already
-    // in a party for this boss.
+    // On a save's answer only: the friends whose player was asked to move them here, and those left
+    // out. Kept beside `outcome` for a client from before it.
     val invited: List<String> = emptyList(),
     val alreadyPartied: List<String> = emptyList(),
+    // On a save's answer only: what happened to each friend's character it named. See PartyInvites.kt.
+    @AbsentOnCachedPayload
+    val outcome: List<RosterNameOutcome> = emptyList(),
     val createdAt: String,
     val updatedAt: String,
+)
+
+/** What a roster save did with a friend's character. */
+@Serializable
+enum class RosterResult {
+    /** Seated and bound to their account. */
+    SEATED,
+
+    /** In another party for the boss, so its player was asked to move it here. Not seated yet. */
+    ASKED,
+
+    /** Seated for one week only; its other party keeps it. */
+    GUEST,
+
+    /** Not seated: its own party for the boss, or already ran the boss that week elsewhere. */
+    LEFT_OUT,
+}
+
+/** One friend's character in a save's answer, with the sentence to show, when there is one. */
+@Serializable
+data class RosterNameOutcome(
+    val name: String,
+    val result: RosterResult,
+    val text: String? = null,
 )
 
 /** The party an accepted invite seated you in. See PartyInviteRoutes.kt. */

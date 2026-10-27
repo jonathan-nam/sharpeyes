@@ -187,7 +187,7 @@ private suspend fun RoutingContext.createPartyRoute(
                     partyIdFor(characterId, bossId)
                 }
             // Friends' characters are seated and bound. See PartyInvites.kt.
-            val (request, split) = typed.seatingFriends(userId, held, bossId)
+            val (request, split) = typed.seatingFriends(userId, held, bossId, typed.oneOff, now)
             val putBack = held?.takeIf { typed.oneOff && typed.members.isNotEmpty() && isSkippedStanding(it, now) }
             val takeOver = held?.takeIf { takesOverConfig(it, typed, now) }
             val saved =
@@ -243,17 +243,24 @@ private suspend fun RoutingContext.savePartyRoute(
             if (keeper == null) {
                 null
             } else {
-                val (request, split) = typed.seatingFriends(keeper, partyId, bossIdOfParty(partyId))
+                val (request, split) =
+                    typed.seatingFriends(
+                        keeper,
+                        partyId,
+                        bossIdOfParty(partyId),
+                        isOneOff(partyId),
+                        now,
+                    )
                 // The row's kind, not the request's: oneOff is read at create only, so an edit
                 // leaves it as it was.
                 val problem =
-                    memberSeatRefusal(userId, keeper, split.seated)
+                    memberSeatRefusal(userId, keeper, split.friends)
                         ?: validateSavedParty(keeper, partyId, request, now, isOneOff(partyId))
                 if (problem != null) {
                     problem
                 } else {
-                    // Everyone else left out for being in another party: still a party, not a solo pool.
-                    saveParty(keeper, partyId, request, now, sprites, keepParty = split.partied.isNotEmpty())
+                    // Everyone else asked to move here or left out: still a party, not a solo pool.
+                    saveParty(keeper, partyId, request, now, sprites, keepParty = split.out.isNotEmpty())
                     findParty(partyId, keeper)!!
                         .withFriendSeats(keeper, split, now, adder = userId)
                         .seenBy(partyId, userId, keeper)
@@ -302,10 +309,10 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
             // the payload, so a browser a day out cannot file a roster in the neighbouring week.
             val week = asked ?: thisWeek
             // A friend not yet in the party is seated, the same as from its own roster.
-            val asking = weekSplit(keeper, partyId, request.members)
+            val asking = weekSplit(keeper, partyId, request.members, week, Clock.System.now())
             val named = asking.named
             val problem =
-                memberSeatRefusal(userId, keeper, asking.split.seated)
+                memberSeatRefusal(userId, keeper, asking.split.friends)
                     ?: validateRosterWeek(partyId, week, thisWeek)
                     ?: validateRosterClear(partyId, named)
                     ?: named?.let { members ->
@@ -327,7 +334,7 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
                     val now = Clock.System.now()
                     if (asking.writes) writeWeek(partyId, characterId, week, named, SeatContext(keeper, sprites, now))
                     findParty(partyId, keeper)!!
-                        .withFriendSeats(keeper, asking.split, now, adder = userId)
+                        .withFriendSeats(keeper, asking.split, now, adder = userId, week = week)
                         .seenBy(partyId, userId, keeper)
                 }
             }

@@ -91,7 +91,7 @@ internal fun removeMember(
 }
 
 /** Takes [seats] out of [party]'s roster and their accounts off them. Leaving and removal both. */
-private fun takeOutSeats(
+internal fun takeOutSeats(
     party: ResultRow,
     seats: List<Pair<Uuid, String>>,
     now: Instant,
