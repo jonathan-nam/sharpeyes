@@ -90,7 +90,7 @@ import { showsMoney } from "@/lib/world";
 import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { DropTables } from "@/types/drop";
-import type { Loot, LogDropBody, PartyLootPool } from "@/types/loot";
+import type { AddLootBody, Loot, LogDropBody, PartyLootPool } from "@/types/loot";
 import type { DropLogPage, SharedBook } from "@/types/page";
 import { SharedCards, type SharedWrites } from "@/components/shared-cards";
 import { OthersSales } from "@/components/others-sales";
@@ -103,7 +103,7 @@ import { sharedPile } from "@/lib/shared-pile";
 import type { ListingKit } from "@/components/settlement-listing";
 import { figuresToReport, LISTINGS_KEY } from "@/lib/settlement-listings";
 import type { SettlementListing } from "@/types/settlement-listing";
-import type { Party, Person } from "@/types/party";
+import type { Party, Person, SaveSharesBody } from "@/types/party";
 import type {
   ProceedsDisposal,
   SettlementDebt,
@@ -311,16 +311,14 @@ export default function DropLog({ children }: { children: ReactNode }) {
    *
    * Both lists, not just the pools: a drop on a boss run alone opens a config for it, and without
    * that config the drop has no seats to be read against and would not appear at all.
+   *
+   * A coupon night with its split on screen goes to that party's own pool instead (see LogDrop).
    */
-  async function logDrop(body: LogDropBody) {
+  async function logDrop(path: string, body: LogDropBody | AddLootBody) {
     setError(null);
     await writes.track(async () => {
       try {
-        await apiFetch<unknown>(
-          "/api/parties/loot",
-          { method: "POST", body: JSON.stringify(body) },
-          getToken,
-        );
+        await apiFetch<unknown>(path, { method: "POST", body: JSON.stringify(body) }, getToken);
         // Past the POST the drop is in, whatever the read-back does. See StaleAfterWrite.
         await readBack(load);
       } catch (e) {
@@ -333,6 +331,21 @@ export default function DropLog({ children }: { children: ReactNode }) {
         setError(failureText(e, "That didn't save. Try again."));
         throw e;
       }
+    });
+  }
+
+  /** The party's standing coupon split, saved from the Add Drop form. Throws for the boxes to show. */
+  async function saveShares(party: Party, shares: Map<string, number>) {
+    await writes.track(async () => {
+      await apiFetch<Party>(
+        `/api/parties/${party.id}/shares`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ shares: Object.fromEntries(shares) } satisfies SaveSharesBody),
+        },
+        getToken,
+      );
+      await readBack(load);
     });
   }
 
@@ -724,8 +737,11 @@ export default function DropLog({ children }: { children: ReactNode }) {
                     bosses={bosses}
                     parties={parties}
                     dropTables={dropTables}
+                    behind={behind}
                     busy={busy}
-                    onLog={logDrop}
+                    onLog={(body) => logDrop("/api/parties/loot", body)}
+                    onLogToParty={(party, body) => logDrop(`/api/parties/${party.id}/loot`, body)}
+                    onSaveShares={saveShares}
                   />
                 )}
                 {error && <p className="split-error">{error}</p>}

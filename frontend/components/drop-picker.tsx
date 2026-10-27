@@ -28,9 +28,8 @@ import type { Party } from "@/types/party";
 /**
  * The stacking drop's own two blocks, answerable in the form that is about to log it.
  *
- * Only this form gets them. The Drop Log's picker resolves its pool on the server, so there is no
- * party in hand to split anything by, and the party's own page reads its rows rather than answering
- * for them.
+ * Only this form gets them: the party's own page reads its rows rather than answering for them. The
+ * Drop Log's picker carries them only for a party running this week (see LogDrop).
  */
 export type StackDraft = {
   /** The drop the blocks are about. They appear only when it is the one picked. */
