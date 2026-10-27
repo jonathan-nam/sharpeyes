@@ -8,7 +8,7 @@ import { SaveGroup, useSaveGroup } from "@/components/save-group";
 import { StaleAfterWrite, failureText } from "@/lib/api";
 import { StackAssign } from "@/components/stack-assign";
 import { nightLabel, poolNights, ranAtThisMode } from "@/lib/pool-nights";
-import type { PieceStatus } from "@/lib/drop-log";
+import { isDropHistory, type PieceStatus } from "@/lib/drop-log";
 import { takenTally } from "@/lib/loot";
 import { modeThisWeek } from "@/lib/parties";
 import { memberSeats } from "@/lib/parties/member-view";
@@ -90,7 +90,13 @@ export function LootPool({
    * it is marked paid.
    */
   const [showingOthers, setShowingOthers] = useState(false);
-  const nights = poolNights(loot, party);
+  // Drops with nothing left to do, behind their own toggle so the pool reads as a worklist.
+  const [showingHistory, setShowingHistory] = useState(false);
+  const past = loot.filter((row) => isDropHistory(row, pieceStatus));
+  const nights = poolNights(
+    loot.filter((row) => !isDropHistory(row, pieceStatus)),
+    party,
+  );
   const here = nights.filter((night) => ranAtThisMode(night, party));
   const others = nights.filter((night) => !ranAtThisMode(night, party));
   const hidden = others.reduce((count, night) => count + night.loot.length, 0);
@@ -152,7 +158,7 @@ export function LootPool({
 
         {/* Nothing of THIS config's. A pool holding only other arrangements' nights is not empty, and
           saying it was would be the screen disagreeing with the line under it. */}
-        {here.length === 0 && hidden === 0 && (
+        {here.length === 0 && hidden === 0 && past.length === 0 && (
           <p className="finder-empty">Nothing in the pool yet.</p>
         )}
 
@@ -203,7 +209,7 @@ export function LootPool({
           </div>
         ))}
 
-        {stacks && here.length > 0 && (
+        {stacks && (here.length > 0 || past.length > 0) && (
           <div className="loot-config-card">
             <h3 className="loot-group-title is-config">{stacks.entitledTitle}</h3>
             <StackAssign
@@ -225,6 +231,41 @@ export function LootPool({
             </Button>
             {showingOthers &&
               others.map((night) => (
+                <div className="loot-night" key={night.weekStart}>
+                  <h3 className="loot-night-title">{nightLabel(night, party)}</h3>
+                  <LootList
+                    party={party}
+                    loot={night.loot}
+                    dropTables={dropTables}
+                    bossByKey={bossByKey}
+                    pieceStatus={pieceStatus}
+                    stacks={stacks}
+                    splitElsewhere
+                    editing={editing}
+                    isSaving={isSaving}
+                    readOnly={readOnly}
+                    onSell={onSell}
+                    onUnsell={onUnsell}
+                    onSetTaken={onSetTaken}
+                    onSetPaid={onSetPaid}
+                    onDelete={onDelete}
+                  />
+                </div>
+              ))}
+          </div>
+        )}
+
+        {past.length > 0 && (
+          <div className="loot-elsewhere">
+            <Button
+              variant="secondary"
+              aria-expanded={showingHistory}
+              onClick={() => setShowingHistory((open) => !open)}
+            >
+              {showingHistory ? "Hide Drop History" : `Show Drop History (${past.length})`}
+            </Button>
+            {showingHistory &&
+              poolNights(past, party).map((night) => (
                 <div className="loot-night" key={night.weekStart}>
                   <h3 className="loot-night-title">{nightLabel(night, party)}</h3>
                   <LootList
