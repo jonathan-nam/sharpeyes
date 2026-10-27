@@ -84,7 +84,18 @@ internal fun payoutRefusal(
         Refusal("You can only mark a share you sent or were sent.")
     }
 
-/** Deleting [loot]:the owner, or a member taking back a drop they logged that nobody has sold or kept. */
+/**
+ * Deleting [loot] once it is sold and every share is paid: nobody, owner included. Its payout rows
+ * are the record that money moved, so the sale is undone first.
+ */
+internal fun settledRefusal(loot: LootResponse): Refusal? =
+    if (loot.soldAt != null && loot.payouts.all { it.paid }) {
+        Refusal("This drop is sold and settled. Undo the sale to remove it.")
+    } else {
+        null
+    }
+
+/** Deleting [loot]: the owner, or a member taking back a drop they logged that nobody has sold or kept. */
 internal fun mayDeleteLoot(
     partyId: Uuid,
     userId: String,
