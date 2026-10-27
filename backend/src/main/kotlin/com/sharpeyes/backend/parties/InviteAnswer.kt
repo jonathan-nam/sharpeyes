@@ -169,7 +169,9 @@ private fun seat(
             null
         }
     val context = SeatContext(owner, emptyMap(), now)
-    writeMembers(partyId, ownCharacterId, others + name, context, shares)
+    // A one-off's guests stand nowhere but its night, so its seats are written in the night's order:
+    // `others` alone would retire them and put the friend joining ahead of them.
+    writeMembers(partyId, ownCharacterId, (night ?: others) + name, context, shares)
     if (night != null) writeNightRoster(partyId, ownCharacterId, night + name, now, context)
     // insertSeat binds only a seat it creates. One typed before the friendship, or unbound when the
     // party was taken off the lists, is reused by name and would stay nobody's.

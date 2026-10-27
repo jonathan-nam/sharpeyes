@@ -454,6 +454,22 @@ class PartyInvitesTest {
         }
     }
 
+    // Rosters are ordered by position, so a tie came back in either order. It made the test above flaky.
+    @Test
+    fun `a friend accepting a one-off leaves every seat its own position`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            link(owner, "Chris", member)
+            val partyId = oneOff(owner, tide, listOf("Baldrix"))
+
+            acceptPending(partyId, pine)
+            val seats = PartyMember.selectAll().where { PartyMember.partyId eq partyId }
+            val positions = seats.map { it[PartyMember.position] }
+            assertEquals(positions.size, positions.toSet().size, "positions $positions")
+        }
+    }
+
     // A seat typed before the friendship, or unbound when the party was taken off the lists.
     @Test
     fun `accepting binds the seat the character already has`() {
