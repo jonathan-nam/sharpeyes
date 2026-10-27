@@ -31,8 +31,10 @@ import {
   type CandidateRun,
   EMPTY_PLAN,
   type EligibleRun,
+  type PlanOptions,
   planNight,
   screenRuns,
+  shuffledNight,
   tradeOffs,
   withoutRunsByCount,
 } from "@/lib/boss-run-plan";
@@ -139,13 +141,18 @@ function preferredOrder(
   hidden: ReadonlySet<string>,
   night: number,
   available: Record<string, Availability>,
+  seed: number | null,
 ): string[] {
   const runs = screenRuns(allRuns, hereAll).eligible;
   let hiddenMinutes = 0;
   for (const run of runs) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
-  return planNight(runs, { minutes: night + hiddenMinutes, available }).best.runs.map(
+  return planOf(runs, { minutes: night + hiddenMinutes, available }, seed).best.runs.map(
     (planned) => planned.run.id,
   );
+}
+
+function planOf(runs: EligibleRun[], options: PlanOptions, seed: number | null) {
+  return seed === null ? planNight(runs, options) : shuffledNight(runs, options, seed);
 }
 
 export default function RunOrderPage() {
@@ -211,6 +218,16 @@ export default function RunOrderPage() {
   function choosePlan(bosses: number) {
     setChosen(bosses);
     replaceQuery({ plan: String(bosses) });
+  }
+  // What breaks ties between equally good orders, from Shuffle. Null is the run ids. In the URL
+  // with the plan, so a reload does not reshuffle the night being run.
+  const [chosenSeed, setChosenSeed] = useState<number | null>(null);
+  const urlSeed = Number(new URLSearchParams(search).get("shuffle"));
+  const seed = chosenSeed ?? (Number.isInteger(urlSeed) && urlSeed > 0 ? urlSeed : null);
+  function shuffle() {
+    const next = 1 + Math.floor(Math.random() * 0x7ffffffe);
+    setChosenSeed(next);
+    replaceQuery({ shuffle: String(next) });
   }
 
   // Whether the night runs to the clock at all. Off, it is an ORDER: nothing bounds it, the windows
@@ -589,15 +606,19 @@ export default function RunOrderPage() {
     // The hidden runs take no time tonight, so the search gets their minutes back on top.
     let hiddenMinutes = 0;
     for (const run of searched) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
-    const full = planNight(searched, {
-      minutes: night + hiddenMinutes,
-      available,
-      prefer: shown.everyoneOn
-        ? preferredOrder(allRuns, hereAll, hidden, night, available)
-        : undefined,
-    });
+    const full = planOf(
+      searched,
+      {
+        minutes: night + hiddenMinutes,
+        available,
+        prefer: shown.everyoneOn
+          ? preferredOrder(allRuns, hereAll, hidden, night, available, seed)
+          : undefined,
+      },
+      seed,
+    );
     return withoutRunsByCount(full.byCount, hidden, { minutes: night, available });
-  }, [searched, hidden, night, available, shown.everyoneOn, allRuns, hereAll]);
+  }, [searched, hidden, night, available, shown.everyoneOn, allRuns, hereAll, seed]);
   const best = byCount[byCount.length - 1] ?? EMPTY_PLAN;
 
   const options = useMemo(() => tradeOffs(byCount), [byCount]);
@@ -952,6 +973,9 @@ export default function RunOrderPage() {
           <div className="night-plan-copy">
             <div className="night-plan-line">
               <CopyPlan plan={plan} roster={onTonight} />
+              <button type="button" className="copy-amount" onClick={shuffle}>
+                <span className="copy-value">Shuffle</span>
+              </button>
               {/* How far through the night is, in the words Party View already counts clears in.
                   The rows say which ones; this says how many are left without counting them. */}
               {log && (

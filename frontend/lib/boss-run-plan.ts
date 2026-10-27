@@ -730,6 +730,81 @@ export function planNight(
   return { best: byCount[byCount.length - 1] ?? EMPTY_PLAN, byCount };
 }
 
+/** `ids` in an order fixed by `seed`: the same seed, the same order. */
+export function shuffledIds(ids: readonly string[], seed: number): string[] {
+  // mulberry32
+  let a = seed;
+  const rand = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const out = [...ids];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    swap(out, i, j);
+  }
+  return out;
+}
+
+/** Runs each person sits out between two of their own, summed. See WAITING. */
+function waitingOf(plan: Plan): number {
+  const lastAt = new Map<string, number>();
+  let waiting = 0;
+  plan.runs.forEach((planned, at) => {
+    for (const seat of planned.run.seats) {
+      const before = lastAt.get(seat.personId);
+      if (before !== undefined) waiting += at - before - 1;
+      lastAt.set(seat.personId, at);
+    }
+  });
+  return waiting;
+}
+
+/** betterPlanned, less its tie-break, on two finished plans of the same length. Zero is a tie. */
+export function comparePlans(a: Plan, b: Plan): number {
+  for (let i = 0; i < a.runs.length; i++) {
+    const left = (a.runs[i] as PlannedRun).run.seats.length;
+    const right = (b.runs[i] as PlannedRun).run.seats.length;
+    if (left !== right) return right - left;
+  }
+  const waiting = waitingOf(a) - waitingOf(b);
+  if (waiting !== 0) return waiting;
+  if (a.switches !== b.switches) return a.switches - b.switches;
+  return a.minutes - b.minutes;
+}
+
+/**
+ * planNight with its ties broken by `seed` instead of by run id, for Run Order's Shuffle.
+ *
+ * The tie-break also decides which states the beam keeps, so a shuffled search can end on a worse
+ * plan than the plain one. Both are run, and at each length the shuffled plan is kept only where
+ * it scores at least as well. A `prefer` still comes first, the shuffle breaking what it leaves.
+ */
+export function shuffledNight(
+  runs: EligibleRun[],
+  options: PlanOptions,
+  seed: number,
+): { best: Plan; byCount: Plan[] } {
+  const plain = planNight(runs, options);
+  const named = new Set(options.prefer);
+  const rest = runs.map((run) => run.id).filter((id) => !named.has(id));
+  const prefer = [...(options.prefer ?? []), ...shuffledIds(rest, seed)];
+  const shuffled = planNight(runs, { ...options, prefer });
+
+  const byCount: Plan[] = [];
+  const lengths = Math.max(plain.byCount.length, shuffled.byCount.length);
+  for (let i = 0; i < lengths; i++) {
+    const mine = shuffled.byCount[i];
+    const theirs = plain.byCount[i];
+    if (mine === undefined) byCount.push(theirs as Plan);
+    else if (theirs === undefined || comparePlans(mine, theirs) <= 0) byCount.push(mine);
+    else byCount.push(theirs);
+  }
+  return { best: byCount[byCount.length - 1] ?? EMPTY_PLAN, byCount };
+}
+
 /**
  * A plan with some of its runs taken out, the rest kept in the same order and re-timed.
  *
