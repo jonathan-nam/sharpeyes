@@ -163,7 +163,8 @@ private suspend fun RoutingContext.getParty() {
  * A one-off run again in a later period is armed for that period rather than duplicated, which is
  * what keeps idx_party_character_boss and partyIdFor answering with one config.
  *
- * A one-off on a standing party taken off this period puts that party back on. See PartyPutBack.kt.
+ * A one-off on a standing party taken off this period puts that party back on, and so does asking
+ * for that party again, yours or a linked account's you sit in. See PartyPutBack.kt.
  */
 private suspend fun RoutingContext.createPartyRoute(
     nexonLookupService: NexonLookupService,
@@ -190,6 +191,9 @@ private suspend fun RoutingContext.createPartyRoute(
             val (request, split) = typed.seatingFriends(userId, held, bossId, typed.oneOff, now)
             val putBack = held?.takeIf { typed.oneOff && typed.members.isNotEmpty() && isSkippedStanding(it, now) }
             val takeOver = held?.takeIf { takesOverConfig(it, typed, now) }
+            // As it stood, roster and all: the typed names are not seated over it.
+            val deleted = deletedThisPeriod(userId, held, characterId, bossId, typed, now)
+            if (deleted != null) return@dbQuery bringBack(deleted, userId, now)
             val saved =
                 if (putBack != null) {
                     val problem = validatePutBack(userId, putBack, request)

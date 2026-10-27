@@ -386,21 +386,16 @@ export function PartyCard({
                     </Button>
                   )}
                   {onTakeOff && (
-                    <button
-                      type="button"
-                      className="party-delete"
-                      disabled={busy}
-                      onClick={async () => {
+                    <ConfirmAct
+                      label="Delete"
+                      question="Delete for This Week?"
+                      keep="Keep"
+                      busy={busy ?? false}
+                      onConfirm={() => {
                         setOffError(null);
-                        try {
-                          await onTakeOff();
-                        } catch {
-                          setOffError("That didn't save.");
-                        }
+                        onTakeOff().catch(() => setOffError("That didn't save."));
                       }}
-                    >
-                      Delete
-                    </button>
+                    />
                   )}
                 </div>
               )}

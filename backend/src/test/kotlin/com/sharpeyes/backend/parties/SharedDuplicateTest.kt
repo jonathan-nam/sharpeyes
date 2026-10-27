@@ -24,6 +24,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
@@ -121,6 +122,38 @@ class SharedDuplicateTest {
                 party.id,
                 sharedDuplicateOf(member, pine, boss("kalos-the-guardian"), listOf("Someone"))?.partyId,
             )
+        }
+    }
+
+    @Test
+    fun `starting a linked owner's party deleted this week brings theirs back`() {
+        transaction {
+            val theirs = character(owner, "orchid88")
+            val pine = character(member, "Pinewick")
+            link(owner, "Chris", member)
+            val id = Uuid.parse(config(theirs, listOf("Pinewick")).id)
+            val now = Clock.System.now()
+            val period = periodShown(bossResetOf(boss("kalos-the-guardian"))!!, week = null, now = now)
+            setRunsInPeriod(id, oneOff = false, period, runs = false, now = now)
+
+            // A seated member deleted it for the week, then asked for it again: a 409 naming a party
+            // their list no longer shows, with Add Anyway counting the night twice.
+            val request = SavePartyRequest(pine.toString(), "kalos-the-guardian", listOf("orchid88"))
+            val asked = { by: String, character: Uuid, req: SavePartyRequest ->
+                deletedThisPeriod(by, held = null, character, boss("kalos-the-guardian"), req, now)
+            }
+            assertEquals(id, asked(member, pine, request))
+            // Add Anyway still means a second party.
+            assertNull(asked(member, pine, request.copy(separate = true)))
+            // Only by a character of your own: the seat lookup would otherwise answer for anybody's.
+            val other = character(stranger, "Nobody")
+            assertNull(asked(stranger, pine, request))
+            assertNull(asked(stranger, other, request))
+
+            assertNull(putBackOn(id, now))
+            assertFalse(isSkippedStanding(id, now))
+            // Back on, it is the duplicate it always was.
+            assertNull(asked(member, pine, request))
         }
     }
 

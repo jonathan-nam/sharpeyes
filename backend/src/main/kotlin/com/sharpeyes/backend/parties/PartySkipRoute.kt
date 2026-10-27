@@ -62,36 +62,12 @@ internal suspend fun RoutingContext.setSkipRoute() {
                 // server's clock rather than the payload, so a browser a day out cannot take a boss
                 // off the neighbouring week.
                 asked != null && asked != currentWeek() -> "only this week can be changed"
+                !request.skipped -> bringBack(partyId, userId, now)
                 else -> {
-                    // A spent one-off holds nobody while it is off (see validateBossRoster), so
-                    // somebody in it may have joined another party for this boss since. Putting it
-                    // back on is the only door into that pair that does not write a config, so the
-                    // rule is kept here too rather than let two of your parties run one clear.
                     val oneOff = isOneOff(partyId)
-                    val clash =
-                        if (request.skipped) {
-                            null
-                        } else {
-                            validateBossRoster(
-                                keeper,
-                                bossId,
-                                exclude = partyId,
-                                rosterNamesFor(partyId, currentWeek()),
-                                now,
-                                oneOff,
-                            )
-                        }
-                    if (clash != null) {
-                        clash
-                    } else {
-                        val period = periodShown(reset, week = null, now = now)
-                        setRunsInPeriod(partyId, oneOff, period, runs = !request.skipped, now = now)
-                        if (oneOff && request.skipped && retractNight(partyId, reset, period)) {
-                            Gone
-                        } else {
-                            findParty(partyId, userId)
-                        }
-                    }
+                    val period = periodShown(reset, week = null, now = now)
+                    setRunsInPeriod(partyId, oneOff, period, runs = false, now = now)
+                    if (oneOff && retractNight(partyId, reset, period)) Gone else findParty(partyId, userId)
                 }
             }
         }
