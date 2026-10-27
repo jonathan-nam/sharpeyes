@@ -18,7 +18,9 @@ describe("which section a path belongs to", () => {
     expect(labelFor("/bosses/order")).toBe("Run Order");
     expect(labelFor("/bosses/split")).toBe("Drop Splitter");
     expect(labelFor("/bosses/planner")).toBe("Party Planner");
-    expect(labelFor("/bosses/drops")).toBe("Drop Log");
+    expect(labelFor("/bosses/drops")).toBe("Drops");
+    expect(labelFor("/bosses/drops/sales")).toBe("Sales");
+    expect(labelFor("/bosses/drops/settlements")).toBe("Settlements");
   });
 
   it("keeps a nested section off its parent", () => {
@@ -38,6 +40,11 @@ describe("which section a path belongs to", () => {
     // still one page under Party View. See lib/party-path.ts.
     expect(labelFor("/bosses/parties/tidelark/kalos-the-guardian")).toBe("Party View");
     expect(labelFor("/bosses/parties/heroic/rune/kalos-the-guardian")).toBe("Party View");
+  });
+
+  it("lights Settlements for the history, and Drops for a drop's own page", () => {
+    expect(labelFor("/bosses/drops/settlements/history")).toBe("Settlements");
+    expect(labelFor("/bosses/drops/3f2504e0-4f89-11d3-9a0c-0305e82c3301")).toBe("Drops");
   });
 
   it("does NOT light Party View for the Drop Log", () => {
@@ -62,12 +69,19 @@ describe("what the menu lists", () => {
     expect(HREFS).not.toContain("/bosses/parties/edit");
   });
 
-  it("lists the Drop Log on its own, not under Bossing", () => {
+  it("lists the Drop Log's stages under their own heading, not under Bossing", () => {
     expect(SECTIONS.find((s) => s.items.some((i) => i.href === "/bosses/drops"))?.group).toBe(
-      undefined,
+      "Drop Log",
     );
+    const dropLog = SECTIONS.find((s) => s.group === "Drop Log")!;
+    expect(dropLog.items.map((i) => i.label)).toEqual(["Drops", "Sales", "Settlements"]);
     const bossing = SECTIONS.find((s) => s.group === "Bossing")!;
     expect(bossing.items.map((i) => i.label)).toEqual(["Boss Matrix", "Party View", "Run Order"]);
+  });
+
+  it("lists only the Drops in a world with nothing to trade", () => {
+    const dropLog = sectionsFor(false).find((s) => s.group === "Drop Log")!;
+    expect(dropLog.items.map((i) => i.label)).toEqual(["Drops"]);
   });
 
   it("lists the sections a person navigates between", () => {
@@ -77,6 +91,8 @@ describe("what the menu lists", () => {
       "/bosses/parties",
       "/bosses/order",
       "/bosses/drops",
+      "/bosses/drops/sales",
+      "/bosses/drops/settlements",
       "/inventory",
       "/bosses/planner",
       "/bosses/split",
@@ -105,8 +121,11 @@ describe("what the welcome-back screen offers", () => {
     // by itself; a label typed here again would quietly keep the old word.
     const items = SECTIONS.flatMap((s) => s.items);
     for (const row of HOME_ROWS) {
-      if (row.href) expect(items.find((i) => i.href === row.href)?.label).toBe(row.label);
+      // The Drop Log row opens its first stage and is named after its heading.
+      const group = SECTIONS.find((s) => s.items.some((i) => i.href === row.href))?.group;
+      if (row.href && !group) expect(items.find((i) => i.href === row.href)?.label).toBe(row.label);
       else expect(SECTIONS.map((s) => s.group)).toContain(row.label);
+      if (group) expect(row.label).toBe(group);
       for (const item of row.items) expect(items).toContainEqual(item);
     }
   });
@@ -153,9 +172,17 @@ describe("every destination can be shown before it has loaded", () => {
   // however early it was prefetched. /characters shipped that way and was the one menu entry that
   // could not answer a click. Checked here rather than by eye: adding a section is adding a link,
   // and nothing about writing that link suggests a second file is owed.
+  //
+  // The Drop Log's stages sit in a route group, (log), whose layout they share. The boundary is the
+  // group's, one level up: inside it the layout stays put and there is nothing to wait for.
+  const DROP_LOG = join(__dirname, "..", "app", "bosses", "drops");
   it.each(HREFS)("has a loading boundary: %s", (href) => {
-    const dir = join(__dirname, "..", "app", ...href.split("/").filter(Boolean));
+    const segments = href.split("/").filter(Boolean);
+    const grouped = href.startsWith("/bosses/drops");
+    const dir = grouped
+      ? join(DROP_LOG, "(log)", ...segments.slice(2))
+      : join(__dirname, "..", "app", ...segments);
     expect(existsSync(join(dir, "page.tsx"))).toBe(true);
-    expect(existsSync(join(dir, "loading.tsx"))).toBe(true);
+    expect(existsSync(join(grouped ? DROP_LOG : dir, "loading.tsx"))).toBe(true);
   });
 });

@@ -30,7 +30,7 @@ import type { ProceedsDisposal } from "@/types/vestige";
 // reason is here: the two entries are NOT equivalent downstream. The last case in this file is the
 // 600m of your own money that the hand-prorated version reports nowhere.
 //
-// Every figure comes off the real pipeline, the way app/bosses/drops/page.tsx assembles it, because
+// Every figure comes off the real pipeline, the way app/bosses/drops/(log)/layout.tsx assembles it, because
 // the failure this pins is one of the surfaces disagreeing rather than one of them being wrong alone.
 
 const M = 1_000_000;

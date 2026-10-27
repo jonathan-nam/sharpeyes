@@ -709,7 +709,10 @@ describe("the picker the card draws", () => {
 // pile of coupons that owes nobody is unsellable through the app until it owes somebody again, and a
 // tranche mistyped on a settled pile can no longer be taken back off. Nothing in lib can see the
 // Drop Log's own wiring, so the cost is pinned here: restoring either control means changing these.
-const page = readFileSync(join(__dirname, "..", "app", "bosses", "drops", "page.tsx"), "utf8");
+const page = readFileSync(
+  join(__dirname, "..", "app", "bosses", "drops", "(log)", "layout.tsx"),
+  "utf8",
+);
 
 describe("the piles the ledger holds back", () => {
   it("offers no way to ask for one", () => {

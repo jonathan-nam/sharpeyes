@@ -44,7 +44,7 @@ import com.sharpeyes.money.sharedparties.withoutLoot
 import kotlinx.serialization.Serializable
 
 // Every figure the Drop Log and its cards draw, off one account's two payloads: its own page and the
-// books other owners keep with it. The composition app/bosses/drops/page.tsx runs today, and what the
+// books other owners keep with it. The composition app/bosses/drops/(log)/layout.tsx runs today, and what the
 // backend serves in its place (docs/backend-arithmetic-plan.md, Phase 3).
 
 /** A pile somebody who signs in holds, netted the way their own card nets it. */

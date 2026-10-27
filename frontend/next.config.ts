@@ -86,10 +86,21 @@ const nextConfig: NextConfig = {
   // The Drop Log came out from under Party View when it started holding drops from bosses that
   // have no party. Permanent, since the old path is nobody's page any more.
   // People moved onto Social. Old links and bookmarks still land.
+  // The Drop Log's stages were `?section=` on one page before each had its own. The query carries
+  // over, so a `&card=` still finds its Settlement card.
   async redirects() {
+    const stage = (section: string, destination: string) => ({
+      source: "/bosses/drops",
+      has: [{ type: "query" as const, key: "section", value: section }],
+      destination,
+      permanent: true,
+    });
     return [
       { source: "/bosses/parties/drops", destination: "/bosses/drops", permanent: true },
       { source: "/bosses/people", destination: "/social/people", permanent: true },
+      stage("sales", "/bosses/drops/sales"),
+      stage("settlement", "/bosses/drops/settlements"),
+      stage("settled", "/bosses/drops/settlements/history"),
     ];
   },
 };

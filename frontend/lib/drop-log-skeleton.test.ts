@@ -5,7 +5,7 @@ import { dropSections } from "./drop-sections";
 
 const root = join(__dirname, "..");
 const skeleton = readFileSync(join(root, "components", "drop-log-skeleton.tsx"), "utf8");
-const page = readFileSync(join(root, "app", "bosses", "drops", "page.tsx"), "utf8");
+const page = readFileSync(join(root, "app", "bosses", "drops", "(log)", "layout.tsx"), "utf8");
 
 // The Drop Log's loading state has to be the page's SHAPE, not a line of text where a page will be.
 // Screenshotting a real click is what settled it: the old placeholder left 1.3s of an all-but-empty
@@ -21,10 +21,10 @@ const page = readFileSync(join(root, "app", "bosses", "drops", "page.tsx"), "utf
 // its absence now, below, because a placeholder for a row the page does not draw jumps exactly as
 // far as a missing one, in the other direction.
 describe("the Drop Log's loading state is the page's shape", () => {
-  // Split by who renders it. The page draws the tabs and the list itself; the Add Drop panel is
+  // Split by who renders it. The page draws the heading and the list itself; the Add Drop panel is
   // LogDrop's and its row of controls is DropPicker's. Asserting all of them against page.tsx
   // passed nothing and only proved the test had not been run.
-  const OWN = ["droplog-sections", "party-toolbar", "droplog-list"];
+  const OWN = ["DropLogHead", "party-toolbar", "droplog-list"];
   const BORROWED = [
     ["add-section", join("components", "log-drop.tsx")],
     ["add-card", join("components", "drop-picker.tsx")],
@@ -46,25 +46,23 @@ describe("the Drop Log's loading state is the page's shape", () => {
     expect(skeleton, `the skeleton is missing ${cls}`).toContain(cls);
   });
 
-  // The tabs are the one part with real words on it, and they are a constant, so it can read them
-  // rather than restate them. Hardcoding the labels is how the strip ends up a rename behind.
-  it("takes its tabs from dropSections rather than spelling them out", () => {
+  // The heading is the one part with real words on it, and they are a constant, so it can read them
+  // rather than restate them. Hardcoding the labels is how it ends up a rename behind.
+  it("takes its heading from dropSections rather than spelling it out", () => {
     expect(skeleton).toContain("dropSections");
     for (const section of dropSections(true)) {
       expect(skeleton, `${section.label} is hardcoded`).not.toContain(`>${section.label}<`);
     }
   });
 
-  // A Heroic world gets one section, so the page draws no strip at all. A skeleton that held four
-  // tabs above it would jump by the strip's whole height the moment the drops landed.
-  it("draws the strip on the same condition the page does", () => {
+  // A Heroic world gets one section, so the page draws no heading for it. A skeleton that held one
+  // would jump by its whole height the moment the drops landed.
+  it("draws the heading on the same condition the page does", () => {
     for (const [file, source] of [
       ["the page", page],
       ["the skeleton", skeleton],
     ] as const) {
-      expect(source, `${file} draws the tab strip unconditionally`).toContain(
-        "sections.length > 1",
-      );
+      expect(source, `${file} draws the heading unconditionally`).toContain("sections.length > 1");
     }
     expect(skeleton, "the skeleton cannot know the world").toContain("useAccountSettings");
   });

@@ -441,7 +441,10 @@ describe("folding the nights one act closed", () => {
 // here, the same way the ledger's other JSX invariants are.
 describe("Settled cannot be reopened", () => {
   const view = readFileSync(join(__dirname, "..", "components", "settled-view.tsx"), "utf8");
-  const page = readFileSync(join(__dirname, "..", "app", "bosses", "drops", "page.tsx"), "utf8");
+  const page = readFileSync(
+    join(__dirname, "..", "app", "bosses", "drops", "(log)", "layout.tsx"),
+    "utf8",
+  );
 
   it("offers no control on a settled row", () => {
     expect(view).not.toMatch(/Reopen/);

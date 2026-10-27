@@ -60,17 +60,16 @@ describe("the fully-settled state", () => {
   });
 });
 
-// Settled is the end of the pipeline, so it sits at the end of the row. Two rules that only work
-// together: `margin-left: auto` does nothing inside the `inline-flex` that `.basis-row` gives the
-// row, because the row shrinks to its chips and there is no free space to push into.
-describe("the Settled chip", () => {
-  it("sits in a row that spans the page, or it has nowhere to go", () => {
-    const rule = css.match(/^\.droplog-sections \{([^}]*)\}/m);
+// The way forward is top right. Two rules that only work together: `margin-left: auto` needs a
+// flex row with free space to push into.
+describe("the next stage's link", () => {
+  it("sits in a flex row", () => {
+    const rule = css.match(/^\.droplog-head-row \{([^}]*)\}/m);
     expect(rule?.[1]).toContain("display: flex");
   });
 
   it("is pushed to the far end", () => {
-    const rule = css.match(/^\.droplog-sections \.basis-tab:last-child \{([^}]*)\}/m);
+    const rule = css.match(/^\.droplog-head-next \{([^}]*)\}/m);
     expect(rule?.[1]).toContain("margin-left: auto");
   });
 });

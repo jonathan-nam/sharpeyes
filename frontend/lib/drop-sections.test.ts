@@ -4,8 +4,9 @@ import {
   dropSections,
   homeSections,
   saleCards,
-  sectionFromQuery,
+  sectionFromPath,
   sectionHref,
+  sectionSteps,
   settlementCardHref,
   shownSection,
 } from "./drop-sections";
@@ -41,7 +42,6 @@ describe("which sections the page has", () => {
   });
 
   it("puts them in pipeline order, which is the order a drop moves through them", () => {
-    // The tabs ARE the stages, so reading them left to right is reading what happens to a drop.
     // Settled last because nothing leaves it.
     expect(keys().indexOf("settled")).toBe(keys().length - 1);
   });
@@ -55,9 +55,8 @@ describe("which sections a Heroic world has", () => {
     expect(keys(false)).toEqual(["drops"]);
   });
 
-  // The strip is drawn on `sections.length > 1`, on the page and in the skeleton alike, so one
-  // section means no tabs at all rather than a strip with nothing to choose between.
-  it("leaves nothing to choose between, which is what takes the strip off screen", () => {
+  // The heading is drawn on `sections.length > 1`, on the page and in the skeleton alike.
+  it("leaves nothing to choose between, which is what takes the heading off screen", () => {
     expect(dropSections(false)).toHaveLength(1);
   });
 
@@ -81,8 +80,8 @@ describe("which section to draw", () => {
   });
 
   // Toggling the header to Heroic while standing on the Sale Ledger. Without this the page would
-  // keep drawing a tab the world does not have, with no strip left to leave it by.
-  it("falls back to the drops when the world drops the chosen tab", () => {
+  // keep drawing a stage the world does not have.
+  it("falls back to the drops when the world drops the chosen stage", () => {
     for (const key of ["sales", "settlement", "settled"] as const) {
       expect(shownSection(key, dropSections(false))).toBe("drops");
     }
@@ -92,14 +91,22 @@ describe("which section to draw", () => {
 describe("linking straight to a stage", () => {
   it("opens on the stage the link names", () => {
     for (const { key } of dropSections()) {
-      const url = new URL(sectionHref(key), "http://x");
-      expect(shownSection(sectionFromQuery(url.search) ?? "drops", dropSections())).toBe(key);
+      expect(sectionFromPath(sectionHref(key))).toBe(key);
+      expect(sectionFromPath(`${sectionHref(key)}/`)).toBe(key);
     }
   });
 
-  it("ignores a section that is not a stage", () => {
-    expect(sectionFromQuery("?section=wallet")).toBeUndefined();
-    expect(sectionFromQuery("")).toBeUndefined();
+  it("reads a drop's own page as no stage", () => {
+    expect(sectionFromPath("/bosses/drops/3f2504e0-4f89-11d3-9a0c-0305e82c3301")).toBeUndefined();
+  });
+
+  // The header lights the longest href a path starts with, so the history must sit under
+  // Settlements to light it, and every stage under the Drop Log.
+  it("nests the history under Settlements", () => {
+    expect(sectionHref("settled").startsWith(`${sectionHref("settlement")}/`)).toBe(true);
+    for (const { key } of dropSections()) {
+      expect(sectionHref(key).startsWith(sectionHref("drops"))).toBe(true);
+    }
   });
 
   it("offers the home screen every stage but Settled", () => {
@@ -114,11 +121,43 @@ describe("linking straight to a stage", () => {
 describe("linking straight to one Settlement card", () => {
   it("opens the Settlement stage and names the card the page scrolls to", () => {
     const url = new URL(settlementCardHref("3f2504e0-4f89-11d3-9a0c-0305e82c3301"), "http://x");
-    expect(sectionFromQuery(url.search)).toBe("settlement");
+    expect(sectionFromPath(url.pathname)).toBe("settlement");
     expect(cardFromQuery(url.search)).toBe("3f2504e0-4f89-11d3-9a0c-0305e82c3301");
   });
 
   it("names no card on a plain stage link", () => {
     expect(cardFromQuery(new URL(sectionHref("settlement"), "http://x").search)).toBeUndefined();
+  });
+});
+
+describe("the links either side of a stage", () => {
+  const steps = (key: Parameters<typeof sectionSteps>[0], trades?: boolean) => {
+    const { back, next } = sectionSteps(key, dropSections(trades));
+    return [back?.key, next?.key];
+  };
+
+  it("walks the pipeline, ending at the history", () => {
+    expect(steps("drops")).toEqual([undefined, "sales"]);
+    expect(steps("sales")).toEqual(["drops", "settlement"]);
+    expect(steps("settlement")).toEqual(["sales", "settled"]);
+    expect(steps("settled")).toEqual(["settlement", undefined]);
+  });
+
+  it("offers a Heroic world nowhere to go", () => {
+    expect(steps("drops", false)).toEqual([undefined, undefined]);
+  });
+});
+
+describe("an old ?section= link", () => {
+  it("redirects to the stage's own page", async () => {
+    const { default: config } = await import("../next.config");
+    const redirects = await config.redirects!();
+    for (const { key } of dropSections()) {
+      if (key === "drops") continue;
+      const rule = redirects.find(
+        (r) => r.source === "/bosses/drops" && r.has?.some((h) => "value" in h && h.value === key),
+      );
+      expect(rule?.destination, key).toBe(sectionHref(key));
+    }
   });
 });

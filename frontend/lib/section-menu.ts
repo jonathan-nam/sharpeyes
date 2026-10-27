@@ -3,6 +3,8 @@
 // Split out of the component because the highlight rule has a silent failure mode: a path that
 // resolves to the wrong entry does not error, it just lights the wrong word. See the tests.
 
+import { homeSections, sectionHref } from "@/lib/drop-sections";
+
 export type SectionItem = {
   href: string;
   label: string;
@@ -29,8 +31,9 @@ export type SectionItem = {
  * stopped being a menu and started being a list of every page. People is on Social, reached from
  * the avatar menu.
  *
- * The Drop Log is its own section, not a Bossing view: it holds what fell on bosses that have no
- * party, and it is where those are logged and sold. Same order as the welcome-back rows.
+ * The Drop Log is its own group, not a Bossing view: it holds what fell on bosses that have no
+ * party, and it is where those are logged and sold. Its stages come from lib/drop-sections.ts, so
+ * the two cannot drift. Same order as the welcome-back rows.
  */
 export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
   {
@@ -47,7 +50,12 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
     ],
   },
   {
-    items: [{ href: "/bosses/drops", label: "Drop Log" }],
+    group: "Drop Log",
+    items: homeSections().map((s) => ({
+      href: sectionHref(s.key),
+      label: s.label,
+      interactiveOnly: s.interactiveOnly,
+    })),
   },
   {
     items: [{ href: "/inventory", label: "Inventory" }],
@@ -66,7 +74,7 @@ export type HomeRow = {
   /** Undefined for a heading with no page of its own. A row that folds is drawn as a toggle either way. */
   href?: string;
   label: string;
-  /** What its chevron unfolds. The Drop Log's stages are not menu entries, so the page adds those. */
+  /** What its chevron unfolds. The Drop Log row's stages are added by the page, with their marks. */
   items: SectionItem[];
 };
 
@@ -96,7 +104,7 @@ export const HOME_ROWS: HomeRow[] = [
     label: menuGroup("/bosses"),
     items: [menuItem("/bosses"), menuItem("/bosses/parties"), menuItem("/bosses/order")],
   },
-  { ...menuItem("/bosses/drops"), items: [] },
+  { href: "/bosses/drops", label: menuGroup("/bosses/drops"), items: [] },
   { ...menuItem("/inventory"), items: [] },
 ];
 

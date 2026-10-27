@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 const root = join(__dirname, "..");
 const read = (...parts: string[]) => readFileSync(join(root, ...parts), "utf8");
 
-const page = read("app", "bosses", "drops", "page.tsx");
+const page = read("app", "bosses", "drops", "(log)", "layout.tsx");
 const settled = read("components", "settled-view.tsx");
 const skeleton = read("components", "drop-log-skeleton.tsx");
 const ledger = read("components", "settlement-ledger.tsx");

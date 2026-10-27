@@ -78,7 +78,7 @@ internal fun dropLogPageFor(
     onStage: (String, Duration) -> Unit = { _, _ -> },
 ): DropLogPageResponse {
     // Solo and retired configs included, matching the page's own query string. Both matter to a
-    // ledger: see the note on PARTIES_KEY in app/bosses/drops/page.tsx. A null week means the
+    // ledger: see the note on PARTIES_KEY in app/bosses/drops/(log)/layout.tsx. A null week means the
     // current one, as partiesFor's own default does.
     val parties = measureTimedValue { partiesFor(userId, week = null, includeSolo = true, includeRetired = true) }
     onStage("parties", parties.duration)
