@@ -467,6 +467,20 @@ export function isOutstanding(entry: DropEntry): boolean {
 }
 
 /**
+ * Whether the Drop Log offers Remove: a drop in one of your own pools that nobody has sold or kept.
+ * A sold one carries shares somebody is owed, and coupon sales spend pieces, so removing either
+ * would quietly move a settlement figure. `own` is every loot id in your own pools.
+ */
+export function removable(entry: DropEntry, own: Set<string>): boolean {
+  return own.has(entry.lootId) && isOutstanding(entry);
+}
+
+/** Every loot id in these pools, for `removable`. */
+export function lootIdsOf(pools: PartyLootPool[]): Set<string> {
+  return new Set(pools.flatMap((pool) => pool.loot.map((loot) => loot.id)));
+}
+
+/**
  * The other side of a coupon night, and which way it runs. Null on a night that came out even.
  *
  * The one place `owedBy` and `owedTo` are read, so a screen cannot answer one direction and go

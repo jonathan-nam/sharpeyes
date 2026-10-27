@@ -1556,10 +1556,13 @@ export function ArmedRemove({
   label,
   busy,
   onRemove,
+  idle = "×",
 }: {
   label: string;
   busy: boolean;
   onRemove: () => void;
+  /** What it says before the first click. */
+  idle?: string;
 }) {
   const [armed, setArmed] = useState(false);
 
@@ -1582,7 +1585,7 @@ export function ArmedRemove({
       }}
       aria-label={armed ? `Confirm: ${label}` : label}
     >
-      {armed ? "Remove?" : "×"}
+      {armed ? "Remove?" : idle}
     </button>
   );
 }

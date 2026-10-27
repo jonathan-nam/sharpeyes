@@ -2,16 +2,17 @@
 
 import { PageSwap } from "@/components/page-swap";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DropAuditView } from "@/components/drop-audit";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, failureText } from "@/lib/api";
+import { ArmedRemove } from "@/components/settlement-ledger";
 import { useAuth } from "@/lib/use-auth";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
 import { buildDropAudit } from "@/lib/drop-audit";
-import { buildDropLog } from "@/lib/drop-log";
+import { buildDropLog, lootIdsOf, removable } from "@/lib/drop-log";
 import { sharedHistory } from "@/lib/shared-history";
 import { closedByHolder, foldSeats } from "@/lib/vestige-ledger";
 import type { Boss } from "@/types/boss";
@@ -46,6 +47,9 @@ export default function DropAuditPage() {
   const { getToken, isLoaded } = useAuth();
   const params = useParams<{ loot: string }>();
   const lootId = params.loot;
+  const router = useRouter();
+  const [removing, setRemoving] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const [parties, setParties] = useState<Party[]>(peek<Party[]>(PARTIES_KEY) ?? []);
   const [pools, setPools] = useState<PartyLootPool[]>([]);
@@ -136,6 +140,22 @@ export default function DropAuditPage() {
     bossLabel,
   );
 
+  // Your own pools only, as on the Drop Log. See `removable`.
+  const entry = log.entries.find((e) => e.lootId === lootId);
+  const canRemove = entry !== undefined && removable(entry, lootIdsOf(pools));
+
+  async function remove(partyId: string) {
+    setRemoving(true);
+    setRefusal(null);
+    try {
+      await apiFetch(`/api/parties/${partyId}/loot/${lootId}`, { method: "DELETE" }, getToken);
+      router.push("/bosses/drops");
+    } catch (e) {
+      setRefusal(failureText(e, "That didn't remove. Try again."));
+      setRemoving(false);
+    }
+  }
+
   return (
     <main className="page">
       <p className="loot-back">
@@ -149,7 +169,20 @@ export default function DropAuditPage() {
       >
         {state === "loaded" &&
           (audit ? (
-            <DropAuditView audit={audit} />
+            <>
+              <DropAuditView audit={audit} />
+              {canRemove && (
+                <p className="loot-actions">
+                  <ArmedRemove
+                    label={`Remove ${audit.name}`}
+                    idle="Remove"
+                    busy={removing}
+                    onRemove={() => void remove(entry.partyId)}
+                  />
+                  {refusal && <span className="split-error">{refusal}</span>}
+                </p>
+              )}
+            </>
           ) : (
             // Refused rather than half-drawn. See buildDropAudit.
             <p className="party-hint">This drop was deleted. Go back to the Drop Log.</p>

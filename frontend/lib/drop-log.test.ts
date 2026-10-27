@@ -16,6 +16,7 @@ import {
   isPieceDrop,
   monthLabel,
   pieceStatusByParty,
+  removable,
   weekLabel,
 } from "./drop-log";
 import type { DropEntry } from "./drop-log";
@@ -696,6 +697,23 @@ describe("foldStatus", () => {
     expect(
       foldStatus([...coupons, entry({ pieces: true, owedBy: "Pinewick", owedToYou: 20 })]),
     ).toBe("3 runs");
+  });
+});
+
+describe("removable", () => {
+  const entry = (over: Partial<DropEntry>): DropEntry =>
+    ({ lootId: "l1", status: "PENDING", pieces: false, ...over }) as DropEntry;
+  const own = new Set(["l1"]);
+
+  it("offers Remove on an unsold drop in your own pool", () => {
+    expect(removable(entry({}), own)).toBe(true);
+  });
+
+  it("never on a sold or kept drop, a piece stack, or somebody else's book", () => {
+    expect(removable(entry({ status: "SOLD" }), own)).toBe(false);
+    expect(removable(entry({ status: "TAKEN" }), own)).toBe(false);
+    expect(removable(entry({ pieces: true }), own)).toBe(false);
+    expect(removable(entry({ lootId: "l2" }), own)).toBe(false);
   });
 });
 
