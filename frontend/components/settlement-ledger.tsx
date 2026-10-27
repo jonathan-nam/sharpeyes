@@ -553,9 +553,11 @@ function SettlementCard({
     };
   };
 
-  // Every night that owed anything, sold or not, so a week reads as what it owed. See PieceNights.
-  const theirNights = row.drops.filter((drop) => drop.pieces + drop.sold > 0);
-  const myNights = row.owedDrops.filter((drop) => drop.pieces + drop.sold > 0);
+  // Only nights still owing coupons. Every night that ever owed any listed months of sold-off
+  // vestiges under a count of 360 (2026-10-27).
+  const theirNights = row.drops.filter((drop) => drop.pieces > 0);
+  const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);
+  const yourKeeps = keptRows.filter((tranche) => tranche.recordedByYou !== false);
 
   /**
    * Whether there is a coupon debt to draw, which the section's gate and its step both ask.
@@ -1075,9 +1077,8 @@ function SettlementCard({
               hands, and which way it runs is in the words because "pieces" alone said nothing
               about direction.
 
-              The lists are GROSS: each night says what it owed and what a sale took off it, and
-              the two sides are not cancelled against each other, so a week filter shows what that
-              week owed. Only the step is netted, and a net of zero is settled, so it is not drawn. */}
+              The lists are the nights still owing, each saying what it owed and what a sale took
+              off it, and the two sides are not cancelled against each other. Only the step is netted, and a net of zero is settled, so it is not drawn. */}
           {couponsOpen && (
             <>
               <div className="ledger-step-line">
@@ -1164,10 +1165,12 @@ function SettlementCard({
               Ledger, from the other end: see V50 and V56.
 
               Drawn beside the lists rather than inside one of them: a pill has nowhere else to be
-              taken back, so it must not go with the heading above it when that heading goes. */}
-              {keptRows.length > 0 && (
+              taken back, so it must not go with the heading above it when that heading goes. Only
+              yours: a keep the other side wrote is their own sale, taken back on their Sale
+              Ledger. */}
+              {yourKeeps.length > 0 && (
                 <span className="ledger-tranches">
-                  {keptRows.map((tranche) => (
+                  {yourKeeps.map((tranche) => (
                     <span key={tranche.id} className="ledger-tranche">
                       {`${formatPieces(tranche.pieces)} kept for ${formatMesos(tranche.amount ?? 0, true)}`}
                       <button

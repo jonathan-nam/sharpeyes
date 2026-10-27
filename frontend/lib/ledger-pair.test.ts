@@ -343,13 +343,9 @@ describe("the two entry forms", () => {
 describe("what a column draws and how wide it lets itself get", () => {
   it("heads a list of nights only where a night will be drawn", () => {
     // A night that never owed anything sits in `drops` at zero. Read as a length, that put "Owen is
-    // holding" over nothing at all. A SOLD night is drawn, with its sale marked.
-    expect(ledger).toContain(
-      "const theirNights = row.drops.filter((drop) => drop.pieces + drop.sold > 0);",
-    );
-    expect(ledger).toContain(
-      "const myNights = row.owedDrops.filter((drop) => drop.pieces + drop.sold > 0);",
-    );
+    // holding" over nothing at all. A night a sale answered in full is not drawn either.
+    expect(ledger).toContain("const theirNights = row.drops.filter((drop) => drop.pieces > 0);");
+    expect(ledger).toContain("const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);");
     // Headed off the week-filtered arrays, which are the same nights narrowed, so a filter that
     // empties one side takes its heading with it.
     expect(ledger).toContain("const theirShown = inNightWeek(theirNights);");
@@ -370,10 +366,14 @@ describe("what a column draws and how wide it lets itself get", () => {
     // A tranche against their pile has a pill nowhere else on any screen, so it must not go with a
     // heading when that heading goes.
     const at = ledger.indexOf("{theirShown.length > 0 && (");
-    const pills = ledger.indexOf("{keptRows.length > 0 && (");
+    const pills = ledger.indexOf("{yourKeeps.length > 0 && (");
     expect(pills).toBeGreaterThan(at);
     // Outside the fragment the heading owns, which ends before it.
     expect(ledger.indexOf("</>", at)).toBeLessThan(pills);
+    // Only the keeps you wrote: the other side's are its own sales, on its own Sale Ledger.
+    expect(ledger).toContain(
+      "const yourKeeps = keptRows.filter((tranche) => tranche.recordedByYou !== false);",
+    );
   });
 
   it("holds a typed entry to ONE line, whatever its note says", () => {
