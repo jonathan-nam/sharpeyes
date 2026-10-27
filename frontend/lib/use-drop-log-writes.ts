@@ -173,6 +173,16 @@ export function useDropLogWrites(
       await readBack(async () => apply({ pools: await call<PartyLootPool[]>(POOLS_KEY, {}) }));
     });
 
+  /** Party View's keep and remove routes, for a card on Outstanding Sales. Same read-back as rowSale. */
+  const rowWrite = (row: SaleRow, path: string, options: RequestInit) =>
+    track(async () => {
+      await call<unknown>(`/api/parties/${row.partyId}/loot/${row.lootId}${path}`, options);
+      await readBack(async () => apply({ pools: await call<PartyLootPool[]>(POOLS_KEY, {}) }));
+    });
+  const rowKeep = (row: SaleRow, memberId: string) =>
+    rowWrite(row, "/taken", { method: "PUT", body: JSON.stringify({ memberId }) });
+  const rowRemove = (row: SaleRow) => rowWrite(row, "", { method: "DELETE" });
+
   return {
     busy,
     track,
@@ -186,6 +196,8 @@ export function useDropLogWrites(
     pin,
     bulkSale,
     rowSale,
+    rowKeep,
+    rowRemove,
   };
 }
 

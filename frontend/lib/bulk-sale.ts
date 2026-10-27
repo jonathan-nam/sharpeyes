@@ -71,6 +71,8 @@ export type SaleRow = {
    * from one that does.
    */
   ran: PartyMember[];
+  /** Fell on a solo run or in a solo pool, so it owes nobody and can be kept. See keptSolo. */
+  solo: boolean;
   /** Who logged it, when somebody other than you did. See LootResponse.recordedByName. */
   loggedBy?: string | null;
 };
@@ -127,6 +129,7 @@ function sellableRows(
         sellerMemberId: seller.id,
         sellerName: seller.name,
         ran,
+        solo: loot.solo === true || party.solo,
         loggedBy: loot.recordedByYou === false ? (loot.recordedByName ?? null) : null,
       });
     }

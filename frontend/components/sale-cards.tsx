@@ -22,7 +22,7 @@ export function SaleCards({
   /** See saleQueues. Passed in because the Sales tab also counts them. */
   bulk: BulkDrop[];
   alone: SaleRow[];
-  writes: Pick<DropLogWrites, "busy" | "bulkSale" | "rowSale">;
+  writes: Pick<DropLogWrites, "busy" | "bulkSale" | "rowSale" | "rowKeep" | "rowRemove">;
 }) {
   const bossByKey = new Map(page.bosses.map((b) => [b.bossKey, b]));
   const partyById = new Map(page.parties.map((p) => [p.id, p]));
@@ -45,6 +45,8 @@ export function SaleCards({
         characterById={characterById}
         busy={writes.busy}
         onSell={writes.rowSale}
+        onKeep={writes.rowKeep}
+        onRemove={writes.rowRemove}
       />
     </>
   );

@@ -30,6 +30,8 @@ data class SaleRow(
     val sellerMemberId: String,
     val sellerName: String,
     val ran: List<PartyMember>,
+    /** Fell on a solo run or in a solo pool, so it can be kept rather than sold. */
+    val solo: Boolean,
     val loggedBy: String? = null,
 )
 
@@ -78,6 +80,7 @@ private fun sellableRow(
         sellerMemberId = seller.id,
         sellerName = seller.name,
         ran = ran,
+        solo = loot.solo == true || party.solo,
         loggedBy = if (loot.recordedByYou == false) loot.recordedByName else null,
     )
 }

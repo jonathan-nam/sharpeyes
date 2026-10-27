@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/button";
 import { LootSaleForm } from "@/components/loot-sale-form";
 import { apiAssetUrl, failureText } from "@/lib/api";
 import { bossLabel } from "@/lib/boss-difficulty";
@@ -11,6 +12,7 @@ import type { Boss } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { Party } from "@/types/party";
 import { sellersOf } from "@/lib/sale-logger";
+import { isMine } from "@/lib/wallet";
 
 // One card per unsold drop that prices ALONE, and the form that prices it.
 //
@@ -32,6 +34,8 @@ export function RowSale({
   characterById,
   busy,
   onSell,
+  onKeep,
+  onRemove,
 }: {
   rows: SaleRow[];
   bossByKey: Map<string, Boss>;
@@ -39,6 +43,8 @@ export function RowSale({
   characterById: Map<string, Character>;
   busy: boolean;
   onSell: (row: SaleRow, body: SellLootBody) => Promise<void>;
+  onKeep: (row: SaleRow, memberId: string) => Promise<void>;
+  onRemove: (row: SaleRow) => Promise<void>;
 }) {
   // Cards only. The "Outstanding Sales" heading covers these, the bulk sales and the coupon piles, so it
   // belongs to whatever draws all three.
@@ -54,6 +60,8 @@ export function RowSale({
           characterName={characterById.get(row.characterId)?.name ?? null}
           busy={busy}
           onSell={onSell}
+          onKeep={onKeep}
+          onRemove={onRemove}
         />
       ))}
     </>
@@ -67,6 +75,8 @@ function RowCard({
   characterName,
   busy,
   onSell,
+  onKeep,
+  onRemove,
 }: {
   row: SaleRow;
   boss: Boss | null;
@@ -74,6 +84,8 @@ function RowCard({
   characterName: string | null;
   busy: boolean;
   onSell: (row: SaleRow, body: SellLootBody) => Promise<void>;
+  onKeep: (row: SaleRow, memberId: string) => Promise<void>;
+  onRemove: (row: SaleRow) => Promise<void>;
 }) {
   const [refusal, setRefusal] = useState<string | null>(null);
 
@@ -82,14 +94,17 @@ function RowCard({
   // than a case with a message.
   if (party === null) return null;
 
-  async function sell(body: SellLootBody) {
+  async function attempt(write: () => Promise<void>) {
     setRefusal(null);
     try {
-      await onSell(row, body);
+      await write();
     } catch (e) {
       setRefusal(failureText(e, "That didn't save. Try again."));
     }
   }
+  // A drop you got solo owes nobody, so keeping it is not a sale. Same rule as keptSolo. Every card
+  // here is a drop you logged and nobody has sold or kept, which mayDeleteLoot lets you remove.
+  const keepers = row.solo ? row.ran.filter(isMine) : [];
 
   return (
     <section className="ledger-card">
@@ -125,7 +140,29 @@ function RowCard({
         sellers={sellersOf(row.ran, party.yours === false)}
         busy={busy}
         labelled
-        onSell={(body) => void sell(body)}
+        onSell={(body) => void attempt(() => onSell(row, body))}
+        actions={
+          <>
+            {keepers.map((m) => (
+              <Button
+                key={m.id}
+                variant="secondary"
+                onClick={() => void attempt(() => onKeep(row, m.id))}
+                disabled={busy}
+              >
+                {keepers.length === 1 ? "Keep" : `${m.name} Kept It`}
+              </Button>
+            ))}
+            <button
+              type="button"
+              className="party-delete"
+              onClick={() => void attempt(() => onRemove(row))}
+              disabled={busy}
+            >
+              Remove
+            </button>
+          </>
+        }
       />
 
       {refusal && <span className="split-error">{refusal}</span>}
