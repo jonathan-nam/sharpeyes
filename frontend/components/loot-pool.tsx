@@ -77,6 +77,8 @@ export function LootPool({
    */
   const [editing, setEditing] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Until the pool is edited again.
+  const [justSaved, setJustSaved] = useState(false);
   const group = useSaveGroup();
   /**
    * Whether the nights run under a different arrangement are on screen.
@@ -110,6 +112,7 @@ export function LootPool({
     try {
       await group.saveAll();
       setEditing(false);
+      setJustSaved(true);
     } catch (e) {
       if (e instanceof StaleAfterWrite) setEditing(false);
       setSaveError(failureText(e, "That didn't save. Try again."));
@@ -128,6 +131,7 @@ export function LootPool({
               onClick={() => {
                 setEditing((open) => !open);
                 setSaveError(null);
+                setJustSaved(false);
               }}
             >
               {editing ? "Cancel" : "Edit"}
@@ -249,7 +253,7 @@ export function LootPool({
           <div className="loot-actions">
             <Button
               variant="primary"
-              disabled={group.saving || (group.changed && !group.ready)}
+              disabled={group.saving || !group.changed || !group.ready}
               onClick={() => void saveAndClose()}
             >
               Save
@@ -257,6 +261,11 @@ export function LootPool({
           </div>
         )}
         {saveError && <p className="split-error">{saveError}</p>}
+        {justSaved && (
+          <p className="split-saved" role="status">
+            Save successful.
+          </p>
+        )}
       </section>
     </SaveGroup>
   );

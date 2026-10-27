@@ -168,6 +168,8 @@ export function PartyCard({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [offError, setOffError] = useState<string | null>(null);
   const [panelError, setPanelError] = useState<string | null>(null);
+  // Until the panel is edited again or closed.
+  const [justSaved, setJustSaved] = useState(false);
   const group = useSaveGroup();
   // The badge, named as the party page names it: `pool` is the pool itself here.
   const poolLine = poolLabel(party, coupons);
@@ -206,6 +208,7 @@ export function PartyCard({
     setEditing(false);
     setSaveError(null);
     setPanelError(null);
+    setJustSaved(false);
   }
 
   /** The panel's one Save: every pickup and split that changed, then closed. */
@@ -214,6 +217,7 @@ export function PartyCard({
     try {
       await group.saveAll();
       close();
+      setJustSaved(true);
     } catch (e) {
       if (e instanceof StaleAfterWrite) close();
       setPanelError(failureText(e, "That didn't save. Try again."));
@@ -252,6 +256,7 @@ export function PartyCard({
               setSaveError(null);
               setOffError(null);
               setPanelError(null);
+              setJustSaved(false);
             }}
           >
             <span className="party-row-chevron" aria-hidden="true" />
@@ -401,6 +406,7 @@ export function PartyCard({
                         setDraft(saved.length > 0 ? saved : [""]);
                         setEditing(true);
                         setSaveError(null);
+                        setJustSaved(false);
                       }}
                     >
                       Edit
@@ -522,7 +528,7 @@ export function PartyCard({
             <div className="loot-actions">
               <Button
                 variant="primary"
-                disabled={busy || group.saving || (group.changed && !group.ready)}
+                disabled={busy || group.saving || !group.changed || !group.ready}
                 onClick={() => void saveAndClose()}
               >
                 Save
@@ -533,6 +539,11 @@ export function PartyCard({
             </div>
           )}
           {panelError && <p className="split-error">{panelError}</p>}
+          {justSaved && (
+            <p className="split-saved" role="status">
+              Save successful.
+            </p>
+          )}
         </div>
       )}
     </article>
