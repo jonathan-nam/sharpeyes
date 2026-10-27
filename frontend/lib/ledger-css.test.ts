@@ -60,17 +60,22 @@ describe("the fully-settled state", () => {
   });
 });
 
-// The way forward is top right. Two rules that only work together: `margin-left: auto` needs a
-// flex row with free space to push into.
-describe("the next stage's link", () => {
-  it("sits in a flex row", () => {
-    const rule = css.match(/^\.droplog-steps \{([^}]*)\}/m);
-    expect(rule?.[1]).toContain("display: flex");
+// The way forward starts at the same place on every stage, Drops included, which has no way back.
+// The back slot stacks its stand-ins in one cell, and only works if they stay unseen.
+describe("the links either side of a stage", () => {
+  it("stack the ways back in one cell", () => {
+    expect(css.match(/^\.droplog-step-back \{([^}]*)\}/m)?.[1]).toContain("display: grid");
+    expect(css.match(/^\.droplog-step-back > \* \{([^}]*)\}/m)?.[1]).toContain("grid-area: 1 / 1");
   });
 
-  it("is pushed to the far end", () => {
-    const rule = css.match(/^\.droplog-step-next \{([^}]*)\}/m);
-    expect(rule?.[1]).toContain("margin-left: auto");
+  it("keep the stand-ins unseen", () => {
+    expect(css.match(/^\.droplog-step\.is-ghost \{([^}]*)\}/m)?.[1]).toContain(
+      "visibility: hidden",
+    );
+  });
+
+  it("start from the left", () => {
+    expect(css).not.toMatch(/\.droplog-step[^{]*\{[^}]*margin-left: auto/);
   });
 });
 

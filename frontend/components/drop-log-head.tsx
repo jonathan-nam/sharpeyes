@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/button";
 import {
   dropSections,
+  homeSections,
   sectionFromPath,
   sectionHref,
   sectionSteps,
@@ -12,33 +13,39 @@ import {
 import { useAccountSettings } from "@/lib/use-account-settings";
 
 /**
- * A stage's title, and a row under it with the stage before on the left and the one after on the
- * right. Read off the path and the world rather than passed in, so the route boundary draws the
- * same one as the page.
+ * A stage's title, and a row under it with the stage before and then the one after. Read off the
+ * path and the world rather than passed in, so the route boundary draws the same one as the page.
  */
 export function DropLogHead() {
   const sections = dropSections(useAccountSettings()?.trades);
   const section = shownSection(sectionFromPath(usePathname()) ?? "drops", sections);
   const { back, next } = sectionSteps(section, sections);
   const label = sections.find((s) => s.key === section)?.label;
+  // Every way back the menu's stages have, drawn unseen under the real one, so the slot is as wide
+  // on every page and the way forward starts at the same place, Drops included.
+  const backs = homeSections(useAccountSettings()?.trades).slice(0, -1);
 
   return (
     <>
       <h1 className="page-title">{label}</h1>
       {(back || next) && (
         <div className="droplog-steps">
-          {back && (
-            <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(back.key)}>
-              <Arrow back />
-              {back.label}
-            </ButtonLink>
-          )}
+          <span className="droplog-step-back">
+            {backs.map((s) => (
+              <span key={s.key} className="party-cancel droplog-step is-ghost" aria-hidden="true">
+                <Arrow back />
+                {s.label}
+              </span>
+            ))}
+            {back && (
+              <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(back.key)}>
+                <Arrow back />
+                {back.label}
+              </ButtonLink>
+            )}
+          </span>
           {next && (
-            <ButtonLink
-              variant="secondary"
-              className="droplog-step droplog-step-next"
-              href={sectionHref(next.key)}
-            >
+            <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(next.key)}>
               {next.key === "settled" ? (
                 <>View {next.label}</>
               ) : (
