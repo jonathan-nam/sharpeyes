@@ -99,6 +99,7 @@ jobs:
               # detekt config from beside it.
               - 'shared/money/**'
               - 'shared/api/**'
+              - 'shared/planning/**'
               - 'gradle/libs.versions.toml'
               - 'config/detekt/**'
               # GeneratedTypesTest compares this to what shared/api renders, so a hand edit fails here.
@@ -110,8 +111,9 @@ jobs:
               # out of this file rather than repeating it. lib/tab-marks.test.ts reads it too, so a
               # change here has to run this job.
               - 'catalog/drops.yaml'
-              # The money golden tests read and write the fixtures the shared module replays.
+              # The golden tests read and write the fixtures the shared modules replay.
               - 'shared/money/src/commonTest/resources/money-golden/**'
+              - 'shared/planning/src/commonTest/resources/planning-golden/**'
               # The composite tests read the page responses they must agree with.
               - 'shared/api/src/commonMain/kotlin/com/sharpeyes/api/pages/**'
             auth:

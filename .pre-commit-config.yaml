@@ -18,7 +18,7 @@ repos:
         # The backend's checks reach the included shared builds too (backend/build.gradle.kts).
         entry: bash -c 'cd backend && ./gradlew ktlintCheck detekt'
         language: system
-        files: ^(backend|shared/money|shared/api)/.*\.kts?$
+        files: ^(backend|shared/money|shared/api|shared/planning)/.*\.kts?$
         pass_filenames: false
 
       # Neither eslint nor the build checks types, so this is the only thing that does. A type

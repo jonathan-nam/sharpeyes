@@ -5,8 +5,8 @@ should move there next. The money port has its own plan, `docs/backend-arithmeti
 
 ## What is shared
 
-Two Kotlin Multiplatform builds under `shared/`, each its own Gradle build that the backend includes
-(`includeBuild`), both taking versions from `gradle/libs.versions.toml`.
+Three Kotlin Multiplatform builds under `shared/`, each its own Gradle build that the backend includes
+(`includeBuild`), all taking versions from `gradle/libs.versions.toml`.
 
 ```
 shared/
@@ -16,7 +16,13 @@ shared/
   money/   com.sharpeyes.money    the ledger arithmetic, ported from frontend/lib
     (root: Model.kt inputs, JavaScript-parity helpers, World.kt)
     split/ sales/ pieces/ coupons/ settlement/ droplog/ sharedparties/
+  planning/ com.sharpeyes.planning Run Order's search, ported from boss-run-plan.ts
 ```
+
+`planning` is for the apps: nothing in the backend calls it yet, and the web still runs the
+TypeScript. Until one copy is deleted they must agree exactly, as money's do: the fixtures in
+`planning-golden/` are written by `frontend/lib/boss-run-plan.golden.test.ts` (`UPDATE_GOLDEN=1`),
+and a change to `boss-run-plan.ts` changes the port in the same PR.
 
 Packages, files and API classes are named in the screens' words: `coupons`, not vestige; items, not
 tokens (`ItemCatalogResponse`); a coupon sale, not a tranche (`CouponSaleResponse`); held money,
@@ -94,8 +100,8 @@ would otherwise have to re-implement, or what is already two copies that can dis
    `editPile`'s checks. One Kotlin function should divide and refuse.
 4. **The rest of the money.** `shares`, `stacks`, `vestige-stacks`, `vestige-pickup`, `pool-nights`,
    `redemption`, `sale-logger` and meso parsing are unported, and ledger inputs depend on them.
-5. **Run Order.** `boss-run-plan.ts` and `boss-night.ts`, about 1,340 lines deciding which runs are
-   eligible and in what order. A `planning` module.
+5. **Run Order.** `boss-run-plan.ts` is ported (`shared/planning`). `boss-night.ts` is not: it
+   builds the runs from parties, and parses and formats the night's times.
 6. **Party Planner.** `party-planner.ts`, which hard-codes `PLANNER_BOSSES` and `ONE_PER_PARTY`,
    catalog data written in TypeScript.
 7. **Client-computed amounts.** Lot sales, `splitOf` and offset amounts are ported, but writes still

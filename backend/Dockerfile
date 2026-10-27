@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 #
 # Built from the REPO ROOT (context: ., file: backend/Dockerfile), because the backend's build reads
-# what sits beside it: the shared money and api modules (includeBuild), the version catalog and the detekt
+# what sits beside it: the shared money, api and planning modules (includeBuild), the version catalog and the detekt
 # config. backend/Dockerfile.dockerignore keeps the context to those. The layout under /app mirrors
 # the repo's, so the relative paths in settings.gradle.kts hold.
 FROM eclipse-temurin:21-jdk AS build
@@ -15,6 +15,7 @@ RUN chmod +x gradlew && ./gradlew --version
 
 COPY shared/money /app/shared/money
 COPY shared/api /app/shared/api
+COPY shared/planning /app/shared/planning
 COPY backend/src ./src
 
 # installDist, not buildFatJar. The fat jar shades every dependency into one

@@ -1,15 +1,18 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-// Golden fixtures: the TypeScript's own answers, written where the backend's Kotlin port reads them.
-// The port must reproduce every case exactly. See docs/backend-arithmetic-plan.md, Phase 1.
+// Golden fixtures: the TypeScript's own answers, written where a shared module's Kotlin port reads
+// them. The port must reproduce every case exactly. See docs/backend-arithmetic-plan.md, Phase 1.
 //
 // Each *.golden.test.ts regenerates its file and fails when it differs from the committed one, so a
 // change to the arithmetic cannot leave the fixtures behind. UPDATE_GOLDEN=1 rewrites them instead.
 
-const DIR = fileURLToPath(
-  new URL("../../shared/money/src/commonTest/resources/money-golden/", import.meta.url),
-);
+/** Where a shared module's port reads its fixtures: `shared/<module>/.../<module>-golden/`. */
+function dirOf(module: string): string {
+  return fileURLToPath(
+    new URL(`../../shared/${module}/src/commonTest/resources/${module}-golden/`, import.meta.url),
+  );
+}
 
 /** One case: what went in, and what came out or that it was refused. */
 export type GoldenCase<I, O> = { input: I; output: O } | { input: I; throws: true };
@@ -36,8 +39,8 @@ export function goldenText(source: string, cases: unknown[]): string {
 }
 
 /** The committed text of [name], after rewriting it when UPDATE_GOLDEN is set. */
-export function committedGolden(name: string, text: string): string {
-  const path = `${DIR}${name}`;
+export function committedGolden(name: string, text: string, module = "money"): string {
+  const path = `${dirOf(module)}${name}`;
   if (process.env.UPDATE_GOLDEN === "1") writeFileSync(path, text);
   try {
     return readFileSync(path, "utf8");

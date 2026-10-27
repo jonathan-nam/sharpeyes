@@ -8,6 +8,10 @@ includeBuild("../shared/money")
 // shared/api/build.gradle.kts.
 includeBuild("../shared/api")
 
+// Run Order's planning, for the apps. Nothing here depends on it yet; it is included so the checks
+// below run its tests. See shared/planning/build.gradle.kts.
+includeBuild("../shared/planning")
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {

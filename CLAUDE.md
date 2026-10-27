@@ -166,6 +166,12 @@ versions from `gradle/libs.versions.toml`. The plan is `docs/backend-arithmetic-
   Changing the TypeScript means `UPDATE_GOLDEN=1 pnpm vitest run` and the Kotlin port changed to
   match, in the same PR. Never edit a fixture by hand, and never update one to make the port pass.
 
+### Run Order's search lives in `shared/planning` too
+
+`frontend/lib/boss-run-plan.ts` has a Kotlin port in `shared/planning`, held to it by the
+`planning-golden/` fixtures the same way money's are. Change both in one PR, regenerating with
+`UPDATE_GOLDEN=1 pnpm vitest run lib/boss-run-plan.golden.test.ts`.
+
 ### The API's types live in `shared/api`
 
 Every request and response body the backend serves is a `@Serializable` class in `shared/api`, built
