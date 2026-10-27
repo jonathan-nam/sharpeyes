@@ -8,15 +8,6 @@ import type * as api from "./api";
 import type { Boss, BossClear, BossClearsView, BossPiece } from "@/types/boss";
 import type { Character } from "@/types/character";
 import type { CharacterToken } from "@/types/character-token";
-import type {
-  CombineConflict,
-  CombinePage,
-  CombineSide,
-  CombineWith,
-  IncomingCombine,
-  SeatClash,
-  SeatFace,
-} from "@/types/combine";
 import type { BossDrop, DropTables } from "@/types/drop";
 import type {
   AcceptedInvite,
@@ -136,13 +127,6 @@ export type ResponseParity = [
   Is<Same<Character, CharacterR>>,
   Is<Same<CharacterToken, api.CharacterItemResponse>>,
   Is<Same<TokenCatalogItem, api.ItemCatalogResponse>>,
-  Is<Same<SeatFace, api.SeatFace>>,
-  Is<Same<CombineSide, api.CombineSideResponse>>,
-  Is<Same<CombineConflict, api.CombinePairResponse>>,
-  Is<Same<CombineWith, api.CombineWithResponse>>,
-  Is<Same<IncomingCombine, api.IncomingCombineResponse>>,
-  Is<Same<SeatClash, api.SeatClashResponse>>,
-  Is<Same<CombinePage, api.CombinePageResponse>>,
   Is<Same<InviteOmission, api.InviteOmission>>,
   Is<Same<Invite, Refine<api.InviteResponse, { token?: string | null }>>>,
   Is<Same<InvitePartyLabel, api.InvitePartyLabel>>,

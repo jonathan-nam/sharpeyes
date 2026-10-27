@@ -1,11 +1,10 @@
 import Link from "next/link";
 
-export type SocialTab = "friends" | "people" | "combine";
+export type SocialTab = "friends" | "people";
 
 const TABS: { key: SocialTab; href: string; label: string }[] = [
   { key: "friends", href: "/social", label: "Friends" },
   { key: "people", href: "/social/people", label: "People" },
-  { key: "combine", href: "/social/combine", label: "Combine Parties" },
 ];
 
 /** Social's title and its pages, drawn as the Drop Log's section chips. */

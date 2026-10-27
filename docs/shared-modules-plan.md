@@ -11,7 +11,7 @@ Two Kotlin Multiplatform builds under `shared/`, each its own Gradle build that 
 ```
 shared/
   api/     com.sharpeyes.api      every request and response body, and apiJson
-    bosses/ characters/ combine/ coupons/ events/ friends/ inventory/ invites/ loot/
+    bosses/ characters/ coupons/ events/ friends/ inventory/ invites/ loot/
     notifications/ pages/ parties/ planner/ screenshots/ settings/ settlement/ sprites/ system/
   money/   com.sharpeyes.money    the ledger arithmetic, ported from frontend/lib
     (root: Model.kt inputs, JavaScript-parity helpers, World.kt)
