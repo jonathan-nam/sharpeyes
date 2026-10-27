@@ -245,7 +245,10 @@ function SharedCardView({
             ...detail.theyOwe.map((line) => line.name),
             ...(card.youHold > 0 ? [heldFor] : []),
           ]),
-          heldDetail: card.youHold > 0 ? heldFor : null,
+          heldDetail: listed([
+            ...sendable.map((part) => part.label),
+            ...(card.youHold > 0 ? [heldFor] : []),
+          ]),
           close,
           listings: listings
             ? {

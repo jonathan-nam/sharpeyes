@@ -50,6 +50,7 @@ import { copyText, formatDollars, formatMoney } from "@/lib/money";
 import type { Currency } from "@/lib/money";
 import { formatDropped } from "@/lib/loot";
 import type { CouponSale, Holder } from "@/lib/vestige-ledger";
+import type { WalletLine } from "@/lib/wallet";
 import type { Boss } from "@/types/boss";
 import type { Party } from "@/types/party";
 import { partyHrefById } from "@/lib/party-path";
@@ -438,16 +439,12 @@ function SettlementCard({
           couponName ?? "coupons",
         )
       : null;
-  const sharesOwed = (all: boolean) =>
-    row.lines
-      .filter((line) => all || line.currency === "MESO")
-      .map((line) => {
-        const boss = bossByKey.get(line.bossKey ?? "");
-        const party = partyById.get(line.partyId);
-        return boss
-          ? `${line.name} · ${bossLabel(boss.name, party?.difficulty ?? null)}`
-          : line.name;
-      });
+  const sharesOwed = (keep: (line: WalletLine) => boolean = () => true) =>
+    row.lines.filter(keep).map((line) => {
+      const boss = bossByKey.get(line.bossKey ?? "");
+      const party = partyById.get(line.partyId);
+      return boss ? `${line.name} · ${bossLabel(boss.name, party?.difficulty ?? null)}` : line.name;
+    });
   const listed = (items: (string | null)[]) => {
     const named = items.filter((item): item is string => !!item);
     return named.length <= 3
@@ -456,7 +453,12 @@ function SettlementCard({
   };
   const theirCoupons = coupons(theirHeld, row.heldByThem);
   // Every share both ways and both pots of coupon money: everything one press settles.
-  const closeFor = listed([...sharesOwed(true), coupons(held, row.holding), theirCoupons]);
+  const closeFor = listed([...sharesOwed(), coupons(held, row.holding), theirCoupons]);
+  // What a keep takes: the meso shares of drops you sold, and their coupon money. See heldOnly.
+  const keepFor = listed([
+    ...sharesOwed((line) => line.direction === "owe" && line.currency === "MESO"),
+    coupons(held, row.holding),
+  ]);
 
   /**
    * What is still to settle with them, in the two shapes it comes in. See offsetOf and V61.
@@ -1228,7 +1230,7 @@ function SettlementCard({
           net,
           name: row.name,
           detail: closeFor,
-          heldDetail: coupons(held, row.holding),
+          heldDetail: keepFor,
           close,
           listings:
             kit && personId

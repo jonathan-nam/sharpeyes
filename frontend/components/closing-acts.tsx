@@ -14,8 +14,9 @@ import type { SettlementListing } from "@/types/settlement-listing";
 //   the side owed gets Mark X Received and Post Listing, and Offset the other way round;
 //   an even pair gets Mark Settled;
 //   every one of them settles all four pots both ways, in one write.
-// And one that settles a single pot (2026-10-26): the side owed, holding the other's coupon money
-// while the other also owes it outside the pots, may keep that money as an Offset on its own.
+// And a keep (2026-10-26): the side owed, holding the other's money while the other also owes it
+// outside the pots, may keep that money as an Offset on its own. Their coupon money and the meso
+// shares of drops it sold alike (2026-10-27): a grindstone share held was left to cross.
 
 export type CloseKind = "OFFSET" | "PAID";
 
@@ -69,16 +70,19 @@ export type ClosingListings = {
   remove: () => void;
 };
 
-/** [net] cut to the coupon money you hold, which is all a keep settles. */
-export const heldOnly = (net: ClosingNet): ClosingNet => ({
-  ...net,
-  mesos: net.holding,
-  sharesYouOwe: [],
-  sharesTheyOwe: [],
-  heldByThem: 0,
-  usdYouOwe: 0,
-  usdTheyOwe: 0,
-});
+/** [net] cut to the money of theirs you hold, coupon money and meso shares, which is all a keep settles. */
+export const heldOnly = (net: ClosingNet): ClosingNet => {
+  const shares = mesoOnly(net.sharesYouOwe);
+  return {
+    ...net,
+    mesos: shares.reduce((sum, share) => sum + share.amount, net.holding),
+    sharesYouOwe: shares,
+    sharesTheyOwe: [],
+    heldByThem: 0,
+    usdYouOwe: 0,
+    usdTheyOwe: 0,
+  };
+};
 
 export function closingActs({
   net,
@@ -93,7 +97,7 @@ export function closingActs({
   name: string;
   /** The drops and coupons the press covers, one line. */
   detail: string | null;
-  /** The coupon money you hold, one line, for the act that keeps it. */
+  /** The money of theirs you hold, one line, for the act that keeps it. */
   heldDetail?: string | null;
   /** [scope] narrows what the press settles; every act but the keep settles the whole of [net]. */
   close: (kind: CloseKind, scope?: ClosingNet) => void;
@@ -145,15 +149,16 @@ export function closingActs({
           onClick: listings.post,
         }
       : null;
-  // Their coupon money in your hands, kept and taken off what they owe you, while the rest still
-  // crosses. Where you owe net, the Offset above already takes it with everything else.
+  // Their money in your hands, kept and taken off what they owe you, while the rest still crosses.
+  // Where you owe net, the Offset above already takes it with everything else.
+  const kept = heldOnly(net);
   const keep: ClosingAct | null =
-    net.payer !== "YOU" && net.holding > 0 && net.enteredBalance > 0
+    net.payer !== "YOU" && kept.mesos > 0 && net.enteredBalance > 0
       ? {
           key: "keep",
-          label: `Offset ${formatMesos(net.holding, true)}`,
+          label: `Offset ${formatMesos(kept.mesos, true)}`,
           detail: heldDetail,
-          onClick: () => close("OFFSET", heldOnly(net)),
+          onClick: () => close("OFFSET", kept),
         }
       : null;
   return [

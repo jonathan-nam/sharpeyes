@@ -126,6 +126,23 @@ describe("which acts each side is offered", () => {
     ]);
   });
 
+  // A drop you sold leaves their share in your hands, the same as a sale of their coupons.
+  const owedAndSold = net({
+    payer: "THEM",
+    mesos: 1_600 * M,
+    sharesYouOwe: [share("g", 800 * M), share("u", 30_000, "USD")],
+    sharesTheyOwe: [share("d", 2_400 * M)],
+    holding: 300 * M,
+    enteredBalance: 48_000 * M,
+  });
+
+  it("keeps the meso shares of drops you sold with the coupon money, never the dollars", () => {
+    expect(keys(owedAndSold)).toContain(`keep:Offset ${formatMesos(1_100 * M, true)}`);
+    expect(keys(net({ ...owedAndSold, holding: 0 }))).toContain(
+      `keep:Offset ${formatMesos(800 * M, true)}`,
+    );
+  });
+
   it("offers no keep where they owe nothing outside the pots, or where you owe net", () => {
     expect(keys(net({ ...owedAndHolding, enteredBalance: 0 }))).not.toContain(
       `keep:Offset ${formatMesos(300 * M, true)}`,
@@ -165,6 +182,20 @@ describe("what one press sends", () => {
       parts: [],
       received: [],
       holding: 300 * M,
+      heldByThem: undefined,
+    });
+  });
+
+  it("sends a keep of a share you hold priced, and leaves theirs to cross", () => {
+    const sold = net({
+      payer: "THEM",
+      sharesYouOwe: [share("g", 800 * M), share("u", 30_000, "USD")],
+      sharesTheyOwe: [share("d", 2_400 * M)],
+    });
+    expect(closeBody(heldOnly(sold), "OFFSET")).toEqual({
+      parts: [{ lootId: "g", memberId: "seat-g", amount: 800 * M }],
+      received: [],
+      holding: undefined,
       heldByThem: undefined,
     });
   });
