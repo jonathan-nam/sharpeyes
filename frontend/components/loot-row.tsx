@@ -36,6 +36,8 @@ export function LootRow({
   onSetPaid,
   onDelete,
   children,
+  actions,
+  editingSplits = false,
 }: {
   loot: Loot;
   party: Party;
@@ -92,6 +94,10 @@ export function LootRow({
    * unframed blocks under it and the eye had nothing saying they belonged to it.
    */
   children?: ReactNode;
+  /** More buttons for the left of the card's foot, such as a coupon row's Edit Splits. */
+  actions?: ReactNode;
+  /** This card's splits are open, which withholds Remove until they close. */
+  editingSplits?: boolean;
 }) {
   const [selling, setSelling] = useState(false);
   // Who could have sold this drop: the seats that ran the week it FELL in. See LootSaleForm.
@@ -147,13 +153,21 @@ export function LootRow({
   // Remove, drawn once at the foot of the card whatever state the drop is in. A piece row is withheld
   // where it heads a config, which would go with it (see couponRemovable).
   const offersRemove = (() => {
-    if (settled || selling) return false;
+    if (settled || selling || editingSplits) return false;
     if (loot.status !== "PENDING") return !readOnly;
     if (!canSell) return mayRemove;
     if (pieces) return mayRemove && couponRemovable;
     return mayRemove && loot.recordedByYou !== false && (!readOnly || sellers.length > 0);
   })();
   const takers = divides(ran) && !instanced ? sellers : [];
+  // Edit Sale and Undo Sale, at the foot with Remove. A settled sale is locked until a share is marked
+  // unpaid; the server refuses it too (settledRefusal).
+  const saleActions =
+    loot.status !== "PENDING" &&
+    loot.status !== "TAKEN" &&
+    actsAs(loot.sellerMemberId) &&
+    !settled &&
+    !selling;
 
   return (
     <article className={`changed-by-anchor loot-row status-${loot.status.toLowerCase()}`}>
@@ -360,8 +374,7 @@ export function LootRow({
             </>
           )}
 
-          {/* A settled sale is locked until a share is marked unpaid. The server refuses it too
-              (settledRefusal). */}
+          {/* Locked when settled, like saleActions. */}
           {actsAs(loot.sellerMemberId) && !settled && selling && corrected !== null && (
             <LootSaleForm
               ran={ran}
@@ -375,29 +388,34 @@ export function LootRow({
               onCancel={() => setSelling(false)}
             />
           )}
-          {actsAs(loot.sellerMemberId) && !settled && !selling && (
-            <div className="loot-actions">
-              {corrected !== null && (
-                <Button variant="secondary" onClick={() => setSelling(true)} disabled={busy}>
-                  Edit Sale
-                </Button>
-              )}
-              <Button variant="secondary" onClick={onUnsell} disabled={busy}>
-                Undo Sale
-              </Button>
-            </div>
-          )}
         </>
       )}
 
       {/* Last, under everything the row says about itself. */}
       {children}
 
-      {offersRemove && (
-        <div className="loot-remove">
-          <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-            Remove
-          </button>
+      {(saleActions || actions || offersRemove) && (
+        <div className="loot-foot">
+          <div className="loot-actions">
+            {saleActions && (
+              <>
+                {corrected !== null && (
+                  <Button variant="secondary" onClick={() => setSelling(true)} disabled={busy}>
+                    Edit Sale
+                  </Button>
+                )}
+                <Button variant="secondary" onClick={onUnsell} disabled={busy}>
+                  Undo Sale
+                </Button>
+              </>
+            )}
+            {actions}
+          </div>
+          {offersRemove && (
+            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+              Remove
+            </button>
+          )}
         </div>
       )}
     </article>

@@ -4,8 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/button";
 import { DropPicker } from "@/components/drop-picker";
 import { LootList, type StackAssignment } from "@/components/loot-list";
-import { SaveGroup, useSaveGroup } from "@/components/save-group";
-import { StaleAfterWrite, failureText } from "@/lib/api";
 import { StackAssign } from "@/components/stack-assign";
 import { nightLabel, poolNights, ranAtThisMode } from "@/lib/pool-nights";
 import { isDropHistory, type PieceStatus } from "@/lib/drop-log";
@@ -48,8 +46,8 @@ export function LootPool({
    * What each seat was entitled to out of a night's coupons, and what they picked up.
    *
    * A gap between the two is a debt, and a debt with nothing on screen behind it is one the other
-   * side argues with. The night's pickup is correctable here (see the Edit below); the standing
-   * split is not, because it is the party's rather than this pool's and arrives with no onSave.
+   * side argues with. Each coupon card's Edit Splits corrects its night's pickup, and the standing
+   * split with it where the party's onSave arrives.
    */
   stacks?: StackAssignment;
   /** The picker's own add. Not the rows': one drop being logged does not lock the pool. */
@@ -68,18 +66,6 @@ export function LootPool({
   onSetPaid: (lootId: string, memberId: string, paid: boolean) => void;
   onDelete: (lootId: string) => void;
 }) {
-  /**
-   * Whether the night's stack boxes take typing. Party View's own model, and for its own reason.
-   *
-   * Not always-on. An unanswered night's boxes OPEN on a guess (the balanced split), so leaving
-   * them out would draw a pickup nobody entered as though it had happened. At
-   * rest the night states what was recorded and nothing else. See StackPickup.
-   */
-  const [editing, setEditing] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  // Until the pool is edited again.
-  const [justSaved, setJustSaved] = useState(false);
-  const group = useSaveGroup();
   /**
    * Whether the nights run under a different arrangement are on screen.
    *
@@ -100,214 +86,152 @@ export function LootPool({
   const here = nights.filter((night) => ranAtThisMode(night, party));
   const others = nights.filter((night) => !ranAtThisMode(night, party));
   const hidden = others.reduce((count, night) => count + night.loot.length, 0);
-  // Offered only where something can actually be answered. A pool whose coupon nights have all
-  // settled is history, and an Edit over it is a button that opens nothing.
-  const pickup = stacks?.pickup;
-  // A member corrects the stacks of a night they logged, and no other (setBundlesRoute).
-  const mine = new Set(loot.filter((row) => row.recordedByYou === true).map((row) => row.id));
-  const correctable = Boolean(
-    pickup?.onSave &&
-    pickup.drops.some(
-      (drop) => !pickup.locked?.has(drop.lootId) && (!readOnly || mine.has(drop.lootId)),
-    ),
-  );
-
-  /** The pool's one Save: every night's pickup that changed, then closed. */
-  async function saveAndClose() {
-    setSaveError(null);
-    try {
-      await group.saveAll();
-      setEditing(false);
-      setJustSaved(true);
-    } catch (e) {
-      if (e instanceof StaleAfterWrite) setEditing(false);
-      setSaveError(failureText(e, "That didn't save. Try again."));
-    }
-  }
 
   return (
-    <SaveGroup group={group}>
-      <section className="loot-pool">
-        <div className="loot-pool-head">
-          <h2 className="loot-pool-title">Loot Pool</h2>
-          {correctable && (
-            <Button
-              variant="secondary"
-              disabled={group.saving}
-              onClick={() => {
-                setEditing((open) => !open);
-                setSaveError(null);
-                setJustSaved(false);
-              }}
-            >
-              {editing ? "Cancel" : "Edit"}
-            </Button>
-          )}
-        </div>
+    <section className="loot-pool">
+      <div className="loot-pool-head">
+        <h2 className="loot-pool-title">Loot Pool</h2>
+      </div>
 
-        {(!readOnly || memberSeats(party)) && (
-          <DropPicker
-            bossKey={party.bossKey}
-            worldType={party.worldType}
-            table={dropTables[party.bossKey]}
-            difficulty={modeThisWeek(party)}
-            busy={adding}
-            onAdd={onAdd}
-          />
-        )}
+      {(!readOnly || memberSeats(party)) && (
+        <DropPicker
+          bossKey={party.bossKey}
+          worldType={party.worldType}
+          table={dropTables[party.bossKey]}
+          difficulty={modeThisWeek(party)}
+          busy={adding}
+          onAdd={onAdd}
+        />
+      )}
 
-        {/* Nothing of THIS config's. A pool holding only other arrangements' nights is not empty, and
+      {/* Nothing of THIS config's. A pool holding only other arrangements' nights is not empty, and
           saying it was would be the screen disagreeing with the line under it. */}
-        {here.length === 0 && hidden === 0 && past.length === 0 && (
-          <p className="finder-empty">Nothing in the pool yet.</p>
-        )}
+      {here.length === 0 && hidden === 0 && past.length === 0 && (
+        <p className="finder-empty">Nothing in the pool yet.</p>
+      )}
 
-        {/* The running count, in a world where nothing sells. Not shown where drops become mesos:
+      {/* The running count, in a world where nothing sells. Not shown where drops become mesos:
           there the pot divides and who physically held the item is not what makes it fair.
           A solo pool has one seat, so there is nobody to be even with. */}
-        {!canTrade(party.worldType) && !party.solo && loot.length > 0 && (
-          <ul className="loot-tally">
-            {takenTally(loot, party.seats).map((seat) => (
-              <li key={seat.memberId} className={seat.up ? "is-up" : undefined}>
-                <span className="loot-tally-name">{seat.name}</span>
-                <span className="loot-tally-count">{seat.taken}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+      {!canTrade(party.worldType) && !party.solo && loot.length > 0 && (
+        <ul className="loot-tally">
+          {takenTally(loot, party.seats).map((seat) => (
+            <li key={seat.memberId} className={seat.up ? "is-up" : undefined}>
+              <span className="loot-tally-name">{seat.name}</span>
+              <span className="loot-tally-count">{seat.taken}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
-        {/* THIS config's nights. One of them is just the pool, and heading it would say in a line
+      {/* THIS config's nights. One of them is just the pool, and heading it would say in a line
           what the page says already; more than one and each carries the night it was run on.
 
           What is NOT here is a night run at another MODE. Extreme Kalos and Chaos Kalos share a row
           only because a config is one per (character, boss) and a one-off takes over the row its
           pair already has, so this pool held 540 Extreme coupons under a Chaos heading, on a boss
           that drops none at Chaos. See ranAtThisMode. */}
-        {here.map((night) => (
-          <div className="loot-night" key={night.weekStart}>
-            {here.length > 1 && <h3 className="loot-night-title">{nightLabel(night, party)}</h3>}
-            <LootList
-              party={party}
-              loot={night.loot}
-              dropTables={dropTables}
-              bossByKey={bossByKey}
-              pieceStatus={pieceStatus}
-              stacks={stacks}
-              // The deal is the PARTY's, not a night's, so it is drawn once below rather than restated
-              // under every night that happens to hold coupons. Same reason LootGroup draws it on the
-              // last row only.
-              splitElsewhere
-              editing={editing}
-              isSaving={isSaving}
-              readOnly={readOnly}
-              onSell={onSell}
-              onUnsell={onUnsell}
-              onSetTaken={onSetTaken}
-              onSetPaid={onSetPaid}
-              onDelete={onDelete}
-            />
-          </div>
-        ))}
+      {here.map((night) => (
+        <div className="loot-night" key={night.weekStart}>
+          {here.length > 1 && <h3 className="loot-night-title">{nightLabel(night, party)}</h3>}
+          <LootList
+            party={party}
+            loot={night.loot}
+            dropTables={dropTables}
+            bossByKey={bossByKey}
+            pieceStatus={pieceStatus}
+            stacks={stacks}
+            // The deal is the PARTY's, not a night's, so it is drawn once below rather than restated
+            // under every night that happens to hold coupons. Same reason LootGroup draws it on the
+            // last row only.
+            splitElsewhere
+            editSplits
+            isSaving={isSaving}
+            readOnly={readOnly}
+            onSell={onSell}
+            onUnsell={onUnsell}
+            onSetTaken={onSetTaken}
+            onSetPaid={onSetPaid}
+            onDelete={onDelete}
+          />
+        </div>
+      ))}
 
-        {stacks && (here.length > 0 || past.length > 0) && (
-          <div className="loot-config-card">
-            <h3 className="loot-group-title is-config">{stacks.entitledTitle}</h3>
-            <StackAssign
-              config={stacks.config}
-              editing={editing}
-              busy={false}
-              onSave={stacks.onSave}
-            />
-          </div>
-        )}
+      {stacks && (here.length > 0 || past.length > 0) && (
+        <div className="loot-config-card">
+          <h3 className="loot-group-title is-config">{stacks.entitledTitle}</h3>
+          <StackAssign config={stacks.config} editing={false} busy={false} onSave={stacks.onSave} />
+        </div>
+      )}
 
-        {/* Said, not silently dropped: a screen may narrow what it draws, and may not lose rows
+      {/* Said, not silently dropped: a screen may narrow what it draws, and may not lose rows
           without saying so. Openable because some of them can still be acted on and a pool row is
           the only place to do it. */}
-        {hidden > 0 && (
-          <div className="loot-elsewhere">
-            <Button variant="secondary" onClick={() => setShowingOthers((open) => !open)}>
-              {showingOthers ? "Hide" : "Other Nights"}
-            </Button>
-            {showingOthers &&
-              others.map((night) => (
-                <div className="loot-night" key={night.weekStart}>
-                  <h3 className="loot-night-title">{nightLabel(night, party)}</h3>
-                  <LootList
-                    party={party}
-                    loot={night.loot}
-                    dropTables={dropTables}
-                    bossByKey={bossByKey}
-                    pieceStatus={pieceStatus}
-                    stacks={stacks}
-                    splitElsewhere
-                    editing={editing}
-                    isSaving={isSaving}
-                    readOnly={readOnly}
-                    onSell={onSell}
-                    onUnsell={onUnsell}
-                    onSetTaken={onSetTaken}
-                    onSetPaid={onSetPaid}
-                    onDelete={onDelete}
-                  />
-                </div>
-              ))}
-          </div>
-        )}
+      {hidden > 0 && (
+        <div className="loot-elsewhere">
+          <Button variant="secondary" onClick={() => setShowingOthers((open) => !open)}>
+            {showingOthers ? "Hide" : "Other Nights"}
+          </Button>
+          {showingOthers &&
+            others.map((night) => (
+              <div className="loot-night" key={night.weekStart}>
+                <h3 className="loot-night-title">{nightLabel(night, party)}</h3>
+                <LootList
+                  party={party}
+                  loot={night.loot}
+                  dropTables={dropTables}
+                  bossByKey={bossByKey}
+                  pieceStatus={pieceStatus}
+                  stacks={stacks}
+                  splitElsewhere
+                  editSplits
+                  isSaving={isSaving}
+                  readOnly={readOnly}
+                  onSell={onSell}
+                  onUnsell={onUnsell}
+                  onSetTaken={onSetTaken}
+                  onSetPaid={onSetPaid}
+                  onDelete={onDelete}
+                />
+              </div>
+            ))}
+        </div>
+      )}
 
-        {past.length > 0 && (
-          <div className="loot-elsewhere">
-            <Button
-              variant="secondary"
-              aria-expanded={showingHistory}
-              onClick={() => setShowingHistory((open) => !open)}
-            >
-              {showingHistory ? "Hide Drop History" : `Show Drop History (${past.length})`}
-            </Button>
-            {showingHistory &&
-              poolNights(past, party).map((night) => (
-                <div className="loot-night" key={night.weekStart}>
-                  <h3 className="loot-night-title">{nightLabel(night, party)}</h3>
-                  <LootList
-                    party={party}
-                    loot={night.loot}
-                    dropTables={dropTables}
-                    bossByKey={bossByKey}
-                    pieceStatus={pieceStatus}
-                    stacks={stacks}
-                    splitElsewhere
-                    editing={editing}
-                    isSaving={isSaving}
-                    readOnly={readOnly}
-                    onSell={onSell}
-                    onUnsell={onUnsell}
-                    onSetTaken={onSetTaken}
-                    onSetPaid={onSetPaid}
-                    onDelete={onDelete}
-                  />
-                </div>
-              ))}
-          </div>
-        )}
-
-        {editing && (
-          <div className="loot-actions">
-            <Button
-              variant="primary"
-              disabled={group.saving || !group.changed || !group.ready}
-              onClick={() => void saveAndClose()}
-            >
-              Save
-            </Button>
-          </div>
-        )}
-        {saveError && <p className="split-error">{saveError}</p>}
-        {justSaved && (
-          <p className="split-saved" role="status">
-            Save successful.
-          </p>
-        )}
-      </section>
-    </SaveGroup>
+      {past.length > 0 && (
+        <div className="loot-elsewhere">
+          <Button
+            variant="secondary"
+            aria-expanded={showingHistory}
+            onClick={() => setShowingHistory((open) => !open)}
+          >
+            {showingHistory ? "Hide Drop History" : `Show Drop History (${past.length})`}
+          </Button>
+          {showingHistory &&
+            poolNights(past, party).map((night) => (
+              <div className="loot-night" key={night.weekStart}>
+                <h3 className="loot-night-title">{nightLabel(night, party)}</h3>
+                <LootList
+                  party={party}
+                  loot={night.loot}
+                  dropTables={dropTables}
+                  bossByKey={bossByKey}
+                  pieceStatus={pieceStatus}
+                  stacks={stacks}
+                  splitElsewhere
+                  editSplits
+                  isSaving={isSaving}
+                  readOnly={readOnly}
+                  onSell={onSell}
+                  onUnsell={onUnsell}
+                  onSetTaken={onSetTaken}
+                  onSetPaid={onSetPaid}
+                  onDelete={onDelete}
+                />
+              </div>
+            ))}
+        </div>
+      )}
+    </section>
   );
 }

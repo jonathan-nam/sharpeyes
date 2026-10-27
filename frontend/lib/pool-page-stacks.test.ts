@@ -162,17 +162,16 @@ describe("the pool page can show the nights behind a coupon debt", () => {
     // somebody has already been shown, which is the silent wrong number this repo exists to stop.
     expect(page).toContain("locked: new Set(mine.filter((entry) => entry.closed)");
     expect(list).toContain("!pickup.locked?.has(item.id)");
-    // And the way in is not offered at all when every night is settled.
-    expect(pool).toContain(
-      "(drop) => !pickup.locked?.has(drop.lootId) && (!readOnly || mine.has(drop.lootId))",
-    );
+    // And a closed night's card offers no Edit Splits at all.
+    expect(list).toContain("const actions = editable ?");
   });
 
   it("opens the boxes behind an Edit rather than leaving them out", () => {
     // An unanswered night's boxes open on a GUESS (a named looter, or the balanced split). Drawn at
     // rest that reads as a pickup somebody entered. See StackPickup.
-    expect(pool).toContain("const [editing, setEditing] = useState(false)");
-    expect(pool).toContain('{editing ? "Cancel" : "Edit"}');
+    expect(list).toContain("const open = editSplits && splitting === item.id;");
+    expect(list).toContain("Edit Splits");
+    expect(pool).toContain("editSplits");
   });
 
   it("draws a summary rather than boxes when nothing can be saved", () => {
