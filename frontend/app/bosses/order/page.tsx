@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import type { StackDraft } from "@/components/drop-picker";
 import { Button, ButtonLink } from "@/components/button";
@@ -28,12 +28,9 @@ import {
 } from "@/lib/boss-night";
 import {
   type Availability,
-  type CandidateRun,
   EMPTY_PLAN,
   type EligibleRun,
   type Plan,
-  planNight,
-  screenRuns,
   shuffledPlan,
   sourcesByCount,
   tradeOffs,
@@ -49,7 +46,15 @@ import { controlsKey } from "@/lib/run-order-submit";
 import { useDropIcons } from "@/lib/drop-icons";
 import { usePiecePiles } from "@/lib/use-piece-piles";
 import { useSeatSprites } from "@/lib/seat-sprites";
+import {
+  type Night,
+  type NightInputs,
+  type NightResult,
+  nightOf,
+  type WindowText,
+} from "@/lib/night-search";
 import { useNightClears } from "@/lib/use-night-clears";
+import { useNightSearch } from "@/lib/use-night-search";
 import { useEveryoneOn } from "@/lib/everyone-on";
 import { useShowTimes } from "@/lib/show-times";
 import { useWhoIsOn } from "@/lib/who-is-on";
@@ -88,11 +93,11 @@ const VESTIGE = "vestige-of-erion";
 const PRESETS = [60, 90, 120, 180, 240];
 
 const NO_RUNS: EligibleRun[] = [];
+const NO_HIDDEN: ReadonlySet<string> = new Set();
+const NO_PEOPLE: NightPerson[] = [];
+const NO_AVAILABLE: Record<string, Availability> = {};
 
 type LoadState = "loading" | "loaded" | "error";
-
-/** One person's window, as typed. Parsed where it is used, so a half-finished "+3" is not a time. */
-type WindowText = { from: string; until: string };
 
 const NO_WINDOW: WindowText = { from: "", until: "" };
 const NO_WINDOWS: Record<string, WindowText> = {};
@@ -133,22 +138,6 @@ function pinOf(window: WindowText | undefined): string | null {
   else if (until !== null) said.push(`to ${formatOffsetShort(until)}`);
 
   return said.length === 0 ? null : `· ${said.join(" · ")}`;
-}
-
-/** The night's order without "Exclude Party Member Subsets", for that toggle to break ties toward. */
-function preferredOrder(
-  allRuns: CandidateRun[],
-  hereAll: string[],
-  hidden: ReadonlySet<string>,
-  night: number,
-  available: Record<string, Availability>,
-): string[] {
-  const runs = screenRuns(allRuns, hereAll).eligible;
-  let hiddenMinutes = 0;
-  for (const run of runs) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
-  return planNight(runs, { minutes: night + hiddenMinutes, available }).best.runs.map(
-    (planned) => planned.run.id,
-  );
 }
 
 export default function RunOrderPage() {
@@ -462,7 +451,7 @@ export default function RunOrderPage() {
   // Snapshot the INPUTS rather than each derived value: derived values are computed at different
   // depths of the chain, and freezing them one by one is what would let them disagree. Server data
   // (parties, bosses) is deliberately not in here, so a write during the night still lands.
-  const inputs = useMemo(
+  const inputs = useMemo<NightInputs>(
     () => ({ budget, openOnly, everyoneOn, away, startAt, windows, timed }),
     [budget, openOnly, everyoneOn, away, startAt, windows, timed],
   );
@@ -483,14 +472,7 @@ export default function RunOrderPage() {
     [openOnly, everyoneOn, timed, away, windows, startText, endText, duration],
   );
 
-  const [asked, setAsked] = useState<{ inputs: typeof inputs; key: string } | null>(null);
-  // Deferred so the press itself lands on the tick it is made. planNight is a beam search, and a
-  // night of a dozen bosses is long enough to be felt between the click and the button answering.
-  const deferredAsk = useDeferredValue(asked);
-  const shownAsk = asked === null ? null : deferredAsk;
-  const stale = shownAsk !== asked;
-  const shown = shownAsk?.inputs ?? inputs;
-  const planning = shownAsk !== null;
+  const [asked, setAsked] = useState<{ inputs: NightInputs; key: string } | null>(null);
   // The controls have moved since. Said by the button, which is the only thing that can act on it.
   const outdated = asked !== null && asked.key !== key;
 
@@ -513,103 +495,63 @@ export default function RunOrderPage() {
     }
   }
 
-  // The same two lists again, from the night that was asked for. Not shared with the live ones
-  // above: those describe the controls, and these are what the plan is, so a filter ticked after
-  // the plan was drawn must move one and not the other.
-  const plannedParties = useMemo(
-    () => (shown.openOnly ? stillToRun(running, answered) : running),
-    [running, shown.openOnly, answered],
+  const data = useMemo(
+    () => ({ running, answered, bosses, switchers }),
+    [running, answered, bosses, switchers],
   );
 
-  const plannedRuns = useMemo(
-    () => runsFromParties(plannedParties, bosses, switchers),
-    [plannedParties, bosses, switchers],
+  // Searched before it is asked for: the controls as they are, from the moment there is a night to
+  // plan, so the button usually finds its answer waiting. In a worker, so the controls stay live.
+  const live = useMemo(
+    () => (now !== null && runs.length > 0 ? nightOf(inputs, data) : null),
+    [now, runs.length, inputs, data],
   );
+  useNightSearch(live?.search ?? null, false);
 
-  // The search plans every config on the period, cleared or not, and the cleared ones are hidden
-  // from what it returns. See withoutRuns for why.
-  const hidden = useMemo(() => {
-    const shownIds = new Set(plannedParties.map((party) => party.id));
-    return new Set(running.filter((party) => !shownIds.has(party.id)).map((party) => party.id));
-  }, [running, plannedParties]);
-  const allRuns = useMemo(
-    () => runsFromParties(running, bosses, switchers),
-    [running, bosses, switchers],
+  const askedNight = useMemo(
+    () => (asked === null ? null : nightOf(asked.inputs, data)),
+    [asked, data],
   );
+  const askedResult = useNightSearch(askedNight?.search ?? null, true);
 
-  // Who is on, as people and as ids. The grid puts a column per person, so it needs the names and
-  // the order, not just the set the screening asks for.
-  const onTonight = useMemo(() => {
-    return rosterFrom(plannedParties).filter(
-      (person) => switchers.has(person.id) && !shown.away.includes(person.id),
-    );
-  }, [plannedParties, shown.away, switchers]);
-  const here = useMemo(() => onTonight.map((person) => person.id), [onTonight]);
-  // Everyone in a hidden run too, or their runs would be refused and drop out of the search.
-  const hereAll = useMemo(
-    () =>
-      rosterFrom(running)
-        .filter((person) => switchers.has(person.id) && !shown.away.includes(person.id))
-        .map((person) => person.id),
-    [running, shown.away, switchers],
-  );
-
-  // The eligible half is the plan. Nothing until the night has been asked for, which is what keeps
-  // the search, the plan and "Left Out" all empty rather than each needing its own gate.
-  const screening = useMemo(
-    () =>
-      planning
-        ? screenRuns(allRuns, hereAll, { everyoneOn: shown.everyoneOn, everyone: here })
-        : { eligible: NO_RUNS, rejected: [] },
-    [planning, allRuns, hereAll, here, shown.everyoneOn],
-  );
-  const searched = screening.eligible;
-  const eligible = useMemo(() => searched.filter((run) => !hidden.has(run.id)), [searched, hidden]);
+  // What is drawn: the last night asked for whose search has answered. Until a newer one has, the
+  // plan on screen stays up rather than blanking for the length of a search.
+  const [drawn, setDrawn] = useState<{
+    inputs: NightInputs;
+    night: Night;
+    result: NightResult;
+  } | null>(null);
+  if (
+    asked !== null &&
+    askedNight !== null &&
+    askedResult !== null &&
+    (drawn?.night !== askedNight || drawn.result !== askedResult)
+  ) {
+    setDrawn({ inputs: asked.inputs, night: askedNight, result: askedResult });
+  }
+  const stale = askedNight !== null && drawn?.night !== askedNight;
+  const shown = drawn?.inputs ?? inputs;
+  const planning = drawn !== null;
 
   // Nothing on screen marks the wait. Fading the old plan through it was tried and removed: at the
   // ~64ms a normal account takes, the fade began and reversed before it finished, and a flicker
   // reads as a fault where the plain swap reads as the page keeping up. aria-busy still says it,
   // for anything listening rather than looking.
-  // Windows are stated on the reset clock and the search counts from the start of the night, so
-  // this is where the one becomes the other. A half-typed "+" parses to nothing and constrains
-  // nothing, which is what stops the plan lurching about while somebody types a time.
-  //
-  // spanBetween rather than a subtraction: the clock wraps at reset, and it also answers the
-  // person who was already free before the night started with a nought rather than most of a day.
-  const available = useMemo(() => {
-    const byPerson: Record<string, Availability> = {};
-    // A window is a time, so an untimed night has none. Not cleared, just not applied: the boxes
-    // still hold what was typed for when the clock comes back.
-    if (!shown.timed) return byPerson;
-    for (const [id, window] of Object.entries(shown.windows)) {
-      if (!switchers.has(id)) continue;
-      const from = parseOffset(window.from);
-      const until = parseOffset(window.until);
-      const said: Availability = {};
-      if (from !== null) said.from = spanBetween(shown.startAt, from);
-      if (until !== null) said.until = spanBetween(shown.startAt, until);
-      if (said.from !== undefined || said.until !== undefined) byPerson[id] = said;
-    }
-    return byPerson;
-  }, [shown.windows, shown.startAt, shown.timed, switchers]);
+  const hidden = drawn?.night.hidden ?? NO_HIDDEN;
+  const onTonight = drawn?.night.onTonight ?? NO_PEOPLE;
+  const searched = drawn?.night.search.searched ?? NO_RUNS;
+  const available = drawn?.night.search.available ?? NO_AVAILABLE;
+  const night = drawn?.night.search.night ?? 0;
+  const plannedRuns = useMemo(
+    () => runsFromParties(drawn?.night.plannedParties ?? [], bosses, switchers),
+    [drawn, bosses, switchers],
+  );
+  const eligible = useMemo(() => searched.filter((run) => !hidden.has(run.id)), [searched, hidden]);
 
-  // What the night is allowed to take. Nothing, when it is not being run to the clock: the point of
-  // that mode is that the length is not the question, so every boss that can be run is in the plan
-  // and none is dropped for a reason the page is no longer showing.
-  const night = shown.timed ? shown.budget : Infinity;
-
-  const full = useMemo(() => {
-    // The hidden runs take no time tonight, so the search gets their minutes back on top.
-    let hiddenMinutes = 0;
-    for (const run of searched) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
-    const minutes = night + hiddenMinutes;
-    const prefer = shown.everyoneOn
-      ? preferredOrder(allRuns, hereAll, hidden, night, available)
-      : undefined;
-    return { minutes, byCount: planNight(searched, { minutes, available, prefer }).byCount };
-  }, [searched, hidden, night, available, shown.everyoneOn, allRuns, hereAll]);
+  const full = drawn?.result ?? null;
   const sources = useMemo(
-    () => sourcesByCount(full.byCount, hidden, { minutes: night, available }),
+    () =>
+      full === null ? [] : sourcesByCount(full.byCount, hidden, { minutes: night, available }),
     [full, hidden, night, available],
   );
   const byCount = useMemo(() => sources.map((source) => source.shown), [sources]);
@@ -622,7 +564,7 @@ export default function RunOrderPage() {
   // would be one each. Reordered whole and then hidden, for the reason withoutRuns gives.
   const plan = useMemo(() => {
     const from = sources.find((source) => source.shown === listed)?.from;
-    if (seed === null || from === undefined) return listed;
+    if (seed === null || from === undefined || full === null) return listed;
     const searchedAs = { minutes: full.minutes, available };
     const reordered = shuffledPlan(full.byCount[from] as Plan, searchedAs, seed);
     return withoutRuns(reordered, hidden, { minutes: night, available });
