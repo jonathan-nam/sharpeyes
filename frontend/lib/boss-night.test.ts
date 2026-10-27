@@ -4,19 +4,16 @@ import type { Party, PartyMember } from "@/types/party";
 
 import { DEFAULT_MINUTES, MAX_MINUTES, parseMinutes, runMinutes } from "./boss-minutes";
 import {
-  type DraftRun,
   formatDuration,
   formatOffset,
   formatOffsetShort,
+  type NightPerson,
   nextHalfHour,
   offsetNow,
   ownerOf,
   parseOffset,
-  personKey,
   rosterFrom,
-  rosterFromDrafts,
   rosterOfSwitchers,
-  runsFromDrafts,
   planAsText,
   planGrid,
   runsFromParties,
@@ -27,7 +24,7 @@ import {
   spanBetween,
   YOU,
 } from "./boss-night";
-import { type EligibleRun, planNight, screenRuns } from "./boss-run-plan";
+import { type CandidateRun, type EligibleRun, planNight, screenRuns } from "./boss-run-plan";
 
 function member(over: Partial<PartyMember> & { name: string }): PartyMember {
   return {
@@ -252,69 +249,6 @@ describe("runsFromParties", () => {
   });
 });
 
-describe("runsFromDrafts", () => {
-  const draft = (seats: [string, string][]): DraftRun => ({
-    id: "d1",
-    bossKey: "lotus",
-    bossName: "Lotus",
-    minutes: 5,
-    seats: seats.map(([character, person]) => ({ character, person })),
-  });
-
-  it("identifies a hand-typed person by name, however it was capitalised", () => {
-    const runs = runsFromDrafts([
-      draft([
-        ["Tide", "Chris"],
-        ["Pine", " chris "],
-      ]),
-    ]);
-    expect(runs[0]?.seats.map((s) => s.personId)).toEqual(["chris", "chris"]);
-  });
-
-  it("leaves a seat with no person named unattributed", () => {
-    expect(runsFromDrafts([draft([["Tide", ""]])])[0]?.seats[0]?.personId).toBeNull();
-  });
-
-  it("drops a row with no character on it, which is an unfilled form", () => {
-    expect(
-      runsFromDrafts([
-        draft([
-          ["Tide", "Chris"],
-          ["  ", "Dave"],
-        ]),
-      ])[0]?.seats,
-    ).toHaveLength(1);
-  });
-});
-
-describe("rosterFromDrafts", () => {
-  it("keeps the spelling it was first given", () => {
-    const drafts: DraftRun[] = [
-      {
-        id: "d1",
-        bossKey: "lotus",
-        bossName: "Lotus",
-        minutes: 5,
-        seats: [
-          { character: "A", person: "Chris" },
-          { character: "B", person: "chris" },
-          { character: "C", person: "Ann" },
-        ],
-      },
-    ];
-    expect(rosterFromDrafts(drafts)).toEqual([
-      { id: "ann", name: "Ann" },
-      { id: "chris", name: "Chris" },
-    ]);
-  });
-});
-
-describe("personKey", () => {
-  it("treats case and padding as typing rather than identity", () => {
-    expect(personKey("  Chris ")).toBe(personKey("chris"));
-  });
-});
-
 describe("runMinutes", () => {
   it("assumes the same half hour for a config nobody has timed", () => {
     expect(runMinutes(null)).toBe(DEFAULT_MINUTES);
@@ -356,19 +290,52 @@ describe("formatDuration", () => {
   });
 });
 
+/** A run written out by hand, with people named rather than linked: the shape these fixtures read best in. */
+type Draft = {
+  id: string;
+  bossKey: string;
+  bossName: string;
+  minutes: number;
+  seats: { character: string; person: string }[];
+};
+
+const runsOf = (drafts: Draft[]): CandidateRun[] =>
+  drafts.map((draft) => ({
+    id: draft.id,
+    bossKey: draft.bossKey,
+    bossName: draft.bossName,
+    difficulty: null,
+    minutes: draft.minutes,
+    seats: draft.seats.map((seat) => ({
+      character: seat.character,
+      personId: seat.person.toLowerCase(),
+    })),
+  }));
+
+/** Everyone named, in the spelling first given, by name. */
+const rosterOf = (drafts: Draft[]): NightPerson[] => {
+  const people = new Map<string, string>();
+  for (const seat of drafts.flatMap((draft) => draft.seats)) {
+    if (!people.has(seat.person.toLowerCase())) people.set(seat.person.toLowerCase(), seat.person);
+  }
+  return [...people.entries()]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+};
+
 describe("planAsText", () => {
   // Built through the real planner rather than a hand-made Plan, so the text is pinned against
   // what the tool actually produces.
-  const textFor = (drafts: DraftRun[], minutes: number) => {
-    const roster = rosterFromDrafts(drafts);
+  const textFor = (drafts: Draft[], minutes: number) => {
+    const roster = rosterOf(drafts);
     const { eligible } = screenRuns(
-      runsFromDrafts(drafts),
+      runsOf(drafts),
       roster.map((p) => p.id),
     );
     return planAsText(planNight(eligible, { minutes }).best, roster);
   };
 
-  const R = (id: string, bossName: string, seats: [string, string][]): DraftRun => ({
+  const R = (id: string, bossName: string, seats: [string, string][]): Draft => ({
     id,
     bossKey: id,
     bossName,
@@ -588,10 +555,10 @@ describe("planAsText", () => {
   });
 
   /** The same night, copied down to the runs named. See planAsText's `only`. */
-  const partTextFor = (drafts: DraftRun[], minutes: number, only: string[]) => {
-    const roster = rosterFromDrafts(drafts);
+  const partTextFor = (drafts: Draft[], minutes: number, only: string[]) => {
+    const roster = rosterOf(drafts);
     const { eligible } = screenRuns(
-      runsFromDrafts(drafts),
+      runsOf(drafts),
       roster.map((p) => p.id),
     );
     return planAsText(planNight(eligible, { minutes }).best, roster, new Set(only));
@@ -628,7 +595,7 @@ describe("planAsText", () => {
 });
 
 describe("planGrid", () => {
-  const R = (id: string, bossName: string, seats: [string, string][]): DraftRun => ({
+  const R = (id: string, bossName: string, seats: [string, string][]): Draft => ({
     id,
     bossKey: id,
     bossName,
@@ -636,10 +603,10 @@ describe("planGrid", () => {
     seats: seats.map(([character, person]) => ({ character, person })),
   });
 
-  const gridFor = (drafts: DraftRun[], minutes: number) => {
-    const roster = rosterFromDrafts(drafts);
+  const gridFor = (drafts: Draft[], minutes: number) => {
+    const roster = rosterOf(drafts);
     const { eligible } = screenRuns(
-      runsFromDrafts(drafts),
+      runsOf(drafts),
       roster.map((p) => p.id),
     );
     return planGrid(planNight(eligible, { minutes }).best, roster);

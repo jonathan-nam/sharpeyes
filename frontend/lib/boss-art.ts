@@ -20,6 +20,7 @@
 //
 // BOSS_SHORT_NAMES is what a party calls a boss out loud, and holds only the ones that have one.
 // A missing key means the full name is the short name. Never match anything against these.
+// shared/planning's PlanText.kt holds the same map; boss-night.golden.test.ts fails when they differ.
 
 export const BOSS_ART: Record<string, string> = {
   lotus: "/boss-icons/lotus.png",

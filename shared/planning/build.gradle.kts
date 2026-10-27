@@ -1,4 +1,5 @@
-// Run Order's planning, shared: ported from frontend/lib/boss-run-plan.ts for the Android and iOS apps,
+// Run Order's planning, shared: ported from frontend/lib/boss-run-plan.ts, boss-night.ts and
+// night-search.ts for the Android and iOS apps,
 // which are to add their own targets to this module. Common code only in commonMain; a platform reaches
 // it through an expect/actual (see Collation.kt), and the tests are common too, so every target runs the
 // goldens. See docs/shared-modules-plan.md.
@@ -26,6 +27,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
+            // Public, because nightOf and runsFromParties take its PartyResponse and BossResponse.
+            api("com.sharpeyes:api")
         }
         jvmMain.dependencies {
             // localeCompare's ICU collation on the JVM. Android has the same in android.icu.
