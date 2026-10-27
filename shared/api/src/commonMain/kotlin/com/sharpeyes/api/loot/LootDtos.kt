@@ -104,6 +104,10 @@ data class LootResponse(
     // Who did, as the viewer calls them, when it was not the viewer. See loggerNames.
     @AbsentOnCachedPayload
     val recordedByName: String? = null,
+    // Locked: sold with every share paid, or a coupon night the owner's coupon sales have answered or
+    // a closing closed. Nothing edits, undoes or removes it. See settledRefusal.
+    @AbsentOnCachedPayload
+    val settled: Boolean = false,
 )
 
 /**

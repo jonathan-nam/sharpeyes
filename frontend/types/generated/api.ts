@@ -406,6 +406,7 @@ export type LootResponse = {
   bundlesBy: LootBundleResponse[];
   recordedByYou?: boolean;
   recordedByName?: string | null;
+  settled?: boolean;
 };
 
 export type NotificationAction = {

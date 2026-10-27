@@ -7,6 +7,7 @@ import com.sharpeyes.backend.characters.charactersInActiveWorld
 import com.sharpeyes.backend.parties.allLootFor
 import com.sharpeyes.backend.parties.debtsFor
 import com.sharpeyes.backend.parties.disposalsFor
+import com.sharpeyes.backend.parties.lockedBy
 import com.sharpeyes.backend.parties.partiesFor
 import com.sharpeyes.backend.parties.paymentsFor
 import com.sharpeyes.backend.parties.peopleFor
@@ -16,6 +17,7 @@ import com.sharpeyes.backend.plugins.addSpan
 import com.sharpeyes.backend.plugins.dbQuery
 import com.sharpeyes.backend.plugins.principalIdAndEmail
 import com.sharpeyes.backend.users.ensureUser
+import com.sharpeyes.money.settlement.answeredNights
 import io.ktor.server.application.call
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -75,6 +77,7 @@ private suspend fun RoutingContext.dropLogPage() {
  */
 internal fun dropLogPageFor(
     userId: String,
+    answered: Boolean = true,
     onStage: (String, Duration) -> Unit = { _, _ -> },
 ): DropLogPageResponse {
     // Solo and retired configs included, matching the page's own query string. Both matter to a
@@ -83,7 +86,8 @@ internal fun dropLogPageFor(
     val parties = measureTimedValue { partiesFor(userId, week = null, includeSolo = true, includeRetired = true) }
     onStage("parties", parties.duration)
 
-    val pools = measureTimedValue { allLootFor(userId) }
+    // Coupon nights are locked off this same page below, rather than by allLootFor reading it again.
+    val pools = measureTimedValue { allLootFor(userId, answered = false) }
     onStage("pools", pools.duration)
 
     val rest =
@@ -103,5 +107,6 @@ internal fun dropLogPageFor(
             )
         }
     onStage("rest", rest.duration)
-    return rest.value
+    if (!answered) return rest.value
+    return rest.value.copy(pools = rest.value.pools.lockedBy(answeredNights(moneyPageOf(rest.value))))
 }

@@ -69,6 +69,8 @@ export type Loot = {
   recordedByYou?: boolean;
   /** Who logged it, as you call them, when it was not you. Absent on a payload from before it. */
   recordedByName?: string | null;
+  /** Locked by the server: nothing edits, undoes or removes it. Absent on a cached payload. */
+  settled?: boolean;
   recordedAt?: string;
   // Who is owed, pinned when the drop sold. Empty before that.
   payouts: LootPayout[];

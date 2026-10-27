@@ -142,6 +142,8 @@ export function LootRow({
   const mayRemove = !readOnly || (member !== null && loot.recordedByYou === true);
   // The sale as entered, for Edit Sale. Only the logger records a sale (loggerRefusal).
   const corrected = loot.recordedByYou !== false ? saleBodyOf(loot) : null;
+  // The server's call (LootResponse.settled), which it also refuses every change against.
+  const settled = loot.settled === true;
 
   return (
     <article className={`changed-by-anchor loot-row status-${loot.status.toLowerCase()}`}>
@@ -196,13 +198,18 @@ export function LootRow({
       {/* A piece row has no sale, so Remove is all it has: the pieces are priced on the Drop Log and
           everything else here would act on a pot that does not exist. Withheld where the row heads a
           config, which would go with it. See couponRemovable. */}
-      {loot.status === "PENDING" && canSell && pieces && couponRemovable && mayRemove && (
-        <div className="loot-actions">
-          <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
-            Remove
-          </button>
-        </div>
-      )}
+      {loot.status === "PENDING" &&
+        canSell &&
+        pieces &&
+        couponRemovable &&
+        mayRemove &&
+        !settled && (
+          <div className="loot-actions">
+            <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
+              Remove
+            </button>
+          </div>
+        )}
 
       {loot.status === "PENDING" && !canSell && (!readOnly || member) && (
         <div className="loot-actions">
@@ -381,7 +388,9 @@ export function LootRow({
             </>
           )}
 
-          {actsAs(loot.sellerMemberId) && selling && corrected !== null && (
+          {/* A settled sale is locked until a share is marked unpaid. The server refuses it too
+              (settledRefusal). */}
+          {actsAs(loot.sellerMemberId) && !settled && selling && corrected !== null && (
             <LootSaleForm
               ran={ran}
               sellers={sellers}
@@ -394,7 +403,7 @@ export function LootRow({
               onCancel={() => setSelling(false)}
             />
           )}
-          {actsAs(loot.sellerMemberId) && !selling && (
+          {actsAs(loot.sellerMemberId) && !settled && !selling && (
             <div className="loot-actions">
               {corrected !== null && (
                 <Button variant="secondary" onClick={() => setSelling(true)} disabled={busy}>
@@ -404,8 +413,7 @@ export function LootRow({
               <Button variant="secondary" onClick={onUnsell} disabled={busy}>
                 Undo Sale
               </Button>
-              {/* A settled sale is undone first. The server refuses it too (settledRefusal). */}
-              {!readOnly && !loot.payouts.every((p) => p.paid) && (
+              {!readOnly && (
                 <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
                   Remove
                 </button>

@@ -111,6 +111,7 @@ internal suspend fun RoutingContext.setBundlesRoute() {
                 stacksRefusal(partyId, userId, loot) != null -> stacksRefusal(partyId, userId, loot)
                 request.bundles.keys.any { Uuid.parseOrNull(it) == null } -> "malformed memberId"
                 settledAlready(lootId) -> SETTLED_STANDS
+                settledRefusal(loot) != null -> settledRefusal(loot)
                 bundlesRefusal(request.bundles, loot.ranThatWeek, loot.bundles) != null ->
                     bundlesRefusal(request.bundles, loot.ranThatWeek, loot.bundles)
                 else -> {

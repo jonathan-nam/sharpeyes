@@ -141,6 +141,7 @@ private suspend fun RoutingContext.unsellLootRoute() {
                 !canEditParty(partyId, userId) -> null
                 loot == null -> null
                 unsellRefusal(partyId, userId, loot) != null -> unsellRefusal(partyId, userId, loot)
+                settledRefusal(loot) != null -> settledRefusal(loot)
                 else -> {
                     unsellLoot(lootId, Clock.System.now())
                     findLoot(lootId, partyId, userId)!!

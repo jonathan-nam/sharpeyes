@@ -22,6 +22,7 @@ import com.sharpeyes.money.coupons.receivedByHolder
 import com.sharpeyes.money.coupons.receivedSinceClosing
 import com.sharpeyes.money.coupons.saleCredits
 import com.sharpeyes.money.coupons.salesByHolder
+import com.sharpeyes.money.pieces.spendAnswered
 import com.sharpeyes.money.split.Wallet
 import com.sharpeyes.money.split.buildWallet
 import com.sharpeyes.money.split.saleMoney
@@ -164,4 +165,25 @@ fun settlementView(page: DropLogPage): SettlementView {
         settlement,
         settlementTotals(settlement),
     )
+}
+
+/**
+ * Coupon nights nothing may edit or remove: closed by a closing, or reached by a coupon sale, even in
+ * part. Removing one would move that sale onto other nights. Sales only, as spendAnswered spends
+ * them: coupons a creditor holds of yours are an offset, not a sale.
+ */
+fun answeredNights(page: DropLogPage): Set<String> =
+    page.settlements.flatMap { it.lootIds }.toSet() + nightsReached(settlementView(page).ledgers)
+
+/** Nights a coupon sale reached in [ledgers], even in part. */
+fun nightsReached(ledgers: List<HolderLedger>): Set<String> {
+    val out = LinkedHashSet<String>()
+    for (ledger in ledgers) {
+        val open = ledger.drops.filter { !it.closed && it.transfers.isNotEmpty() }
+        val spent = spendAnswered(ledger).nights
+        for ((before, after) in open.zip(spent)) {
+            if (before.transfers.zip(after.transfers).any { (b, a) -> a.pieces < b.pieces }) out.add(before.lootId)
+        }
+    }
+    return out
 }

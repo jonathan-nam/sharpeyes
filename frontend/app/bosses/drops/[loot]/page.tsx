@@ -147,11 +147,13 @@ export default function DropAuditPage() {
 
   // Your own pools only, as on the Drop Log. See `removable`.
   const entry = log.entries.find((e) => e.lootId === lootId);
-  const canRemove = entry !== undefined && removable(entry, lootIdsOf(pools));
   // A sale is corrected in your own pools, by whoever logged the drop (loggerRefusal).
   const loot = pools.flatMap((pool) => pool.loot).find((l) => l.id === lootId);
+  // Locked by the server (settledRefusal): no Edit Sale and no Remove.
+  const locked = loot?.settled === true;
+  const canRemove = entry !== undefined && !locked && removable(entry, lootIdsOf(pools));
   const party = entry && parties.find((p) => p.id === entry.partyId);
-  const sale = loot && loot.recordedByYou !== false ? saleBodyOf(loot) : null;
+  const sale = loot && !locked && loot.recordedByYou !== false ? saleBodyOf(loot) : null;
   const ran = loot && party ? party.seats.filter((s) => loot.ranThatWeek.includes(s.id)) : [];
 
   async function write(path: string, options: RequestInit): Promise<boolean> {
