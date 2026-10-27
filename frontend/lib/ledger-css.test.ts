@@ -60,25 +60,6 @@ describe("the fully-settled state", () => {
   });
 });
 
-// The way forward starts at the same place on every stage, Drops included, which has no way back.
-// The back slot stacks its stand-ins in one cell, and only works if they stay unseen.
-describe("the links either side of a stage", () => {
-  it("stack the ways back in one cell", () => {
-    expect(css.match(/^\.droplog-step-back \{([^}]*)\}/m)?.[1]).toContain("display: grid");
-    expect(css.match(/^\.droplog-step-back > \* \{([^}]*)\}/m)?.[1]).toContain("grid-area: 1 / 1");
-  });
-
-  it("keep the stand-ins unseen", () => {
-    expect(css.match(/^\.droplog-step\.is-ghost \{([^}]*)\}/m)?.[1]).toContain(
-      "visibility: hidden",
-    );
-  });
-
-  it("start from the left", () => {
-    expect(css).not.toMatch(/\.droplog-step[^{]*\{[^}]*margin-left: auto/);
-  });
-});
-
 // A drop row names who it was run with, so its meta line grew by up to three names. The row is a
 // nowrap flex, and a column that sizes to its content does not give any of it back: the status chip
 // went off the right rather than the text getting narrower. Three rules, none of which works alone.

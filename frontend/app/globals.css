@@ -6723,33 +6723,10 @@ button.link:disabled {
   font-variant-numeric: tabular-nums;
 }
 
-/* The stages either side of this one, under its title: back on the left, next on the right. */
-.droplog-steps {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
 .droplog-step {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-/* One cell for the way back and its unseen stand-ins, so it is as wide as the widest of them. */
-.droplog-step-back {
-  display: grid;
-}
-
-.droplog-step-back > * {
-  grid-area: 1 / 1;
-  justify-self: start;
-}
-
-.droplog-step.is-ghost {
-  visibility: hidden;
 }
 
 .droplog-step-arrow {
