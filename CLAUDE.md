@@ -168,9 +168,10 @@ versions from `gradle/libs.versions.toml`. The plan is `docs/backend-arithmetic-
 
 ### Run Order's search lives in `shared/planning` too
 
-`frontend/lib/boss-run-plan.ts` has a Kotlin port in `shared/planning`, held to it by the
-`planning-golden/` fixtures the same way money's are. Change both in one PR, regenerating with
-`UPDATE_GOLDEN=1 pnpm vitest run lib/boss-run-plan.golden.test.ts`.
+`frontend/lib/boss-run-plan.ts`, `boss-night.ts` and `night-search.ts` have a Kotlin port in
+`shared/planning`, held to them by the `planning-golden/` fixtures the same way money's are. Change
+both in one PR, regenerating with `UPDATE_GOLDEN=1 pnpm vitest run lib/boss-run-plan.golden.test.ts
+lib/boss-night.golden.test.ts`.
 
 ### The API's types live in `shared/api`
 

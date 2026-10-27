@@ -1,6 +1,9 @@
 // Turning what the account knows into a night the planner can order. A party config already IS
 // "this character, this boss, with these people", which is exactly a candidate run.
 //
+// Ported to shared/planning for the apps. A change here changes the port in the same PR, with the
+// fixtures rewritten by boss-night.golden.test.ts (UPDATE_GOLDEN=1).
+//
 // See boss-run-plan.ts for what is then done with them.
 
 import type { Boss } from "@/types/boss";

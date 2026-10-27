@@ -1,5 +1,6 @@
 // Run Order's night, from the controls to the search's answer, as plain functions of plain data so
 // the search can run in a worker (night-search.worker.ts) ahead of the button. See use-night-search.
+// Ported to shared/planning (NightSearch.kt), held to it by boss-night.golden.test.ts.
 
 import {
   type NightPerson,
