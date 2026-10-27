@@ -66,10 +66,13 @@ import {
   dropStatusLabel,
   foldNames,
   foldStatus,
+  lootIdsOf,
+  removable,
   type DropEntry,
   type DropGroup,
   type Grouping,
 } from "@/lib/drop-log";
+import { ArmedRemove } from "@/components/settlement-ledger";
 import { formatDropped } from "@/lib/loot";
 import { saleQueues } from "@/lib/bulk-sale";
 import { useDropIcons } from "@/lib/drop-icons";
@@ -381,7 +384,17 @@ export default function DropLog({ children }: { children: ReactNode }) {
       await writes.rowSale(...args);
       await load().catch(() => {});
     },
+    rowKeep: async (...args: Parameters<typeof writes.rowKeep>) => {
+      await writes.rowKeep(...args);
+      await load().catch(() => {});
+    },
+    rowRemove: async (...args: Parameters<typeof writes.rowRemove>) => {
+      await writes.rowRemove(...args);
+      await load().catch(() => {});
+    },
   };
+  // Your own pools only: a drop in somebody else's book is theirs to remove.
+  const ownLoot = lootIdsOf(pools);
   // A drop logged or sold by anybody in a party of yours, on screen without a reload.
   useLive(["loot", "settlement", "party"], () => load().catch(() => {}));
 
@@ -817,6 +830,9 @@ export default function DropLog({ children }: { children: ReactNode }) {
                     bossByKey={bossByKey}
                     characterById={characterById}
                     showCharacter={character === null}
+                    own={ownLoot}
+                    busy={writes.busy}
+                    onRemove={saleWrites.rowRemove}
                   />
                 ))}
 
@@ -1012,6 +1028,9 @@ function GroupSection({
   bossByKey,
   characterById,
   showCharacter,
+  own,
+  busy,
+  onRemove,
 }: {
   group: DropGroup;
   /** The group's rows, already consolidated by the page. */
@@ -1019,6 +1038,10 @@ function GroupSection({
   bossByKey: Map<string, Boss>;
   characterById: Map<string, Character>;
   showCharacter: boolean;
+  /** See `removable`. */
+  own: Set<string>;
+  busy: boolean;
+  onRemove: (entry: DropEntry) => Promise<void>;
 }) {
   return (
     <section className="party-group">
@@ -1035,6 +1058,9 @@ function GroupSection({
             bossByKey={bossByKey}
             characterById={characterById}
             showCharacter={showCharacter}
+            own={own}
+            busy={busy}
+            onRemove={onRemove}
           />
         ))}
       </ul>
@@ -1047,13 +1073,20 @@ function DropRow({
   bossByKey,
   characterById,
   showCharacter,
+  own,
+  busy,
+  onRemove,
 }: {
   line: DropLine;
   bossByKey: Map<string, Boss>;
   characterById: Map<string, Character>;
   showCharacter: boolean;
+  own: Set<string>;
+  busy: boolean;
+  onRemove: (entry: DropEntry) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
   const entry = line.entries[0]!;
   const boss = bossByKey.get(entry.bossKey ?? "") ?? null;
   const characterName = characterById.get(entry.characterId)?.name ?? null;
@@ -1129,7 +1162,21 @@ function DropRow({
         </span>
 
         <Stage label={status} statusClass={entry.status.toLowerCase()} />
+        {/* A fold is several drops, so only a row that is one drop can be removed from here. */}
+        {!line.folded && removable(entry, own) && (
+          <ArmedRemove
+            label={`Remove ${line.name}`}
+            busy={busy}
+            onRemove={() => {
+              setRefusal(null);
+              onRemove(entry).catch((e) =>
+                setRefusal(failureText(e, "That didn't remove. Try again.")),
+              );
+            }}
+          />
+        )}
       </div>
+      {refusal && <span className="split-error">{refusal}</span>}
 
       {line.folded && open && (
         <ul className="droplog-runs" id={panelId}>

@@ -40,7 +40,8 @@ describe("the rows under `owed` take two clicks to remove", () => {
   it("says which state it is in in words, not only in colour", () => {
     // Hover already paints the button --warn, so an armed button that only changed colour would be
     // indistinguishable from one under the pointer.
-    expect(ledger).toContain('{armed ? "Remove?" : "×"}');
+    expect(ledger).toContain('{armed ? "Remove?" : idle}');
+    expect(ledger).toContain('idle = "×",');
     expect(ledger).toContain("aria-label={armed ? `Confirm: ${label}` : label}");
     expect(css).toContain("button.ledger-drop-sale.is-armed");
     expect(css).toContain("button.ledger-drop-sale.is-armed:hover:not(:disabled) { padding-left");

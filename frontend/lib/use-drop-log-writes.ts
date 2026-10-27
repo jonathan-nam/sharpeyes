@@ -28,6 +28,9 @@ export const DEBTS_KEY = "/api/settlement-debts";
 export const DISPOSALS_KEY = "/api/proceeds-disposals";
 export const PEOPLE_KEY = "/api/people";
 
+/** One drop, as its routes name it. A SaleRow and a DropEntry both are one. */
+export type LootRef = { partyId: string; lootId: string };
+
 /** The lists a write can move. Each write answers with the ones it moved, whole. */
 export type DropLogPatch = Partial<
   Pick<
@@ -173,6 +176,16 @@ export function useDropLogWrites(
       await readBack(async () => apply({ pools: await call<PartyLootPool[]>(POOLS_KEY, {}) }));
     });
 
+  /** Party View's keep and remove routes, for the Drop Log's rows. Same read-back as rowSale. */
+  const rowWrite = (row: LootRef, path: string, options: RequestInit) =>
+    track(async () => {
+      await call<unknown>(`/api/parties/${row.partyId}/loot/${row.lootId}${path}`, options);
+      await readBack(async () => apply({ pools: await call<PartyLootPool[]>(POOLS_KEY, {}) }));
+    });
+  const rowKeep = (row: LootRef, memberId: string) =>
+    rowWrite(row, "/taken", { method: "PUT", body: JSON.stringify({ memberId }) });
+  const rowRemove = (row: LootRef) => rowWrite(row, "", { method: "DELETE" });
+
   return {
     busy,
     track,
@@ -186,6 +199,8 @@ export function useDropLogWrites(
     pin,
     bulkSale,
     rowSale,
+    rowKeep,
+    rowRemove,
   };
 }
 

@@ -352,6 +352,7 @@ describe("what each row of a bulk sale sold for", () => {
       sellerMemberId: "m1",
       sellerName: "Marrow",
       ran: [seat("m1", "Marrow", { mine: true })],
+      solo: false,
     }));
 
   it("divides the total evenly when it divides", () => {

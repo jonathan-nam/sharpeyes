@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Field } from "@/components/add-field";
 import { Button } from "@/components/button";
 import { formatMoney, parseAmount } from "@/lib/money";
@@ -26,6 +26,7 @@ export function LootSaleForm({
   onSell,
   onCancel,
   labelled,
+  actions,
 }: {
   /**
    * Who could have sold this drop: the seats that ran the week it FELL in, not the party as it
@@ -47,6 +48,8 @@ export function LootSaleForm({
    * labelling it would say each thing twice.
    */
   labelled?: boolean;
+  /** Other acts on the same drop (Keep, Remove), on the save button's line. */
+  actions?: ReactNode;
 }) {
   const [price, setPrice] = useState("");
   const [amountBasis, setAmountBasis] = useState("LISTED");
@@ -212,6 +215,7 @@ export function LootSaleForm({
             Cancel
           </Button>
         )}
+        {actions}
         {/* Shown before saving, so a typed "9.5b" is confirmed as 9,500,000,000 rather than
             discovered afterwards. It is also what makes the unit visible: "$1000" echoes back as
             $1,000.00, which is the only thing on screen saying the "$" was read as one. */}
