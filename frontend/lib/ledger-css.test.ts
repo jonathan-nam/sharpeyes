@@ -60,18 +60,10 @@ describe("the fully-settled state", () => {
   });
 });
 
-// The way forward starts at the same place on every stage, Drops included, which has no way back.
-// The back slot stacks its stand-ins in one cell, and only works if they stay unseen.
+// Side by side from the left, so Drops, with no way back, starts its way forward at the edge.
 describe("the links either side of a stage", () => {
-  it("stack the ways back in one cell", () => {
-    expect(css.match(/^\.droplog-step-back \{([^}]*)\}/m)?.[1]).toContain("display: grid");
-    expect(css.match(/^\.droplog-step-back > \* \{([^}]*)\}/m)?.[1]).toContain("grid-area: 1 / 1");
-  });
-
-  it("keep the stand-ins unseen", () => {
-    expect(css.match(/^\.droplog-step\.is-ghost \{([^}]*)\}/m)?.[1]).toContain(
-      "visibility: hidden",
-    );
+  it("sit in a flex row", () => {
+    expect(css.match(/^\.droplog-steps \{([^}]*)\}/m)?.[1]).toContain("display: flex");
   });
 
   it("start from the left", () => {

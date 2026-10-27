@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { ButtonLink } from "@/components/button";
 import {
   dropSections,
-  homeSections,
   sectionFromPath,
   sectionHref,
   sectionSteps,
@@ -21,29 +20,18 @@ export function DropLogHead() {
   const section = shownSection(sectionFromPath(usePathname()) ?? "drops", sections);
   const { back, next } = sectionSteps(section, sections);
   const label = sections.find((s) => s.key === section)?.label;
-  // Every way back the menu's stages have, drawn unseen under the real one, so the slot is as wide
-  // on every page and the way forward starts at the same place, Drops included.
-  const backs = homeSections(useAccountSettings()?.trades).slice(0, -1);
 
   return (
     <>
       <h1 className="page-title">{label}</h1>
       {(back || next) && (
         <div className="droplog-steps">
-          <span className="droplog-step-back">
-            {backs.map((s) => (
-              <span key={s.key} className="party-cancel droplog-step is-ghost" aria-hidden="true">
-                <Arrow back />
-                {s.label}
-              </span>
-            ))}
-            {back && (
-              <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(back.key)}>
-                <Arrow back />
-                {back.label}
-              </ButtonLink>
-            )}
-          </span>
+          {back && (
+            <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(back.key)}>
+              <Arrow back />
+              {back.label}
+            </ButtonLink>
+          )}
           {next && (
             <ButtonLink variant="secondary" className="droplog-step" href={sectionHref(next.key)}>
               {next.key === "settled" ? (
