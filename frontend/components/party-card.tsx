@@ -56,6 +56,7 @@ export function PartyCard({
   onAddDrop,
   pool,
   onSaveRoster,
+  past = false,
   onTakeOff,
   onLeave,
   onWithdrawInvite,
@@ -98,9 +99,8 @@ export function PartyCard({
   /** This party's boss's drop table, for the picker in the panel. */
   dropTable?: BossDrop[];
   /**
-   * Omitted where a drop may not be added, which is any past week: the server stamps a drop with
-   * today, so adding one under last week's label would file it in a week the screen is not showing.
-   * Must reject when the add fails, so the row can say so.
+   * Omitted where a drop may not be added. On a past week the caller dates it that week, or it would
+   * land in a week the screen is not showing. Must reject when the add fails, so the row can say so.
    */
   onAddDrop?: (body: AddLootBody) => Promise<void>;
   /**
@@ -108,9 +108,6 @@ export function PartyCard({
    *
    * The same rows, controls and coupon split the party's own page draws, through the same
    * component: a drop sold from this panel and one sold there are one write.
-   *
-   * Omitted on a past week. The badge above is scoped to the week on screen and a pool is not, so
-   * listing every drop under it would answer a different question from the one the badge asked.
    */
   pool?: {
     /** THIS week's drops. Narrowed by dropsInWeek, which is where the rule lives. */
@@ -132,13 +129,14 @@ export function PartyCard({
     onDelete: (lootId: string) => void;
   };
   /**
-   * Sets who ran THIS week, or puts it back to the usual party with null.
+   * Sets who ran the week on screen, or puts it back to the usual party with null.
    *
-   * Omitted on a past week, which is shown and not edited: the server refuses to write one anyway,
-   * because its payouts were pinned when its drops sold. Must reject when the save fails, so the
-   * row can show the server's reason.
+   * The server refuses a past week whose drops are paid out. Must reject when the save fails, so
+   * the row can show the server's reason.
    */
   onSaveRoster?: (members: string[] | null) => Promise<void>;
+  /** The row is about a past week, which names the week its roster Save is for. */
+  past?: boolean;
   /**
    * This week's coupon nights on this boss, and who picked up which stacks of them.
    *
@@ -188,8 +186,8 @@ export function PartyCard({
   const saved = others.map((m) => m.name);
   const cleaned = draft.map((m) => m.trim()).filter((m) => m !== "");
   const dirty = cleaned.join(SEP) !== saved.join(SEP);
-  // Both, because `open` outlives `opens`: stepping to a past week takes the picker off a solo
-  // row, and an is-open row with nothing under it is a gap below one line.
+  // Both, because `open` outlives `opens`: a row can lose everything under it while open (no drop
+  // tables, say), and an is-open row with nothing under it is a gap below one line.
   const expanded = open && opens;
 
   /** Writes the week, or takes it back to the usual party with null, and closes on success. */
@@ -238,7 +236,7 @@ export function PartyCard({
       <header className="party-row-head">
         {/* A disclosure of its own rather than the whole header, which already holds two links and
             the clear button: nesting those inside a control is not something a row can do. Absent
-            on a past week for a solo config, where the panel would hold nothing at all.
+            where the panel would hold nothing at all.
 
             The label stopped naming the roster when the drop picker joined it below. */}
         {opens ? (
@@ -328,7 +326,7 @@ export function PartyCard({
       {expanded && (
         <div id={panelId} className="party-row-panel">
           {/* One heading per block, in the order the panel already went in. Only where the block is
-              answerable: a past week's roster is read, so naming it for the control it does not
+              answerable: a roster with no Save is read, so naming it for the control it does not
               carry would be a heading over a list of sprites. */}
           {onSaveRoster && <h3 className="loot-group-title">Add Member</h3>}
           {editing && onSaveRoster ? (
@@ -342,7 +340,7 @@ export function PartyCard({
                   disabled={busy || !dirty || cleaned.length === 0}
                   onClick={() => save(cleaned)}
                 >
-                  Save Roster for This Week
+                  {past ? "Save Roster for That Week" : "Save Roster for This Week"}
                 </Button>
                 {/* Only once the week has been spelled out: there is nothing to go back to
                     otherwise, and offering it would imply the week is currently unusual. A one-off
