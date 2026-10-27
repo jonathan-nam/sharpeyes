@@ -162,16 +162,11 @@ describe("one section for what is unsettled", () => {
     expect(ledger).toContain('<div className="ledger-offsets-panel" id={`nights-${row.key}`}>');
   });
 
-  it("names whose inventory only where both sides have nights", () => {
-    // One list and the step above it has already said the direction: a pile of theirs you hold is
-    // "to hand over", a pile of yours they hold is "owed", and the net cannot disagree with the
-    // only list making it. A label under that was the direction a second time.
-    //
-    // Two lists and it is the whole question, since nothing on a night's own row says which
-    // inventory it sits in: unlabelled they run together into one list reading all one way.
-    expect(ledger).toContain("const bothWays = theirNights.length > 0 && myNights.length > 0;");
-    expect(ledger).toContain('{bothWays && <span className="ledger-step">I am holding</span>}');
-    expect(ledger).toContain("{bothWays && <span className=");
+  it("draws one list of nights, the side the net runs, with no week filter", () => {
+    // Both sides drawn read as 20 you held under a net of 360 owed. The step says the direction.
+    expect(ledger).toContain("const nights = nightsOwing(theirNights, myNights);");
+    expect(ledger).not.toContain("I am holding");
+    expect(ledger).not.toContain("nightWeek");
   });
 
   it("puts each half's figure on its own line, over the drops that make it", () => {
@@ -346,15 +341,9 @@ describe("what a column draws and how wide it lets itself get", () => {
     // holding" over nothing at all. A night a sale answered in full is not drawn either.
     expect(ledger).toContain("const theirNights = row.drops.filter((drop) => drop.pieces > 0);");
     expect(ledger).toContain("const myNights = row.owedDrops.filter((drop) => drop.pieces > 0);");
-    // Headed off the week-filtered arrays, which are the same nights narrowed, so a filter that
-    // empties one side takes its heading with it.
-    expect(ledger).toContain("const theirShown = inNightWeek(theirNights);");
-    expect(ledger).toContain("{theirShown.length > 0 && (");
-    expect(ledger).toContain("{myShown.length > 0 && (");
-    // The filtered arrays are what gets drawn, which is the claim. Not pinned to the whole tag:
-    // one of these wraps and one does not, so the tag prefix was really pinning prettier.
-    expect(ledger).toContain("drops={theirShown}");
-    expect(ledger).toContain("drops={myShown}");
+    // The washed list is what gets drawn, and what opens the section.
+    expect(ledger).toContain("drops={nights}");
+    expect(ledger).toContain("const couponsOpen = row.piecesNet !== 0 && nights.length > 0;");
     // And nothing is drawn off the raw arrays, which is the question that was being asked wrong.
     expect(ledger).not.toContain("row.drops.length > 0");
     expect(ledger).not.toContain("row.owedDrops.length > 0");
@@ -365,11 +354,12 @@ describe("what a column draws and how wide it lets itself get", () => {
   it("keeps the price a pill records beside the lists, not inside one", () => {
     // A tranche against their pile has a pill nowhere else on any screen, so it must not go with a
     // heading when that heading goes.
-    const at = ledger.indexOf("{theirShown.length > 0 && (");
+    const at = ledger.indexOf("drops={nights}");
     const pills = ledger.indexOf("{yourKeeps.length > 0 && (");
+    expect(at).toBeGreaterThan(-1);
     expect(pills).toBeGreaterThan(at);
-    // Outside the fragment the heading owns, which ends before it.
-    expect(ledger.indexOf("</>", at)).toBeLessThan(pills);
+    // Outside the panel the toggle owns, which ends before it.
+    expect(ledger.indexOf("</div>", at)).toBeLessThan(pills);
     // Only the keeps you wrote: the other side's are its own sales, on its own Sale Ledger.
     expect(ledger).toContain(
       "const yourKeeps = keptRows.filter((tranche) => tranche.recordedByYou !== false);",

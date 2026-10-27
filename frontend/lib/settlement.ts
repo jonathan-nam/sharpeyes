@@ -57,6 +57,30 @@ export type HeldOfYours = {
   shared: boolean;
 };
 
+/**
+ * The nights the coupon net runs on: the side holding more, with the other side's count taken off
+ * its oldest nights. So the list comes to the netted count above it.
+ */
+export function nightsOwing(theirs: HeldOfYours[], mine: HeldOfYours[]): HeldOfYours[] {
+  const count = (drops: HeldOfYours[]) => drops.reduce((sum, d) => sum + d.pieces, 0);
+  const [side, other] = count(theirs) >= count(mine) ? [theirs, mine] : [mine, theirs];
+  let wash = count(other);
+  const left = new Map<HeldOfYours, number>();
+  const oldestFirst = [...side].sort(
+    (a, b) =>
+      a.droppedOn.localeCompare(b.droppedOn) ||
+      (a.recordedAt ?? "").localeCompare(b.recordedAt ?? ""),
+  );
+  for (const night of oldestFirst) {
+    const off = Math.min(wash, night.pieces);
+    wash -= off;
+    left.set(night, night.pieces - off);
+  }
+  return side
+    .map((night) => ({ ...night, pieces: left.get(night) ?? night.pieces }))
+    .filter((night) => night.pieces > 0);
+}
+
 /** One person, and everything of yours they have not handed over yet. */
 export type Settlement = {
   key: string;
