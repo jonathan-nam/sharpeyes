@@ -29,7 +29,12 @@ import type {
   SetLootTakenBody,
   SettleBody,
 } from "@/types/loot";
-import type { Actor, AppNotification, Notifications } from "@/types/notifications";
+import type {
+  Actor,
+  AppNotification,
+  NotificationAction,
+  Notifications,
+} from "@/types/notifications";
 import type { DropLogPage, SharedBook } from "@/types/page";
 import type { PartiesExtras, PartiesPage } from "@/types/parties-page";
 import type {
@@ -38,6 +43,7 @@ import type {
   PartyMember,
   PendingLink,
   Person,
+  RosterNameOutcome,
   SavePartyBody,
   SaveSharesBody,
   SavePeopleBody,
@@ -138,6 +144,8 @@ export type ResponseParity = [
   Is<Same<PartyLootPool, api.PartyLootPoolResponse>>,
   Is<Same<Actor, api.Actor>>,
   Is<Same<AppNotification, Refine<api.NotificationView, { payload: Record<string, unknown> }>>>,
+  Is<Same<NotificationAction, api.NotificationAction>>,
+  Is<Same<RosterNameOutcome, api.RosterNameOutcome>>,
   Is<Same<Notifications, Refine<api.NotificationsResponse, { notifications: AppNotification[] }>>>,
   Is<Same<PartyMember, api.PartyMemberResponse>>,
   Is<Same<PartyAccount, api.PartyAccountResponse>>,

@@ -78,14 +78,25 @@ internal fun notificationsFor(userId: String): NotificationsResponse {
             .orderBy(Notification.createdAt, SortOrder.DESC)
             .limit(LISTED)
             .map { row ->
+                val actor = row[Notification.actorId]?.let(::actorOf)
+                val subjectId = row[Notification.subjectId]?.toString()
+                val shown =
+                    rendered(
+                        row[Notification.kind],
+                        subjectId,
+                        row[Notification.payload],
+                        actor?.name ?: actor?.username ?: "Somebody",
+                    )
                 NotificationView(
                     id = row[Notification.id].toString(),
                     kind = row[Notification.kind],
-                    subjectId = row[Notification.subjectId]?.toString(),
+                    subjectId = subjectId,
                     createdAt = row[Notification.createdAt].toString(),
                     read = row[Notification.readAt] != null,
-                    actor = row[Notification.actorId]?.let(::actorOf),
+                    actor = actor,
                     payload = row[Notification.payload],
+                    text = shown?.first,
+                    actions = shown?.second.orEmpty(),
                 )
             }
     return NotificationsResponse(unread.toInt(), listed)

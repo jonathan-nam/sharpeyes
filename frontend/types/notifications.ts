@@ -21,6 +21,19 @@ export type AppNotification = {
   actor: Actor | null;
   /** Whatever else the kind needs, as the feature that raised it wrote it. */
   payload: Record<string, unknown>;
+  /** The sentence, written by the server. Absent for a kind this client still writes itself. */
+  text?: string | null;
+  /** Its buttons, described by the server. Absent on a cached payload. */
+  actions?: NotificationAction[];
+};
+
+/** A link has `href`; an answer has `method` and `path`. See NotificationsResponse.kt. */
+export type NotificationAction = {
+  label: string;
+  primary: boolean;
+  href: string | null;
+  method: string | null;
+  path: string | null;
 };
 
 export type Notifications = {

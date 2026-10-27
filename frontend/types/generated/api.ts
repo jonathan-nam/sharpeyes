@@ -404,6 +404,14 @@ export type LootResponse = {
   recordedByName?: string | null;
 };
 
+export type NotificationAction = {
+  label: string;
+  primary: boolean;
+  href: string | null;
+  method: string | null;
+  path: string | null;
+};
+
 export type NotificationView = {
   id: string;
   kind: string;
@@ -412,6 +420,8 @@ export type NotificationView = {
   read: boolean;
   actor: Actor | null;
   payload: unknown;
+  text?: string | null;
+  actions?: NotificationAction[];
 };
 
 export type NotificationsResponse = {
@@ -509,6 +519,7 @@ export type PartyResponse = {
   pendingInvites?: PendingInviteView[];
   invited: string[];
   alreadyPartied: string[];
+  outcome?: RosterNameOutcome[];
   createdAt: string;
   updatedAt: string;
 };
@@ -626,6 +637,14 @@ export type ReportedFigure = {
 export type ResolveScreenshotRequest = {
   characterId: string;
 };
+
+export type RosterNameOutcome = {
+  name: string;
+  result: RosterResult;
+  text: string | null;
+};
+
+export type RosterResult = "SEATED" | "ASKED" | "GUEST" | "LEFT_OUT";
 
 export type SaveMainCharacterRequest = {
   characterId?: string | null;

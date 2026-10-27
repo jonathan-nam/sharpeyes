@@ -2,14 +2,15 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ButtonLink } from "@/components/button";
+import { Button, ButtonLink } from "@/components/button";
 import { kindOf, type KindActions } from "@/components/notification-kinds";
 import { apiAssetUrl, apiFetch, failureText, spriteUrl } from "@/lib/api";
+import { invalidate } from "@/lib/cache";
 import { onFriendsChanged } from "@/lib/friends-changed";
 import { useAuth } from "@/lib/use-auth";
 import { useDismiss } from "@/lib/use-dismiss";
 import { useLive } from "@/lib/use-live";
-import type { AppNotification, Notifications } from "@/types/notifications";
+import type { AppNotification, NotificationAction, Notifications } from "@/types/notifications";
 
 const NOTIFICATIONS_KEY = "/api/notifications";
 
@@ -65,7 +66,8 @@ export function NotificationBell() {
       .finally(() => setBusy(false));
   };
 
-  const shown = (state?.notifications ?? []).filter((n) => kindOf(n.kind) !== null);
+  // A kind the server writes needs nothing here; one it does not is drawn only if this build knows it.
+  const shown = (state?.notifications ?? []).filter((n) => n.text || kindOf(n.kind) !== null);
   const unread = state?.unread ?? 0;
 
   return (
@@ -122,10 +124,12 @@ function NotificationItem({
   onDismiss,
   onFollow,
 }: KindActions & { fresh: boolean; onDismiss: () => void; onFollow: () => void }) {
-  const kind = kindOf(notification.kind)!;
+  const kind = kindOf(notification.kind) ?? {};
   const { actor, payload } = notification;
   const icon = kind.icon?.(payload);
-  const sentence = kind.text?.(payload, actor?.name ?? actor?.username ?? "Somebody");
+  const sentence =
+    notification.text ?? kind.text?.(payload, actor?.name ?? actor?.username ?? "Somebody");
+  const served = notification.actions ?? [];
   return (
     <div className={fresh ? "notification-item is-fresh" : "notification-item"}>
       {/* What changed, with the face of who changed it on its corner. Otherwise the account that
@@ -161,16 +165,30 @@ function NotificationItem({
             )}
           </span>
         )}
-        {(kind.actions || kind.go) && (
+        {served.length > 0 ? (
           <span className="notification-actions">
-            {kind.actions
-              ? kind.actions({ notification, busy, run })
-              : kind.go && (
-                  <ButtonLink variant="primary" href={kind.go.href(payload)} onClick={onFollow}>
-                    {kind.go.label(payload)}
-                  </ButtonLink>
-                )}
+            {served.map((action) => (
+              <ServedAction
+                key={action.label}
+                action={action}
+                busy={busy}
+                run={run}
+                onFollow={onFollow}
+              />
+            ))}
           </span>
+        ) : (
+          (kind.actions || kind.go) && (
+            <span className="notification-actions">
+              {kind.actions
+                ? kind.actions({ notification, busy, run })
+                : kind.go && (
+                    <ButtonLink variant="primary" href={kind.go.href(payload)} onClick={onFollow}>
+                      {kind.go.label(payload)}
+                    </ButtonLink>
+                  )}
+            </span>
+          )
         )}
       </span>
       {/* Every entry clears. A request or invite cleared here is still answered on Social. */}
@@ -184,5 +202,44 @@ function NotificationItem({
         &times;
       </button>
     </div>
+  );
+}
+
+/** A button the server described: a link, or an answer sent to its endpoint. */
+function ServedAction({
+  action,
+  busy,
+  run,
+  onFollow,
+}: {
+  action: NotificationAction;
+  busy: boolean;
+  run: KindActions["run"];
+  onFollow: () => void;
+}) {
+  const variant = action.primary ? "primary" : "secondary";
+  if (action.href) {
+    return (
+      <ButtonLink variant={variant} href={action.href} onClick={onFollow}>
+        {action.label}
+      </ButtonLink>
+    );
+  }
+  const { method, path } = action;
+  if (!method || !path) return null;
+  return (
+    <Button
+      variant={variant}
+      disabled={busy}
+      onClick={() =>
+        run(async (getToken) => {
+          await apiFetch<unknown>(path, { method }, getToken);
+          // An answer can seat or move a character, which every party screen reads.
+          invalidate("/api/parties");
+        }, `Couldn't ${action.label.toLowerCase()}.`)
+      }
+    >
+      {action.label}
+    </Button>
   );
 }

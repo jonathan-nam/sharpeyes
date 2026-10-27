@@ -79,12 +79,21 @@ private fun join(
     val characterId = invite[PartyInvite.characterId]
     val name = invite[Characters.name]
     val owner = party[Party.userId]
+    val boss = party[BossCatalog.name]
+    // Accepting is the player saying to move it, so a party holding it is left. See PartyMoves.kt.
+    val holder = holderOf(characterId, party[Party.bossCatalogId], partyId)
+    val ranThisWeek = holder != null && recordedIn(holder.partyId, characterId, currentWeek(), now)
     return when {
-        inPartyFor(characterId, party[Party.bossCatalogId], partyId) ->
-            InviteAnswer.Refused(Refusal("$name is already in a party for ${party[BossCatalog.name]}. Leave it first."))
+        holder?.own == true -> InviteAnswer.Refused(Refusal("$name has its own $boss party. Remove it first."))
         linkedCharactersFor(owner)[name.lowercase()] != characterId ->
             InviteAnswer.Refused(Refusal("You're no longer friends. Ask for a new invite."))
+        // A one-off is one night: one already run elsewhere this week cannot be this one too.
+        ranThisWeek && party[Party.oneOff] -> InviteAnswer.Refused(Refusal("$name already ran $boss this week."))
         else -> {
+            if (holder != null) moveOut(holder.partyId, characterId, now)
+            // Ran with its old party this week, so it joins this one from next week. This week is
+            // written as it reads now, without it.
+            if (ranThisWeek && currentWeek() !in weeksSpelledOutFor(partyId)) freezeWeek(partyId, currentWeek())
             seat(partyId, party[Party.characterId], owner, name, characterId, now)
             publishToParty(partyId, Topic.PARTY)
             answered(owner, userId, partyId, name, accepted = true, now)

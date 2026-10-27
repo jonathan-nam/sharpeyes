@@ -137,6 +137,19 @@ gaining a test that reads it, in the same commit. If it never gets a test it sta
 that templates and icons exist. Never edit `R__token_catalog.sql` by hand, and never add an item
 in only one place, that drift is exactly what the manifest exists to end.
 
+### Build for the mobile apps
+
+Android and iOS apps are coming, built on Kotlin Multiplatform. Put logic where every platform can
+use it rather than in `frontend/`:
+
+- **Decisions run on the server.** Who is seated, asked, refused or moved: a client sends the input
+  and renders the answer.
+- **Shared types and small helpers go in `shared/api`**, arithmetic in `shared/money` (below).
+- **Sentences a phone also needs are written by the server**: a notification's `text` and `actions`
+  (buttons described as a link or an API call), and typed outcomes such as `PartyResponse.outcome`.
+  Privacy is what the server leaves out of a payload, never what a client hides.
+- **Keep API changes additive.** An app build lags a deploy.
+
 ### Money arithmetic is moving to a shared Kotlin module
 
 Splits, shares and settlement figures are being ported from `frontend/lib` to `shared/money`, a

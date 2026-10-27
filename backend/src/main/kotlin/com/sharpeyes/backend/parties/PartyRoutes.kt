@@ -186,8 +186,8 @@ private suspend fun RoutingContext.createPartyRoute(
                 } else {
                     partyIdFor(characterId, bossId)
                 }
-            // Friends' characters are invited, not seated. See PartyInvites.kt.
-            val (request, invitees) = typed.inviting(userId, held)
+            // Friends' characters are seated and bound. See PartyInvites.kt.
+            val (request, split) = typed.seatingFriends(userId, held, bossId, typed.oneOff, now)
             val putBack = held?.takeIf { typed.oneOff && typed.members.isNotEmpty() && isSkippedStanding(it, now) }
             val takeOver = held?.takeIf { takesOverConfig(it, typed, now) }
             val saved =
@@ -221,7 +221,7 @@ private suspend fun RoutingContext.createPartyRoute(
                         findParty(id, userId)!!
                     }
                 }
-            saved.withInvites(userId, invitees, now)
+            saved.withFriendSeats(userId, split, now)
         }
     respondToSave(outcome, HttpStatusCode.Created)
 }
@@ -243,18 +243,27 @@ private suspend fun RoutingContext.savePartyRoute(
             if (keeper == null) {
                 null
             } else {
-                val (request, invitees) = typed.inviting(keeper, partyId)
+                val (request, split) =
+                    typed.seatingFriends(
+                        keeper,
+                        partyId,
+                        bossIdOfParty(partyId),
+                        isOneOff(partyId),
+                        now,
+                    )
                 // The row's kind, not the request's: oneOff is read at create only, so an edit
                 // leaves it as it was.
                 val problem =
-                    memberInviteRefusal(userId, keeper, invitees)
+                    memberSeatRefusal(userId, keeper, split.friends)
                         ?: validateSavedParty(keeper, partyId, request, now, isOneOff(partyId))
                 if (problem != null) {
                     problem
                 } else {
-                    // Everyone else invited rather than removed: still a party, not a solo pool.
-                    saveParty(keeper, partyId, request, now, sprites, keepParty = invitees.isNotEmpty())
-                    findParty(partyId, keeper)!!.withInvites(keeper, invitees, now).seenBy(partyId, userId, keeper)
+                    // Everyone else asked to move here or left out: still a party, not a solo pool.
+                    saveParty(keeper, partyId, request, now, sprites, keepParty = split.out.isNotEmpty())
+                    findParty(partyId, keeper)!!
+                        .withFriendSeats(keeper, split, now, adder = userId)
+                        .seenBy(partyId, userId, keeper)
                 }
             }
         }
@@ -299,11 +308,11 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
             // Omitted means this week. Which week THIS is comes from the server's clock rather than
             // the payload, so a browser a day out cannot file a roster in the neighbouring week.
             val week = asked ?: thisWeek
-            // A friend not yet in the party is invited to it, the same as from its own roster.
-            val asking = weekInvites(keeper, partyId, request.members)
+            // A friend not yet in the party is seated, the same as from its own roster.
+            val asking = weekSplit(keeper, partyId, request.members, week, Clock.System.now())
             val named = asking.named
             val problem =
-                memberInviteRefusal(userId, keeper, asking.invitees)
+                memberSeatRefusal(userId, keeper, asking.split.friends)
                     ?: validateRosterWeek(partyId, week, thisWeek)
                     ?: validateRosterClear(partyId, named)
                     ?: named?.let { members ->
@@ -325,7 +334,7 @@ private suspend fun RoutingContext.saveWeekRosterRoute(
                     val now = Clock.System.now()
                     if (asking.writes) writeWeek(partyId, characterId, week, named, SeatContext(keeper, sprites, now))
                     findParty(partyId, keeper)!!
-                        .withInvites(keeper, asking.invitees, now)
+                        .withFriendSeats(keeper, asking.split, now, adder = userId, week = week)
                         .seenBy(partyId, userId, keeper)
                 }
             }

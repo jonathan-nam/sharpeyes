@@ -202,7 +202,7 @@ private fun standingSeats(partyId: Uuid): Map<String, Int> =
  * Never a week after this one. A MONTHLY boss's clear covers the weeks either side of today as well
  * as today's, and freezing those would hold an edit back until the month turned over.
  */
-private fun weeksAlreadyWritten(
+internal fun weeksAlreadyWritten(
     config: ResultRow,
     reset: String?,
     now: Instant,
