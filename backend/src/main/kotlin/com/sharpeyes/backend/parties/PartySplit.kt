@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.parties.SaveSharesRequest
+import com.sharpeyes.backend.bosses.weekOf
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyMember
 import com.sharpeyes.backend.plugins.dbQuery
@@ -34,7 +35,13 @@ internal fun splitRefusal(
         else -> null
     }
 
-/** Sets [partyId]'s standing shares, pinning the weeks already written first. See pinWeeksAlreadyWritten. */
+/**
+ * Sets the shares of [partyId]'s seats this week, pinning the weeks already written first. See
+ * pinWeeksAlreadyWritten.
+ *
+ * Seated this week, not standing: a one-off's guests are written onto the night only (see
+ * writeNightRoster), and the split on screen names them.
+ */
 internal fun saveSplit(
     partyId: Uuid,
     shares: Map<Uuid, Int>,
@@ -43,7 +50,7 @@ internal fun saveSplit(
     val seats =
         PartyMember
             .selectAll()
-            .where { (PartyMember.partyId eq partyId) and (PartyMember.standing eq true) }
+            .where { (PartyMember.partyId eq partyId) and seatedFor(weekOf(todayIn(now))) }
             .associate { it[PartyMember.id] to (it[PartyMember.name] to it[PartyMember.shares]) }
     val standing = seats.mapValues { (_, seat) -> seat.second }
     splitRefusal(standing, shares)?.let { return it }
