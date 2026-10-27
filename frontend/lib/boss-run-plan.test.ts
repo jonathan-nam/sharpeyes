@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   bestOf,
   type CandidateRun,
+  comparePlans,
   type EligibleRun,
   type Plan,
   planNight,
   screenRuns,
+  shuffledIds,
+  shuffledPlan,
   tradeOffs,
   withoutRuns,
   withoutRunsByCount,
@@ -864,6 +867,94 @@ describe("planNight's prefer", () => {
     const kept = planNight(trios, { minutes: Infinity, prefer: costly }).best;
     expect(kept.switches).toBe(alone.switches);
     expect(order(kept)).not.toEqual(costly);
+  });
+
+  it("is what Shuffle draws from: several orders, every one as good", () => {
+    const alone = planNight(trios, { minutes: Infinity }).best;
+    const orders = new Set<string>();
+    for (let seed = 1; seed <= 20; seed++) {
+      const shuffled = shuffledPlan(alone, { minutes: Infinity }, seed);
+      expect(comparePlans(shuffled, alone)).toBe(0);
+      orders.add(order(shuffled).join());
+    }
+    expect(orders.size).toBeGreaterThan(1);
+  });
+});
+
+describe("shuffledPlan", () => {
+  function mulberry32(a: number) {
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  it("orders the same ids the same way for the same seed", () => {
+    const ids = ["a", "b", "c", "d", "e", "f"];
+    expect(shuffledIds(ids, 7)).toEqual(shuffledIds(ids, 7));
+    expect([...shuffledIds(ids, 7)].sort()).toEqual(ids);
+  });
+
+  // The tie-break also steers the beam, so a shuffled search alone can end somewhere worse.
+  it("hands back the same bosses, scoring exactly the same, at any length", () => {
+    for (let night = 1; night <= 30; night++) {
+      const rand = mulberry32(night);
+      const pick = (n: number) => Math.floor(rand() * n);
+      const people = 3 + pick(4);
+      const runs: EligibleRun[] = Array.from({ length: 5 + pick(8) }, (_, i) => {
+        const seated = new Set<number>();
+        const size = 2 + pick(3);
+        while (seated.size < Math.min(size, people)) seated.add(pick(people));
+        return eligible(
+          `r${i}`,
+          `boss${pick(5)}`,
+          [15, 20, 30][pick(3)] as number,
+          [...seated].map((p) => [`p${p}c${pick(3)}`, `p${p}`]),
+        );
+      });
+      const minutes = [60, 120, 180][pick(3)] as number;
+
+      const plain = planNight(runs, { minutes }).byCount;
+      for (const seed of [1, 2, 3]) {
+        for (const plan of plain) {
+          const shuffled = shuffledPlan(plan, { minutes }, seed);
+          expect(comparePlans(shuffled, plan)).toBe(0);
+          expect(order(shuffled).sort()).toEqual(order(plan).sort());
+        }
+      }
+    }
+  });
+
+  // Two parties of the same three characters where the clock fits one: equally good either way,
+  // and a shuffle that swapped them changed which boss was run.
+  it("reorders the bosses the plain plan picked and never swaps one in", () => {
+    const trio: [string, string][] = [
+      ["Thornwick", "you"],
+      ["Quillon", "bren"],
+      ["Vantress", "sela"],
+    ];
+    const other: [string, string][] = [
+      ["Pellmoor", "you"],
+      ["Marrowby", "bren"],
+      ["Ollowen", "sela"],
+    ];
+    const runs = [
+      eligible("lucid", "lucid", 30, trio),
+      eligible("will", "will", 30, trio),
+      eligible("verus", "verus", 25, trio),
+      eligible("gloom", "gloom", 25, other),
+      eligible("darknell", "darknell", 25, other),
+    ];
+    const plain = planNight(runs, { minutes: 120 }).best;
+    const orders = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) {
+      const shuffled = shuffledPlan(plain, { minutes: 120 }, seed);
+      expect(order(shuffled).sort()).toEqual(order(plain).sort());
+      orders.add(order(shuffled).join());
+    }
+    expect(orders.size).toBeGreaterThan(1);
   });
 });
 

@@ -730,6 +730,73 @@ export function planNight(
   return { best: byCount[byCount.length - 1] ?? EMPTY_PLAN, byCount };
 }
 
+/** `ids` in an order fixed by `seed`: the same seed, the same order. */
+export function shuffledIds(ids: readonly string[], seed: number): string[] {
+  // mulberry32
+  let a = seed;
+  const rand = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const out = [...ids];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    swap(out, i, j);
+  }
+  return out;
+}
+
+/** Runs each person sits out between two of their own, summed. See WAITING. */
+function waitingOf(plan: Plan): number {
+  const lastAt = new Map<string, number>();
+  let waiting = 0;
+  plan.runs.forEach((planned, at) => {
+    for (const seat of planned.run.seats) {
+      const before = lastAt.get(seat.personId);
+      if (before !== undefined) waiting += at - before - 1;
+      lastAt.set(seat.personId, at);
+    }
+  });
+  return waiting;
+}
+
+/** betterPlanned, less its tie-break, on two finished plans of the same length. Zero is a tie. */
+export function comparePlans(a: Plan, b: Plan): number {
+  for (let i = 0; i < a.runs.length; i++) {
+    const left = (a.runs[i] as PlannedRun).run.seats.length;
+    const right = (b.runs[i] as PlannedRun).run.seats.length;
+    if (left !== right) return right - left;
+  }
+  const waiting = waitingOf(a) - waitingOf(b);
+  if (waiting !== 0) return waiting;
+  if (a.switches !== b.switches) return a.switches - b.switches;
+  return a.minutes - b.minutes;
+}
+
+/**
+ * [plan]'s own runs reordered with their ties broken by `seed`, for Run Order's Shuffle.
+ *
+ * Never other bosses, and only an order that scores exactly as well, so a tab's switch count still
+ * holds. The tie-break also steers the beam, so where the reordered search ends anywhere else
+ * [plan] comes back as it was. A `prefer` still comes first, the shuffle breaking what it leaves.
+ */
+export function shuffledPlan(plan: Plan, options: PlanOptions, seed: number): Plan {
+  const picked = plan.runs.map((planned) => planned.run);
+  const named = new Set(options.prefer);
+  const rest = picked.map((run) => run.id).filter((id) => !named.has(id));
+  const prefer = [...(options.prefer ?? []), ...shuffledIds(rest, seed)];
+  const beamWidth = Math.min(options.beamWidth ?? SHUFFLE_BEAM, SHUFFLE_BEAM);
+  const mine = planNight(picked, { ...options, prefer, beamWidth }).byCount[picked.length - 1];
+  return mine !== undefined && comparePlans(mine, plan) === 0 ? mine : plan;
+}
+
+// Narrow, because a press has to answer at once and a miss only means the plan comes back as it was.
+// At 22 untimed runs, 92ms a press against 483ms at the full 1000, both giving 10 different orders
+// in 10 seeds (2026-10-27, a scratch timing over the shuffledPlan tests' generator).
+const SHUFFLE_BEAM = 200;
+
 /**
  * A plan with some of its runs taken out, the rest kept in the same order and re-timed.
  *
@@ -780,14 +847,23 @@ export function withoutRunsByCount(
   hidden: ReadonlySet<string>,
   options: PlanOptions,
 ): Plan[] {
-  const byLength = new Map<number, Plan>();
+  return sourcesByCount(byCount, hidden, options).map((source) => source.shown);
+}
+
+/** withoutRunsByCount, with the index into `byCount` each plan came from. */
+export function sourcesByCount(
+  byCount: Plan[],
+  hidden: ReadonlySet<string>,
+  options: PlanOptions,
+): { shown: Plan; from: number }[] {
+  const byLength = new Map<number, { shown: Plan; from: number }>();
   for (let i = byCount.length - 1; i >= 0; i--) {
-    const plan = withoutRuns(byCount[i] as Plan, hidden, options);
-    if (plan.runs.length > 0 && !byLength.has(plan.runs.length)) {
-      byLength.set(plan.runs.length, plan);
+    const shown = withoutRuns(byCount[i] as Plan, hidden, options);
+    if (shown.runs.length > 0 && !byLength.has(shown.runs.length)) {
+      byLength.set(shown.runs.length, { shown, from: i });
     }
   }
-  return [...byLength.values()].sort((a, b) => a.runs.length - b.runs.length);
+  return [...byLength.values()].sort((a, b) => a.shown.runs.length - b.shown.runs.length);
 }
 
 /**
