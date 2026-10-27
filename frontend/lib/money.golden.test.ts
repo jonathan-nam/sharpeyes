@@ -9,7 +9,7 @@ import type { DropLogPage, SharedBook } from "@/types/page";
 
 // The Drop Log's figures, recorded for the backend port. See docs/backend-arithmetic-plan.md.
 //
-// Runs lib/money-figures.ts, the money app/bosses/drops/page.tsx and its cards draw, over every page in the corpus
+// Runs lib/money-figures.ts, the money app/bosses/drops/(log)/layout.tsx and its cards draw, over every page in the corpus
 // and seeded mutations of each. Writes one entry fixture per page (the whole answer) and one fixture
 // per module (what the others asked it, recorded at the module boundary by the mocks below).
 //

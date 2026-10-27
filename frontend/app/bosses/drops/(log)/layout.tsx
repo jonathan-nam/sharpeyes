@@ -5,11 +5,12 @@ import { DropLogSkeleton } from "@/components/drop-log-skeleton";
 import { PageSwap } from "@/components/page-swap";
 import { useAuth } from "@/lib/use-auth";
 import Link from "next/link";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { LogDrop } from "@/components/log-drop";
 import { PieceLedger } from "@/components/piece-ledger";
 import { SaleCards } from "@/components/sale-cards";
-import { SectionMark } from "@/components/section-mark";
+import { DropLogHead } from "@/components/drop-log-head";
 import { SettlementStage } from "@/components/settlement-stage";
 import { StackArrangement } from "@/components/stack-arrangement";
 import { SettledView } from "@/components/settled-view";
@@ -44,10 +45,9 @@ import {
   useDropLogWrites,
 } from "@/lib/use-drop-log-writes";
 import {
-  type DropSectionKey,
   dropSections,
   saleCards,
-  sectionFromQuery,
+  sectionFromPath,
   cardFromQuery,
   cardAnchor,
   sectionHref,
@@ -126,9 +126,6 @@ const SHARED_KEY = "/api/pages/shared-books";
 // How long the figures must sit still before they are reported. A sale's read-back lands in parts.
 const FIGURES_SETTLE_MS = 1500;
 
-/** The query is read once per render and never changes under the page, so nothing to listen to. */
-const noSubscription = () => () => {};
-
 // Solo pools included, and retired configs too: both hold drops whose configs are off every list,
 // and buildDropLog skips a pool whose config it cannot find, so without these the log would quietly
 // be missing them. Every page that reads a pool as a ledger asks the same, Party View included, or
@@ -146,10 +143,14 @@ const CHARACTERS_KEY = "/api/characters";
  */
 const SPLIT_ATTEMPTED = new Set<string>();
 
-export default function DropLogPage() {
+/**
+ * The layout every stage's page sits in, so moving between them keeps what is loaded. The pages
+ * themselves draw nothing: the stage is read off the path.
+ */
+export default function DropLog({ children }: { children: ReactNode }) {
   const { getToken, isLoaded } = useAuth();
   // This page sums across every party the server hands back, which is one world's. In a Heroic
-  // world the money tiles would be three true zeroes, so they go, and so do the three tabs that
+  // world the money tiles would be three true zeroes, so they go, and so do the three stages that
   // only exist because something changed hands. See lib/drop-sections.ts.
   const trades = useAccountSettings()?.trades;
   const money = showsMoney(trades);
@@ -179,31 +180,11 @@ export default function DropLogPage() {
   const [character, setCharacter] = useState<string | null>(null);
   const [grouping, setGrouping] = useState<Grouping>("month");
   const [boss, setBoss] = useState<string | null>(null);
-  // The home screen links to a stage by `?section=`. Read from the URL rather than useSearchParams,
-  // which would need a Suspense boundary around the whole page to prerender. A click overrides it.
-  const asked = useSyncExternalStore(
-    noSubscription,
-    () => sectionFromQuery(window.location.search),
-    () => undefined,
-  );
-  const [chosen, setChosen] = useState<DropSectionKey | null>(null);
-  // A notification's View Settlement asks for one card. A newly asked card beats a tab clicked
-  // before it, since the link may land on this page while it is already open.
-  const askedCard = useSyncExternalStore(
-    noSubscription,
-    () => cardFromQuery(window.location.search),
-    () => undefined,
-  );
-  const [cardSeen, setCardSeen] = useState(askedCard);
-  if (askedCard !== cardSeen) {
-    setCardSeen(askedCard);
-    setChosen(null);
-  }
-  const section = chosen ?? asked ?? "drops";
-  function chooseSection(key: DropSectionKey) {
-    setChosen(key);
-    window.history.replaceState(null, "", sectionHref(key));
-  }
+  const router = useRouter();
+  const section = sectionFromPath(usePathname()) ?? "drops";
+  // A notification's View Settlement asks for one card. The route boundary in loading.tsx is the
+  // Suspense this needs to prerender.
+  const askedCard = cardFromQuery(useSearchParams().toString());
   const [error, setError] = useState<string | null>(null);
   // Every write the Sales and Settlement stages make, each patching the lists it moved. See
   // lib/use-drop-log-writes.ts.
@@ -595,11 +576,12 @@ export default function DropLogPage() {
   const vestigeIcon = vestigeOf(dropTables)?.iconUrl ?? null;
   const coupon = { iconUrl: vestigeIcon, name: vestigeOf(dropTables)?.name ?? null };
 
-  // What fell, and what it was sold for, one at a time. Both halves are entered into rather than
-  // read, so they stay on one page: a drop and the sale that prices it are the same evening's work.
-  // See lib/drop-sections.ts for why the chosen tab is not drawn straight from state.
   const sections = dropSections(trades);
   const shown = shownSection(section, sections);
+  // A stage this world does not carry, from a link or a toggle to Heroic while standing on one.
+  useEffect(() => {
+    if (shown !== section) router.replace(sectionHref(shown));
+  }, [shown, section, router]);
   /**
    * Everything a pile card takes but the piles themselves.
    *
@@ -712,7 +694,7 @@ export default function DropLogPage() {
     });
   const tranche = (body: object): RequestInit => ({ method: "POST", body: JSON.stringify(body) });
   // Whether either ledger has anything on it, which is what decides between its cards and one line
-  // saying there are none. All three tabs are always offered. See lib/drop-sections.ts.
+  // saying there are none. All three stages are always offered. See lib/drop-sections.ts.
   const hasSales =
     saleCards({
       unanswered: open.length,
@@ -730,22 +712,7 @@ export default function DropLogPage() {
       <PageSwap waiting={state === "loading"} placeholder={<DropLogSkeleton />} shaped>
         {state === "loaded" && (
           <>
-            {sections.length > 1 && (
-              <div className="basis-row droplog-sections" role="group" aria-label="Section">
-                {sections.map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    className={shown === s.key ? "basis-tab active" : "basis-tab"}
-                    aria-pressed={shown === s.key}
-                    onClick={() => chooseSection(s.key)}
-                  >
-                    <SectionMark section={s.key} />
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            )}
+            {sections.length > 1 && <DropLogHead section={shown} sections={sections} />}
 
             {shown === "drops" && (
               <>
@@ -1019,6 +986,7 @@ export default function DropLogPage() {
           </>
         )}
       </PageSwap>
+      {children}
     </main>
   );
 }

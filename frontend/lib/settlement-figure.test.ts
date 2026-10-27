@@ -18,7 +18,10 @@ import { describe, expect, it } from "vitest";
 const source = ["settlement-ledger.tsx", "ledger-card.tsx"]
   .map((file) => readFileSync(join(__dirname, "..", "components", file), "utf8"))
   .join("\n");
-const page = readFileSync(join(__dirname, "..", "app", "bosses", "drops", "page.tsx"), "utf8");
+const page = readFileSync(
+  join(__dirname, "..", "app", "bosses", "drops", "(log)", "layout.tsx"),
+  "utf8",
+);
 const summary = readFileSync(join(__dirname, "..", "components", "settlement-summary.tsx"), "utf8");
 const css = readFileSync(join(__dirname, "..", "app", "globals.css"), "utf8");
 const settlement = readFileSync(join(__dirname, "settlement.ts"), "utf8");

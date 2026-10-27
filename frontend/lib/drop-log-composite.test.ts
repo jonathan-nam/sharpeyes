@@ -14,7 +14,10 @@ import { describe, expect, it } from "vitest";
 // is not. The backend half, that the composite answers with the same rows, is guarded in
 // backend/.../pages/DropLogPageTest.kt.
 
-const page = readFileSync(join(__dirname, "..", "app", "bosses", "drops", "page.tsx"), "utf8");
+const page = readFileSync(
+  join(__dirname, "..", "app", "bosses", "drops", "(log)", "layout.tsx"),
+  "utf8",
+);
 const pageType = readFileSync(join(__dirname, "..", "types", "page.ts"), "utf8");
 const kotlin = readFileSync(
   join(

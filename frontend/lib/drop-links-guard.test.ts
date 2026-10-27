@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 const source = (...parts: string[]) =>
   readFileSync(join(__dirname, "..", ...parts), "utf8").replace(/\s+/g, " ");
 
-const droplog = source("app", "bosses", "drops", "page.tsx");
+const droplog = source("app", "bosses", "drops", "(log)", "layout.tsx");
 const settled = source("components", "settled-view.tsx");
 // The card is settlement-ledger.tsx drawn through ledger-card.tsx, so a guard reads both.
 const ledger =

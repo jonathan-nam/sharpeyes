@@ -17,7 +17,11 @@ function files(dir: string, name: string): string[] {
   });
 }
 
-const pages = files(app, "page.tsx");
+// A layout that draws its pages' <main> is held to the same column. See app/bosses/drops/(log).
+const pages = [
+  ...files(app, "page.tsx"),
+  ...files(app, "layout.tsx").filter((p) => readFileSync(p, "utf8").includes("<main")),
+];
 const loadings = files(app, "loading.tsx");
 
 /** Source without comments, which mention <main> in prose. */
@@ -41,8 +45,8 @@ describe("the page column", () => {
 
   it.each(pages.map((p) => [relative(app, p), p]))("%s renders its <main> as .page", (_, path) => {
     const source = code(path);
-    // A redirect has nothing to lay out.
-    if (/^\s*redirect\(/m.test(source) && !source.includes("<main")) return;
+    // A redirect has nothing to lay out, and nor does a page its layout draws.
+    if (/^\s*(redirect\(|return null;)/m.test(source) && !source.includes("<main")) return;
     const mains = source.match(/<main\b[^>]*>/g) ?? [];
     expect(mains.length).toBeGreaterThan(0);
     for (const main of mains)

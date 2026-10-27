@@ -193,7 +193,7 @@ describe("the wait for a page that has been asked for", () => {
   // "Loading..." instead, and a line of text has nothing to fade or dissolve badly, so they keep
   // the delay and the crossfade.
   const SHAPED = [
-    ["app/bosses/drops/loading.tsx", "app/bosses/drops/page.tsx"],
+    ["app/bosses/drops/loading.tsx", "app/bosses/drops/(log)/layout.tsx"],
     ["app/bosses/loading.tsx", "app/bosses/page.tsx"],
     ["app/inventory/loading.tsx", "app/inventory/page.tsx"],
   ];
@@ -208,7 +208,7 @@ describe("the wait for a page that has been asked for", () => {
   // treatment is the blank screen back on that page, and nothing else would say so.
   it("has every skeleton page in that list", () => {
     const here = join(__dirname, "..");
-    const withSkeleton = globSync("app/**/{page,loading}.tsx", { cwd: here }).filter((f) => {
+    const withSkeleton = globSync("app/**/{page,layout,loading}.tsx", { cwd: here }).filter((f) => {
       const src = readFileSync(join(here, f), "utf8");
       // A named *Skeleton component, or the matrix asked to draw itself as one.
       return /<\w+Skeleton\b/.test(src) || /<BossMatrix\s+loading\b/.test(src);
