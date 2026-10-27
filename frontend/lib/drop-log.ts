@@ -21,7 +21,6 @@ import { formatWeekStart } from "./boss-clears";
 import { saleMoney, splitOf, statusLabel } from "./loot";
 import type { Currency } from "./money";
 import { isMine } from "./wallet";
-import type { CouponsOutstanding } from "./loot";
 import { closureKeyOf, couponGapOf, ranSeats, yourShare } from "./vestige-ledger";
 import { canTrade, isPerMember } from "./world";
 import type { BossDrop, DropTables } from "@/types/drop";
@@ -555,6 +554,9 @@ function totalsOf(entries: DropEntry[]): DropLogTotals {
     unreadable: entries.filter((e) => e.unreadable).length,
   };
 }
+
+/** What a party's coupon nights left owed TO you. Zero is nothing to chase. */
+export type CouponsOutstanding = { toYou: number };
 
 /**
  * Coupons of yours somebody else is holding, out of THIS BOSS's own nights.

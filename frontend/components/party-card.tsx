@@ -13,7 +13,6 @@ import { SaveGroup, useSaveGroup } from "@/components/save-group";
 import { SAVED_BUT_STALE, StaleAfterWrite, failureText, isDuplicateDrop } from "@/lib/api";
 import { clearClass, clearStateLabel, nextClear } from "@/lib/boss-clears";
 import type { PieceStatus } from "@/lib/drop-log";
-import { type CouponsOutstanding, poolLabel } from "@/lib/loot";
 import { hasStandingRoster, modeThisWeek, otherMembers, partySizeLabel } from "@/lib/parties";
 import type { Boss } from "@/types/boss";
 import type { BossDrop, DropTables } from "@/types/drop";
@@ -50,7 +49,6 @@ export function PartyCard({
   heading,
   busy,
   clear,
-  coupons,
   onToggleClear,
   dropTable,
   onAddDrop,
@@ -73,18 +71,6 @@ export function PartyCard({
   heading: ReactNode;
   /** THIS row's write. Fed the page's, it dimmed every row at once: the page appeared to flicker. */
   busy?: boolean;
-  /**
-   * Coupons of yours out of this party somebody else is holding.
-   *
-   * Passed in rather than worked out here: it comes off the same entries the Drop Log counts, so
-   * the badge and the log cannot disagree. Zero for a party whose coupons went where they belong
-   * on the night.
-   *
-   * Required, with no default. Every caller has the figure and a default of zero would let one of
-   * them quietly draw a row as square: this feature's own history is a number added to some call
-   * sites and missed on the others. See drop-log-callers.test.ts.
-   */
-  coupons: CouponsOutstanding;
   /**
    * The clear to draw, which is NOT always the config's own.
    *
@@ -169,8 +155,6 @@ export function PartyCard({
   // Until the panel is edited again or closed.
   const [justSaved, setJustSaved] = useState(false);
   const group = useSaveGroup();
-  // The badge, named as the party page names it: `pool` is the pool itself here.
-  const poolLine = poolLabel(party, coupons);
   const panelId = `party-panel-${party.id}`;
   const others = otherMembers(party);
   // A solo party has no roster, but it does have a pool, so it opens too now.
@@ -273,20 +257,6 @@ export function PartyCard({
         </Link>
         <span className="party-row-label">{partySizeLabel(party.members.length)}</span>
         <PartyAccounts accounts={party.accounts ?? []} />
-
-        {/* Work to do gets the line; a settled pool gets it quietly when there is none. It used
-            to say nothing at all once everything was paid, which erased the pool from the row and
-            left no way to tell a party with a season of drops from one that never dropped. */}
-        {poolLine && (
-          <Link
-            className={`changed-by-anchor party-loot-summary${poolLine.done ? " is-done" : ""}`}
-            href={partyHref(party)}
-          >
-            {poolLine.text}
-            {/* Somebody else's drop landing in this pool: their face, and a ring on the count. */}
-            <ChangedBy topics={["loot"]} matches={(t) => t.party === party.id} outline />
-          </Link>
-        )}
 
         {/* The clear is boss_clear's own row, the one the matrix draws and a planner capture
             writes, so ticking it here and uploading a planner are two ways of saying the same

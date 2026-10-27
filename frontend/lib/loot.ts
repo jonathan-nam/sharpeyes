@@ -3,7 +3,6 @@
 // The arithmetic is splitDrop() in lib/drop-split.ts; this file only feeds it. Do not grow a
 // second implementation of the split.
 
-import { formatPieces } from "./piece-ledger";
 import { type AmountBasis, FEE_STANDARD, type Split, splitDrop } from "./drop-split";
 import type { Currency, Money } from "./money";
 import type { Loot, SellLootBody } from "@/types/loot";
@@ -182,28 +181,6 @@ export function splitOf(loot: Loot, members: PartyMember[]): LootSplit | null {
   };
 }
 
-export type LootSummary = {
-  /** Dropped, not sold yet. */
-  pending: number;
-  /** Sold, with a share through your seats still unpaid. */
-  awaitingPayout: number;
-  /** Sold, every share through your seats paid, nothing left to do. */
-  settled: number;
-};
-
-/**
- * What a pool is up to: what is unsold, what is sold but not settled, and what is done. The settled
- * count is what tells a fully paid pool apart from an empty one.
- */
-export function summarize(loot: Loot[]): LootSummary {
-  return {
-    pending: loot.filter((l) => l.status === "PENDING").length,
-    awaitingPayout: loot.filter((l) => l.status === "SOLD").length,
-    // TAKEN is terminal in a Heroic pool the way PAID_OUT is in an Interactive one.
-    settled: loot.filter((l) => l.status === "PAID_OUT" || l.status === "TAKEN").length,
-  };
-}
-
 export type TakenCount = {
   memberId: string;
   name: string;
@@ -237,46 +214,12 @@ export function takenTally(loot: Loot[], members: PartyMember[]): TakenCount[] {
   }));
 }
 
-/** The three counts a party row reads its badge off. Mirrors PartyResponse's own fields. */
+/** A party's pool counts. Mirrors PartyResponse's own fields. */
 export type PoolCounts = {
   pendingLoot: number;
   awaitingPayout: number;
   settledLoot: number;
 };
-
-/**
- * What a party's coupon nights left owed TO you. Zero is nothing to chase. One direction only:
- * coupons you hold for others are shown on the drop and in the Sale Ledger.
- *
- * Declared here rather than in drop-log.ts (where it is counted) to avoid an import cycle.
- */
-export type CouponsOutstanding = { toYou: number };
-
-/** A party with nothing in the wrong hands, for the callers that read a map with gaps in it. */
-export const NOTHING_OUTSTANDING: CouponsOutstanding = { toYou: 0 };
-
-/**
- * What a party row says about its pool, or null when there is no pool. Outstanding work wins the
- * line; the settled count shows only when there is nothing to do.
- */
-export function poolLabel(
-  counts: PoolCounts,
-  /**
-   * Coupons of yours out of this party's piece drops that somebody else is holding. In coupons,
-   * not rows. Counted by lib/drop-log.ts, never a second time here.
-   */
-  coupons: CouponsOutstanding = NOTHING_OUTSTANDING,
-): { text: string; done: boolean } | null {
-  const outstanding = [
-    counts.pendingLoot > 0 ? `${counts.pendingLoot} in the pool` : null,
-    counts.awaitingPayout > 0 ? `${counts.awaitingPayout} awaiting payout` : null,
-    coupons.toYou > 0 ? `${formatPieces(coupons.toYou)} coupons owed` : null,
-  ].filter(Boolean);
-
-  if (outstanding.length > 0) return { text: outstanding.join(" \u00b7 "), done: false };
-  if (counts.settledLoot > 0) return { text: `${counts.settledLoot} settled`, done: true };
-  return null;
-}
 
 /** Every drop the pool holds, whatever state it is in. */
 export function poolSize(counts: PoolCounts): number {
@@ -297,7 +240,7 @@ export function dropsInWeek(loot: Loot[], weekStart: string | null): Loot[] {
   return loot.filter((drop) => drop.weekStart >= weekStart);
 }
 
-/** The status as a short label. Kept beside summarize so the two cannot disagree. */
+/** The status as a short label. */
 export function statusLabel(status: string): string {
   if (status === "PENDING") return "In the pool";
   if (status === "SOLD") return "Awaiting payout";

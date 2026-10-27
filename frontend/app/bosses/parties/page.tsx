@@ -31,8 +31,8 @@ import { invalidate, peek, put, storedAt } from "@/lib/cache";
 import { type Grouping, partyViewFromQuery, partyViewQuery } from "@/lib/party-view";
 import { replaceQuery, useQueryString } from "@/lib/url-state";
 import { reportDataReady } from "@/lib/rum";
-import { buildDropLog, couponsOutstandingByParty, pieceStatusByParty } from "@/lib/drop-log";
-import { dropsInWeek, NOTHING_OUTSTANDING } from "@/lib/loot";
+import { buildDropLog, pieceStatusByParty } from "@/lib/drop-log";
+import { dropsInWeek } from "@/lib/loot";
 import { closedByHolder, outstanding, runningBalance, stillOpen } from "@/lib/vestige-ledger";
 import { assignableDrops } from "@/lib/vestige-pickup";
 import { shareConfig } from "@/lib/vestige-stacks";
@@ -677,26 +677,10 @@ export default function PartiesPage() {
 
   const characterById = new Map(characters.map((c) => [c.id, c]));
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
-  // Coupons somebody else is holding for you, per party. Through the Drop Log's own entries so the
-  // badge and the log cannot disagree about what you are owed, rather than counted again here.
   // Off the ledger's own notion of finished, not off the party's arrangement: `owedBy` is
-  // `entitled - looted` and never moves, so without the closures this counted a debt forever. See V52.
-  // NOT off the tranches. Selling their share turns a coupon debt into a meso one and the Sale
-  // Ledger is the one place that nets it: subtracting it here too made a boss row's figure depend on
-  // every other party. See couponsOutstandingByParty.
+  // `entitled - looted` and never moves, so without the closures a debt reads open forever. See V52.
   const log = buildDropLog(everyParty, pools, dropTables, closedByHolder(settlements).closed);
-  // Narrowed to the week on screen, the same way the panel below each row is. A row sits under a
-  // heading about one week, so summing a season of runs into it answers a question nobody asked:
-  // Hard Baldrix read "20 coupons owed" off a run ten days before the one being looked at.
-  // `weekStart ?? currentWeekStart` is the week ON SCREEN, which is what weekLabel heads the page
-  // with. currentWeekStart alone is the live one, and would answer for tonight under a heading
-  // about a week in August.
-  const couponsOut = couponsOutstandingByParty(
-    log.entries,
-    view ? (view.weekStart ?? view.currentWeekStart) : null,
-  );
-  // What each COUPON row in a panel says it is, off the same entries the badge above it is counted
-  // from, so the two cannot disagree about a stack of vestiges.
+  // What each COUPON row in a panel says it is, off the Drop Log's own entries.
   const pieceStatus = pieceStatusByParty(log.entries);
   const history = week !== null;
 
@@ -926,7 +910,6 @@ export default function PartiesPage() {
         heading={heading}
         busy={isSaving(party.id)}
         clear={clearOf(party)}
-        coupons={shared ? NOTHING_OUTSTANDING : (couponsOut.get(party.id) ?? NOTHING_OUTSTANDING)}
         onToggleClear={
           history
             ? undefined

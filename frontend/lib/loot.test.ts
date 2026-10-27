@@ -6,12 +6,10 @@ import {
   formatDropped,
   formatDroppedWithYear,
   memberFee,
-  poolLabel,
   poolSize,
   saleBodyOf,
   splitOf,
   statusLabel,
-  summarize,
   takenTally,
 } from "./loot";
 import type { Loot } from "@/types/loot";
@@ -165,27 +163,6 @@ describe("splitOf", () => {
   });
 });
 
-describe("summarize", () => {
-  it("counts what is unsold apart from what is sold and unsettled", () => {
-    const loot = [
-      sold({ id: "a", status: "PENDING" }),
-      sold({ id: "b", status: "SOLD" }),
-      sold({ id: "c", status: "SOLD" }),
-      sold({ id: "d", status: "PAID_OUT" }),
-    ];
-    // The settled one is counted rather than ignored: a pool where everything is paid still has
-    // drops in it, and reporting nothing made it look empty.
-    expect(summarize(loot)).toEqual({ pending: 1, awaitingPayout: 2, settled: 1 });
-  });
-
-  it("counts a taken drop as done, the way a paid-out one is", () => {
-    // A Heroic pool never sells, so nothing in it ever reaches PAID_OUT. Counting only that state
-    // would report a party that had claimed a season of drops as having done nothing.
-    const loot = [sold({ id: "a", status: "PENDING" }), sold({ id: "b", status: "TAKEN" })];
-    expect(summarize(loot)).toEqual({ pending: 1, awaitingPayout: 0, settled: 1 });
-  });
-});
-
 describe("statusLabel", () => {
   it("says what each state means for the person reading it", () => {
     expect(statusLabel("PENDING")).toBe("In the pool");
@@ -264,67 +241,6 @@ describe("formatDroppedWithYear", () => {
   it("gives an unreadable date back whole rather than dressing it with a year", () => {
     expect(formatDroppedWithYear("not a date")).toBe("not a date");
     expect(formatDroppedWithYear("2026-13-40")).toBe("2026-13-40");
-  });
-});
-
-describe("poolLabel", () => {
-  const counts = (pendingLoot: number, awaitingPayout: number, settledLoot: number) => ({
-    pendingLoot,
-    awaitingPayout,
-    settledLoot,
-  });
-
-  it("says nothing for a pool with nothing in it", () => {
-    expect(poolLabel(counts(0, 0, 0))).toBeNull();
-  });
-
-  it("shows a fully settled pool rather than going silent", () => {
-    // The bug this exists for: with only the outstanding counts, marking the last share paid
-    // erased the pool from the row, and a party with a season of drops behind it read exactly
-    // like one that had never dropped anything.
-    expect(poolLabel(counts(0, 0, 3))).toEqual({ text: "3 settled", done: true });
-  });
-
-  it("gives the line to work that needs doing, not to what is finished", () => {
-    // A settled count beside "1 awaiting payout" is noise next to a thing to go and do.
-    expect(poolLabel(counts(0, 1, 9))).toEqual({ text: "1 awaiting payout", done: false });
-    expect(poolLabel(counts(2, 0, 9))).toEqual({ text: "2 in the pool", done: false });
-    expect(poolLabel(counts(2, 1, 9))).toEqual({
-      text: "2 in the pool \u00b7 1 awaiting payout",
-      done: false,
-    });
-  });
-
-  it("marks the settled case as done so it can be drawn quietly", () => {
-    expect(poolLabel(counts(0, 0, 1))?.done).toBe(true);
-    expect(poolLabel(counts(1, 0, 1))?.done).toBe(false);
-  });
-
-  it("says the coupons in coupons, because a count of rows cannot", () => {
-    // One row is one hammer or 180 coupons, and the row count leaves out the coupon drops that
-    // came out even, so the two numbers are answering different questions.
-    const owed = (toYou: number) => ({ toYou });
-    expect(poolLabel(counts(0, 0, 0), owed(90))).toEqual({
-      text: "90 coupons owed",
-      done: false,
-    });
-    expect(poolLabel(counts(1, 0, 0), owed(90))).toEqual({
-      text: "1 in the pool · 90 coupons owed",
-      done: false,
-    });
-    // Nothing either way is silent, which is every party whose coupons went where they belong.
-    expect(poolLabel(counts(0, 0, 3), owed(0))).toEqual({ text: "3 settled", done: true });
-    // And being owed some is work, so a settled pool does not get the quiet line.
-    expect(poolLabel(counts(0, 0, 3), owed(20))?.done).toBe(false);
-  });
-
-  it("says only what is owed to you, never what you are holding", () => {
-    // The row carried "45 to hand over" for the ordinary night, the one you loot whole. What you
-    // do about it is on the drop and in the Sale Ledger, and a list is not where it is read.
-    expect(poolLabel(counts(0, 0, 0), { toYou: 0 })).toBeNull();
-    // Which means a pool whose only outstanding thing is coupons of theirs in your inventory is
-    // drawn as settled here. Deliberate: this line answers what to chase, not what to do.
-    expect(poolLabel(counts(0, 0, 2), { toYou: 0 })).toEqual({ text: "2 settled", done: true });
   });
 });
 
