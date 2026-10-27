@@ -311,7 +311,7 @@ export function weekEndExclusive(weekStart: string): string {
 /**
  * Which week a view is showing: "Week of July 16".
  *
- * Shared by the stepper on the Individual View and the standing label on Party View, so the two
+ * Shared by the stepper on the Boss Matrix and the standing label on Party View, so the two
  * cannot end up wording the same week differently. `weekStart` is null on the live view, and then
  * the week in progress is the one being shown.
  */
@@ -377,7 +377,7 @@ const SKELETON_CHARACTERS = Array.from({ length: VISIBLE_COLUMNS }, (_, i) => ({
 
 export type BossBand = { cadence: string; inCadence: Boss[]; progress: ClearProgress };
 
-/** The Solo and Party chips on the Individual View. Null is neither, which counts every cell. */
+/** The Solo and Party chips on the Boss Matrix. Null is neither, which counts every cell. */
 export type RunFilter = "solo" | "party";
 
 export function inRunFilter(filter: RunFilter | null, party: boolean): boolean {

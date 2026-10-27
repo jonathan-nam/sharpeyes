@@ -39,7 +39,7 @@ export const SECTIONS: { group?: string; items: SectionItem[] }[] = [
   {
     group: "Bossing",
     items: [
-      { href: "/bosses", label: "Individual View" },
+      { href: "/bosses", label: "Boss Matrix" },
       // The Wallet sits under /bosses/parties and so already resolves to Party View, which is the
       // section it is part of.
       { href: "/bosses/parties", label: "Party View" },
@@ -122,7 +122,7 @@ export function sectionsFor(trades: boolean | undefined) {
  * Which entry to light up for this path, or undefined for none.
  *
  * Longest match wins, so /bosses/split lights "Drop Splitter" alone: a plain startsWith would
- * light "Individual View" too, since one section nests under the other.
+ * light "Boss Matrix" too, since one section nests under the other.
  */
 export function activeHref(pathname: string): string | undefined {
   return HREFS.filter((href) => pathname === href || pathname.startsWith(`${href}/`)).sort(

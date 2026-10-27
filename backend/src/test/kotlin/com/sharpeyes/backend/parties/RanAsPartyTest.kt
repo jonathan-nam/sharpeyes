@@ -29,7 +29,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 
 /**
- * The Individual View's party flag, week by week, as a config is added, taken off, converted and
+ * The Boss Matrix's party flag, week by week, as a config is added, taken off, converted and
  * deleted. Each case drives the same writes the routes make and reads the flag back for every week
  * it touches, because a flag that is right this week and wrong for the weeks before is a plausible
  * wrong answer about who you ran with.

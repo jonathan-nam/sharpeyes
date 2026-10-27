@@ -494,7 +494,7 @@ class SeatedPartiesTest {
                 it[createdAt] = Clock.System.now()
             }
 
-            // Off last week, on this one. The Individual View marks each week's cells from this.
+            // Off last week, on this one. The Boss Matrix marks each week's cells from this.
             assertTrue(partiesSeatedIn(member, lastWeek).single().party.skippedThisPeriod)
             assertFalse(partiesSeatedIn(member).single().party.skippedThisPeriod)
         }

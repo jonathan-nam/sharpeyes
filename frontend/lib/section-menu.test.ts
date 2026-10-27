@@ -13,7 +13,7 @@ describe("which section a path belongs to", () => {
   it("lights the entry for its own page", () => {
     expect(labelFor("/characters")).toBe("Characters");
     expect(labelFor("/inventory")).toBe("Inventory");
-    expect(labelFor("/bosses")).toBe("Individual View");
+    expect(labelFor("/bosses")).toBe("Boss Matrix");
     expect(labelFor("/bosses/parties")).toBe("Party View");
     expect(labelFor("/bosses/order")).toBe("Run Order");
     expect(labelFor("/bosses/split")).toBe("Drop Splitter");
@@ -24,9 +24,9 @@ describe("which section a path belongs to", () => {
   it("keeps a nested section off its parent", () => {
     // The rule the longest-match sort exists for: /bosses/split must not also light the entry for
     // /bosses, which is a prefix of it.
-    expect(labelFor("/bosses/split")).not.toBe("Individual View");
-    expect(labelFor("/bosses/order")).not.toBe("Individual View");
-    expect(labelFor("/bosses/parties")).not.toBe("Individual View");
+    expect(labelFor("/bosses/split")).not.toBe("Boss Matrix");
+    expect(labelFor("/bosses/order")).not.toBe("Boss Matrix");
+    expect(labelFor("/bosses/parties")).not.toBe("Boss Matrix");
   });
 
   it("lights Party View for the pages that hang off it", () => {
@@ -67,11 +67,7 @@ describe("what the menu lists", () => {
       undefined,
     );
     const bossing = SECTIONS.find((s) => s.group === "Bossing")!;
-    expect(bossing.items.map((i) => i.label)).toEqual([
-      "Individual View",
-      "Party View",
-      "Run Order",
-    ]);
+    expect(bossing.items.map((i) => i.label)).toEqual(["Boss Matrix", "Party View", "Run Order"]);
   });
 
   it("lists the sections a person navigates between", () => {
@@ -101,11 +97,7 @@ describe("what the welcome-back screen offers", () => {
   it("folds the boss views and Run Order under Bossing, which is not a page", () => {
     const bossing = HOME_ROWS.find((r) => r.label === "Bossing")!;
     expect(bossing.href).toBeUndefined();
-    expect(bossing.items.map((i) => i.label)).toEqual([
-      "Individual View",
-      "Party View",
-      "Run Order",
-    ]);
+    expect(bossing.items.map((i) => i.label)).toEqual(["Boss Matrix", "Party View", "Run Order"]);
   });
 
   it("takes every label from the menu, so the two cannot drift apart", () => {
@@ -136,7 +128,7 @@ describe("what an account with nothing to trade is offered", () => {
 
   it("still routes the page it stopped listing", () => {
     // Off the menu is not gone. A bookmark or an old link has to keep working, and activeHref has
-    // to keep resolving it to itself rather than lighting Individual View.
+    // to keep resolving it to itself rather than lighting Boss Matrix.
     expect(HREFS).toContain("/bosses/split");
     expect(activeHref("/bosses/split")).toBe("/bosses/split");
   });

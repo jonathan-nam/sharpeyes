@@ -387,7 +387,7 @@ export default function PartiesPage() {
   /**
    * Ticks a boss cleared, or un-ticks it.
    *
-   * Writes boss_clear, the same row the Individual View matrix reads and a planner capture
+   * Writes boss_clear, the same row the Boss Matrix reads and a planner capture
    * overwrites, so the two pages cannot drift. Refetched rather than patched in place: the server
    * decides which period the tick landed in.
    */
@@ -1003,7 +1003,7 @@ export default function PartiesPage() {
           <>
             {/* Once for the page, not once per row: every roster editor points at this one id. */}
             <KnownCharacters names={knownCharacters} />
-            {/* The same controls the Individual View carries, in the same order and the same row:
+            {/* The same controls the Boss Matrix carries, in the same order and the same row:
               the stepper on the left, the countdown on the right. The WeekStepper component
               itself, not a copy of its label, so the two pages cannot drift in wording, spacing
               or behaviour.
@@ -1103,7 +1103,7 @@ export default function PartiesPage() {
               </>
             )}
 
-            {/* Not "nothing cleared": that week's clears are real and the Individual View has them.
+            {/* Not "nothing cleared": that week's clears are real and the Boss Matrix has them.
               These parties just were not around for it. */}
             {listed.length > 0 && shown.length === 0 && (
               <p className="finder-empty">No parties in this week. {emptyWeekReason}</p>
