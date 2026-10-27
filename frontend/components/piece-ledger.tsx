@@ -71,6 +71,7 @@ export function PieceLedger({
   onAddKept,
   onAddBought,
   onRemoveSale,
+  onCorrectSale,
   yours = false,
 }: {
   ledgers: HolderLedger[];
@@ -99,6 +100,8 @@ export function PieceLedger({
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
   onRemoveSale?: (trancheId: string) => Promise<void>;
+  /** A new price for a SOLD or BOUGHT row. Its pieces stay put. */
+  onCorrectSale?: (trancheId: string, amount: number) => Promise<void>;
   /** Your own pile though another book keeps it, so it reads in the first person. See sharedPile. */
   yours?: boolean;
 }) {
@@ -124,6 +127,7 @@ export function PieceLedger({
           onAddKept={onAddKept}
           onAddBought={onAddBought}
           onRemoveSale={onRemoveSale}
+          onCorrectSale={onCorrectSale}
           yours={yours || ledger.holder.kind === "SELF"}
         />
       ))}
@@ -144,6 +148,7 @@ function HolderCard({
   onAddKept,
   onAddBought,
   onRemoveSale,
+  onCorrectSale,
   yours,
 }: {
   ledger: HolderLedger;
@@ -174,8 +179,12 @@ function HolderCard({
     shares: VestigeTrancheShare[],
   ) => Promise<void>;
   onRemoveSale?: (trancheId: string) => Promise<void>;
+  onCorrectSale?: (trancheId: string, amount: number) => Promise<void>;
   yours: boolean;
 }) {
+  // The one row being repriced, and the price typed for it.
+  const [editing, setEditing] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const [pieces, setPieces] = useState("");
   const [amount, setAmount] = useState("");
   const [fate, setFate] = useState<Fate>("SOLD");
@@ -261,7 +270,7 @@ function HolderCard({
   const { owing } = queueOf(ledger, heldOfYours);
 
   /** Keeps what was typed when the server refuses it, so a rejected sale can be corrected. */
-  async function write(action: Promise<void>, clear: "entry" | "paid" | null) {
+  async function write(action: Promise<void>, clear: "entry" | "paid" | null): Promise<boolean> {
     setRefusal(null);
     try {
       await action;
@@ -269,9 +278,18 @@ function HolderCard({
         setPieces("");
         setAmount("");
       }
+      return true;
     } catch (e) {
       setRefusal(failureText(e, "That didn't save. Try again."));
+      return false;
     }
+  }
+
+  /** Saves the typed price for one row, and closes its box only once the server took it. */
+  async function reprice(trancheId: string) {
+    const price = parseMesos(draft);
+    if (!onCorrectSale || price === null || price < 1) return;
+    if (await write(onCorrectSale(trancheId, price), null)) setEditing(null);
   }
 
   return (
@@ -472,6 +490,32 @@ function HolderCard({
                   repeated. See V50. */}
               {tranche.amount === null ? (
                 `${formatPieces(tranche.pieces)} kept`
+              ) : editing === tranche.id && onCorrectSale ? (
+                <>
+                  {`${formatPieces(tranche.pieces)} for `}
+                  <input
+                    className="split-input"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void reprice(tranche.id);
+                      if (e.key === "Escape") setEditing(null);
+                    }}
+                    aria-label={`Price for ${formatPieces(tranche.pieces)} pieces`}
+                    inputMode="decimal"
+                    autoFocus
+                  />
+                  <Button
+                    variant="primary"
+                    onClick={() => void reprice(tranche.id)}
+                    disabled={busy || (parseMesos(draft) ?? 0) < 1}
+                  >
+                    Save
+                  </Button>
+                  <Button variant="secondary" onClick={() => setEditing(null)} disabled={busy}>
+                    Cancel
+                  </Button>
+                </>
               ) : (
                 <>
                   {`${formatPieces(tranche.pieces)} for `}
@@ -494,6 +538,19 @@ function HolderCard({
                   {`${formatPieces(share.pieces)} ${creditorNames.get(holderKey(share.holder)) ?? "theirs"}`}
                 </span>
               ))}
+              {onCorrectSale && tranche.amount !== null && editing !== tranche.id && (
+                <button
+                  type="button"
+                  className="link ledger-drop-sale"
+                  disabled={busy}
+                  onClick={() => {
+                    setDraft(String(tranche.amount));
+                    setEditing(tranche.id);
+                  }}
+                >
+                  Edit
+                </button>
+              )}
               {onRemoveSale && (
                 <button
                   type="button"

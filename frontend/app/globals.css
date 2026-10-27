@@ -7987,6 +7987,13 @@ button.link:disabled {
   border-radius: var(--radius-sm);
 }
 
+/* The price box Edit opens inside the chip: wide enough for a meso total, no taller than the chip. */
+.ledger-tranche .split-input {
+  width: 14ch;
+  padding: 2px 6px;
+  font-size: var(--text-base);
+}
+
 /* A sale's total, short at rest and exact while the chip is hovered or focused. */
 .ledger-tranche-total {
   color: var(--ink-strong);

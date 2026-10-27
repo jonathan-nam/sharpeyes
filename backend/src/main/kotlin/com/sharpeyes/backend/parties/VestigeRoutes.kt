@@ -28,6 +28,7 @@ import io.ktor.server.routing.RoutingContext
 import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -103,6 +104,7 @@ fun Route.vestigeRoutes() {
     get { listTranches() }
     post { addTrancheRoute() }
     delete("/{trancheId}") { deleteTrancheRoute() }
+    put("/{trancheId}/amount") { correctTrancheRoute() }
 }
 
 private suspend fun RoutingContext.listTranches() {
