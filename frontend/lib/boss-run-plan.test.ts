@@ -9,7 +9,7 @@ import {
   planNight,
   screenRuns,
   shuffledIds,
-  shuffledNight,
+  shuffledPlan,
   tradeOffs,
   withoutRuns,
   withoutRunsByCount,
@@ -873,7 +873,7 @@ describe("planNight's prefer", () => {
     const alone = planNight(trios, { minutes: Infinity }).best;
     const orders = new Set<string>();
     for (let seed = 1; seed <= 20; seed++) {
-      const shuffled = shuffledNight(trios, { minutes: Infinity }, seed).best;
+      const shuffled = shuffledPlan(alone, { minutes: Infinity }, seed);
       expect(comparePlans(shuffled, alone)).toBe(0);
       orders.add(order(shuffled).join());
     }
@@ -881,7 +881,7 @@ describe("planNight's prefer", () => {
   });
 });
 
-describe("shuffledNight", () => {
+describe("shuffledPlan", () => {
   function mulberry32(a: number) {
     return () => {
       a = (a + 0x6d2b79f5) | 0;
@@ -898,7 +898,7 @@ describe("shuffledNight", () => {
   });
 
   // The tie-break also steers the beam, so a shuffled search alone can end somewhere worse.
-  it("never hands back a worse plan than the plain search, at any length", () => {
+  it("hands back the same bosses, scoring exactly the same, at any length", () => {
     for (let night = 1; night <= 30; night++) {
       const rand = mulberry32(night);
       const pick = (n: number) => Math.floor(rand() * n);
@@ -918,13 +918,43 @@ describe("shuffledNight", () => {
 
       const plain = planNight(runs, { minutes }).byCount;
       for (const seed of [1, 2, 3]) {
-        const shuffled = shuffledNight(runs, { minutes }, seed).byCount;
-        expect(shuffled.length).toBeGreaterThanOrEqual(plain.length);
-        plain.forEach((plan, i) => {
-          expect(comparePlans(shuffled[i] as Plan, plan)).toBeLessThanOrEqual(0);
-        });
+        for (const plan of plain) {
+          const shuffled = shuffledPlan(plan, { minutes }, seed);
+          expect(comparePlans(shuffled, plan)).toBe(0);
+          expect(order(shuffled).sort()).toEqual(order(plan).sort());
+        }
       }
     }
+  });
+
+  // Two parties of the same three characters where the clock fits one: equally good either way,
+  // and a shuffle that swapped them changed which boss was run.
+  it("reorders the bosses the plain plan picked and never swaps one in", () => {
+    const trio: [string, string][] = [
+      ["Thornwick", "you"],
+      ["Quillon", "bren"],
+      ["Vantress", "sela"],
+    ];
+    const other: [string, string][] = [
+      ["Pellmoor", "you"],
+      ["Marrowby", "bren"],
+      ["Ollowen", "sela"],
+    ];
+    const runs = [
+      eligible("lucid", "lucid", 30, trio),
+      eligible("will", "will", 30, trio),
+      eligible("verus", "verus", 25, trio),
+      eligible("gloom", "gloom", 25, other),
+      eligible("darknell", "darknell", 25, other),
+    ];
+    const plain = planNight(runs, { minutes: 120 }).best;
+    const orders = new Set<string>();
+    for (let seed = 1; seed <= 30; seed++) {
+      const shuffled = shuffledPlan(plain, { minutes: 120 }, seed);
+      expect(order(shuffled).sort()).toEqual(order(plain).sort());
+      orders.add(order(shuffled).join());
+    }
+    expect(orders.size).toBeGreaterThan(1);
   });
 });
 

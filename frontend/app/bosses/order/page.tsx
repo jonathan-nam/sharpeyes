@@ -31,12 +31,13 @@ import {
   type CandidateRun,
   EMPTY_PLAN,
   type EligibleRun,
-  type PlanOptions,
+  type Plan,
   planNight,
   screenRuns,
-  shuffledNight,
+  shuffledPlan,
+  sourcesByCount,
   tradeOffs,
-  withoutRunsByCount,
+  withoutRuns,
 } from "@/lib/boss-run-plan";
 import { peek, put } from "@/lib/cache";
 import { reportDataReady } from "@/lib/rum";
@@ -141,18 +142,13 @@ function preferredOrder(
   hidden: ReadonlySet<string>,
   night: number,
   available: Record<string, Availability>,
-  seed: number | null,
 ): string[] {
   const runs = screenRuns(allRuns, hereAll).eligible;
   let hiddenMinutes = 0;
   for (const run of runs) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
-  return planOf(runs, { minutes: night + hiddenMinutes, available }, seed).best.runs.map(
+  return planNight(runs, { minutes: night + hiddenMinutes, available }).best.runs.map(
     (planned) => planned.run.id,
   );
-}
-
-function planOf(runs: EligibleRun[], options: PlanOptions, seed: number | null) {
-  return seed === null ? planNight(runs, options) : shuffledNight(runs, options, seed);
 }
 
 export default function RunOrderPage() {
@@ -602,28 +598,35 @@ export default function RunOrderPage() {
   // and none is dropped for a reason the page is no longer showing.
   const night = shown.timed ? shown.budget : Infinity;
 
-  const byCount = useMemo(() => {
+  const full = useMemo(() => {
     // The hidden runs take no time tonight, so the search gets their minutes back on top.
     let hiddenMinutes = 0;
     for (const run of searched) if (hidden.has(run.id)) hiddenMinutes += run.minutes;
-    const full = planOf(
-      searched,
-      {
-        minutes: night + hiddenMinutes,
-        available,
-        prefer: shown.everyoneOn
-          ? preferredOrder(allRuns, hereAll, hidden, night, available, seed)
-          : undefined,
-      },
-      seed,
-    );
-    return withoutRunsByCount(full.byCount, hidden, { minutes: night, available });
-  }, [searched, hidden, night, available, shown.everyoneOn, allRuns, hereAll, seed]);
+    const minutes = night + hiddenMinutes;
+    const prefer = shown.everyoneOn
+      ? preferredOrder(allRuns, hereAll, hidden, night, available)
+      : undefined;
+    return { minutes, byCount: planNight(searched, { minutes, available, prefer }).byCount };
+  }, [searched, hidden, night, available, shown.everyoneOn, allRuns, hereAll]);
+  const sources = useMemo(
+    () => sourcesByCount(full.byCount, hidden, { minutes: night, available }),
+    [full, hidden, night, available],
+  );
+  const byCount = useMemo(() => sources.map((source) => source.shown), [sources]);
   const best = byCount[byCount.length - 1] ?? EMPTY_PLAN;
 
   const options = useMemo(() => tradeOffs(byCount), [byCount]);
   // A count no option has falls back to the full plan.
-  const plan = (chosen !== null && options.find((o) => o.runs.length === chosen)) || best;
+  const listed = (chosen !== null && options.find((o) => o.runs.length === chosen)) || best;
+  // Shuffle reorders the plan on screen alone: one search over its own runs, where every length
+  // would be one each. Reordered whole and then hidden, for the reason withoutRuns gives.
+  const plan = useMemo(() => {
+    const from = sources.find((source) => source.shown === listed)?.from;
+    if (seed === null || from === undefined) return listed;
+    const searchedAs = { minutes: full.minutes, available };
+    const reordered = shuffledPlan(full.byCount[from] as Plan, searchedAs, seed);
+    return withoutRuns(reordered, hidden, { minutes: night, available });
+  }, [seed, sources, listed, full, available, hidden, night]);
 
   // A clear moving on any party tonight, yours or one you are in, is on the plan without a reload.
   // The runs already on screen are kept in the night first, as a tick from here keeps its run (see
@@ -993,8 +996,8 @@ export default function RunOrderPage() {
                   <button
                     key={option.runs.length}
                     type="button"
-                    className={plan === option ? "basis-tab active" : "basis-tab"}
-                    aria-pressed={plan === option}
+                    className={listed === option ? "basis-tab active" : "basis-tab"}
+                    aria-pressed={listed === option}
                     onClick={() => choosePlan(option.runs.length)}
                   >
                     {option.runs.length} {option.runs.length === 1 ? "boss" : "bosses"}

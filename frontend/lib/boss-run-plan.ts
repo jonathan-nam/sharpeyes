@@ -776,34 +776,26 @@ export function comparePlans(a: Plan, b: Plan): number {
 }
 
 /**
- * planNight with its ties broken by `seed` instead of by run id, for Run Order's Shuffle.
+ * [plan]'s own runs reordered with their ties broken by `seed`, for Run Order's Shuffle.
  *
- * The tie-break also decides which states the beam keeps, so a shuffled search can end on a worse
- * plan than the plain one. Both are run, and at each length the shuffled plan is kept only where
- * it scores at least as well. A `prefer` still comes first, the shuffle breaking what it leaves.
+ * Never other bosses, and only an order that scores exactly as well, so a tab's switch count still
+ * holds. The tie-break also steers the beam, so where the reordered search ends anywhere else
+ * [plan] comes back as it was. A `prefer` still comes first, the shuffle breaking what it leaves.
  */
-export function shuffledNight(
-  runs: EligibleRun[],
-  options: PlanOptions,
-  seed: number,
-): { best: Plan; byCount: Plan[] } {
-  const plain = planNight(runs, options);
+export function shuffledPlan(plan: Plan, options: PlanOptions, seed: number): Plan {
+  const picked = plan.runs.map((planned) => planned.run);
   const named = new Set(options.prefer);
-  const rest = runs.map((run) => run.id).filter((id) => !named.has(id));
+  const rest = picked.map((run) => run.id).filter((id) => !named.has(id));
   const prefer = [...(options.prefer ?? []), ...shuffledIds(rest, seed)];
-  const shuffled = planNight(runs, { ...options, prefer });
-
-  const byCount: Plan[] = [];
-  const lengths = Math.max(plain.byCount.length, shuffled.byCount.length);
-  for (let i = 0; i < lengths; i++) {
-    const mine = shuffled.byCount[i];
-    const theirs = plain.byCount[i];
-    if (mine === undefined) byCount.push(theirs as Plan);
-    else if (theirs === undefined || comparePlans(mine, theirs) <= 0) byCount.push(mine);
-    else byCount.push(theirs);
-  }
-  return { best: byCount[byCount.length - 1] ?? EMPTY_PLAN, byCount };
+  const beamWidth = Math.min(options.beamWidth ?? SHUFFLE_BEAM, SHUFFLE_BEAM);
+  const mine = planNight(picked, { ...options, prefer, beamWidth }).byCount[picked.length - 1];
+  return mine !== undefined && comparePlans(mine, plan) === 0 ? mine : plan;
 }
+
+// Narrow, because a press has to answer at once and a miss only means the plan comes back as it was.
+// At 22 untimed runs, 92ms a press against 483ms at the full 1000, both giving 10 different orders
+// in 10 seeds (2026-10-27, a scratch timing over the shuffledPlan tests' generator).
+const SHUFFLE_BEAM = 200;
 
 /**
  * A plan with some of its runs taken out, the rest kept in the same order and re-timed.
@@ -855,14 +847,23 @@ export function withoutRunsByCount(
   hidden: ReadonlySet<string>,
   options: PlanOptions,
 ): Plan[] {
-  const byLength = new Map<number, Plan>();
+  return sourcesByCount(byCount, hidden, options).map((source) => source.shown);
+}
+
+/** withoutRunsByCount, with the index into `byCount` each plan came from. */
+export function sourcesByCount(
+  byCount: Plan[],
+  hidden: ReadonlySet<string>,
+  options: PlanOptions,
+): { shown: Plan; from: number }[] {
+  const byLength = new Map<number, { shown: Plan; from: number }>();
   for (let i = byCount.length - 1; i >= 0; i--) {
-    const plan = withoutRuns(byCount[i] as Plan, hidden, options);
-    if (plan.runs.length > 0 && !byLength.has(plan.runs.length)) {
-      byLength.set(plan.runs.length, plan);
+    const shown = withoutRuns(byCount[i] as Plan, hidden, options);
+    if (shown.runs.length > 0 && !byLength.has(shown.runs.length)) {
+      byLength.set(shown.runs.length, { shown, from: i });
     }
   }
-  return [...byLength.values()].sort((a, b) => a.runs.length - b.runs.length);
+  return [...byLength.values()].sort((a, b) => a.shown.runs.length - b.shown.runs.length);
 }
 
 /**
