@@ -84,3 +84,21 @@ describe("the drop row's meta line", () => {
     expect(rule?.[1]).toContain("text-overflow: ellipsis");
   });
 });
+
+// The gap under a Drop Log stage's heading is the heading's alone. The title's margin and the first
+// panel's used to stack under it, loaded and loading alike.
+describe("the gap under a Drop Log stage's heading", () => {
+  it("is the heading's own margin", () => {
+    expect(css.match(/^\.droplog-head \{([^}]*)\}/m)?.[1]).toContain("margin-bottom: 16px");
+    expect(css.match(/^\.droplog-head \.page-title \{([^}]*)\}/m)?.[1]).toContain(
+      "margin-bottom: 0",
+    );
+  });
+
+  it("takes the first panel's top margin away, in the page and in the skeleton", () => {
+    const rule = css.match(
+      /^\.droplog-head \+ \*,\n\.droplog-head \+ \.droplog-skeleton > :first-child \{([^}]*)\}/m,
+    );
+    expect(rule?.[1]).toContain("margin-top: 0");
+  });
+});
