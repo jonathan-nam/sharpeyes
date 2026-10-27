@@ -53,6 +53,9 @@ export function UserAvatar() {
           <Link href="/social" role="menuitem" onClick={() => setOpen(false)}>
             Social
           </Link>
+          <Link href="/settings" role="menuitem" onClick={() => setOpen(false)}>
+            Settings
+          </Link>
           <button
             type="button"
             role="menuitem"

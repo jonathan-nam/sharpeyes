@@ -6,7 +6,6 @@ import { HeaderNav } from "@/components/header-nav";
 import { NotificationBell } from "@/components/notification-bell";
 import { SectionMenu } from "@/components/section-menu";
 import { UserAvatar } from "@/components/user-avatar";
-import { WorldToggle } from "@/components/world-toggle";
 import { isSetupPath } from "@/lib/setup-paths";
 import { useAuth } from "@/lib/use-auth";
 import { SharpEyesMark } from "./sharp-eyes-mark";
@@ -56,9 +55,6 @@ export function SiteHeader() {
             <SectionMenu />
           </div>
         )}
-
-        {/* Which world everything below is answering for. */}
-        {isSignedIn && <WorldToggle />}
 
         {!isLoaded && (
           <div className="site-user header-reserved" aria-hidden="true">

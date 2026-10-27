@@ -5,10 +5,7 @@ import { useState } from "react";
 import { saveWorld, useAccountSettings } from "@/lib/use-account-settings";
 import { WORLD_TYPES, worldShortLabel, type WorldType } from "@/lib/world";
 
-// Which world the site is answering for.
-//
-// In the header rather than on a settings page, because it is not a preference you set once. It
-// says what every number on screen is a number of, so it belongs where the numbers are.
+// Which world the site is answering for, on Settings.
 
 /**
  * The class and the flag, set together.
@@ -69,8 +66,7 @@ export function WorldToggle() {
       window.location.reload();
     } catch {
       // Left as it was, veil included: nothing changed, so nothing should be covering it. The
-      // toggle is one click to retry, and an error line in the header would outlive the moment it
-      // belongs to.
+      // toggle is one click to retry.
       lowerVeil();
       setBusy(false);
     }

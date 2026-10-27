@@ -9,7 +9,7 @@ import type { WorldType } from "@/lib/world";
 // The account's settings, shared by every component that asks for them.
 //
 // A module store rather than the SWR cache in lib/cache.ts, because this one has to PUSH: the
-// world toggle sits in the header and changes what every mounted page is showing, so a cache read
+// world toggle changes what every mounted component is showing, the header's menu included, so a cache read
 // only on mount would leave the menu offering a tool the account just toggled away from.
 
 export const SETTINGS_KEY = "/api/settings";

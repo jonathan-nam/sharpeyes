@@ -26,7 +26,7 @@ export function worldLabel(world: WorldType): string {
 /**
  * The same name where two of them sit side by side.
  *
- * The header toggle carries both worlds at once, and "Heroic (Reboot)" beside "Interactive" is a
+ * The world toggle carries both worlds at once, and "Heroic (Reboot)" beside "Interactive" is a
  * two-word pill next to a one-word one. The parenthetical is what goes: with both names on screen
  * together, which is which is not in question.
  */
