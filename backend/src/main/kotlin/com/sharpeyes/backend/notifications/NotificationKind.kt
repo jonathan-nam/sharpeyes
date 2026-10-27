@@ -18,12 +18,6 @@ object NotificationKind {
     /** Your invite was accepted or declined (payload `accepted`). No subject. */
     const val PARTY_INVITE_ANSWERED = "PARTY_INVITE_ANSWERED"
 
-    /** A linked owner asked to combine their party with yours. Subject: the party_combine. */
-    const val PARTY_COMBINE = "PARTY_COMBINE"
-
-    /** Your combine was accepted (payload `partyId`, the kept one). No subject. */
-    const val PARTY_COMBINED = "PARTY_COMBINED"
-
     // What somebody else did to something you share. See PartyNotices.kt. Nothing to answer. Shares
     // marked, stacks, clears and ledger entries had kinds too, and were cut as noise (V94).
 
