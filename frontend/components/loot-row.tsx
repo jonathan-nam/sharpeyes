@@ -404,7 +404,8 @@ export function LootRow({
               <Button variant="secondary" onClick={onUnsell} disabled={busy}>
                 Undo Sale
               </Button>
-              {!readOnly && (
+              {/* A settled sale is undone first. The server refuses it too (settledRefusal). */}
+              {!readOnly && !loot.payouts.every((p) => p.paid) && (
                 <button type="button" className="party-delete" onClick={onDelete} disabled={busy}>
                   Remove
                 </button>

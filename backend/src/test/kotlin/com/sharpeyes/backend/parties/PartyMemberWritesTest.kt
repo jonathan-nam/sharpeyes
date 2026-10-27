@@ -304,6 +304,24 @@ class PartyMemberWritesTest {
     }
 
     @Test
+    fun `nobody deletes a drop that is sold and settled until the sale is undone`() {
+        transaction {
+            val party = shared()
+            val lootId = drop(party)
+            assertNull(settledRefusal(loot(party, lootId, owner)))
+            sell(party, lootId, "Pinewick")
+            val owed = loot(party, lootId, owner).payouts
+            assertTrue(owed.isNotEmpty())
+            assertNull(settledRefusal(loot(party, lootId, owner)))
+
+            owed.forEach { setPayoutPaid(lootId, Uuid.parse(it.memberId), true, now) }
+            assertNotNull(settledRefusal(loot(party, lootId, owner)))
+            unsellLoot(lootId, now)
+            assertNull(settledRefusal(loot(party, lootId, owner)))
+        }
+    }
+
+    @Test
     fun `a member sets the split, and nothing else of the party moves`() {
         transaction {
             val party = shared()

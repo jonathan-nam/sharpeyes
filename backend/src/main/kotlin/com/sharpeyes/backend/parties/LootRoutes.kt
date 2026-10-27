@@ -216,13 +216,21 @@ private suspend fun RoutingContext.deleteLootRoute() {
     val partyId = call.parseUuidParam("id") ?: return
     val lootId = call.parseUuidParam("lootId") ?: return
 
-    val deleted =
+    val outcome =
         dbQuery {
             ensureUser(userId, email)
             val loot = findLoot(lootId, partyId, userId)
-            mayDeleteLoot(partyId, userId, loot) && deleteLoot(lootId, partyId)
+            when {
+                !mayDeleteLoot(partyId, userId, loot) -> false
+                settledRefusal(loot!!) != null -> settledRefusal(loot)
+                else -> deleteLoot(lootId, partyId)
+            }
         }
-    call.respond(if (deleted) HttpStatusCode.NoContent else HttpStatusCode.NotFound)
+    when (outcome) {
+        is Refusal -> call.refuse(HttpStatusCode.BadRequest, outcome)
+        true -> call.respond(HttpStatusCode.NoContent)
+        else -> call.respond(HttpStatusCode.NotFound)
+    }
 }
 
 /** All three path ids at once, so a handler that needs them keeps to one early return. */
