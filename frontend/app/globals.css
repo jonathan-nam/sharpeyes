@@ -6738,9 +6738,18 @@ button.link:disabled {
   gap: 6px;
 }
 
-/* Auto rather than space-between, so it stays right on a page with no way back. */
-.droplog-step-next {
-  margin-left: auto;
+/* One cell for the way back and its unseen stand-ins, so it is as wide as the widest of them. */
+.droplog-step-back {
+  display: grid;
+}
+
+.droplog-step-back > * {
+  grid-area: 1 / 1;
+  justify-self: start;
+}
+
+.droplog-step.is-ghost {
+  visibility: hidden;
 }
 
 .droplog-step-arrow {
