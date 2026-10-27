@@ -24,6 +24,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 
 /**
@@ -177,14 +178,15 @@ class PartyLootSharesTest {
                 Clock.System.now(),
             )
             setPayoutPaid(lootId, Uuid.parse(steve.id), true, Clock.System.now())
+            val soldAt = findLoot(lootId, partyId)!!.soldAt
 
-            // A 3 that should have been a 2, fixed after somebody was already paid.
+            // A 3 that should have been a 2, fixed after somebody was already paid, a week later.
             sellLoot(
                 lootId,
-                sale(seller.id).copy(shares = mapOf(steve.id to 2, seller.id to 2)),
+                sale(seller.id).copy(amount = 8_000_000_000, shares = mapOf(steve.id to 2, seller.id to 2)),
                 Uuid.parse(seller.id),
                 partyId,
-                Clock.System.now(),
+                Clock.System.now() + 7.days,
             )
 
             val loot = findLoot(lootId, partyId)!!
@@ -193,6 +195,9 @@ class PartyLootSharesTest {
             assertTrue(loot.payouts.single { it.memberId == steve.id }.paid)
             // A seat dropped from the request goes back to one rather than keeping the old count.
             assertEquals(1, loot.payouts.single { it.memberId != steve.id }.shares)
+            assertEquals(8_000_000_000, loot.saleAmount)
+            // Still the day it sold, so it stays in that week's settlement.
+            assertEquals(soldAt, loot.soldAt)
         }
     }
 

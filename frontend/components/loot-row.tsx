@@ -8,7 +8,7 @@ import { LootSaleForm } from "@/components/loot-sale-form";
 import { apiAssetUrl } from "@/lib/api";
 import { copyText, formatMoney } from "@/lib/money";
 import { sharesLabel } from "@/lib/shares";
-import { divides, formatDropped, saleMoney, splitOf, statusLabel } from "@/lib/loot";
+import { divides, formatDropped, saleBodyOf, saleMoney, splitOf, statusLabel } from "@/lib/loot";
 import { isMine } from "@/lib/wallet";
 import { memberSeats } from "@/lib/parties/member-view";
 import { canTrade, isPerMember } from "@/lib/world";
@@ -140,6 +140,8 @@ export function LootRow({
     !readOnly || (memberId != null && (member?.has(memberId) ?? false));
   const sellers = ran.filter((m) => actsAs(m.id));
   const mayRemove = !readOnly || (member !== null && loot.recordedByYou === true);
+  // The sale as entered, for Edit Sale. Only the logger records a sale (loggerRefusal).
+  const corrected = loot.recordedByYou !== false ? saleBodyOf(loot) : null;
 
   return (
     <article className={`changed-by-anchor loot-row status-${loot.status.toLowerCase()}`}>
@@ -379,8 +381,26 @@ export function LootRow({
             </>
           )}
 
-          {actsAs(loot.sellerMemberId) && (
+          {actsAs(loot.sellerMemberId) && selling && corrected !== null && (
+            <LootSaleForm
+              ran={ran}
+              sellers={sellers}
+              busy={busy}
+              initial={corrected}
+              onSell={(body) => {
+                onSell(body);
+                setSelling(false);
+              }}
+              onCancel={() => setSelling(false)}
+            />
+          )}
+          {actsAs(loot.sellerMemberId) && !selling && (
             <div className="loot-actions">
+              {corrected !== null && (
+                <Button variant="secondary" onClick={() => setSelling(true)} disabled={busy}>
+                  Edit Sale
+                </Button>
+              )}
               <Button variant="secondary" onClick={onUnsell} disabled={busy}>
                 Undo Sale
               </Button>

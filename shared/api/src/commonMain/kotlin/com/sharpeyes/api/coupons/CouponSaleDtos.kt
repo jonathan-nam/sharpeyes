@@ -70,3 +70,9 @@ data class AddCouponSaleRequest(
      */
     val shares: List<CouponSaleShareRow> = emptyList(),
 )
+
+/** A corrected price for a sold or bought coupon sale. Its pieces and whose they were stay put. */
+@Serializable
+data class CorrectCouponSaleRequest(
+    val amount: Long,
+)

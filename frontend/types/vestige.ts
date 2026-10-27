@@ -70,6 +70,11 @@ export type AddVestigeTrancheBody = {
   shares?: VestigeTrancheShare[];
 };
 
+// PUT /api/vestige-tranches/{id}/amount. A SOLD or BOUGHT row's price only; answers with the tally.
+export type CorrectVestigeTrancheBody = {
+  amount: number;
+};
+
 // One payment: mesos that actually arrived from a holder, against what their whole pile owes. No
 // pieces and no boss, because a payment is against the debt rather than against particular coupons.
 // See V51.

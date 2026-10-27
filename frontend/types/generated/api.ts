@@ -169,6 +169,10 @@ export type ClientErrorReport = {
   count?: number | null;
 };
 
+export type CorrectCouponSaleRequest = {
+  amount: number;
+};
+
 export type CouponSaleResponse = {
   id: string;
   holder: VestigeHolder;

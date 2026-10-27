@@ -6,7 +6,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { DropAuditView } from "@/components/drop-audit";
 import { apiFetch, failureText } from "@/lib/api";
-import { ArmedRemove } from "@/components/settlement-ledger";
+import { Button } from "@/components/button";
+import { LootSaleForm } from "@/components/loot-sale-form";
+import { saleBodyOf } from "@/lib/loot";
+import { sellersOf } from "@/lib/sale-logger";
 import { useAuth } from "@/lib/use-auth";
 import { bossLabel } from "@/lib/boss-difficulty";
 import { peek, put } from "@/lib/cache";
@@ -17,7 +20,7 @@ import { sharedHistory } from "@/lib/shared-history";
 import { closedByHolder, foldSeats } from "@/lib/vestige-ledger";
 import type { Boss } from "@/types/boss";
 import type { DropTables } from "@/types/drop";
-import type { PartyLootPool } from "@/types/loot";
+import type { PartyLootPool, SellLootBody } from "@/types/loot";
 import type { Party, Person } from "@/types/party";
 import type { SharedBook } from "@/types/page";
 import type { SettlementDebt, VestigeSettlement } from "@/types/vestige";
@@ -48,7 +51,9 @@ export default function DropAuditPage() {
   const params = useParams<{ loot: string }>();
   const lootId = params.loot;
   const router = useRouter();
-  const [removing, setRemoving] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [armed, setArmed] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const [parties, setParties] = useState<Party[]>(peek<Party[]>(PARTIES_KEY) ?? []);
@@ -143,17 +148,34 @@ export default function DropAuditPage() {
   // Your own pools only, as on the Drop Log. See `removable`.
   const entry = log.entries.find((e) => e.lootId === lootId);
   const canRemove = entry !== undefined && removable(entry, lootIdsOf(pools));
+  // A sale is corrected in your own pools, by whoever logged the drop (loggerRefusal).
+  const loot = pools.flatMap((pool) => pool.loot).find((l) => l.id === lootId);
+  const party = entry && parties.find((p) => p.id === entry.partyId);
+  const sale = loot && loot.recordedByYou !== false ? saleBodyOf(loot) : null;
+  const ran = loot && party ? party.seats.filter((s) => loot.ranThatWeek.includes(s.id)) : [];
 
-  async function remove(partyId: string) {
-    setRemoving(true);
+  async function write(path: string, options: RequestInit): Promise<boolean> {
+    setBusy(true);
     setRefusal(null);
     try {
-      await apiFetch(`/api/parties/${partyId}/loot/${lootId}`, { method: "DELETE" }, getToken);
-      router.push("/bosses/drops");
+      await apiFetch(`/api/parties/${entry!.partyId}/loot/${lootId}${path}`, options, getToken);
+      return true;
     } catch (e) {
-      setRefusal(failureText(e, "That didn't remove. Try again."));
-      setRemoving(false);
+      setRefusal(failureText(e, "That didn't save. Try again."));
+      return false;
+    } finally {
+      setBusy(false);
     }
+  }
+
+  async function remove() {
+    if (await write("", { method: "DELETE" })) router.push("/bosses/drops");
+  }
+
+  async function correct(body: SellLootBody) {
+    if (!(await write("/sale", { method: "PUT", body: JSON.stringify(body) }))) return;
+    setEditing(false);
+    setPools(await apiFetch<PartyLootPool[]>(POOLS_KEY, { method: "GET" }, getToken));
   }
 
   return (
@@ -171,17 +193,39 @@ export default function DropAuditPage() {
           (audit ? (
             <>
               <DropAuditView audit={audit} />
-              {canRemove && (
-                <p className="loot-actions">
-                  <ArmedRemove
-                    label={`Remove ${audit.name}`}
-                    idle="Remove"
-                    busy={removing}
-                    onRemove={() => void remove(entry.partyId)}
-                  />
-                  {refusal && <span className="split-error">{refusal}</span>}
-                </p>
+              {editing && sale && party ? (
+                <LootSaleForm
+                  ran={ran}
+                  sellers={sellersOf(ran, party.yours === false)}
+                  busy={busy}
+                  labelled
+                  initial={sale}
+                  onSell={(body) => void correct(body)}
+                  onCancel={() => setEditing(false)}
+                />
+              ) : (
+                (canRemove || (sale && party)) && (
+                  <div className="loot-actions">
+                    {sale && party && (
+                      <Button variant="secondary" onClick={() => setEditing(true)} disabled={busy}>
+                        Edit Sale
+                      </Button>
+                    )}
+                    {/* Two clicks, like every remove that loses something. */}
+                    {canRemove && (
+                      <Button
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => (armed ? void remove() : setArmed(true))}
+                        onBlur={() => setArmed(false)}
+                      >
+                        {armed ? "Confirm Remove" : "Remove"}
+                      </Button>
+                    )}
+                  </div>
+                )
               )}
+              {refusal && <span className="split-error">{refusal}</span>}
             </>
           ) : (
             // Refused rather than half-drawn. See buildDropAudit.

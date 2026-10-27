@@ -8,6 +8,7 @@ import {
   memberFee,
   poolLabel,
   poolSize,
+  saleBodyOf,
   splitOf,
   statusLabel,
   summarize,
@@ -424,5 +425,41 @@ describe("divides", () => {
 
   it("is true where the party ran it", () => {
     expect(divides(party)).toBe(true);
+  });
+});
+
+describe("saleBodyOf", () => {
+  it("opens a correction on the sale as entered", () => {
+    const loot = sold({
+      sellerShares: 2,
+      ranThatWeek: ["m1", "m2", "m3", "m4"],
+      payouts: [
+        { memberId: "m2", paid: false, paidAt: null, shares: 3 },
+        { memberId: "m3", paid: true, paidAt: null, shares: 1 },
+      ],
+    });
+    expect(saleBodyOf(loot)).toEqual({
+      amount: 9_500_000_000,
+      usdCents: undefined,
+      amountBasis: "LISTED",
+      splitMethod: "FAIR",
+      sellerMemberId: "m1",
+      // m4 ran and has no payout row, so it was on no share. One would hand it a share on save.
+      shares: { m1: 2, m2: 3, m3: 1, m4: 0 },
+    });
+  });
+
+  it("carries a dollar sale as cents and no mesos", () => {
+    const body = saleBodyOf(
+      sold({ saleAmount: null, saleUsdCents: 100_000, amountBasis: "RECEIVED" }),
+    );
+    expect(body?.usdCents).toBe(100_000);
+    expect(body?.amount).toBe(0);
+  });
+
+  it("has nothing to correct on an unsold drop", () => {
+    expect(
+      saleBodyOf(sold({ soldAt: null, saleAmount: null, sellerMemberId: null, amountBasis: null })),
+    ).toBeNull();
   });
 });

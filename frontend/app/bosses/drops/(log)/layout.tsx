@@ -108,6 +108,7 @@ import { figuresToReport, LISTINGS_KEY } from "@/lib/settlement-listings";
 import type { SettlementListing } from "@/types/settlement-listing";
 import type { Party, Person, SaveSharesBody } from "@/types/party";
 import type {
+  CorrectVestigeTrancheBody,
   ProceedsDisposal,
   SettlementDebt,
   VestigePayment,
@@ -384,10 +385,6 @@ export default function DropLog({ children }: { children: ReactNode }) {
       await writes.rowSale(...args);
       await load().catch(() => {});
     },
-    rowKeep: async (...args: Parameters<typeof writes.rowKeep>) => {
-      await writes.rowKeep(...args);
-      await load().catch(() => {});
-    },
     rowRemove: async (...args: Parameters<typeof writes.rowRemove>) => {
       await writes.rowRemove(...args);
       await load().catch(() => {});
@@ -649,6 +646,11 @@ export default function DropLog({ children }: { children: ReactNode }) {
       }),
     onRemoveSale: (trancheId: string) =>
       writes.saleWrite(`${TRANCHES_KEY}/${trancheId}`, { method: "DELETE" }),
+    onCorrectSale: (trancheId: string, amount: number) =>
+      writes.saleWrite(`${TRANCHES_KEY}/${trancheId}/amount`, {
+        method: "PUT",
+        body: JSON.stringify({ amount } satisfies CorrectVestigeTrancheBody),
+      }),
   };
   // Your pile in each book you share, drawn with the same card and written into THAT book: a coupon
   // sale out of it is the owner's ledger's row, which both of you read. See lib/shared-pile.ts.
