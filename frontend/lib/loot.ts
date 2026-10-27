@@ -6,7 +6,7 @@
 import { formatPieces } from "./piece-ledger";
 import { type AmountBasis, FEE_STANDARD, type Split, splitDrop } from "./drop-split";
 import type { Currency, Money } from "./money";
-import type { Loot } from "@/types/loot";
+import type { Loot, SellLootBody } from "@/types/loot";
 import type { PartyMember } from "@/types/party";
 
 /**
@@ -67,6 +67,36 @@ export function saleMoney(loot: Pick<Loot, "saleAmount" | "saleUsdCents">): Mone
   const cents = loot.saleUsdCents ?? null;
   if (cents !== null) return { amount: cents, currency: "USD" };
   return loot.saleAmount === null ? null : { amount: loot.saleAmount, currency: "MESO" };
+}
+
+/**
+ * A sold drop's sale as the sale form sends it, so a correction opens on what was entered. Null
+ * when it has not sold.
+ *
+ * A seat that ran with no payout row was on no share (sellLoot writes none for zero), so it reads 0
+ * here. Left out, the form would open it on one and a correction would hand it a share.
+ */
+export function saleBodyOf(loot: Loot): SellLootBody | null {
+  const { sellerMemberId, amountBasis, splitMethod } = loot;
+  const money = saleMoney(loot);
+  if (money === null || sellerMemberId === null || amountBasis === null || splitMethod === null) {
+    return null;
+  }
+  const owed = new Map(loot.payouts.map((p) => [p.memberId, p.shares]));
+  const shares = Object.fromEntries(
+    loot.ranThatWeek.map((id) => [
+      id,
+      id === sellerMemberId ? (loot.sellerShares ?? 1) : (owed.get(id) ?? 0),
+    ]),
+  );
+  return {
+    amount: money.currency === "MESO" ? money.amount : 0,
+    usdCents: money.currency === "USD" ? money.amount : undefined,
+    amountBasis,
+    splitMethod,
+    sellerMemberId,
+    shares,
+  };
 }
 
 /**

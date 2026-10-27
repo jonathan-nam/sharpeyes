@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { Field } from "@/components/add-field";
 import { Button } from "@/components/button";
-import { formatMoney, parseAmount } from "@/lib/money";
+import { copyText, formatMoney, parseAmount } from "@/lib/money";
 import { divides } from "@/lib/loot";
 import { parseShares, sharePercents } from "@/lib/shares";
 import type { SellLootBody } from "@/types/loot";
@@ -26,7 +26,7 @@ export function LootSaleForm({
   onSell,
   onCancel,
   labelled,
-  actions,
+  initial,
 }: {
   /**
    * Who could have sold this drop: the seats that ran the week it FELL in, not the party as it
@@ -48,18 +48,22 @@ export function LootSaleForm({
    * labelling it would say each thing twice.
    */
   labelled?: boolean;
-  /** Other acts on the same drop (Keep, Remove), on the save button's line. */
-  actions?: ReactNode;
+  /** The sale being corrected, which the boxes open on. See saleBodyOf. */
+  initial?: SellLootBody;
 }) {
-  const [price, setPrice] = useState("");
-  const [amountBasis, setAmountBasis] = useState("LISTED");
-  const [splitMethod, setSplitMethod] = useState("FAIR");
-  const [sellerMemberId, setSellerMemberId] = useState(sellers[0]?.id ?? "");
+  const [price, setPrice] = useState(initial ? priceText(initial) : "");
+  const [amountBasis, setAmountBasis] = useState(initial?.amountBasis ?? "LISTED");
+  const [splitMethod, setSplitMethod] = useState(initial?.splitMethod ?? "FAIR");
+  const [sellerMemberId, setSellerMemberId] = useState(
+    initial?.sellerMemberId ?? sellers[0]?.id ?? "",
+  );
   // Every seat opens on one share, and an uneven split is typed here. It used to be seeded from
   // `party_member.shares`, which is the STACK entitlement the party config's boxes write: a duo
   // splitting three vestige stacks 1 and 2 had every ring and grindstone they ever sold open at
   // 1:2. That ratio divides the coupon pile and nothing else, which is ranSeats' job, not this one.
-  const [shares, setShares] = useState<Record<string, string>>({});
+  const [shares, setShares] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(initial?.shares ?? {}).map(([id, n]) => [id, String(n)])),
+  );
   const shareOf = (memberId: string) => shares[memberId] ?? "1";
   const entered = ran.map((m) => parseShares(shareOf(m.id)));
   const sharesReadable = entered.every((count) => count !== null);
@@ -215,7 +219,6 @@ export function LootSaleForm({
             Cancel
           </Button>
         )}
-        {actions}
         {/* Shown before saving, so a typed "9.5b" is confirmed as 9,500,000,000 rather than
             discovered afterwards. It is also what makes the unit visible: "$1000" echoes back as
             $1,000.00, which is the only thing on screen saying the "$" was read as one. */}
@@ -227,4 +230,11 @@ export function LootSaleForm({
       </div>
     </form>
   );
+}
+
+/** A recorded sale's price as the box takes it: digits for mesos, `$` and two decimals for dollars. */
+function priceText(sale: SellLootBody): string {
+  return sale.usdCents !== undefined
+    ? `$${copyText(sale.usdCents, "USD")}`
+    : copyText(sale.amount, "MESO");
 }

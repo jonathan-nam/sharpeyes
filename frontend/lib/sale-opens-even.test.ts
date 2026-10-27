@@ -28,9 +28,12 @@ describe("the sale form's share boxes", () => {
     expect(form).toContain('const shareOf = (memberId: string) => shares[memberId] ?? "1";');
   });
 
-  it("read no stored ratio, standing or pinned", () => {
+  it("read no stored ratio, standing or pinned, but the sale being corrected", () => {
     expect(form).not.toContain("sharesThatWeek");
-    expect(form).not.toContain("?.shares");
+    // Edit Sale opens on that sale's own shares (saleBodyOf), or saving it would reset them. That
+    // is the one stored ratio a box may open on.
+    expect(form.match(/\?\.shares/g)).toEqual(["?.shares"]);
+    expect(form).toContain("initial?.shares");
   });
 
   it("are still typeable, so an uneven split is one box away", () => {

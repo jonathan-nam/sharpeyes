@@ -176,15 +176,12 @@ export function useDropLogWrites(
       await readBack(async () => apply({ pools: await call<PartyLootPool[]>(POOLS_KEY, {}) }));
     });
 
-  /** Party View's keep and remove routes, for the Drop Log's rows. Same read-back as rowSale. */
-  const rowWrite = (row: LootRef, path: string, options: RequestInit) =>
+  /** Party View's remove route, for a Drop Log row. Same read-back as rowSale. */
+  const rowRemove = (row: LootRef) =>
     track(async () => {
-      await call<unknown>(`/api/parties/${row.partyId}/loot/${row.lootId}${path}`, options);
+      await call<unknown>(`/api/parties/${row.partyId}/loot/${row.lootId}`, { method: "DELETE" });
       await readBack(async () => apply({ pools: await call<PartyLootPool[]>(POOLS_KEY, {}) }));
     });
-  const rowKeep = (row: LootRef, memberId: string) =>
-    rowWrite(row, "/taken", { method: "PUT", body: JSON.stringify({ memberId }) });
-  const rowRemove = (row: LootRef) => rowWrite(row, "", { method: "DELETE" });
 
   return {
     busy,
@@ -199,7 +196,6 @@ export function useDropLogWrites(
     pin,
     bulkSale,
     rowSale,
-    rowKeep,
     rowRemove,
   };
 }

@@ -152,7 +152,8 @@ internal fun sellLoot(
     val sharesFor = { seatId: Uuid -> request.shares[seatId.toString()] ?: 1 }
 
     PartyLoot.update({ PartyLoot.id eq lootId }) {
-        it[soldAt] = now
+        // A correction keeps the day it sold, or it would move into another week's settlement.
+        it[soldAt] = row[PartyLoot.soldAt] ?: now
         // One or the other, never both: see V76. A dollar sale's `amount` is not stored at all,
         // because a meso figure standing beside a dollar one is a conversion nobody entered.
         it[saleAmount] = if (request.usdCents != null) null else request.amount

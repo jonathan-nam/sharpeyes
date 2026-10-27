@@ -384,10 +384,6 @@ export default function DropLog({ children }: { children: ReactNode }) {
       await writes.rowSale(...args);
       await load().catch(() => {});
     },
-    rowKeep: async (...args: Parameters<typeof writes.rowKeep>) => {
-      await writes.rowKeep(...args);
-      await load().catch(() => {});
-    },
     rowRemove: async (...args: Parameters<typeof writes.rowRemove>) => {
       await writes.rowRemove(...args);
       await load().catch(() => {});
