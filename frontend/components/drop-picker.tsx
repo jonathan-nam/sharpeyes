@@ -3,7 +3,8 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Field } from "@/components/add-field";
 import { Button } from "@/components/button";
-import { failureText, isDuplicateDrop } from "@/lib/api";
+import { StaleAfterWrite, failureText, isDuplicateDrop } from "@/lib/api";
+import { SaveGroup, useSaveGroup } from "@/components/save-group";
 import { DropSelect } from "@/components/drop-select";
 import { type PileForm, PiecePileEditor } from "@/components/piece-pile";
 import { StackAssign } from "@/components/stack-assign";
@@ -124,15 +125,15 @@ export function DropPicker({
    * The stacking drop's blocks, answerable here. Absent on every picker that has no party to split by.
    *
    * The pickup goes out WITH the drop, in one request, because it is keyed to a row that does not
-   * exist until this form creates one. The split is the party's own standing deal and keeps its own
-   * Save, since it outlives the night being logged.
+   * exist until this form creates one. The split is the party's standing deal and its own request,
+   * sent first by the same Add when it changed.
    */
   draft?: StackDraft;
   /**
    * What is picked, for a caller that draws something of its own about it.
    *
    * Party View's panel needs it to stop drawing the standing split while this form is drawing an
-   * editable copy: two of them, each with a Save, is two answers to one question.
+   * editable copy: two of them is two answers to one question.
    */
   onPick?: (dropKey: string) => void;
   /**
@@ -150,6 +151,8 @@ export function DropPicker({
   const [boxes, setBoxes] = useState<Record<string, string>>({});
   // The server's word that this drop is already logged, kept until it is added again or replaced.
   const [duplicate, setDuplicate] = useState<string | null>(null);
+  const split = useSaveGroup();
+  const [splitError, setSplitError] = useState<string | null>(null);
 
   const drops = pickableDrops(table, worldType, difficulty);
   const offered: BossDrop[] = piece
@@ -184,11 +187,22 @@ export function DropPicker({
   const stacks = night ? draftStacks(night, boxes) : null;
   // An arrangement that does not add up is not sent at all: the server refuses one, and refusing it
   // now takes the DROP down with it, so the form holds it back rather than losing both.
-  const ready = Boolean(body) && (night === null || stacks !== null);
+  const ready =
+    Boolean(body) && (night === null || stacks !== null) && !(split.changed && !split.ready);
 
   async function send(again: boolean) {
-    if (!body || busy || !ready) return;
+    if (!body || busy || split.saving || !ready) return;
     setDuplicate(null);
+    setSplitError(null);
+    // The split first: refused, and the drop is not logged either, so nothing has to be retyped.
+    if (night) {
+      try {
+        await split.saveAll();
+      } catch (e) {
+        setSplitError(failureText(e, "That didn't save. Try again."));
+        if (!(e instanceof StaleAfterWrite)) return;
+      }
+    }
     // Empty is a night nobody has answered for, which is what a drop logged anywhere else is, so
     // nothing is sent rather than an empty map.
     const sent = stacks && Object.keys(stacks).length > 0 ? { ...body, bundles: stacks } : body;
@@ -212,17 +226,17 @@ export function DropPicker({
 
   /* Both blocks the coupon row carries, before there is a row to carry them. Inside the form and
      ABOVE its button, because the pickup goes out with Add drop and a button that submits what is
-     under it reads as belonging to the line it is on instead.
-
-     The split keeps its own Save: it is the party's standing deal, it outlives this night, and it
-     is already saved that way everywhere else. */
+     under it reads as belonging to the line it is on instead. Add saves a changed split too. */
   const blocks = night && draft && (
     <div className="loot-draft">
       <h4 className="loot-group-title is-config">{draft.pickupTitle}</h4>
       <StackPickupDraft drop={night} boxes={boxes} busy={busy} onChange={setBoxes} />
 
       <h4 className="loot-group-title is-config">{draft.entitledTitle}</h4>
-      <StackAssign config={draft.config} editing busy={busy} onSave={draft.onSaveShares} />
+      <SaveGroup group={split}>
+        <StackAssign config={draft.config} editing busy={busy} onSave={draft.onSaveShares} />
+      </SaveGroup>
+      {splitError && <p className="split-error">{splitError}</p>}
     </div>
   );
 

@@ -635,19 +635,29 @@ export default function PartiesPage() {
    * Every route here is the party page's own, so selling from this panel and selling from there are
    * one write and cannot come out differently. A refusal is kept with the party it was about.
    */
+  /** Rejects when it fails, for a caller that reports the failure itself. */
+  async function writeDropOrThrow(
+    party: Party,
+    lootId: string,
+    path: string,
+    options: RequestInit,
+  ) {
+    await write(lootId, async () => {
+      await apiFetch<unknown>(
+        `${PARTIES_KEY}/${party.id}/loot/${lootId}${path}`,
+        options,
+        getToken,
+      );
+      // Past the write, so the same reading the party's own page makes: a refetch that fails is
+      // a stale panel, not a sale that did not save. See StaleAfterWrite.
+      await readBack(party.yours === false ? refreshSeatedPools : refreshPools);
+    });
+  }
+
   async function writeDrop(party: Party, lootId: string, path: string, options: RequestInit) {
     setPoolError(null);
     try {
-      await write(lootId, async () => {
-        await apiFetch<unknown>(
-          `${PARTIES_KEY}/${party.id}/loot/${lootId}${path}`,
-          options,
-          getToken,
-        );
-        // Past the write, so the same reading the party's own page makes: a refetch that fails is
-        // a stale panel, not a sale that did not save. See StaleAfterWrite.
-        await readBack(party.yours === false ? refreshSeatedPools : refreshPools);
-      });
+      await writeDropOrThrow(party, lootId, path, options);
     } catch (e) {
       setPoolError({
         partyId: party.id,
@@ -743,7 +753,7 @@ export default function PartiesPage() {
         // settledAlready), so without this the boxes would open on a save that cannot land.
         locked: new Set(log.entries.filter((entry) => entry.closed).map((entry) => entry.lootId)),
         onSave: (lootId: string, bundles: Record<string, number>) =>
-          writeDrop(party, lootId, "/bundles", {
+          writeDropOrThrow(party, lootId, "/bundles", {
             method: "PUT",
             body: JSON.stringify({ bundles }),
           }),

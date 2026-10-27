@@ -108,8 +108,7 @@ export function LootList({
    * The standing split is being drawn somewhere else on this screen, so it is not drawn here.
    *
    * True while the Add Drop form has the stacking drop picked and is showing an editable copy. Two
-   * of them, each with a Save, is two answers to one question, and the one being typed into is the
-   * one to keep. The night's PICKUP is unaffected: that is about a row that already exists.
+   * of them is two answers to one question, and the one being typed into is the one to keep. The night's PICKUP is unaffected: that is about a row that already exists.
    */
   splitElsewhere?: boolean;
   /** Whether a coupon row offers Remove. See LootRow's couponRemovable. */

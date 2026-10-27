@@ -1,7 +1,6 @@
 "use client";
 
-import { Button } from "@/components/button";
-import { failureText } from "@/lib/api";
+import { useSaveSlot } from "@/components/save-group";
 import { useState } from "react";
 import { holderKey, holderOf } from "@/lib/vestige-ledger";
 import {
@@ -11,6 +10,7 @@ import {
   draftUnanswered,
   openingCounts,
   parseWholeStacks,
+  pickupChanged,
   pieceTallies,
   stacksToSave,
 } from "@/lib/vestige-pickup";
@@ -23,7 +23,8 @@ import {
 // Whole stacks only. A half belongs to the deal, where it means an average across weeks; nobody
 // bends down for half a stack on the night.
 //
-// Read-only until the panel's own Edit, and read-only it shows what was RECORDED and nothing else.
+// Read-only until the panel's own Edit, whose one Save writes these boxes (see SaveGroup), and
+// read-only it shows what was RECORDED and nothing else.
 // The boxes open on a balanced guess when nobody has said, and drawing that as a resting
 // state would put a pickup nobody entered on screen as though it had happened.
 //
@@ -88,7 +89,7 @@ function PickupBoxes({
   const [boxes, setBoxes] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(openingCounts(drop)).map(([id, n]) => [id, String(n)])),
   );
-  const [refusal, setRefusal] = useState<string | null>(null);
+  const [touched, setTouched] = useState(false);
 
   const parsed = Object.fromEntries(
     drop.seats.map((s) => [s.id, parseWholeStacks(boxes[s.id] ?? "")]),
@@ -98,15 +99,12 @@ function PickupBoxes({
   const assigned = assignedStacks(whole);
   const adds = readable && assigned === drop.bundles;
   const tallies = adds ? pieceTallies(drop, whole) : null;
-
-  async function save() {
-    setRefusal(null);
-    try {
-      await onSave(drop.lootId, stacksToSave(whole));
-    } catch (e) {
-      setRefusal(failureText(e, "That didn't save. Try again."));
-    }
-  }
+  const saving = useSaveSlot({
+    changed: pickupChanged(drop, parsed, touched),
+    ready: adds,
+    save: () => onSave(drop.lootId, stacksToSave(whole)),
+  });
+  const held = busy || saving;
 
   return (
     <>
@@ -119,11 +117,14 @@ function PickupBoxes({
               <input
                 className="split-input"
                 value={boxes[seat.id] ?? ""}
-                onChange={(e) => setBoxes({ ...boxes, [seat.id]: e.target.value })}
+                onChange={(e) => {
+                  setBoxes({ ...boxes, [seat.id]: e.target.value });
+                  setTouched(true);
+                }}
                 placeholder="0"
                 inputMode="numeric"
                 aria-label={`Stacks ${seat.name} picked up`}
-                disabled={busy}
+                disabled={held}
               />
               <span className="config-share-stacks">{tally ? tallyLabel(tally) : ""}</span>
             </label>
@@ -131,19 +132,12 @@ function PickupBoxes({
         })}
       </div>
 
-      <div className="loot-actions">
-        <Button variant="primary" disabled={busy || !adds} onClick={() => void save()}>
-          Save Pickup
-        </Button>
-        {readable && !adds && (
-          <span className="split-error">
-            {assigned} of {drop.bundles} stacks placed
-          </span>
-        )}
-        {!readable && <span className="split-error">whole stacks only</span>}
-      </div>
-
-      {refusal && <p className="split-error">{refusal}</p>}
+      {readable && !adds && (
+        <span className="split-error">
+          {assigned} of {drop.bundles} stacks placed
+        </span>
+      )}
+      {!readable && <span className="split-error">whole stacks only</span>}
     </>
   );
 }

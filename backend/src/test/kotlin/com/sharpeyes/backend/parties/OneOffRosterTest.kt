@@ -164,6 +164,16 @@ class OneOffRosterTest {
     }
 
     @Test
+    fun `the night's split names its guest`() {
+        transaction {
+            val party = nightOn(mine("Rune"))
+            val steve = Uuid.parse(party.members.single { it.name == "Steve" }.id)
+            assertNull(saveSplit(Uuid.parse(party.id), mapOf(steve to 2), Clock.System.now()))
+            assertEquals(2, findParty(Uuid.parse(party.id), userId)!!.members.single { it.name == "Steve" }.shares)
+        }
+    }
+
+    @Test
     fun `one guest cannot run the same boss on two nights in one week`() {
         transaction {
             nightOn(mine("Rune"))

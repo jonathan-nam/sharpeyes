@@ -4059,6 +4059,12 @@ button.link:disabled {
   font-size: var(--text-base);
 }
 
+.split-saved {
+  margin: 16px 0 0;
+  color: var(--good);
+  font-size: var(--text-base);
+}
+
 .split-result {
   margin-top: 24px;
   padding: 18px;

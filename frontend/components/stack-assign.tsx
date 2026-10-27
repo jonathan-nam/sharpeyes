@@ -1,7 +1,6 @@
 "use client";
 
-import { Button } from "@/components/button";
-import { failureText } from "@/lib/api";
+import { useSaveSlot } from "@/components/save-group";
 import { useState } from "react";
 import {
   type ShareConfig,
@@ -23,8 +22,9 @@ import {
 // takes four stacks and I take two".
 //
 // Read-only until the panel's own Edit, which is the one that already swaps the roster for its
-// inputs: one press opens everything on the row that can be answered. A screen that only STATES the
-// split passes no onSave, and read-only is all it can ever be.
+// inputs: one press opens everything on the row that can be answered, and one Save writes it (see
+// SaveGroup). A screen that only STATES the split passes no onSave, and read-only is all it can
+// ever be.
 
 export function StackAssign({
   config,
@@ -80,8 +80,6 @@ function ShareBoxes({
   const [boxes, setBoxes] = useState<Record<string, string>>(() =>
     Object.fromEntries([...stacksPerWeek(config)].map(([id, stacks]) => [id, stacksLabel(stacks)])),
   );
-  const [refusal, setRefusal] = useState<string | null>(null);
-
   const parsed = new Map(config.seats.map((seat) => [seat.id, parseStacks(boxes[seat.id] ?? "")]));
   const readable = [...parsed.values()].every((value) => value !== null);
   const typed = new Map([...parsed].map(([id, value]) => [id, value ?? 0]));
@@ -90,20 +88,19 @@ function ShareBoxes({
   // of it, and the difference would quietly become somebody's.
   const adds = readable && placed === config.bundles;
   const pieces = adds ? piecesFor(config, typed) : null;
+  // Against the labels the boxes open on, so a third of a stack that cannot be typed is not a change.
+  const onFile = stacksPerWeek(config);
+  const changed = config.seats.some(
+    (seat) => parsed.get(seat.id) !== parseStacks(stacksLabel(onFile.get(seat.id) ?? 0)),
+  );
+  const shares = adds ? sharesFromStacks(typed) : null;
 
-  async function save() {
-    setRefusal(null);
-    const shares = sharesFromStacks(typed);
-    if (!shares) {
-      setRefusal("that is not a split");
-      return;
-    }
-    try {
-      await onSave(shares);
-    } catch (e) {
-      setRefusal(failureText(e, "That didn't save. Try again."));
-    }
-  }
+  const saving = useSaveSlot({
+    changed,
+    ready: shares !== null,
+    save: () => onSave(shares!),
+  });
+  const held = busy || saving;
 
   return (
     <div className="config-vestige">
@@ -122,7 +119,7 @@ function ShareBoxes({
               placeholder="0"
               inputMode="decimal"
               aria-label={`Stacks a week ${seat.name} takes`}
-              disabled={busy}
+              disabled={held}
             />
             <span className="config-share-stacks">
               {pieces ? `${pieces.get(seat.id) ?? 0} coupons` : ""}
@@ -131,21 +128,14 @@ function ShareBoxes({
         ))}
       </div>
 
-      <div className="loot-actions">
-        <Button variant="primary" disabled={busy || !adds} onClick={() => void save()}>
-          Save Split
-        </Button>
-        {/* Only the arithmetic, and only while it is wrong: what is left to place is the one thing
-            the boxes cannot show, and it is what the button is waiting for. */}
-        {readable && !adds && (
-          <span className="split-error">
-            {stacksLabel(placed)} of {config.bundles} stacks split
-          </span>
-        )}
-        {!readable && <span className="split-error">whole or half stacks</span>}
-      </div>
-
-      {refusal && <p className="split-error">{refusal}</p>}
+      {/* Only the arithmetic, and only while it is wrong: what is left to place is the one thing
+          the boxes cannot show, and it is what Save is waiting for. */}
+      {readable && !adds && (
+        <span className="split-error">
+          {stacksLabel(placed)} of {config.bundles} stacks split
+        </span>
+      )}
+      {!readable && <span className="split-error">whole or half stacks</span>}
     </div>
   );
 }

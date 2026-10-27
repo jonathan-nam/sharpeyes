@@ -221,8 +221,9 @@ export default function PartyPage() {
   const remove = (lootId: string) => mutate(lootId, `${lootUrl()}/${lootId}`, { method: "DELETE" });
   // Who bent down for which stack, on one night. The same route Party View's panel writes, so a
   // correction made here and one made there cannot come out differently.
+  // Rejects, because the pool's one Save reports it.
   const setBundles = (lootId: string, bundles: Record<string, number>) =>
-    mutate(lootId, `${lootUrl()}/${lootId}/bundles`, {
+    mutateOrThrow(lootId, `${lootUrl()}/${lootId}/bundles`, {
       method: "PUT",
       body: JSON.stringify({ bundles }),
     });
