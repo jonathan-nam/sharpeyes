@@ -57,12 +57,6 @@ function partyOf(p: Payload): string {
   return p.leader ? `${str(p.leader)}'s ${boss}` : boss;
 }
 
-/** "18 parties", from a combine's payload. */
-function partiesCount(p: Payload): string {
-  const n = typeof p.count === "number" ? p.count : 0;
-  return `${n} ${n === 1 ? "party" : "parties"}`;
-}
-
 /**
  * The Settlement card the payload names (backend PartyNotices.kt and SettlementListings.kt), or the
  * Settlement stage for an entry written before it named one.
@@ -96,14 +90,6 @@ const KINDS: Record<string, Kind> = {
   PARTY_ADDED: {
     text: (p, who) => `${who} added ${str(p.character)} to ${partyOf(p)}`,
     go: { label: () => "View Party", href: partyPage },
-  },
-  PARTY_COMBINE: {
-    text: (_, who) => `${who} has requested to combine parties.`,
-    go: { label: () => "Review", href: () => "/social/combine" },
-  },
-  PARTY_COMBINED: {
-    text: (p, who) => `${who} combined ${partiesCount(p)}`,
-    go: { label: () => "View Parties", href: () => "/bosses/parties" },
   },
   SALE_RECORDED: {
     text: (p, who) => `${who} sold ${str(p.item)} for ${priceOf(p)}`,

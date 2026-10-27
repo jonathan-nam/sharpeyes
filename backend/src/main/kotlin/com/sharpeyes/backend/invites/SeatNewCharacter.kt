@@ -45,8 +45,8 @@ internal fun seatInLinkedParties(
     // it is, so their seats are left for them to settle. See LinkedRoster.
     val clear = owners.filter { linkedRosterFor(it).soleCharacter(name) == characterId }
     if (clear.isEmpty()) return
-    // Not a boss they already run in a party of their own: two pools for one night, until the two
-    // owners combine them. See CombineParties.kt.
+    // Not a boss they already run in a party of their own: two pools for one night. See
+    // StandingParties.kt.
     val ownBosses = bossesRunInOwnParty(userId, name)
     val parties =
         Party

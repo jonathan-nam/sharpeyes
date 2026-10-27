@@ -169,48 +169,6 @@ export type ClientErrorReport = {
   count?: number | null;
 };
 
-export type CombineChoiceRequest = {
-  mine: string;
-  theirs: string;
-  keepPartyId: string;
-};
-
-export type CombinePageResponse = {
-  friends: CombineWithResponse[];
-  incoming: IncomingCombineResponse[];
-};
-
-export type CombinePairResponse = {
-  bossKey: string;
-  boss: string;
-  mine: CombineSideResponse;
-  theirs: CombineSideResponse;
-  keepable: string[];
-  sharedFrom: string;
-};
-
-export type CombinePreviewResponse = {
-  clashes: SeatClashResponse[];
-};
-
-export type CombineSideResponse = {
-  partyId: string;
-  leader: string;
-  difficulty: string | null;
-  members: SeatFace[];
-};
-
-export type CombineWithResponse = {
-  personId: string;
-  friend: string;
-  friendImage: string | null;
-  matched: number;
-  keepsYours: number;
-  keepsTheirs: number;
-  conflicts: CombinePairResponse[];
-  sentRequestId: string | null;
-};
-
 export type CouponSaleResponse = {
   id: string;
   holder: VestigeHolder;
@@ -313,16 +271,6 @@ export type HeldMoneyResponse = {
   heldBy?: string;
   recordedByYou?: boolean;
   recordedByName?: string | null;
-};
-
-export type IncomingCombineResponse = {
-  id: string;
-  friend: string;
-  friendImage: string | null;
-  total: number;
-  keepsYours: number;
-  keepsTheirs: number;
-  takesOut?: SeatOutResponse[];
 };
 
 export type IncomingInviteView = {
@@ -746,36 +694,6 @@ export type ScreenshotResultResponse = {
   reachedBossListEnd: boolean | null;
 };
 
-export type SeatChoiceRequest = {
-  name: string;
-  keepPartyId: string;
-};
-
-export type SeatClashResponse = {
-  name: string;
-  boss: string;
-  sprite: string | null;
-  options: SeatOptionResponse[];
-};
-
-export type SeatFace = {
-  name: string;
-  sprite: string | null;
-};
-
-export type SeatOptionResponse = {
-  partyId: string;
-  yours: boolean;
-  leader: string;
-  difficulty: string | null;
-};
-
-export type SeatOutResponse = {
-  name: string;
-  boss: string;
-  leader: string;
-};
-
 export type SeatedPartyResponse = {
   party: PartyResponse;
   mySeatIds: string[];
@@ -789,12 +707,6 @@ export type SellLootRequest = {
   sellerMemberId: string;
   shares?: Record<string, number>;
   usdCents?: number | null;
-};
-
-export type SendCombineRequest = {
-  personId: string;
-  choices?: CombineChoiceRequest[];
-  seats?: SeatChoiceRequest[];
 };
 
 export type SendFriendRequest = {

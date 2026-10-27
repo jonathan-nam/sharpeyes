@@ -21,9 +21,9 @@ import kotlin.uuid.Uuid
  *
  * Nothing from before the two accounts were linked (V99): everything dated earlier is already in the
  * reader's own book, or was never theirs to count. Every kind alike, or a debt would be read without
- * the payment that settled it. A combined party is read from its cutoff, the one retired into it not
- * at all, and one still overlapping a party of the member's not at all until the two are combined.
- * See CombineParties.kt.
+ * the payment that settled it. A party overlapping one of the member's is not read at all. A party
+ * combined while that existed (V98) is read from its PartyReadCutoff, the one retired into it not at
+ * all.
  */
 internal class MemberReads(
     owner: String,
@@ -118,7 +118,7 @@ private fun linkedPersonId(
 
 /**
  * [owner]'s standing parties that share a character with one of [reader]'s for the same boss: two
- * pools for one night until the owners combine them, so neither is read across. See CombineSeats.kt.
+ * pools for one night, so neither is read across. See StandingParties.kt.
  */
 private fun overlappingParties(
     owner: String,

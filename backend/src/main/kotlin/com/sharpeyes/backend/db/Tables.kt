@@ -242,9 +242,6 @@ object Party : Table("party") {
     // When the standing roster started standing for weeks nobody wrote down. See V80__party_since.sql.
     val partySince = timestamp("party_since").defaultExpression(CurrentTimestamp)
 
-    // Retired by combining it into this party. See V98 and CombineParties.kt.
-    val combinedInto = uuid("combined_into").nullable()
-
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 
@@ -810,34 +807,6 @@ object PartyReadCutoff : Table("party_read_cutoff") {
     val sharedFrom = date("shared_from").nullable()
 
     override val primaryKey = PrimaryKey(partyId, userId)
-}
-
-// A request to combine every matching party with one friend, waiting on them. See V98.
-object PartyCombineRequest : Table("party_combine_request") {
-    val id = uuid("id")
-    val fromUserId = reference("from_user_id", Users.id)
-    val toUserId = reference("to_user_id", Users.id)
-    val createdAt = timestamp("created_at")
-
-    override val primaryKey = PrimaryKey(id)
-}
-
-// One pair of a combine request: the party kept and the one retired into it. See V98.
-object PartyCombineItem : Table("party_combine_item") {
-    val requestId = reference("request_id", PartyCombineRequest.id)
-    val keepPartyId = reference("keep_party_id", Party.id)
-    val retirePartyId = reference("retire_party_id", Party.id)
-
-    override val primaryKey = PrimaryKey(requestId, retirePartyId)
-}
-
-// A seat a combine request takes out, so a character holds one party per boss. See V98.
-object PartyCombineSeat : Table("party_combine_seat") {
-    val requestId = reference("request_id", PartyCombineRequest.id)
-    val partyId = reference("party_id", Party.id)
-    val name = text("name")
-
-    override val primaryKey = PrimaryKey(requestId, partyId, name)
 }
 
 // One notification, of any kind. See V86 and notifications/.
