@@ -5420,6 +5420,11 @@ button.link:disabled {
   color: var(--ink-strong);
 }
 
+.run-chip:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Editing one character's parties: a row per boss they do not solo. */
 .configs {
   display: flex;

@@ -54,7 +54,9 @@ export default function BossesPage() {
 
   const [bosses, setBosses] = useState<Boss[]>(seededBosses ?? []);
   const [characters, setCharacters] = useState<Character[]>(seededCharacters ?? []);
-  const [partyLists, setPartyLists] = useState<PartyLists | null>(null);
+  // Undefined until the first answer, so the filter can hold its place disabled instead of popping
+  // in after a cached matrix has painted.
+  const [partyLists, setPartyLists] = useState<PartyLists | null | undefined>(undefined);
   const [runFilter, setRunFilter] = useState<RunFilter | null>(null);
   const [view, setView] = useState<BossClearsView | null>(peek<BossClearsView>(CLEARS_KEY) ?? null);
   // When the view was received, so the countdown can correct for a browser clock that disagrees
@@ -178,13 +180,18 @@ export default function BossesPage() {
       })
       // Only show the error state if we have nothing at all: a failed refresh behind data we
       // already have should not blank the page.
-      .catch(() => setState((s) => (s === "loaded" ? "loaded" : "error")));
+      .catch(() => {
+        setState((s) => (s === "loaded" ? "loaded" : "error"));
+        // Lists that will not come drop the filter rather than leave it disabled for good.
+        setPartyLists((lists) => lists ?? null);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
   const partyRuns = partyLists && partyRunsByCharacter(partyLists.parties, partyLists.seated);
   // No chips without the party lists: every cell would read as solo, and Solo would count them all.
   const filterable = !!partyRuns && partyRuns.size > 0;
+  const filterPending = partyLists === undefined;
 
   // Not "characters.length === 0": that is also true while the roster is still loading, when the
   // answer is "not yet" rather than "nobody".
@@ -236,7 +243,7 @@ export default function BossesPage() {
                 {view && (
                   <div className="boss-controls">
                     <WeekStepper view={view} onSelect={selectWeek} busy={stepping} />
-                    {filterable && (
+                    {(filterable || filterPending) && (
                       <div className="run-filters" role="group" aria-labelledby="run-filters-label">
                         <span id="run-filters-label" className="run-filters-label">
                           Filter
@@ -247,6 +254,7 @@ export default function BossesPage() {
                             type="button"
                             className={`run-chip${runFilter === kind ? " is-on" : ""}`}
                             aria-pressed={runFilter === kind}
+                            disabled={filterPending}
                             onClick={() => setRunFilter(runFilter === kind ? null : kind)}
                           >
                             {kind === "solo" ? "Solo" : "Party"}
