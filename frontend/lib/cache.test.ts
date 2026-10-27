@@ -40,7 +40,7 @@ describe("cache", () => {
   });
 
   /*
-   * The bug this pairing exists for: switching between Individual and Party View mounted a page
+   * The bug this pairing exists for: switching between Boss Matrix and Party View mounted a page
    * seeded from this cache, and it read the entry's AGE as clock skew. Both reset countdowns drew
    * five minutes ahead until the refresh landed, then snapped back.
    */

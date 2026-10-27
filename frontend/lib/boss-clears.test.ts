@@ -492,7 +492,7 @@ describe("weekLabel", () => {
   });
 
   it("is one function so two pages cannot word the same week differently", () => {
-    // The stepper on the Individual View and the standing label on Party View both read this.
+    // The stepper on the Boss Matrix and the standing label on Party View both read this.
     const view = { weekStart: null, currentWeekStart: "2026-01-01" };
     expect(weekLabel(view)).toBe(weekLabel({ ...view }));
     expect(weekLabel(view)).toBe("Week of January 1");

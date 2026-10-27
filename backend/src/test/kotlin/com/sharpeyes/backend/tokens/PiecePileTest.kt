@@ -257,7 +257,7 @@ class PiecePileTest {
         }
     }
 
-    // --- solo runs of the pooled bosses, ticked on Individual View -----------------------------
+    // --- solo runs of the pooled bosses, ticked on Boss Matrix ---------------------------------
 
     @Test
     fun `a solo pooled boss adds the whole pile on its tick, swaps on a mode change, and leaves on untick`() {

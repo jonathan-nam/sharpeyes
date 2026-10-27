@@ -14,7 +14,7 @@ what fell, and who is owed what.
 
 ## Bossing
 
-- **Individual View.** Every character against every boss for the week, ticked as they clear.
+- **Boss Matrix.** Every character against every boss for the week, ticked as they clear.
   Bosses a character does not run stop counting towards the week.
 - **Party View.** The same week by party: who you ran each boss with, at what difficulty, and what
   each seat is entitled to. Earlier weeks are read-only.

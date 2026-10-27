@@ -194,7 +194,7 @@ export default function BossesPage() {
       {/* Beside the title, like Edit Parties on Party View: it leaves the page, so it does not
           belong in the controls row, where everything else acts on the table below. */}
       <div className="page-head">
-        <h1 className="page-title">Individual View</h1>
+        <h1 className="page-title">Boss Matrix</h1>
         {state === "loaded" && characters.length > 0 && (
           <span className="page-head-links">
             {/* Which bosses a character runs is set one character at a time, on its own page: the

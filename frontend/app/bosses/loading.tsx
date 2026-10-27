@@ -10,7 +10,7 @@ import { BossMatrix } from "@/components/boss-matrix";
 export default function Loading() {
   return (
     <RouteLoading shaped>
-      <h1 className="page-title">Individual View</h1>
+      <h1 className="page-title">Boss Matrix</h1>
       <BossMatrix loading bosses={[]} characters={[]} clearsByCharacter={{}} />
     </RouteLoading>
   );

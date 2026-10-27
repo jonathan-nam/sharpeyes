@@ -28,7 +28,7 @@ export function describeCaveat(caveat: PlannerCaveat, unreadableRows: number): s
 }
 
 // Whether a result carries a planner at all. A capture can hold the inventory, the planner, or
-// both, and the dock on the Individual View page should stay quiet about the inventory half.
+// both, and the dock on the Boss Matrix page should stay quiet about the inventory half.
 export function hasPlanner(result: Pick<ScreenshotResult, "bossClears" | "reachedBossListEnd">) {
   return result.bossClears.length > 0 || result.reachedBossListEnd !== null;
 }

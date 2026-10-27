@@ -98,7 +98,7 @@ data class PartyResponse(
     // taken off the week, or a one-off whose week has passed. Answers for the week the list was
     // asked for, unlike `cleared` below, which always answers for now.
     val skippedThisPeriod: Boolean = false,
-    // Somebody besides you ran it in the week shown. What the Individual View flags. See ranAsPartyIn.
+    // Somebody besides you ran it in the week shown. What the Boss Matrix flags. See ranAsPartyIn.
     @AbsentOnCachedPayload
     val ranAsParty: Boolean = false,
     // The pool at a glance: dropped but unsold, and sold with somebody still unpaid.
