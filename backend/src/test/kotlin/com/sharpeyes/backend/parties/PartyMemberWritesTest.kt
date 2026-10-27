@@ -376,13 +376,16 @@ class PartyMemberWritesTest {
     }
 
     @Test
-    fun `only the owner invites, and a member's Drop Log drop is sent to the party`() {
+    fun `a member seats only their own friends' characters, and a member's Drop Log drop is sent to the party`() {
         transaction {
             val party = shared()
-            val friend = listOf(Invitee("Quillon", Uuid.random()))
-            assertNotNull(memberInviteRefusal(member, owner, friend))
-            assertNull(memberInviteRefusal(owner, owner, friend))
-            assertNull(memberInviteRefusal(member, owner, emptyList()))
+            // The owner's friend, but not the member's.
+            val quillon = FriendSeat("Quillon", character(stranger, "Quillon"))
+            link(owner, "Dana", stranger)
+            val pine = Characters.selectAll().where { Characters.userId eq member }.single()[Characters.id]
+            assertNotNull(memberSeatRefusal(member, owner, listOf(quillon)))
+            assertNull(memberSeatRefusal(owner, owner, listOf(quillon)))
+            assertNull(memberSeatRefusal(member, owner, listOf(FriendSeat("Pinewick", pine))))
             val pinewick = Characters.selectAll().where { Characters.userId eq member }.single()[Characters.id]
             assertTrue(seatedPartyFor(pinewick, bossIdForKey("kalos-the-guardian")!!) == id(party))
         }

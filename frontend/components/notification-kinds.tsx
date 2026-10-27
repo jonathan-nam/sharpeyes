@@ -93,6 +93,10 @@ const KINDS: Record<string, Kind> = {
       href: (p) => (p.accepted ? partyPage(p) : "/bosses/parties"),
     },
   },
+  PARTY_ADDED: {
+    text: (p, who) => `${who} added ${str(p.character)} to ${partyOf(p)}`,
+    go: { label: () => "View Party", href: partyPage },
+  },
   PARTY_COMBINE: {
     text: (_, who) => `${who} has requested to combine parties.`,
     go: { label: () => "Review", href: () => "/social/combine" },

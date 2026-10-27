@@ -1,5 +1,6 @@
 package com.sharpeyes.backend.parties
 
+import com.sharpeyes.api.parties.PartyResponse
 import com.sharpeyes.api.parties.PersonRequest
 import com.sharpeyes.api.parties.SavePartyRequest
 import com.sharpeyes.api.parties.SavePeopleRequest
@@ -118,40 +119,112 @@ class PartyInvitesTest {
 
     private fun invitesTo(partyId: Uuid) = pendingInvitesFor(listOf(partyId))[partyId].orEmpty()
 
-    private fun inviteAndAccept(
+    /** An invite still pending from before they stopped being sent. */
+    private fun pending(
         partyId: Uuid,
-        names: List<String>,
+        characterId: Uuid,
     ) {
-        val (_, invitees) = splitInvitees(owner, partyId, names)
-        sendInvites(owner, partyId, invitees, now)
+        PartyInvite.insert {
+            it[id] = Uuid.random()
+            it[PartyInvite.partyId] = partyId
+            it[PartyInvite.characterId] = characterId
+            it[invitedBy] = owner
+            it[createdAt] = now
+        }
+    }
+
+    private fun acceptPending(
+        partyId: Uuid,
+        characterId: Uuid,
+    ) {
+        pending(partyId, characterId)
         assertTrue(acceptInvite(member, Uuid.parse(invitesTo(partyId).single().id), now) is InviteAnswer.Joined)
     }
 
+    /** What POST /api/parties does: split the roster, save what is kept, then bind and tell. */
+    private fun create(
+        character: Uuid,
+        members: List<String>,
+    ): PartyResponse {
+        val typed = SavePartyRequest(character.toString(), "kalos-the-guardian", members)
+        val (request, split) = typed.seatingFriends(owner, null, kalos)
+        val id = createParty(owner, character, kalos, request, now)
+        return findParty(id, owner)!!.withFriendSeats(owner, split, now) as PartyResponse
+    }
+
+    private fun seatOf(
+        partyId: Uuid,
+        name: String,
+    ) = PartyMember
+        .selectAll()
+        .where { (PartyMember.partyId eq partyId) and (PartyMember.name eq name) }
+        .single()
+
     @Test
-    fun `a friend's character is invited rather than seated, and seated on Accept`() {
+    fun `a friend's character is seated and bound at once, and told`() {
         transaction {
             val tide = character(owner, "tidelark")
             val pine = character(member, "Pinewick")
             link(owner, "Chris", member)
-            val partyId = party(owner, tide, listOf("Baldrix"))
 
-            val (kept, invitees) = splitInvitees(owner, partyId, listOf("Baldrix", "Pinewick"))
-            assertEquals(listOf("Baldrix"), kept)
-            assertEquals(listOf("Pinewick"), invitees.map { it.name })
-
-            assertEquals(listOf("Pinewick"), sendInvites(owner, partyId, invitees, now).invited)
-            val invite = invitesTo(partyId).single()
-            val told = Notification.selectAll().where { Notification.userId eq member }.single()
-            assertEquals(NotificationKind.PARTY_INVITE, told[Notification.kind])
-            // No seat while the invite stands, so nothing is shared with them yet.
-            assertTrue(PartyMember.selectAll().where { PartyMember.linkedCharacterId eq pine }.empty())
-
-            assertTrue(acceptInvite(member, Uuid.parse(invite.id), now) is InviteAnswer.Joined)
-            val seat = PartyMember.selectAll().where { PartyMember.linkedCharacterId eq pine }.single()
-            assertEquals(true, seat[PartyMember.standing])
+            val party = create(tide, listOf("Baldrix", "Pinewick"))
+            val partyId = Uuid.parse(party.id)
+            assertEquals(pine, seatOf(partyId, "Pinewick")[PartyMember.linkedCharacterId])
             assertTrue(invitesTo(partyId).isEmpty())
-            // In the party now, so naming them again seats rather than invites.
-            assertTrue(splitInvitees(owner, partyId, listOf("Baldrix", "Pinewick")).second.isEmpty())
+            val told = Notification.selectAll().where { Notification.userId eq member }.single()
+            assertEquals(NotificationKind.PARTY_ADDED, told[Notification.kind])
+
+            // Saved again, nothing is new, so nobody is told twice.
+            findParty(partyId, owner).withFriendSeats(owner, splitFriends(owner, partyId, listOf("Pinewick")), now)
+            assertEquals(1, Notification.selectAll().where { Notification.userId eq member }.count())
+        }
+    }
+
+    // Only a friendship binds: a typed name is a stranger's otherwise, and they did not agree to it.
+    @Test
+    fun `a stranger's character is a seat that binds to nobody`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            character(member, "Pinewick")
+
+            val party = create(tide, listOf("Pinewick"))
+            assertEquals(null, seatOf(Uuid.parse(party.id), "Pinewick")[PartyMember.linkedCharacterId])
+            assertTrue(Notification.selectAll().where { Notification.userId eq member }.empty())
+        }
+    }
+
+    @Test
+    fun `a friend already in a party for the boss is left out and said`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            link(owner, "Chris", member)
+            party(member, pine, listOf("Somebody"))
+
+            val party = create(tide, listOf("Pinewick", "Baldrix"))
+            assertEquals(listOf("Pinewick"), party.alreadyPartied)
+            assertTrue(
+                PartyMember
+                    .selectAll()
+                    .where { (PartyMember.partyId eq Uuid.parse(party.id)) and (PartyMember.name eq "Pinewick") }
+                    .empty(),
+            )
+        }
+    }
+
+    // A name typed before the friendship is a seat already, which insertSeat would not bind.
+    @Test
+    fun `naming a friend binds the seat their character already has`() {
+        transaction {
+            val tide = character(owner, "tidelark")
+            val pine = character(member, "Pinewick")
+            val partyId = oneOff(owner, tide, listOf("Pinewick"))
+            link(owner, "Chris", member)
+
+            val asking = weekSplit(owner, partyId, listOf("Pinewick"))
+            writeWeek(partyId, tide, currentWeek(), asking.named, SeatContext(owner, emptyMap(), now))
+            findParty(partyId, owner).withFriendSeats(owner, asking.split, now)
+            assertEquals(pine, seatOf(partyId, "Pinewick")[PartyMember.linkedCharacterId])
         }
     }
 
@@ -164,7 +237,7 @@ class PartyInvitesTest {
             link(owner, "Chris", member)
             val partyId = oneOff(owner, tide, listOf("Baldrix"))
 
-            inviteAndAccept(partyId, listOf("Baldrix", "Pinewick"))
+            acceptPending(partyId, pine)
             assertEquals(1, PartyMember.selectAll().where { PartyMember.linkedCharacterId eq pine }.count())
             assertEquals(
                 listOf("tidelark", "Baldrix", "Pinewick"),
@@ -182,7 +255,7 @@ class PartyInvitesTest {
             val partyId = oneOff(owner, tide, listOf("Pinewick"))
             link(owner, "Chris", member)
 
-            inviteAndAccept(partyId, listOf("Pinewick"))
+            acceptPending(partyId, pine)
             val seat =
                 PartyMember
                     .selectAll()
@@ -193,29 +266,13 @@ class PartyInvitesTest {
     }
 
     @Test
-    fun `a character already in a party for the boss is not invited`() {
-        transaction {
-            val tide = character(owner, "tidelark")
-            val pine = character(member, "Pinewick")
-            link(owner, "Chris", member)
-            party(member, pine, listOf("Somebody"))
-            val partyId = party(owner, tide, listOf("Baldrix"))
-
-            val outcome = sendInvites(owner, partyId, listOf(Invitee("Pinewick", pine)), now)
-            assertEquals(listOf("Pinewick"), outcome.alreadyPartied)
-            assertTrue(outcome.invited.isEmpty())
-            assertTrue(PartyInvite.selectAll().where { PartyInvite.partyId eq partyId }.empty())
-        }
-    }
-
-    @Test
     fun `declining drops the invite and seats nobody`() {
         transaction {
             val tide = character(owner, "tidelark")
             val pine = character(member, "Pinewick")
             link(owner, "Chris", member)
             val partyId = party(owner, tide, listOf("Baldrix"))
-            sendInvites(owner, partyId, listOf(Invitee("Pinewick", pine)), now)
+            pending(partyId, pine)
             val invite = invitesTo(partyId).single()
 
             assertTrue(dropInviteAs(member, Uuid.parse(invite.id), now))
@@ -232,7 +289,7 @@ class PartyInvitesTest {
             val pine = character(member, "Pinewick")
             link(owner, "Chris", member)
             val partyId = createSoloParty(owner, tide, kalos, now)
-            sendInvites(owner, partyId, listOf(Invitee("Pinewick", pine)), now)
+            pending(partyId, pine)
 
             val sent = invitesSentBy(owner).single()
             assertEquals("Pinewick", sent.character)
@@ -253,7 +310,7 @@ class PartyInvitesTest {
             val pine = character(member, "Pinewick")
             link(owner, "Chris", member)
             val partyId = party(owner, tide, listOf("Baldrix"))
-            sendInvites(owner, partyId, listOf(Invitee("Pinewick", pine)), now)
+            pending(partyId, pine)
 
             val waiting = invitesWaitingOn(member).single()
             assertEquals(invitesTo(partyId).single().id, waiting.id)
