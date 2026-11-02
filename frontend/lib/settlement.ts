@@ -116,17 +116,17 @@ export type Settlement = {
    */
   piecesNet: number;
   /**
-   * Mesos they owe you once every direction is netted off. Zero when the two sides cancel or you are
-   * the one behind, and then `owedByYou` carries it instead.
+   * The debt they owe you: every part but the unpaid shares, which wait outside it both ways until
+   * an act settles them. Only an act or a payment moves it, so Offset X moves it by exactly X. Zero
+   * when it runs the other way, and then `owedByYou` carries it instead.
    */
   mesos: number;
-  /** Mesos YOU owe them, when the netting comes out that way. */
+  /** The same debt, when it runs from you to them. */
   owedByYou: number;
   /**
-   * Unpaid shares YOU owe them, outside the net until you say which way they go. See V57 and V61.
+   * Unpaid shares YOU owe them, outside the debt until you say which way they go. See V57 and V61.
    *
-   * Offset takes it off what they owe you; Mark sent leaves their debt where it was. Subtracting it
-   * on arrival would make Offset a button that changes nothing on screen.
+   * Offset takes it off what they owe you; Mark sent leaves their debt where it was.
    */
   sharesYouOwe: number;
   /**
@@ -139,7 +139,7 @@ export type Settlement = {
   usd: Owings;
   /** What the net is made of, in the order the card says them. Every one is signed towards you. */
   parts: {
-    /** Unpaid shares THEY owe you. What you owe them is `sharesYouOwe`, which is not netted here. */
+    /** Unpaid shares THEY owe you. Outside `mesos`, as `sharesYouOwe` is: see `mesos`. */
     shares: number;
     /**
      * Entered by hand. Positive is what they owe you that no drop accounts for. Negative is a share
@@ -361,8 +361,8 @@ export function buildSettlement(
     row.drops = spent;
   }
 
-  // The shares, one direction each. What they owe you is in the net; what YOU owe stays outside it
-  // until Offset or Mark sent says which way it goes. See sharesYouOwe and V61.
+  // The shares, one direction each, both outside the debt until Offset or Mark Sent says which way
+  // they go. See `mesos`.
   for (const person of wallet.counterparties) {
     if (person.lines.length === 0) continue;
     const row = rowFor(person.key, person.name);
@@ -417,7 +417,7 @@ export function buildSettlement(
   }
 
   for (const row of out.values()) {
-    const net = Object.values(row.parts).reduce((sum, part) => sum + part, 0);
+    const net = Object.values(row.parts).reduce((sum, part) => sum + part, 0) - row.parts.shares;
     row.mesos = Math.max(0, net);
     row.owedByYou = Math.max(0, -net);
   }
@@ -440,6 +440,7 @@ export function buildSettlement(
         row.pinned ||
         row.mesos > 0 ||
         row.owedByYou > 0 ||
+        row.parts.shares > 0 ||
         // Each of these is outside the net and can be the only thing on a card. Dropping the card
         // would leave it nowhere to be settled.
         row.sharesYouOwe > 0 ||
@@ -452,7 +453,8 @@ export function buildSettlement(
     )
     .sort(
       (a, b) =>
-        b.mesos - a.mesos ||
+        // All they owe you, shares included, so the order does not wait on an act.
+        b.mesos + b.parts.shares - (a.mesos + a.parts.shares) ||
         b.owedByYou + b.sharesYouOwe - (a.owedByYou + a.sharesYouOwe) ||
         // Its own key, never added to the mesos. See buildWallet's sort.
         b.usd.owed - a.usd.owed ||
@@ -863,8 +865,8 @@ export type SettlementTotals = {
  * not in it: a count cannot be added to a total of mesos.
  */
 export function settlementTotals(rows: Settlement[]): SettlementTotals {
-  const owed = rows.reduce((sum, row) => sum + row.mesos, 0);
-  // Shares of yours are outside the net, so they are added here or the tile would be short.
+  // Unpaid shares are outside each card's debt, so they are added here or the tiles would be short.
+  const owed = rows.reduce((sum, row) => sum + row.mesos + row.parts.shares, 0);
   const owe = rows.reduce((sum, row) => sum + row.owedByYou + row.sharesYouOwe, 0);
   const usdOwed = rows.reduce((sum, row) => sum + row.usd.owed, 0);
   const usdOwe = rows.reduce((sum, row) => sum + row.usd.owe, 0);
@@ -931,7 +933,7 @@ export function offsetOf(row: Settlement): Offset {
     .map((line) => ({ lootId: line.lootId, memberId: line.payeeId, amount: line.pay }));
   // Off the parts, never alongside them, so the rows always add up to the total.
   const amount = parts.reduce((sum, part) => sum + part.amount, 0);
-  // Their side, whole: the shares being discharged are no longer inside it, so nothing is added back.
+  // The debt, which no unpaid share is inside.
   const toComeOff = row.mesos - row.owedByYou;
   return {
     parts,
@@ -1047,6 +1049,7 @@ export function isEmpty(row: Settlement): boolean {
     row.piecesYouOwe === 0 &&
     row.mesos === 0 &&
     row.owedByYou === 0 &&
+    row.parts.shares === 0 &&
     row.sharesYouOwe === 0 &&
     row.usd.owed === 0 &&
     row.usd.owe === 0

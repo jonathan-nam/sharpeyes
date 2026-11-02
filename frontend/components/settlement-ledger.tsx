@@ -313,23 +313,14 @@ function SettlementCard({
   // check. This is a debt somebody is going to be asked for, and the pieces beside it are a count.
   // The one figure on the card anybody pastes anywhere, whichever way it runs. Null when the two
   // sides cancel and only the pieces hold the card here.
-  // What YOU owe them, however it got there: a net that came out against you and shares nobody has
-  // decided about are the same errand. Never subtracted from `mesos`, which is what they owe you and
-  // moves when Offset is pressed rather than before. See sharesYouOwe.
-  const youOwe = row.owedByYou + row.sharesYouOwe;
+  // The debt alone, either way: unpaid shares are under Unsettled Amounts until an act moves them.
+  const youOwe = row.owedByYou;
   const toCopy = row.mesos > 0 ? row.mesos : youOwe > 0 ? youOwe : null;
   // Whether the headline says anything. Since the coupons left it, a card can be held here by its
   // pieces alone, and this line would then be an empty one. See #629.
   const headline = toCopy !== null || row.usd.owed > 0 || row.usd.owe > 0;
 
-  /**
-   * The drops behind the shares figure, on hover.
-   *
-   * They are already listed further down the card, under their own step, but two forms sit between
-   * the two: the number and the nights it came off do not read as the same thing from that far
-   * apart. Only the ones this figure is made of, which is the direction running towards you: what
-   * you owe is outside the net and is listed under the step below with the acts that answer it.
-   */
+  /** The drops behind a shares figure, on hover. */
   const behind = (direction: "owed" | "owe") =>
     row.lines
       // Meso lines only. These are the breakdowns of the two meso figures, and a dollar share listed
@@ -343,7 +334,6 @@ function SettlementCard({
         return `${line.name} \u00b7 ${where} \u00b7 ${line.theirs}: ${formatMoney(line.pay, line.currency, true)}`;
       })
       .join("\n");
-  const behindShares = behind("owed");
 
   /**
    * A component of the net, always signed: nothing else on the row says which way it pushes.
@@ -354,15 +344,9 @@ function SettlementCard({
   const signed = (value: number, currency: Currency = "MESO") =>
     `${value > 0 ? "+" : ""}${formatMoney(value, currency, true)}`;
 
-  // What the net is made of, in the order the money moved, before the rows somebody typed. Only the
-  // parts that happened: a zero says nothing and a column of them would bury the one that matters.
+  // What the debt is made of, before the rows somebody typed. Unpaid shares are not: they are under
+  // Unsettled Amounts, outside the debt until an act moves them. Only the parts that happened.
   const parts = [
-    {
-      key: "shares",
-      label: "shares",
-      mesos: row.parts.shares,
-      detail: behindShares,
-    },
     // `soldOfTheirs` is NOT here, and must not be. It is only ever the part of their money somebody
     // has said comes off their debt, which makes it a discharge, and discharges are listed once
     // under `offsets`. It was in both lists at once: 2,412,222,150 read as a row of the owed
@@ -468,9 +452,7 @@ function SettlementCard({
    * press of Offset moves both, so the figure worth heading the section is the one it moves.
    *
    * ONE DIRECTION, which is what makes the addition safe. Both are money running from you to them,
-   * so nothing is being netted. The shares running the other way are what they owe you, and they are
-   * under `Owed` where they have always been: putting them in here too would be one debt in two
-   * totals.
+   * so nothing is being netted. The shares running the other way are under `Held by <name>`.
    *
    * MESOS ONLY, matching offsetOf. A share of a dollar sale is in neither figure and stays on the
    * headline in its own unit, there being no rate in this app to add it at.
@@ -785,17 +767,10 @@ function SettlementCard({
                     <ul className="ledger-queue">
                       {parts.map((part) => (
                         <li key={part.key} className="ledger-drop">
-                          {/* The nights behind the figure, where there are any. A tooltip, because this is the
-                    detail of one row rather than something the card owes everybody: the same list
-                    is under its own step below, and both are the wallet's, not a third answer. */}
-                          <Tooltip text={part.detail}>
-                            <div className="ledger-drop-head">
-                              <span className={part.detail ? "loot-name has-detail" : "loot-name"}>
-                                {part.label}
-                              </span>
-                              <span className="ledger-amount">{signed(part.mesos)}</span>
-                            </div>
-                          </Tooltip>
+                          <div className="ledger-drop-head">
+                            <span className="loot-name">{part.label}</span>
+                            <span className="ledger-amount">{signed(part.mesos)}</span>
+                          </div>
                         </li>
                       ))}
                       {theirEntries.map((entry) => (

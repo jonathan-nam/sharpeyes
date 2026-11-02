@@ -67,6 +67,8 @@ data class SharedPart(
 
 @Serializable
 data class SharedDetail(
+    /** Your unpaid shares, outside the debt until an act settles them. */
+    val shares: List<SharedPart>,
     val owe: List<SharedPart>,
     val oweTotal: Double,
     val paid: List<SharedPart>,
@@ -81,8 +83,12 @@ data class SharedCard(
     val name: String,
     val image: String? = null,
     val personId: String,
+    /** The debt either way, which only an act or a payment moves. */
     val owed: Double,
     val owe: Double,
+    /** Unpaid meso shares each way, outside the debt. */
+    val sharesOwed: Double,
+    val sharesOwe: Double,
     val holding: Double,
     val youHold: Double,
     val youHoldSales: List<CouponSale>,
@@ -230,13 +236,11 @@ fun sharedCard(
     val money = moneyRows(row, receipts)
     val where = Where(book, bosses)
     val sold = SharedPart("sold", "Coupons of ${book.ownerName}'s you kept", row.parts.soldOfYours)
-    val owe =
-        (yourShares(row, where) + sold + money.typed.filter { it.amount > 0 }.map { enteredPart(it, book) }).filter {
-            it.mesos !=
-                0.0
-        }
+    val entered = money.typed.filter { it.amount > 0 }.map { enteredPart(it, book) }
+    val owe = (listOf(sold) + entered).filter { it.mesos != 0.0 }
     val detail =
         SharedDetail(
+            shares = yourShares(row, where).filter { it.mesos != 0.0 },
             owe = owe,
             oweTotal = owe.fold(0.0) { sum, part -> sum + part.mesos },
             paid = money.discharges.map { paidPart(it, book) },
@@ -249,8 +253,10 @@ fun sharedCard(
         name = book.ownerName,
         image = book.ownerImage,
         personId = book.personId,
-        owed = row.owedByYou + row.sharesYouOwe,
+        owed = row.owedByYou,
         owe = row.mesos,
+        sharesOwed = row.sharesYouOwe,
+        sharesOwe = row.parts.shares,
         holding = row.holding,
         youHold = row.heldByThem,
         youHoldSales = undecidedSales(row.salesHeldByThem, row.heldByThem),
@@ -269,8 +275,9 @@ fun withSharedCards(
     totals: SettlementTotals,
     cards: List<SharedCard>,
 ): SettlementTotals {
-    val owed = totals.owed + cards.fold(0.0) { sum, card -> sum + card.owed }
-    val owe = totals.owe + cards.fold(0.0) { sum, card -> sum + card.owe }
+    // The debt and the unpaid shares, as settlementTotals adds them for your own cards.
+    val owed = totals.owed + cards.fold(0.0) { sum, card -> sum + card.owed + card.sharesOwed }
+    val owe = totals.owe + cards.fold(0.0) { sum, card -> sum + card.owe + card.sharesOwe }
     val usdOwed = totals.usd.owed + cards.fold(0.0) { sum, card -> sum + card.usd.owed }
     val usdOwe = totals.usd.owe + cards.fold(0.0) { sum, card -> sum + card.usd.owe }
     return SettlementTotals(
