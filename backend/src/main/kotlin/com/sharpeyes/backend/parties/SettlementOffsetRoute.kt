@@ -199,6 +199,7 @@ internal fun writeCloseRows(
             }
             act.holding?.let { writeDisposalRow(entry, kind, it, HELD_BY_YOU) }
             act.heldByThem?.let { writeDisposalRow(entry, kind, it, HELD_BY_THEM) }
+            logClose(userId, person, act)
             null
         }
     }
