@@ -30,11 +30,11 @@ import kotlin.uuid.Uuid
 // the catalog, so clearing Extreme Kalos alone already says 180 vestige coupons landed and typing
 // that in is busywork. See V37__loot_from_clear.sql.
 //
-// SOLO ONLY. A party's coupons are typed, with the count filled in from the config (see
-// defaultQuantity in the frontend). What fell is only half of what a party needs to know: the stacks
-// have to be handed out, and a row that appeared on its own is one nobody remembers agreeing to, so
-// a tick corrected the next day moved money. One seat has nothing to hand out and nobody to answer
-// to, which is what makes the same row a fact there rather than a guess.
+// SOLO ONLY. What fell is only half of what a party needs to know: the stacks have to be handed out,
+// and a row that appeared on its own is one nobody remembers agreeing to, so a tick corrected the
+// next day moved money. One seat has nothing to hand out and nobody to answer to, which is what makes
+// the same row a fact there rather than a guess. A party gets one only when its owner opts in, and
+// then from AutoVestiges.kt, which hands the stacks out too.
 //
 // Only drops the catalog has an amount for. That is what makes this a fact rather than a guess: a
 // drop with no amount for this boss and difficulty may or may not have fallen, and the pool would be
@@ -178,8 +178,9 @@ internal fun unlootFromClear(
  * correcting the mode you ran would take the closure with the row, silently.
  *
  * Two claims, both a human's: the books closed over this drop, and which seat picked up which stack.
+ * A pickup the app wrote (auto_split, see AutoVestiges.kt) is not a human's, so it holds nothing.
  */
-private fun spokenFor(lootIds: List<Uuid>): Set<Uuid> {
+internal fun spokenFor(lootIds: List<Uuid>): Set<Uuid> {
     if (lootIds.isEmpty()) return emptySet()
     val settled =
         VestigeSettlementLoot
@@ -188,8 +189,9 @@ private fun spokenFor(lootIds: List<Uuid>): Set<Uuid> {
             .map { it[VestigeSettlementLoot.lootId] }
     val bundled =
         PartyLootBundle
+            .innerJoin(PartyLoot)
             .selectAll()
-            .where { PartyLootBundle.lootId inList lootIds }
+            .where { (PartyLootBundle.lootId inList lootIds) and (PartyLoot.autoSplit eq false) }
             .map { it[PartyLootBundle.lootId] }
     return (settled + bundled).toSet()
 }

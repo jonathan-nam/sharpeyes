@@ -8,6 +8,7 @@ import com.sharpeyes.backend.events.Topic
 import com.sharpeyes.backend.events.publishToParty
 import com.sharpeyes.backend.parties.linkedSeatsOn
 import com.sharpeyes.backend.parties.runsInPeriod
+import com.sharpeyes.backend.parties.syncAutoVestiges
 import com.sharpeyes.backend.tokens.CaptureCounts
 import com.sharpeyes.backend.tokens.syncPiecesForClear
 import kotlinx.datetime.LocalDate
@@ -42,6 +43,7 @@ internal fun clearChanged(
     capture: CaptureCounts? = null,
 ) {
     syncPiecesForClear(characterId, bossCatalogId, period, now, capture)
+    syncAutoVestiges(characterId, bossCatalogId, period, now)
     writeClearThrough(characterId, bossCatalogId, period, now)
 }
 

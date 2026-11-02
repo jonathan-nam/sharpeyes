@@ -25,6 +25,7 @@ import com.sharpeyes.backend.parties.piecePilesFor
 import com.sharpeyes.backend.parties.retireOrDeleteParty
 import com.sharpeyes.backend.parties.saveParty
 import com.sharpeyes.backend.parties.saveWeekRoster
+import com.sharpeyes.backend.parties.setAutoAddVestiges
 import com.sharpeyes.backend.parties.setRunsInPeriod
 import com.sharpeyes.backend.parties.setSoloDifficulty
 import com.sharpeyes.backend.parties.takeOverParty
@@ -346,6 +347,8 @@ class PiecePileTest {
                 val me = character(world = world)
                 // A party of its own each: one boss under two modes is still one clear per character.
                 val partyId = party(me, bossKey, difficulty, members = listOf("Steve$index", "Bob$index"))
+                // The coupons a tick files are AutoVestigesTest's.
+                setAutoAddVestiges(partyId, false, Clock.System.now())
                 tick(me, bossKey)
                 assertEquals(count, held(me, item), "$bossKey $difficulty $world")
                 assertNull(pile(partyId))

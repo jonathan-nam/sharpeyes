@@ -117,6 +117,7 @@ private fun newParty(
         it[oneOff] = party[Party.oneOff]
         it[standing] = party[Party.standing]
         it[partySince] = party[Party.partySince]
+        it[autoAddVestiges] = party[Party.autoAddVestiges]
         it[createdAt] = now
         it[updatedAt] = now
     }

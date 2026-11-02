@@ -525,6 +525,7 @@ export type PartyResponse = {
   invited: string[];
   alreadyPartied: string[];
   outcome?: RosterNameOutcome[];
+  autoAddVestiges?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -744,6 +745,10 @@ export type SentInviteView = {
   boss: string;
   difficulty: string | null;
   leader: string;
+};
+
+export type SetAutoVestigesRequest = {
+  enabled: boolean;
 };
 
 export type SetBossClearRequest = {

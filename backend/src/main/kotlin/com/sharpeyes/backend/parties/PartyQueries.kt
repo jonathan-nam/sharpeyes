@@ -476,6 +476,7 @@ private fun ResultRow.toPartyResponse(
     settledLoot = loot.settled,
     cleared = clear.cleared,
     clearedByHand = clear.byHand,
+    autoAddVestiges = this[Party.autoAddVestiges],
     createdAt = this[Party.createdAt].toString(),
     updatedAt = this[Party.updatedAt].toString(),
 )

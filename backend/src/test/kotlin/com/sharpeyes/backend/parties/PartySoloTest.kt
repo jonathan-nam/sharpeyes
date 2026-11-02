@@ -311,6 +311,8 @@ class PartySoloTest {
             val request =
                 SavePartyRequest(characterId.toString(), "limbo", listOf("Steve"), difficulty = "HARD")
             val partyId = createParty(userId, characterId, bossId, request, now)
+            // The party's own coupons are AutoVestigesTest's; this one counts the solo pool's.
+            setAutoAddVestiges(partyId, false, now)
             addLoot(partyId, LootedDrop(dropIdForKey("grindstone-of-faith")!!), bossId, dropped, now)
             retireOrDeleteParty(partyId, userId, now)
             // The order that got this wrong: the boss is ticked cleared before anybody says what mode

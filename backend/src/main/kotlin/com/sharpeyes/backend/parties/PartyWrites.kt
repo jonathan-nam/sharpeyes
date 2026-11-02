@@ -75,6 +75,7 @@ internal fun createParty(
     }
     val context = SeatContext(userId, sprites, now)
     writeMembers(partyId, characterId, request.members, context, request.shares, request.pieceShares)
+    defaultAutoVestiges(partyId)
     if (request.oneOff) writeNightRoster(partyId, characterId, request.members, now, context)
     syncPiecesForParty(partyId, now)
     clearSkipsOfSeats(partyId)
@@ -191,8 +192,8 @@ internal fun setPartyClear(
         row[sourceScreenshotId] = null
         row[viaPartyId] = null
     }
-    // What the clear guarantees on a boss run alone, or taking it back. Nothing for a party, whose
-    // coupons are typed: the gate is lootFromClear's. See LootFromClear.kt.
+    // What the clear guarantees on a boss run alone, or taking it back. A party's opt-in coupons
+    // follow from clearChanged below (AutoVestiges.kt).
     val own = Uuid.parse(party.characterId)
     val today = todayIn(now)
     if (cleared) {

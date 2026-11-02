@@ -983,6 +983,9 @@ export default function PartiesPage() {
         <h1 className="page-title">Party View</h1>
         {state === "loaded" && (
           <span className="page-head-links">
+            <ButtonLink variant="secondary" href="/settings/parties">
+              Settings
+            </ButtonLink>
             <ButtonLink variant="secondary" href="/bosses/parties/edit">
               Edit Parties
             </ButtonLink>
