@@ -249,6 +249,8 @@ class PartyRetireTest {
             val partyId = Uuid.parse(party.id)
             val boss = bossIdForKey("limbo")!!
             val now = Clock.System.now()
+            // The coupons a clear files are AutoVestigesTest's.
+            setAutoAddVestiges(partyId, false, now)
             val lootId = addGrindstone(party)
             setPartyClear(party, boss, bossResetOf(boss)!!, cleared = true, now = now)
 

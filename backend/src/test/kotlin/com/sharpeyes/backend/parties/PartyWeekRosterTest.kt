@@ -666,6 +666,8 @@ class PartyWeekRosterTest {
             val boss = bossIdForKey("limbo")!!
             // A tick says the party ran, and nothing else. Nothing fell as far as the pool is
             // concerned, so a party cleared and then given a split has no week to have pinned.
+            // With coupons filed from the tick, see AutoVestigesTest.
+            setAutoAddVestiges(partyId, false, Clock.System.now())
             setPartyClear(party, boss, bossResetOf(boss)!!, cleared = true, now = Clock.System.now())
 
             saveParty(

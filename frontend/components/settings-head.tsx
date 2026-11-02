@@ -1,9 +1,10 @@
 import Link from "next/link";
 
-export type SettingsTab = "general";
+export type SettingsTab = "general" | "parties";
 
 const TABS: { key: SettingsTab; href: string; label: string }[] = [
   { key: "general", href: "/settings", label: "General" },
+  { key: "parties", href: "/settings/parties", label: "Parties" },
 ];
 
 /** Settings' title and its pages, drawn as Social's are. */

@@ -49,6 +49,7 @@ import type {
   SavePeopleBody,
   SaveWeekRosterBody,
   SeatedParty,
+  SetAutoVestigesBody,
   SetPartySkipBody,
   SoloDifficultyBody,
 } from "@/types/party";
@@ -223,6 +224,7 @@ export type RequestParity = [
   Is<Accepted<SavePiecePileBody, api.SavePiecePileRequest>>,
   Is<Accepted<SavePieceSyncBody, api.SavePieceSyncRequest>>,
   Is<Accepted<SaveSettingsBody, api.SaveSettingsRequest>>,
+  Is<Accepted<SetAutoVestigesBody, api.SetAutoVestigesRequest>>,
   Is<Accepted<SaveMainCharacterBody, api.SaveMainCharacterRequest>>,
   Is<Accepted<AddVestigeTrancheBody, api.AddCouponSaleRequest>>,
   Is<Accepted<CorrectVestigeTrancheBody, api.CorrectCouponSaleRequest>>,

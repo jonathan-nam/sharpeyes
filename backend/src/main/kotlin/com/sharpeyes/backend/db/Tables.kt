@@ -242,6 +242,9 @@ object Party : Table("party") {
     // When the standing roster started standing for weeks nobody wrote down. See V80__party_since.sql.
     val partySince = timestamp("party_since").defaultExpression(CurrentTimestamp)
 
+    // A clear files the party's coupons. See V102__auto_add_vestiges.sql.
+    val autoAddVestiges = bool("auto_add_vestiges").default(false)
+
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 
@@ -498,6 +501,9 @@ object PartyLoot : Table("party_loot") {
     // It fell on a run with nobody else, so it divides by one seat whatever the pool's roster says
     // that week. What the Drop Log's own form records, since it names no party. See V72.
     val solo = bool("solo")
+
+    // Its stacks were handed out by the app, not a person, so they do not hold the row. See V102.
+    val autoSplit = bool("auto_split").default(false)
 
     // The sale, all six columns or none of them (party_loot_sale_complete).
     val soldAt = timestamp("sold_at").nullable()

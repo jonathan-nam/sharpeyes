@@ -1,6 +1,7 @@
 package com.sharpeyes.backend.parties
 
 import com.sharpeyes.api.loot.SellLootRequest
+import com.sharpeyes.backend.bosses.periodOf
 import com.sharpeyes.backend.db.Party
 import com.sharpeyes.backend.db.PartyLoot
 import com.sharpeyes.backend.db.PartyLootBundle
@@ -85,7 +86,12 @@ internal fun addLoot(
         // Both present by the FKs the insert above just satisfied: the party exists, and the boss
         // id came out of the catalog.
         val reset = bossResetOf(bossCatalogId)!!
-        clearFromDrop(characterIdOfParty(partyId)!!, bossCatalogId, reset, droppedOn, now)
+        val own = characterIdOfParty(partyId)!!
+        clearFromDrop(own, bossCatalogId, reset, droppedOn, now)
+        // Over a clear already recorded, clearFromDrop writes nothing, so nothing else would ask.
+        if (!source.solo && item.dropCatalogId != vestigeId()) {
+            syncAutoVestiges(own, bossCatalogId, periodOf(reset, droppedOn), now)
+        }
     }
     return lootId
 }
@@ -254,6 +260,8 @@ internal fun setLootBundles(
     assignment: Map<Uuid, Int>,
 ) {
     PartyLootBundle.deleteWhere { PartyLootBundle.lootId eq lootId }
+    // A person's answer from here on, even where it matches the app's. AutoVestiges sets it back.
+    PartyLoot.update({ PartyLoot.id eq lootId }) { it[autoSplit] = false }
     for ((memberId, count) in assignment) {
         PartyLootBundle.insert {
             it[PartyLootBundle.lootId] = lootId

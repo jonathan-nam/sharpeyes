@@ -80,6 +80,7 @@ fun Route.partyRoutes(
     put("/{id}/shares") { saveSplitRoute() }
     put("/{id}/clear") { setClearRoute() }
     put("/{id}/skip") { setSkipRoute() }
+    put("/{id}/auto-vestiges") { setAutoVestigesRoute() }
     put("/{id}/pieces") { savePiecePileRoute() }
     delete("/{id}/pieces") { removePiecePileRoute() }
     delete("/{id}") { deletePartyRoute() }

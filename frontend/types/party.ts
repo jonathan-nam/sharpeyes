@@ -113,8 +113,15 @@ export type Party = {
   // On a save's answer only: each friend's character it named, with the sentence to show. Absent
   // from a server before it. See lib/invite-notice.ts.
   outcome?: RosterNameOutcome[];
+  // A clear files this party's coupons. Absent on a payload cached from before it.
+  autoAddVestiges?: boolean;
   createdAt: string;
   updatedAt: string;
+};
+
+// PUT /api/parties/{id}/auto-vestiges.
+export type SetAutoVestigesBody = {
+  enabled: boolean;
 };
 
 /** What a roster save did with a friend's character. See PartyDtos.kt. */

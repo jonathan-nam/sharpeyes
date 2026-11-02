@@ -135,7 +135,7 @@ internal fun setSoloDifficulty(
         it[Party.difficulty] = difficulty
         it[updatedAt] = now
     }
-    // Coupons a clear files are a solo pool's only; a party's are typed. See LootFromClear.kt.
+    // A solo pool's coupons. A party's re-file from clearChanged below (AutoVestiges.kt).
     if (!liveParty) {
         val today = todayIn(now)
         unlootFromClear(characterId, bossCatalogId, reset, today)
@@ -208,6 +208,7 @@ internal fun adoptSoloParty(
         it[solo] = false
         it[partySince] = now
     }
+    defaultAutoVestiges(partyId)
     saveParty(userId, partyId, request, now, sprites)
 }
 
@@ -243,6 +244,7 @@ internal fun openSoloParty(
         it[partySince] = now
         it[updatedAt] = now
     }
+    defaultAutoVestiges(partyId)
     setRunsInPeriod(
         partyId,
         oneOff = true,

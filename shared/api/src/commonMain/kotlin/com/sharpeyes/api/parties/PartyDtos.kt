@@ -134,8 +134,17 @@ data class PartyResponse(
     // On a save's answer only: what happened to each friend's character it named. See PartyInvites.kt.
     @AbsentOnCachedPayload
     val outcome: List<RosterNameOutcome> = emptyList(),
+    // A clear files this party's coupons. See V102.
+    @AbsentOnCachedPayload
+    val autoAddVestiges: Boolean = false,
     val createdAt: String,
     val updatedAt: String,
+)
+
+/** PUT /api/parties/{id}/auto-vestiges. */
+@Serializable
+data class SetAutoVestigesRequest(
+    val enabled: Boolean,
 )
 
 /** What a roster save did with a friend's character. */
