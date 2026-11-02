@@ -25,7 +25,6 @@ import {
   runTimes,
 } from "@/lib/boss-night";
 import type { Plan } from "@/lib/boss-run-plan";
-import { poolSize } from "@/lib/loot";
 import { modeThisWeek } from "@/lib/parties";
 import type { BossDrop } from "@/types/drop";
 import type { AddLootBody } from "@/types/loot";
@@ -121,8 +120,8 @@ function sameRuns(a: Set<string>, b: Set<string>): boolean {
  * is often the next two runs rather than all seven, and the alternative is pasting the whole thing
  * and deleting lines out of it.
  *
- * The clipboard is REBUILT, never taken from the DOM: a row carries a portrait, a length, a pool
- * count and a tick, none of which are in the paste, and the browser's own copy of a table row is
+ * The clipboard is REBUILT, never taken from the DOM: a row carries a portrait, a length and a
+ * tick, none of which are in the paste, and the browser's own copy of a table row is
  * all of them run together. Rebuilt through the same planAsText the button uses, so the two cannot
  * disagree about what a row says.
  */
@@ -247,10 +246,6 @@ export function RunPlan({
             const time = times[row];
             const tick = ticks[row];
             const party = log?.partyOf(planned.run.id);
-            const pool = party ? poolSize(party) : 0;
-            // Every drop, not just the outstanding ones, but quietly once there is nothing left to
-            // do with them. Same two states the party row's summary has.
-            const settled = party !== undefined && party.pendingLoot + party.awaitingPayout === 0;
             const onAddDrop = log?.onAddDrop;
             const open = opened === planned.run.id;
             const rowClasses = [];
@@ -311,23 +306,6 @@ export function RunPlan({
                           {timed && (
                             <span className="run-boss-minutes">
                               {`${planned.run.assumed ? "~" : ""}${formatDuration(planned.run.minutes)}`}
-                            </span>
-                          )}
-                          {/* What the pool holds, as a bare count. Party View's wording ("1 in the
-                            pool") is a line of its own there and wrapped the boss name onto a
-                            second line here. It counts the
-                            whole pool rather than tonight: a pool is not per night, and a badge
-                            that emptied at reset would be a number about the week dressed as a
-                            number about the run. */}
-                          {pool > 0 && (
-                            <span
-                              className={
-                                settled
-                                  ? "run-pool party-loot-summary is-done"
-                                  : "run-pool party-loot-summary"
-                              }
-                            >
-                              {pool}
                             </span>
                           )}
                         </span>

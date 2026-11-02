@@ -214,18 +214,6 @@ export function takenTally(loot: Loot[], members: PartyMember[]): TakenCount[] {
   }));
 }
 
-/** A party's pool counts. Mirrors PartyResponse's own fields. */
-export type PoolCounts = {
-  pendingLoot: number;
-  awaitingPayout: number;
-  settledLoot: number;
-};
-
-/** Every drop the pool holds, whatever state it is in. */
-export function poolSize(counts: PoolCounts): number {
-  return counts.pendingLoot + counts.awaitingPayout + counts.settledLoot;
-}
-
 /**
  * A pool narrowed to one week, for a Party View row.
  *

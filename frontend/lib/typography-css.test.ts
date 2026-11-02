@@ -102,13 +102,7 @@ describe("the corner scale", () => {
       .filter((r) => r.body.includes("var(--radius-pill)"))
       .map((r) => r.selector)
       .sort();
-    expect(pills).toEqual([
-      ".ledger-bar",
-      ".loot-paid",
-      ".loot-status",
-      ".party-clear",
-      ".run-pool",
-    ]);
+    expect(pills).toEqual([".ledger-bar", ".loot-paid", ".loot-status", ".party-clear"]);
   });
 });
 

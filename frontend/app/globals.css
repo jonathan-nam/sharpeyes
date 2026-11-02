@@ -7454,17 +7454,6 @@ button.link:disabled {
   font-size: var(--text-sm);
 }
 
-/* The same pill the arrangement view's boss chips carry, and the same reason: beside a boss name
-   there is room for a count and not for a sentence. Party View's wording wrapped "Hard Kalos The
-   Guardian" onto a second line and made a one-line run two lines tall. */
-.run-pool {
-  padding: 0 5px;
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  font-size: var(--text-sm);
-  white-space: nowrap;
-}
-
 /* The clear, at the end of the line, the same pill Party View's boss row carries and writing the
    same boss_clear row. Its own column rather than a chip in the boss cell: the states are read
    down a column, and beside a boss name of any length there is no column to read down. */

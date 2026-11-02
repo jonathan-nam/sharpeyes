@@ -6,7 +6,6 @@ import {
   formatDropped,
   formatDroppedWithYear,
   memberFee,
-  poolSize,
   saleBodyOf,
   splitOf,
   statusLabel,
@@ -241,15 +240,6 @@ describe("formatDroppedWithYear", () => {
   it("gives an unreadable date back whole rather than dressing it with a year", () => {
     expect(formatDroppedWithYear("not a date")).toBe("not a date");
     expect(formatDroppedWithYear("2026-13-40")).toBe("2026-13-40");
-  });
-});
-
-describe("poolSize", () => {
-  it("counts every drop whatever state it is in", () => {
-    // The way into a pool, so it must not vanish just because the work is done.
-    expect(poolSize({ pendingLoot: 1, awaitingPayout: 2, settledLoot: 3 })).toBe(6);
-    expect(poolSize({ pendingLoot: 0, awaitingPayout: 0, settledLoot: 4 })).toBe(4);
-    expect(poolSize({ pendingLoot: 0, awaitingPayout: 0, settledLoot: 0 })).toBe(0);
   });
 });
 
