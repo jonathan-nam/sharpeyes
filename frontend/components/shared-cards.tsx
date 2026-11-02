@@ -116,7 +116,7 @@ function SharedCardView({
       part.remove && act(writes.remove(card.personId, part.remove.kind, part.remove.id)),
   };
   // Every share of a drop you sold that you still owe: money of theirs in your hands.
-  const sendable = detail.owe.flatMap((part) => (part.send ? [part] : []));
+  const sendable = detail.shares.flatMap((part) => (part.send ? [part] : []));
   const sharesYouHold = sendable.reduce((sum, part) => sum + part.mesos, 0);
   const sharesTheyHold = detail.theyOwe
     .filter((line) => line.currency === "MESO")

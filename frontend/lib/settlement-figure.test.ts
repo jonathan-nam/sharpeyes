@@ -35,9 +35,9 @@ const entry = readFileSync(join(__dirname, "..", "components", "add-settlement.t
 describe("what the card says a person owes", () => {
   it("states it to the meso, never shortened", () => {
     expect(source).toContain("formatMesos(row.mesos, true)");
-    // What you owe them, which is the netted debt and the shares nobody has decided about, added
-    // rather than netted against the above: both are money leaving your hands. See sharesYouOwe.
-    expect(source).toContain("const youOwe = row.owedByYou + row.sharesYouOwe;");
+    // The debt alone, either way. Unpaid shares are under Unsettled Amounts until an act moves them,
+    // or a sale would move the headline and an Offset of X would move it by less than X.
+    expect(source).toContain("const youOwe = row.owedByYou;");
     expect(source).toContain("formatMesos(youOwe, true)");
   });
 
@@ -87,13 +87,11 @@ describe("what the card says a person owes", () => {
     // cases in lib/closing-acts.test.ts.
     expect(acts).toContain("`${sent} Sent`");
   });
-  it("puts the nights behind the shares figure on hover, and marks that it has them", () => {
-    // The same list sits under its own step further down, with two forms between the two, so the
-    // figure and the nights it came off did not read as the same thing.
-    expect(source).toContain('const behindShares = behind("owed");');
-    expect(source).toMatch(/<Tooltip text=\{part\.detail\}>\s*<div className="ledger-drop-head">/);
-    expect(source).toContain('part.detail ? "loot-name has-detail" : "loot-name"');
-    expect(css).toContain(".loot-name.has-detail");
+  it("keeps unpaid shares out of the debt's own list", () => {
+    // They are under Unsettled Amounts, in the half holding their money. Listed under Owed as well,
+    // a sale moved the debt before anybody acted on it.
+    expect(source).not.toContain('label: "shares",');
+    expect(source).toContain('detail: behind("owe")');
   });
   it("has no aggregate Settle, an act being per line and in one direction", () => {
     // Kept as a guard rather than deleted, because deleting it would delete the lesson. Settle
@@ -471,13 +469,11 @@ describe("what the figures on the card are counted in", () => {
     // through the meso formatter would state $333.34 as 33,334 mesos: a thousandth of the debt,
     // with nothing on screen to say which unit was meant. See lib/money.ts.
     expect(source).toContain("formatMoney(line.pay, line.currency, true)");
-    // The hover list behind the `shares` part is one direction, because that part is: what they owe
-    // you. What you owe is not in it and is not netted off it. Mesos only, for the same reason: it
-    // is the breakdown of a meso figure, and a dollar share is not one of its components.
+    // A hover list behind a shares figure is one direction and mesos only: it is the breakdown of a
+    // meso figure, and a dollar share is not one of its components.
     expect(source).toContain(
       '.filter((line) => line.direction === direction && line.currency === "MESO")',
     );
-    expect(source).toContain('const behindShares = behind("owed");');
     // No figure on this card comes off the fee, so `nets` is not read here at all.
     expect(source).not.toContain("line.nets");
   });

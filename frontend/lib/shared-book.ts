@@ -21,10 +21,13 @@ export type SharedCard = {
   image: string | null;
   /** Your person row in their book: where your writes into it go (/api/shared-books/{personId}). */
   personId: string;
-  /** Mesos they owe you: what their card says they owe you, netted or as unpaid shares. */
+  /** The debt they owe you, which only an act or a payment moves. Unpaid shares are outside it. */
   owed: number;
-  /** Mesos you owe them. */
+  /** The debt you owe them. */
   owe: number;
+  /** Unpaid meso shares, each way, outside the debt. */
+  sharesOwed: number;
+  sharesOwe: number;
   /** Money of yours they are holding from a sale of your coupons, with nothing decided yet. */
   holding: number;
   /** Money of THEIRS you are holding from your sale of their coupons, undecided. See V91. */
@@ -62,7 +65,9 @@ export type SharedPart = {
  * owner's own card shows, under the label turned round, and nothing here is worked out again.
  */
 export type SharedDetail = {
-  /** What you owe them before anything came off: your shares, their coupons you sold, entered debts. */
+  /** Your unpaid shares, outside the debt until an act settles them. */
+  shares: SharedPart[];
+  /** What the debt to them was before anything came off: coupons of theirs you kept, entered debts. */
   owe: SharedPart[];
   oweTotal: number;
   /** What has come off it, newest first: payments of yours, and offsets. */
@@ -139,7 +144,6 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     remove: entry.recordedByYou === true ? { kind: "debts" as const, id: entry.id } : undefined,
   });
   const owe: SharedPart[] = [
-    ...shares,
     { key: "sold", label: `Coupons of ${book.ownerName}'s you kept`, mesos: row.parts.soldOfYours },
     ...typed.filter((entry) => entry.amount > 0).map(enteredPart),
   ].filter((part) => part.mesos !== 0);
@@ -156,8 +160,10 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     name: book.ownerName,
     image: book.ownerImage ?? null,
     personId: book.personId,
-    owed: row.owedByYou + row.sharesYouOwe,
+    owed: row.owedByYou,
     owe: row.mesos,
+    sharesOwed: row.sharesYouOwe,
+    sharesOwe: row.parts.shares,
     holding: row.holding,
     youHold: row.heldByThem,
     youHoldSales: undecidedSales({ sales: row.salesHeldByThem, holding: row.heldByThem }),
@@ -167,6 +173,7 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
     usd: { owed: row.usd.owe, owe: row.usd.owed, net: -row.usd.net },
     net: flipNet(closingNet(row)),
     detail: {
+      shares: shares.filter((part) => part.mesos !== 0),
       owe,
       oweTotal: owe.reduce((sum, part) => sum + part.mesos, 0),
       paid: discharges.map((act) => {
@@ -202,8 +209,9 @@ export function sharedCard(book: SharedBook, bosses: Boss[]): SharedCard | null 
 
 /** [totals] with every shared card added in, so the tiles cover each book you are owed or owe in. */
 export function withSharedCards(totals: SettlementTotals, cards: SharedCard[]): SettlementTotals {
-  const owed = totals.owed + cards.reduce((sum, card) => sum + card.owed, 0);
-  const owe = totals.owe + cards.reduce((sum, card) => sum + card.owe, 0);
+  // The debt and the unpaid shares, as settlementTotals adds them for your own cards.
+  const owed = totals.owed + cards.reduce((sum, card) => sum + card.owed + card.sharesOwed, 0);
+  const owe = totals.owe + cards.reduce((sum, card) => sum + card.owe + card.sharesOwe, 0);
   const usdOwed = totals.usd.owed + cards.reduce((sum, card) => sum + card.usd.owed, 0);
   const usdOwe = totals.usd.owe + cards.reduce((sum, card) => sum + card.usd.owe, 0);
   return {

@@ -26,7 +26,7 @@ import kotlin.math.min
 
 // What stands between you and each other person, in one place. The port of buildSettlement in
 // frontend/lib/settlement.ts, which explains each rule. MONEY is one net figure; PIECES stay a count.
-// What you owe in shares stays outside the net until Offset or Mark Sent says which way it goes.
+// Unpaid shares, both ways, stay outside the debt until Offset or Mark Sent says which way they go.
 
 /** One night's coupons sitting in the wrong inventory, in whichever direction it runs. */
 @Serializable
@@ -222,10 +222,11 @@ private class SettlementBuilder(
         }
     }
 
-    /** The net either way, pinned cards kept, and the coupon counts washed into one handover. */
+    /** The debt either way, pinned cards kept, and the coupon counts washed into one handover. */
     fun finish() {
         for (row in out.values) {
-            val net = row.parts.sum()
+            // Unpaid shares stay outside the debt until an act settles them. See Settlement.mesos.
+            val net = row.parts.sum() - row.parts.shares
             row.mesos = max(0.0, net)
             row.owedByYou = max(0.0, -net)
         }
@@ -263,6 +264,7 @@ private fun drawn(row: Settlement): Boolean =
     row.pinned ||
         row.mesos > 0 ||
         row.owedByYou > 0 ||
+        row.parts.shares > 0 ||
         row.sharesYouOwe > 0 ||
         row.usd.owed > 0 ||
         row.usd.owe > 0 ||
@@ -277,7 +279,7 @@ private fun byWhatIsOwed(
     b: Settlement,
 ): Int =
     listOf(
-        b.mesos - a.mesos,
+        (b.mesos + b.parts.shares) - (a.mesos + a.parts.shares),
         (b.owedByYou + b.sharesYouOwe) - (a.owedByYou + a.sharesYouOwe),
         b.usd.owed - a.usd.owed,
         b.pieces - a.pieces,

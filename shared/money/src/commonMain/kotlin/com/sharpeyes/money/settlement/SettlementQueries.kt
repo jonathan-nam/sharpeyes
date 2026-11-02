@@ -151,7 +151,8 @@ fun splittableDebts(
 
 /** The account's position, summed off the cards. Pieces are not in it. */
 fun settlementTotals(rows: List<Settlement>): SettlementTotals {
-    val owed = rows.fold(0.0) { sum, row -> sum + row.mesos }
+    // Unpaid shares are outside each card's debt, so they are added here or the tiles would be short.
+    val owed = rows.fold(0.0) { sum, row -> sum + row.mesos + row.parts.shares }
     val owe = rows.fold(0.0) { sum, row -> sum + row.owedByYou + row.sharesYouOwe }
     val usdOwed = rows.fold(0.0) { sum, row -> sum + row.usd.owed }
     val usdOwe = rows.fold(0.0) { sum, row -> sum + row.usd.owe }
@@ -172,7 +173,16 @@ fun offsetOf(row: Settlement): Offset {
 
 /** Nothing stands between you either way. */
 fun isEmpty(row: Settlement): Boolean =
-    listOf(row.pieces, row.piecesYouOwe, row.mesos, row.owedByYou, row.sharesYouOwe, row.usd.owed, row.usd.owe).all {
+    listOf(
+        row.pieces,
+        row.piecesYouOwe,
+        row.mesos,
+        row.owedByYou,
+        row.parts.shares,
+        row.sharesYouOwe,
+        row.usd.owed,
+        row.usd.owe,
+    ).all {
         it ==
             0.0
     }

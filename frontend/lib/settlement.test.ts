@@ -152,7 +152,7 @@ describe("what one person owes you", () => {
       wallet([counterparty("person:p-owen", "Owen", [line("l2", 900 * M)])]),
     );
     expect(rows).toHaveLength(1);
-    expect([rows[0]!.name, rows[0]!.pieces, rows[0]!.mesos]).toEqual(["Owen", 80, 900 * M]);
+    expect([rows[0]!.name, rows[0]!.pieces, rows[0]!.parts.shares]).toEqual(["Owen", 80, 900 * M]);
   });
 
   it("states the pieces and never a price for them", () => {
@@ -340,21 +340,41 @@ describe("who belongs on the list at all", () => {
 });
 
 describe("the two directions, which are said rather than netted", () => {
-  it("keeps a share you owe out of what they owe you, so an offset has something to move", () => {
-    // They owe you 1b of shares and you owe them 400m. One transfer of 600m is still how the pair
-    // settles; the CARD says both, because which way the 400m goes is a decision nobody has made
-    // yet: Offset takes it off the 1b, Mark sent does not. See sharesYouOwe.
+  it("keeps unpaid shares, both ways, out of the debt, so only an act moves it", () => {
+    // They owe you 1b of shares and you owe them 400m. Which way either goes is a decision nobody
+    // has made yet, so the debt is untouched until Offset or Mark Sent says. See `mesos`.
     const rows = buildSettlement(
       [],
       wallet([
         counterparty("person:p-owen", "Owen", [line("l1", 1_000 * M), line("l2", 400 * M, "owe")]),
       ]),
     );
-    expect([rows[0]!.mesos, rows[0]!.owedByYou, rows[0]!.sharesYouOwe]).toEqual([
-      1_000 * M,
-      0,
-      400 * M,
-    ]);
+    expect([
+      rows[0]!.mesos,
+      rows[0]!.owedByYou,
+      rows[0]!.parts.shares,
+      rows[0]!.sharesYouOwe,
+    ]).toEqual([0, 0, 1_000 * M, 400 * M]);
+  });
+
+  it("leaves an entered debt where it is when a share arrives running against it", () => {
+    // The 7.42b case: shares they owe used to come off what you owe them on arrival, so an Offset
+    // then moved the debt by less than it said.
+    const rows = buildSettlement(
+      [],
+      wallet([counterparty("person:p-owen", "Owen", [line("l1", 600 * M)])]),
+      [
+        {
+          id: "d1",
+          holder: OWEN,
+          amount: -2_000 * M,
+          note: null,
+          payouts: [],
+          incurredAt: "2026-08-10T00:00:00Z",
+        },
+      ],
+    );
+    expect([rows[0]!.owedByYou, rows[0]!.parts.shares]).toEqual([2_000 * M, 600 * M]);
   });
 
   it("says both sides when the shares you owe are the bigger half", () => {
@@ -369,11 +389,12 @@ describe("the two directions, which are said rather than netted", () => {
         ]),
       ]),
     );
-    expect([rows[0]!.mesos, rows[0]!.owedByYou, rows[0]!.sharesYouOwe]).toEqual([
-      1_000 * M,
-      0,
-      1_500 * M,
-    ]);
+    expect([
+      rows[0]!.mesos,
+      rows[0]!.owedByYou,
+      rows[0]!.parts.shares,
+      rows[0]!.sharesYouOwe,
+    ]).toEqual([0, 0, 1_000 * M, 1_500 * M]);
   });
 
   it("says what you owe when their PIECES put them on the list anyway", () => {
@@ -387,7 +408,7 @@ describe("the two directions, which are said rather than netted", () => {
         ]),
       ]),
     );
-    expect([rows[0]!.pieces, rows[0]!.mesos, rows[0]!.sharesYouOwe]).toEqual([
+    expect([rows[0]!.pieces, rows[0]!.parts.shares, rows[0]!.sharesYouOwe]).toEqual([
       80,
       1_000 * M,
       1_500 * M,
@@ -1197,7 +1218,7 @@ describe("a person whose card is kept", () => {
       new Set(["person:p-owen"]),
     );
     expect(rows).toHaveLength(1);
-    expect([rows[0]!.pinned, rows[0]!.mesos]).toEqual([true, 900 * M]);
+    expect([rows[0]!.pinned, rows[0]!.parts.shares]).toEqual([true, 900 * M]);
   });
 });
 
