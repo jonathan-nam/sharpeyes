@@ -160,6 +160,16 @@ export function LootRow({
     return mayRemove && loot.recordedByYou !== false && (!readOnly || sellers.length > 0);
   })();
   const takers = divides(ran) && !instanced ? sellers : [];
+  // Whoever logged a drop sells it: the rest of the party reads the row without the form.
+  // See LootPermissions.kt.
+  const sellable =
+    loot.status === "PENDING" &&
+    canSell &&
+    !pieces &&
+    loot.recordedByYou !== false &&
+    (!readOnly || sellers.length > 0);
+  // Mark Sold and Keep, at the foot with the card's other buttons so they line up across cards.
+  const sellActions = sellable && !selling;
   // Edit Sale and Undo Sale, at the foot with Remove. A settled sale is locked until a share is marked
   // unpaid; the server refuses it too (settledRefusal).
   const saleActions =
@@ -249,41 +259,18 @@ export function LootRow({
         </div>
       )}
 
-      {/* Whoever logged a drop sells it: the rest of the party reads the row without the form.
-          See LootPermissions.kt. */}
-      {loot.status === "PENDING" &&
-        canSell &&
-        !pieces &&
-        loot.recordedByYou !== false &&
-        (!readOnly || sellers.length > 0) &&
-        (selling ? (
-          <LootSaleForm
-            ran={ran}
-            sellers={sellers}
-            busy={busy}
-            onSell={(body) => {
-              onSell(body);
-              setSelling(false);
-            }}
-            onCancel={() => setSelling(false)}
-          />
-        ) : (
-          <div className="loot-actions">
-            <Button variant="primary" onClick={() => setSelling(true)} disabled={busy}>
-              Mark Sold
-            </Button>
-            {keepers.map((m) => (
-              <Button
-                key={m.id}
-                variant="secondary"
-                onClick={() => onSetTaken(m.id)}
-                disabled={busy}
-              >
-                {keepers.length === 1 ? "Keep" : `${m.name} kept it`}
-              </Button>
-            ))}
-          </div>
-        ))}
+      {sellable && selling && (
+        <LootSaleForm
+          ran={ran}
+          sellers={sellers}
+          busy={busy}
+          onSell={(body) => {
+            onSell(body);
+            setSelling(false);
+          }}
+          onCancel={() => setSelling(false)}
+        />
+      )}
 
       {/* Sold, which TAKEN is not: it has no pot, no seller and no payout roster, so splitOf would
           refuse it and the row would say "Split unreadable" about a drop that was never sold. */}
@@ -394,9 +381,26 @@ export function LootRow({
       {/* Last, under everything the row says about itself. */}
       {children}
 
-      {(saleActions || actions || offersRemove) && (
+      {(sellActions || saleActions || actions || offersRemove) && (
         <div className="loot-foot">
           <div className="loot-actions">
+            {sellActions && (
+              <>
+                <Button variant="primary" onClick={() => setSelling(true)} disabled={busy}>
+                  Mark Sold
+                </Button>
+                {keepers.map((m) => (
+                  <Button
+                    key={m.id}
+                    variant="secondary"
+                    onClick={() => onSetTaken(m.id)}
+                    disabled={busy}
+                  >
+                    {keepers.length === 1 ? "Keep" : `${m.name} kept it`}
+                  </Button>
+                ))}
+              </>
+            )}
             {saleActions && (
               <>
                 {corrected !== null && (
