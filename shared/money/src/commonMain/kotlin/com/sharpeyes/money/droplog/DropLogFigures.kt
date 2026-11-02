@@ -36,6 +36,7 @@ import com.sharpeyes.money.settlement.yourPiles
 import com.sharpeyes.money.sharedparties.DecidedSerializer
 import com.sharpeyes.money.sharedparties.SharedCard
 import com.sharpeyes.money.sharedparties.SharedPile
+import com.sharpeyes.money.sharedparties.crossingShares
 import com.sharpeyes.money.sharedparties.loggedTwice
 import com.sharpeyes.money.sharedparties.sharedCard
 import com.sharpeyes.money.sharedparties.sharedHistory
@@ -174,7 +175,7 @@ fun dropLogFigures(
     val twice = loggedTwice(page.parties to page.pools, shared, ownerOf)
     // A run in both your party and theirs counts once, as the owner's copy.
     val counted = withoutLoot(page.pools, twice)
-    val view = settlementView(page.copy(pools = counted))
+    val view = settlementView(page.copy(pools = counted), crossingShares(shared, page.people))
     val logParties = page.parties + shared.parties
     val logPools = counted + shared.pools
     val log =

@@ -5,6 +5,7 @@ import com.sharpeyes.money.split.buildWallet
 import com.sharpeyes.money.split.saleMoney
 import com.sharpeyes.money.split.splitDrop
 import com.sharpeyes.money.split.splitOf
+import com.sharpeyes.money.split.withCounterparties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -46,7 +47,9 @@ class ModuleGoldenTest {
     fun wallet() =
         check(
             "wallet",
-            vestigeHelperAdapters + ("wallet.buildWallet" to { a -> out(buildWallet(a.arg(0), a.arg(1))) }),
+            vestigeHelperAdapters +
+                ("wallet.buildWallet" to { a -> out(buildWallet(a.arg(0), a.arg(1))) }) +
+                ("wallet.withCounterparties" to { a -> out(withCounterparties(a.arg(0), a.arg(1))) }),
         )
 
     @Test

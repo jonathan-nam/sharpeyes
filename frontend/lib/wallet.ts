@@ -222,3 +222,49 @@ export function buildWallet(parties: Party[], pools: PartyLootPool[]): Wallet {
     betweenMine,
   };
 }
+
+/** [wallet] with [more] folded in by key, the totals summed again off the result. */
+export function withCounterparties(wallet: Wallet, more: Counterparty[]): Wallet {
+  if (more.length === 0) return wallet;
+  const groups = new Map(wallet.counterparties.map((c) => [c.key, c]));
+  for (const c of more) {
+    const into = groups.get(c.key);
+    if (!into) {
+      groups.set(c.key, c);
+      continue;
+    }
+    const usd = {
+      owe: into.usd.owe + c.usd.owe,
+      owed: into.usd.owed + c.usd.owed,
+      net: into.usd.net + c.usd.net,
+    };
+    groups.set(c.key, {
+      ...into,
+      owe: into.owe + c.owe,
+      owed: into.owed + c.owed,
+      net: into.net + c.net,
+      usd,
+      lines: [...into.lines, ...c.lines],
+    });
+  }
+  const counterparties = [...groups.values()].sort(
+    (a, b) =>
+      b.owe + b.owed - (a.owe + a.owed) ||
+      b.usd.owe + b.usd.owed - (a.usd.owe + a.usd.owed) ||
+      a.name.localeCompare(b.name),
+  );
+  const sum = (pick: (c: Counterparty) => number) =>
+    counterparties.reduce((s, c) => s + pick(c), 0);
+  const owe = sum((c) => c.owe);
+  const owed = sum((c) => c.owed);
+  const usdOwe = sum((c) => c.usd.owe);
+  const usdOwed = sum((c) => c.usd.owed);
+  return {
+    ...wallet,
+    counterparties,
+    owe,
+    owed,
+    net: owed - owe,
+    usd: { owe: usdOwe, owed: usdOwed, net: usdOwed - usdOwe },
+  };
+}

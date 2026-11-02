@@ -1,6 +1,6 @@
 import { holderKey, SELF_HOLDER, type Holder } from "@/lib/vestige-ledger";
 import type { PartyLootPool } from "@/types/loot";
-import type { Party, PartyMember } from "@/types/party";
+import type { Party, PartyMember, Person } from "@/types/party";
 import type { SharedBook } from "@/types/page";
 import type { SettlementDebt, VestigeSettlement } from "@/types/vestige";
 
@@ -58,6 +58,41 @@ export function fromYourSide(book: SharedBook): SharedHistory {
     settlements: book.settlements.map((act) => ({ ...act, holder: holder(act.holder) })),
     debts: book.debts.map((debt) => ({ ...debt, holder: holder(debt.holder) })),
     names: new Map([[holderKey(owner), book.ownerName]]),
+  };
+}
+
+/** Shares in other owners' parties that are yours to settle, for settlementView. See crossingShares. */
+export type Crossing = {
+  parties: Party[];
+  pools: PartyLootPool[];
+  /** Each owner's holder key: that pair is the shared card's, never your own book's. */
+  skip: Set<string>;
+};
+
+/**
+ * The shares in other owners' parties between a seat of yours and a third person's: money between
+ * you two that neither owner's book carries. Their seat is keyed to your own people by character
+ * name, or else stands as a character, since the owner's person ids mean nothing in your book.
+ */
+export function crossingShares(shared: SharedHistory, people: Person[]): Crossing {
+  const byName = new Map(
+    people.flatMap((p) => p.characters.map((c) => [c.toLowerCase(), p] as const)),
+  );
+  const skip = new Set(shared.names.keys());
+  const seat = (m: PartyMember): PartyMember => {
+    if (m.characterId !== null || (m.personId !== null && skip.has(`person:${m.personId}`)))
+      return m;
+    const person = byName.get(m.name.toLowerCase());
+    return { ...m, personId: person?.id ?? null, personName: person?.name ?? null };
+  };
+  return {
+    parties: shared.parties.map((party) => ({
+      ...party,
+      members: party.members.map(seat),
+      seats: party.seats.map(seat),
+    })),
+    pools: shared.pools,
+    skip,
   };
 }
 

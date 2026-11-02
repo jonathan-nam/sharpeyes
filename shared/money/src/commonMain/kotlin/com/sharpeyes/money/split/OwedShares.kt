@@ -208,3 +208,36 @@ fun buildWallet(
         betweenMine = reader.betweenMine,
     )
 }
+
+/** [wallet] with [more] folded in by key, the totals summed again off the result. */
+fun withCounterparties(
+    wallet: Wallet,
+    more: List<Counterparty>,
+): Wallet {
+    if (more.isEmpty()) return wallet
+    val groups = LinkedHashMap<String, Counterparty>()
+    wallet.counterparties.forEach { groups[it.key] = it }
+    for (c in more) {
+        val into = groups[c.key]
+        groups[c.key] =
+            into?.copy(
+                owe = into.owe + c.owe,
+                owed = into.owed + c.owed,
+                net = into.net + c.net,
+                usd = Owings(into.usd.owe + c.usd.owe, into.usd.owed + c.usd.owed, into.usd.net + c.usd.net),
+                lines = into.lines + c.lines,
+            ) ?: c
+    }
+    val counterparties = groups.values.sortedWith(::byWhatIsOwed)
+    val owe = counterparties.fold(0.0) { sum, c -> sum + c.owe }
+    val owed = counterparties.fold(0.0) { sum, c -> sum + c.owed }
+    val usdOwe = counterparties.fold(0.0) { sum, c -> sum + c.usd.owe }
+    val usdOwed = counterparties.fold(0.0) { sum, c -> sum + c.usd.owed }
+    return wallet.copy(
+        counterparties = counterparties,
+        owe = owe,
+        owed = owed,
+        net = owed - owe,
+        usd = Owings(usdOwe, usdOwed, usdOwed - usdOwe),
+    )
+}

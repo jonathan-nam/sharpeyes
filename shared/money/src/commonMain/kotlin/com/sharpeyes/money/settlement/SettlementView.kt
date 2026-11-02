@@ -23,10 +23,12 @@ import com.sharpeyes.money.coupons.receivedSinceClosing
 import com.sharpeyes.money.coupons.saleCredits
 import com.sharpeyes.money.coupons.salesByHolder
 import com.sharpeyes.money.pieces.spendAnswered
+import com.sharpeyes.money.sharedparties.Crossing
 import com.sharpeyes.money.split.Wallet
 import com.sharpeyes.money.split.buildWallet
 import com.sharpeyes.money.split.saleMoney
 import com.sharpeyes.money.split.splitOf
+import com.sharpeyes.money.split.withCounterparties
 import kotlinx.serialization.Serializable
 
 // The Settlement stage's figures off the Drop Log payload, intermediates included because the Drop
@@ -80,12 +82,16 @@ private fun holderNamesOf(page: DropLogPage): Map<String, String> {
 }
 
 /** The shares an offset discharged, resolved off the pools: only the drops an offset names. */
-private fun offsetSharesOf(page: DropLogPage): Map<String, OffsetShare> {
+private fun offsetSharesOf(
+    page: DropLogPage,
+    crossing: Crossing?,
+): Map<String, OffsetShare> {
     val out = LinkedHashMap<String, OffsetShare>()
     val wanted = page.debts.flatMap { d -> d.payouts.map { it.lootId } }.toSet()
-    val partyById = page.parties.associateBy { it.id }
+    val partyById = (page.parties + crossing?.parties.orEmpty()).associateBy { it.id }
     val bossByKey = page.bosses.associateBy { it.bossKey }
-    for (pool in page.pools.filter { partyById.containsKey(it.partyId) }) {
+    val pools = page.pools + crossing?.pools.orEmpty()
+    for (pool in pools.filter { partyById.containsKey(it.partyId) }) {
         val party = partyById.getValue(pool.partyId)
         for (loot in pool.loot.filter { it.id in wanted }) {
             val split = splitOf(loot, party.seats) ?: continue
@@ -114,8 +120,11 @@ private fun offsetSharesOf(page: DropLogPage): Map<String, OffsetShare> {
     return out
 }
 
-/** The Settlement stage's figures off the Drop Log payload. */
-fun settlementView(page: DropLogPage): SettlementView {
+/** The Settlement stage's figures off the Drop Log payload, with [crossing] shares yours to settle. */
+fun settlementView(
+    page: DropLogPage,
+    crossing: Crossing? = null,
+): SettlementView {
     val bossOrder = LinkedHashMap<String, Double>()
     page.bosses.forEachIndexed { i, b -> bossOrder[b.bossKey] = i.toDouble() }
     val closures = closedByHolder(page.settlements)
@@ -132,7 +141,11 @@ fun settlementView(page: DropLogPage): SettlementView {
         )
     val ledgers = holderLedgers(settled + alsoHeldByYou(page.parties, page.pools, VESTIGE, bossOrder, settled), inputs)
     val holderNames = holderNamesOf(page)
-    val wallet = buildWallet(page.parties, page.pools)
+    val own = buildWallet(page.parties, page.pools)
+    val wallet =
+        crossing?.let { c ->
+            withCounterparties(own, buildWallet(c.parties, c.pools).counterparties.filter { it.key !in c.skip })
+        } ?: own
     val credits = saleCredits(page.tranches)
     val pinned =
         page.people
@@ -160,7 +173,7 @@ fun settlementView(page: DropLogPage): SettlementView {
         ledgers,
         holderNames,
         wallet,
-        offsetSharesOf(page),
+        offsetSharesOf(page, crossing),
         credits,
         settlement,
         settlementTotals(settlement),
