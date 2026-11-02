@@ -163,7 +163,20 @@ internal fun writeClose(
     holder: VestigeHolder,
     act: CloseAct,
     now: Instant,
-): OffsetWrite {
+): OffsetWrite =
+    writeCloseRows(userId, holder, act, now)
+        ?: OffsetWrite.Wrote(OffsetSharesResponse(allLootFor(userId), debtsFor(userId), disposalsFor(userId)))
+
+/**
+ * writeClose without reading the book back: null once written, else the refusal. For a caller that
+ * reads back its own way, since allLootFor is a whole Drop Log read (3s on prod, 2026-11-02).
+ */
+internal fun writeCloseRows(
+    userId: String,
+    holder: VestigeHolder,
+    act: CloseAct,
+    now: Instant,
+): OffsetWrite? {
     val kind = act.kind
     val person = holder.personId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
     val shares = (act.parts + act.received).map { it.lootId to it.memberId }
@@ -186,9 +199,7 @@ internal fun writeClose(
             }
             act.holding?.let { writeDisposalRow(entry, kind, it, HELD_BY_YOU) }
             act.heldByThem?.let { writeDisposalRow(entry, kind, it, HELD_BY_THEM) }
-            OffsetWrite.Wrote(
-                OffsetSharesResponse(allLootFor(userId), debtsFor(userId), disposalsFor(userId)),
-            )
+            null
         }
     }
 }

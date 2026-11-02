@@ -72,8 +72,9 @@ private suspend fun RoutingContext.closeShared() {
             val act = closeActOf(request, kind, note, writer)
             val shares = (act.parts + act.received).map { it.lootId to it.memberId }
             if (!memberMayClose(writer, shares)) return@run "You can only settle shares you sent or were sent."
-            when (writeClose(book.owner, book.holder, act, Clock.System.now())) {
-                is OffsetWrite.Wrote -> null
+            // inBook reads the book back from the member's side, so the owner's read is not needed.
+            when (writeCloseRows(book.owner, book.holder, act, Clock.System.now())) {
+                null, is OffsetWrite.Wrote -> null
                 OffsetWrite.AlreadyDischarged -> "This is already settled. Reload to see it."
                 OffsetWrite.NotYourPerson, OffsetWrite.Unreachable -> "A drop named here is not in this book any more."
             }

@@ -17,7 +17,11 @@ internal fun answeredNightsFor(owner: String): Set<String> =
 private fun LootResponse.openCouponNight() = dropKey == VESTIGE && soldAt == null && !settled
 
 internal fun List<LootResponse>.withAnsweredNights(owner: String): List<LootResponse> =
-    if (none { it.openCouponNight() }) this else lockedBy(answeredNightsFor(owner))
+    withAnsweredNights { answeredNightsFor(owner) }
+
+/** [nights] is asked only where a pool holds an open night, so a caller can share one read per owner. */
+internal fun List<LootResponse>.withAnsweredNights(nights: () -> Set<String>): List<LootResponse> =
+    if (none { it.openCouponNight() }) this else lockedBy(nights())
 
 @JvmName("poolsWithAnsweredNights")
 internal fun List<PartyLootPoolResponse>.withAnsweredNights(owner: String): List<PartyLootPoolResponse> =
