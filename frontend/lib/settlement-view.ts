@@ -16,7 +16,8 @@ import {
   saleCredits,
   salesByHolder,
 } from "@/lib/vestige-ledger";
-import { buildWallet } from "@/lib/wallet";
+import type { Crossing } from "@/lib/shared-history";
+import { buildWallet, withCounterparties } from "@/lib/wallet";
 import type { DropTables } from "@/types/drop";
 import type { DropLogPage } from "@/types/page";
 
@@ -53,6 +54,8 @@ export function settlementView(
     | "debts"
     | "disposals"
   >,
+  /** Shares in other owners' parties that are yours to settle. See crossingShares. */
+  crossing?: Crossing,
 ) {
   const { parties, pools, bosses, people, tranches, payments, settlements, debts, disposals } =
     page;
@@ -79,15 +82,23 @@ export function settlementView(
   for (const party of parties) {
     for (const seat of foldSeats(party.seats)) holderNames.set(seat.key, seat.name);
   }
-  const wallet = buildWallet(parties, pools);
+  const wallet = crossing
+    ? withCounterparties(
+        buildWallet(parties, pools),
+        buildWallet(crossing.parties, crossing.pools).counterparties.filter(
+          (c) => !crossing.skip.has(c.key),
+        ),
+      )
+    : buildWallet(parties, pools);
   // The shares an offset discharged, splitting only the drops an offset names. Off the pools, since
-  // an offset marks its shares PAID and they leave the wallet. See V58.
-  const partyById = new Map(parties.map((p) => [p.id, p]));
+  // an offset marks its shares PAID and they leave the wallet. See V58. Crossing ones too, being
+  // yours to offset.
+  const partyById = new Map([...parties, ...(crossing?.parties ?? [])].map((p) => [p.id, p]));
   const bossByKey = new Map(bosses.map((b) => [b.bossKey, b]));
   const offsetShares = new Map<string, OffsetShare>();
   const wanted = new Set(debts.flatMap((d) => d.payouts.map((s) => s.lootId)));
   if (wanted.size > 0) {
-    for (const pool of pools) {
+    for (const pool of [...pools, ...(crossing?.pools ?? [])]) {
       const party = partyById.get(pool.partyId);
       if (!party) continue;
       for (const loot of pool.loot) {

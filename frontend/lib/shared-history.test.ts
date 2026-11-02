@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildDropLog } from "./drop-log";
 import { splitOf } from "./loot";
 import { buildSettledLog } from "./settled-log";
-import { fromYourSide, sharedHistory } from "./shared-history";
+import { crossingShares, fromYourSide, sharedHistory } from "./shared-history";
+import { buildWallet } from "./wallet";
 import { SELF_HOLDER, closedByHolder, holderKey } from "./vestige-ledger";
 import type { Loot } from "@/types/loot";
 import type { Party, PartyMember } from "@/types/party";
@@ -159,5 +160,62 @@ describe("somebody else's book from your side", () => {
 
   it("adds nothing when nobody shares a book with you", () => {
     expect(sharedHistory([]).parties).toEqual([]);
+  });
+});
+
+describe("shares in their party between you and a third person", () => {
+  // Owen sold in Kip's party and owes Thornwick's seat, which Kip's book files under Kip's own person
+  // row for him. Neither owner's book carries it, so Owen's own book must.
+  const thornSeat = seat({
+    id: "m3",
+    name: "Thornwick",
+    personId: "kip-p-thorn",
+    personName: "Thorn",
+  });
+  const three = {
+    ...party,
+    members: [ownerSeat, owenSeat, thornSeat],
+    seats: [ownerSeat, owenSeat, thornSeat],
+  };
+  const owenSold: Loot = {
+    ...sold,
+    sellerMemberId: "m2",
+    payouts: [
+      { memberId: "m1", paid: false, paidAt: null, shares: 1 },
+      { memberId: "m3", paid: false, paidAt: null, shares: 1 },
+    ],
+  };
+  const shared = sharedHistory([
+    book({ parties: [three], pools: [{ partyId: "pa", loot: [owenSold] }] }),
+  ]);
+  const people = [
+    {
+      id: "owen-p-thorn",
+      name: "Thorn",
+      characters: ["thornwick"],
+      ownedCharacters: [],
+      linked: false,
+      pinned: false,
+    },
+  ];
+
+  it("keys their seat to your own person by character name, and leaves the owner's pair out", () => {
+    const crossing = crossingShares(shared, people);
+    const wallet = buildWallet(crossing.parties, crossing.pools).counterparties.filter(
+      (c) => !crossing.skip.has(c.key),
+    );
+
+    expect(wallet.map((c) => [c.key, c.lines.map((l) => [l.direction, l.theirs])])).toEqual([
+      ["person:owen-p-thorn", [["owe", "Thornwick"]]],
+    ]);
+  });
+
+  it("stands as a character when you have no person for them", () => {
+    const crossing = crossingShares(shared, []);
+    const keys = buildWallet(crossing.parties, crossing.pools)
+      .counterparties.map((c) => c.key)
+      .filter((k) => !crossing.skip.has(k));
+
+    expect(keys).toEqual(["character:thornwick"]);
   });
 });

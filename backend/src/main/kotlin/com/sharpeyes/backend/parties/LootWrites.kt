@@ -284,10 +284,11 @@ internal fun setPayoutPaid(
 /**
  * Marks every named payout paid, across parties, or writes nothing at all.
  *
- * False without writing when any ref names a row this account cannot reach: a drop in someone
- * else's party, a member who is not on that drop's roster, or a drop deleted since the wallet was
- * drawn. Refusing the lot beats settling the reachable ones, which would leave the wallet showing
- * a smaller debt with nothing saying which part of the transfer it thinks happened.
+ * False without writing when any ref names a row this account cannot reach: a share in someone
+ * else's party that is not between a seat of yours and another, a member who is not on that drop's
+ * roster, or a drop deleted since the wallet was drawn. Refusing the lot beats settling the
+ * reachable ones, which would leave the wallet showing a smaller debt with nothing saying which part
+ * of the transfer it thinks happened.
  *
  * Rows already paid are left as they are rather than refused, so a settle sent twice is a no-op
  * instead of rewriting when the money moved.
@@ -298,15 +299,20 @@ internal fun settlePayouts(
     now: Instant,
 ): Boolean {
     val wanted = refs.toSet()
-    val reachable =
+    val rows =
         PartyLootPayout
             .join(PartyLoot, JoinType.INNER, PartyLootPayout.lootId, PartyLoot.id)
             .join(Party, JoinType.INNER, PartyLoot.partyId, Party.id)
             .selectAll()
-            .where { (PartyLootPayout.lootId inList wanted.map { it.first }) and (Party.userId eq userId) }
-            .map { it[PartyLootPayout.lootId] to it[PartyLootPayout.memberId] }
-            .toSet()
-    if (!reachable.containsAll(wanted)) return false
+            .where { PartyLootPayout.lootId inList wanted.map { it.first } }
+            .map { (it[PartyLootPayout.lootId] to it[PartyLootPayout.memberId]) to it[Party.userId] }
+    // In somebody else's party, a share between a seat of yours and a third person's: yours to
+    // settle from your own book, by the rule a shared book's close uses (memberMayClose).
+    val elsewhere = wanted - rows.filter { it.second == userId }.map { it.first }.toSet()
+    val reachable =
+        rows.map { it.first }.toSet().containsAll(wanted) &&
+            (elsewhere.isEmpty() || memberMayClose(userId, elsewhere.toList()))
+    if (!reachable) return false
 
     wanted.forEach { (lootId, memberId) ->
         PartyLootPayout.update({

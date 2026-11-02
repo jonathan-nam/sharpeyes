@@ -34,7 +34,7 @@ import {
 import { buildSettledLog, orphansOf, settledTotals } from "@/lib/settled-log";
 import { settlementView, VESTIGE } from "@/lib/settlement-view";
 import { sharedCard } from "@/lib/shared-book";
-import { sharedHistory } from "@/lib/shared-history";
+import { crossingShares, sharedHistory } from "@/lib/shared-history";
 import { sharedPile } from "@/lib/shared-pile";
 import {
   closedByHolder,
@@ -130,7 +130,7 @@ export function dropLogFigures(page: DropLogPage, books: SharedBook[]) {
     },
   );
   const counted = withoutLoot(page.pools, twice);
-  const view = settlementView({ ...page, pools: counted });
+  const view = settlementView({ ...page, pools: counted }, crossingShares(shared, page.people));
   const { closures, settled, ledgers, holderNames, offsetShares, credits } = view;
   const logParties = [...page.parties, ...shared.parties];
   const logPools = [...counted, ...shared.pools];

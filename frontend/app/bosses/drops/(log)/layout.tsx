@@ -101,7 +101,7 @@ import { splitByLogger } from "@/lib/sale-logger";
 import { useLive } from "@/lib/use-live";
 import { sharedCard } from "@/lib/shared-book";
 import { loggedTwice, withoutLoot } from "@/lib/duplicate-runs";
-import { sharedHistory } from "@/lib/shared-history";
+import { crossingShares, sharedHistory } from "@/lib/shared-history";
 import { sharedPile } from "@/lib/shared-pile";
 import type { ListingKit } from "@/components/settlement-listing";
 import { figuresToReport, LISTINGS_KEY } from "@/lib/settlement-listings";
@@ -415,17 +415,20 @@ export default function DropLog({ children }: { children: ReactNode }) {
     },
   );
   const counted = withoutLoot(pools, twice);
-  const view = settlementView({
-    parties,
-    pools: counted,
-    bosses,
-    people,
-    tranches,
-    payments,
-    settlements,
-    debts,
-    disposals,
-  });
+  const view = settlementView(
+    {
+      parties,
+      pools: counted,
+      bosses,
+      people,
+      tranches,
+      payments,
+      settlements,
+      debts,
+      disposals,
+    },
+    crossingShares(shared, people),
+  );
   const { closures, settled, ledgers, holderNames, offsetShares, credits } = view;
   const logParties = [...parties, ...shared.parties];
   const logPools = [...counted, ...shared.pools];
@@ -966,7 +969,8 @@ export default function DropLog({ children }: { children: ReactNode }) {
             {shown === "settlement" && (
               <SettlementStage
                 page={{
-                  parties,
+                  // Theirs too: a card can carry a share of a drop in another owner's party.
+                  parties: logParties,
                   bosses,
                   people,
                   tranches,

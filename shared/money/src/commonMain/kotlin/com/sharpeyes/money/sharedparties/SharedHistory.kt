@@ -4,6 +4,7 @@ import com.sharpeyes.money.Holder
 import com.sharpeyes.money.Party
 import com.sharpeyes.money.PartyLootPool
 import com.sharpeyes.money.PartyMember
+import com.sharpeyes.money.Person
 import com.sharpeyes.money.SettlementDebt
 import com.sharpeyes.money.SharedBook
 import com.sharpeyes.money.VestigeSettlement
@@ -63,6 +64,37 @@ fun fromYourSide(book: SharedBook): SharedHistory {
         settlements = book.settlements.map { it.copy(holder = swap.holder(it.holder)) },
         debts = book.debts.map { it.copy(holder = swap.holder(it.holder)) },
         names = mapOf(holderKey(swap.owner) to book.ownerName),
+    )
+}
+
+/** Shares in other owners' parties that are yours to settle. The port of crossingShares. */
+data class Crossing(
+    val parties: List<Party>,
+    val pools: List<PartyLootPool>,
+    /** Each owner's holder key: that pair is the shared card's. */
+    val skip: Set<String>,
+)
+
+/** Shares between a seat of yours and a third person's in other owners' parties, keyed to your people. */
+fun crossingShares(
+    shared: SharedHistory,
+    people: List<Person>,
+): Crossing {
+    val byName = LinkedHashMap<String, Person>()
+    for (p in people) for (c in p.characters) byName[c.lowercase()] = p
+    val skip = shared.names.keys
+    val seat = { m: PartyMember ->
+        if (m.characterId != null || (m.personId != null && "person:${m.personId}" in skip)) {
+            m
+        } else {
+            val person = byName[m.name.lowercase()]
+            m.copy(personId = person?.id, personName = person?.name)
+        }
+    }
+    return Crossing(
+        parties = shared.parties.map { it.copy(members = it.members.map(seat), seats = it.seats.map(seat)) },
+        pools = shared.pools,
+        skip = skip,
     )
 }
 

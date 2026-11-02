@@ -464,4 +464,39 @@ class SettlementOffsetDbTest {
             assertTrue(!memberMayClose(member, listOf(lootId to members[0], lootId to members[1])))
         }
     }
+
+    // From the member's OWN book: a share in somebody else's party between their seat and a third
+    // person's. Neither owner's book carries it, so it is theirs to settle (2026-11-02). The seat here
+    // is the payee; memberMayClose takes a seller seat the same way.
+    @Test
+    fun `a member settles a share between their seat and a third person's from their own book`() {
+        transaction {
+            ensureUser(userId, "offset@example.com")
+            ensureUser(strangerId, "member@example.com")
+            setActiveWorld(strangerId, WORLD_INTERACTIVE)
+            val (lootId, members) = nightOwing(userId, seats = 2)
+            val theirs = Uuid.random()
+            val now = Clock.System.now()
+            val member = strangerId
+            Characters.insert {
+                it[Characters.id] = theirs
+                it[Characters.userId] = member
+                it[Characters.name] = "Pinewick"
+                it[Characters.worldType] = WORLD_INTERACTIVE
+                it[Characters.position] = 0
+                it[Characters.createdAt] = now
+                it[Characters.updatedAt] = now
+            }
+            PartyMember.update({ PartyMember.id eq members[0] }) { it[linkedCharacterId] = theirs }
+            val thorn = holderFor(person(member, "Thorn"))
+            val send = { loot: Uuid, seat: Uuid ->
+                writeClose(member, thorn, CloseAct(CLOSE_PAID, null, listOf(OffsetPart(loot, seat, 1)), null), now)
+            }
+
+            // Neither seat theirs: somebody else's share, even in a party they sit in.
+            assertIs<OffsetWrite.Unreachable>(send(lootId, members[1]))
+            assertIs<OffsetWrite.Wrote>(send(lootId, members[0]))
+            assertEquals(1, paidRows(lootId))
+        }
+    }
 }
