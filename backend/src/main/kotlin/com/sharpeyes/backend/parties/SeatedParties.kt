@@ -207,11 +207,22 @@ internal fun seatedPartyFor(
 internal fun seatedPoolsFor(
     userId: String,
     seated: List<SeatedPartyResponse> = partiesSeatedIn(userId),
-): List<PartyLootPoolResponse> =
-    seated.map { row ->
-        val id = Uuid.parse(row.party.id)
-        PartyLootPoolResponse(row.party.id, lootFor(id, userId).readBy(userId, id))
+): List<PartyLootPoolResponse> {
+    val ids = seated.map { Uuid.parse(it.party.id) }
+    val owners = ownersOf(ids)
+    val reads = dropsReadBy(userId, ids)
+    // Once per OWNER: answeredNightsFor is a whole Drop Log read, and once per party took 3s on prod
+    // (2026-11-02, a member seated in a dozen of one owner's parties).
+    val nights = mutableMapOf<String, Set<String>>()
+    return ids.map { id ->
+        val owner = owners.getValue(id)
+        val loot =
+            lootFor(id, userId, answered = false)
+                .filter { reads(id, LocalDate.parse(it.droppedOn)) }
+                .withAnsweredNights { nights.getOrPut(owner) { answeredNightsFor(owner) } }
+        PartyLootPoolResponse(id.toString(), loot)
     }
+}
 
 /** GET /api/parties/seated/loot. See seatedPoolsFor. */
 internal suspend fun RoutingContext.listSeatedPools() {

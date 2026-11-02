@@ -138,10 +138,14 @@ private fun sharesThatWeekFor(
         row[PartyLoot.id] to shares.orEmpty().mapKeys { it.key.toString() }
     }
 
-/** [viewer] is who `recordedByYou` answers for. Null answers as the owner. */
+/**
+ * [viewer] is who `recordedByYou` answers for. Null answers as the owner. [answered] false leaves
+ * coupon nights unlocked, for a caller that locks them itself.
+ */
 internal fun lootFor(
     partyId: Uuid,
     viewer: String? = null,
+    answered: Boolean = true,
 ): List<LootResponse> {
     val rows =
         lootWithCatalog()
@@ -181,7 +185,7 @@ internal fun lootFor(
                     loot.copy(recordedByYou = viewer == null || logger == viewer, recordedByName = names[logger])
                 }
         }
-    return loot.withAnsweredNights(owner)
+    return if (answered) loot.withAnsweredNights(owner) else loot
 }
 
 /**
